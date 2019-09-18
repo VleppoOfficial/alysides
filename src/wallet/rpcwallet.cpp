@@ -7376,14 +7376,14 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
         return(result);
     }
     
-	tokentype = atof(params[2].get_str().c_str())
+	tokentype = atof(params[2].get_str().c_str());
     if (tokentype.size() <= 0)   {
         ERR_RESULT("Token type must not be empty");
         return(result);
     }
 	
 	if (params.size() >= 4)     {
-        expiryTimeSec = atof(params[3].get_str().c_str())
+        expiryTimeSec = atof(params[3].get_str().c_str());
         if (expiryTimeSec <= 0)    {
         ERR_RESULT("Expire time must be positive");
         return(result);
@@ -7391,7 +7391,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
     }
 	
 	if (params.size() >= 5)     {
-        ownerperc = atof(params[4].get_str().c_str())
+        ownerperc = atof(params[4].get_str().c_str());
         if (ownerperc <= 0)    {
         ERR_RESULT("owner percentage must be positive");
         return(result);
