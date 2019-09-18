@@ -782,7 +782,7 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey) {
 }
 
 // returns token creation signed raw tx
-std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, vscript_t nonfungibleData)
+std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerperc, uint8_t tokentype, uint256 assettokenid, int64_t expiryTimeSec, vscript_t nonfungibleData)
 {
 	//Create a mutable version of a transaction object.
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight()); std::string rawtx;
@@ -827,6 +827,25 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		return("");
 	}
 	
+	//Checking if a digital asset or contract type has data embedded
+	//Placeholder until we get proper data update functionality
+    if ((tokentype == "a" || tokentype == "c") && description.size() <= 0) {
+        CCerror = "for digital asset and contract tokens description cannot be empty";
+        LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+        return std::string("");
+    }
+	
+	//Checking if tokensupply is equal to 1 if token is contract or master license type
+    if ((tokentype == "m" || tokentype == "c") && tokensupply != 1) {
+        CCerror = "for contract and master license tokens tokensupply should be equal to 1";
+        LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+        return std::string("");
+    }
+	
+	//Check for assettoken ID for master and sublicense types
+	
+	//Check expirytime for master and sublicense types
+	
 	//We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
 	if (AddNormalinputs(mtx, mypk, tokensupply + 2 * txfee, 64) > 0)
 	{
@@ -841,7 +860,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		//Eval code is EVAL_TOKENS
         uint8_t destEvalCode = EVAL_TOKENS;
 		
-		//???
+		//If nonfungibleData exists, eval code is set to the one specified within nonfungibleData
         if( nonfungibleData.size() > 0 )
             destEvalCode = nonfungibleData.begin()[0];
 
