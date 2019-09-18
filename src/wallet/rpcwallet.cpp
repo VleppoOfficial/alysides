@@ -7352,11 +7352,12 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
     std::string name, description, hextx; 
     std::vector<uint8_t> nonfungibleData;
     int64_t supply; // changed from uin64_t to int64_t for this 'if ( supply <= 0 )' to work as expected
+	uint8_t tokentype; int64_t expiryTimeSec; double ownerperc; uint256 assettokenid;
 
     CCerror.clear();
 
-    if ( fHelp || params.size() > 4 || params.size() < 2 )
-        throw runtime_error("tokencreate name supply [description][data]\n");
+    if ( fHelp || params.size() > 8 || params.size() < 3 )
+        throw runtime_error("tokencreate name supply tokentype [expirytime][ownerperc][assettokenid][description][data]\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
         throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
     
@@ -7375,16 +7376,46 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
         return(result);
     }
     
-    if (params.size() >= 3)     {
-        description = params[2].get_str();
+	tokentype = params[2].get_str();
+    if (tokentype.size() <= 0)   {
+        ERR_RESULT("Token type must not be empty");
+        return(result);
+    }
+	
+	if (params.size() >= 4)     {
+        expiryTimeSec = atof(params[3].get_str().c_str())
+        if (expiryTimeSec <= 0)    {
+        ERR_RESULT("Expire time must be positive");
+        return(result);
+		}
+    }
+	
+	if (params.size() >= 5)     {
+        ownerperc = atof(params[4].get_str().c_str())
+        if (ownerperc <= 0)    {
+        ERR_RESULT("owner percentage must be positive");
+        return(result);
+		}
+    }
+	
+	if (params.size() >= 6)     {
+		assettokenid = Parseuint256((char *)params[5].get_str().c_str());
+		if( assettokenid == zeroid )    {
+			ERR_RESULT("invalid assettokenid");
+			return(result);
+		}
+    }
+	
+    if (params.size() >= 7)     {
+        description = params[6].get_str();
         if (description.size() > 4096)   {
             ERR_RESULT("Token description must be <= 4096 characters");
             return(result);
         }
     }
     
-    if (params.size() == 4)    {
-        nonfungibleData = ParseHex(params[3].get_str());
+    if (params.size() == 8)    {
+        nonfungibleData = ParseHex(params[7].get_str());
         if (nonfungibleData.size() > IGUANA_MAXSCRIPTSIZE) // opret limit
         {
             ERR_RESULT("Non-fungible data size must be <= " + std::to_string(IGUANA_MAXSCRIPTSIZE));
@@ -7396,7 +7427,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
         }
     }
 
-    hextx = CreateToken(0, supply, name, description, nonfungibleData);
+    hextx = CreateToken(0, supply, name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, nonfungibleData);
     if( hextx.size() > 0 )     {
         result.push_back(Pair("result", "success"));
         result.push_back(Pair("hex", hextx));
