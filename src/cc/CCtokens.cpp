@@ -782,7 +782,7 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey) {
 }
 
 // returns token creation signed raw tx
-std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerperc, uint8_t tokentype, uint256 assettokenid, int64_t expiryTimeSec, vscript_t nonfungibleData)
+std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 assettokenid, int64_t expiryTimeSec, vscript_t nonfungibleData)
 {
 	//Create a mutable version of a transaction object.
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
