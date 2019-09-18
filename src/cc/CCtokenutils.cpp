@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright © 2014-2019 The SuperNET Developers.                             *
+* Copyright ï¿½ 2014-2019 The SuperNET Developers.                             *
 *                                                                            *
 * See the AUTHORS, DEVELOPER-AGREEMENT and LICENSE files at                  *
 * the top-level directory of this distribution for the individual copyright  *
@@ -25,32 +25,27 @@
 
 // NOTE: this inital tx won't be used by other contract
 // for tokens to be used there should be at least one 't' tx with other contract's custom opret
-CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, vscript_t vopretNonfungible)
+CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description,double ownerperc, uint8_t tokentype, uint256 assettokenid, int64_t expiryTimeSec, vscript_t vopretNonfungible)
 {
-    /*   CScript opret;
-    uint8_t evalcode = EVAL_TOKENS;
-    funcid = 'c'; // override the param
-
-    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << name << description; \
-    if (!vopretNonfungible.empty()) {
-    ss << (uint8_t)OPRETID_NONFUNGIBLEDATA;
-    ss << vopretNonfungible;
-    });  */
-
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
 
     if(!vopretNonfungible.empty())
         oprets.push_back(std::make_pair(OPRETID_NONFUNGIBLEDATA, vopretNonfungible));
-    return EncodeTokenCreateOpRet(funcid, origpubkey, name, description, oprets);
+    return EncodeTokenCreateOpRet(funcid, origpubkey, name, description,ownerperc, tokentype, assettokenid, expiryTimeSec, oprets);
 }
 
-CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, std::vector<std::pair<uint8_t, vscript_t>> oprets)
+CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, uint8_t tokentype, uint256 assettokenid, int64_t expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> oprets)
 {
     CScript opret;
     uint8_t evalcode = EVAL_TOKENS;
     funcid = 'c'; // override the param
+    //ownerperc = 'p';
+    //tokentype = 't';
+    //assettokenid = 'a';
+    //expiryTimeSec = 'e';
 
-    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << name << description;
+
+    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << name << description << ownerperc << tokentype << assettokenid << expiryTimeSec ;
     for (auto o : oprets) {
         if (o.first != 0) {
             ss << (uint8_t)o.first;
@@ -59,29 +54,7 @@ CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, 
     });
     return(opret);
 }
-
-/*
-// opret 'i' for imported tokens
-CScript EncodeTokenImportOpRet(std::vector<uint8_t> origpubkey, std::string name, std::string description, uint256 srctokenid, std::vector<std::pair<uint8_t, vscript_t>> oprets)
-{
-    CScript opret;
-    uint8_t evalcode = EVAL_TOKENS;
-    uint8_t funcid = 'i';
-
-    srctokenid = revuint256(srctokenid); // do not forget this
-
-    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << name << description << srctokenid;
-    for (auto o : oprets) {
-        if (o.first != 0) {
-            ss << (uint8_t)o.first;
-            ss << o.second;
-        }
-    });
-    return(opret);
-}
-*/
-
-
+// stop her
 CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::pair<uint8_t, vscript_t> opretWithId)
 {
     std::vector<std::pair<uint8_t, vscript_t>>  oprets;
