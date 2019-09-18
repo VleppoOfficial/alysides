@@ -800,7 +800,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	mypk = pubkey2pk(Mypubkey());
 	
 	//reference transaction for asset/master license types
-	CTransaction tokentx;
+	CTransaction tokentx; uint256 hashBlock;
 	
 	//Checking if the specified tokensupply is valid.
 	if (tokensupply < 0)	{
@@ -832,21 +832,21 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	
 	//Checking if a digital asset or contract type has data embedded
 	//Placeholder until we get proper data update functionality
-    if ((tokentype == "a" || tokentype == "c") && description.size() <= 0) {
+    if ((tokentype == 'a' || tokentype == 'c') && description.size() <= 0) {
         CCerror = "for digital asset and contract tokens description cannot be empty";
         LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
         return std::string("");
     }
 	
 	//Checking if tokensupply is equal to 1 if token is contract or master license type
-    if ((tokentype == "m" || tokentype == "c") && tokensupply != 1) {
+    if ((tokentype == 'm' || tokentype == 'c') && tokensupply != 1) {
         CCerror = "for contract and master license tokens tokensupply should be equal to 1";
         LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
         return std::string("");
     }
 	
 	//If token is "m" or "s"
-	if (tokentype == "m" || tokentype == "s") {
+	if (tokentype == 'm' || tokentype == 's') {
 		//Check if expirytime for master and sublicense types exists. If not defined, set it to 31536000 seconds.
 		if (expiryTimeSec == 0) {
 			expiryTimeSec = 31536000;
