@@ -25,7 +25,7 @@
 
 // NOTE: this inital tx won't be used by other contract
 // for tokens to be used there should be at least one 't' tx with other contract's custom opret
-CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description,double ownerperc, uint8_t tokentype, uint256 assettokenid, int64_t expiryTimeSec, vscript_t vopretNonfungible)
+CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description,double ownerperc, std::string tokentype, uint256 assettokenid, int64_t expiryTimeSec, vscript_t vopretNonfungible)
 {
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
 
@@ -34,7 +34,7 @@ CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, 
     return EncodeTokenCreateOpRet(funcid, origpubkey, name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, oprets);
 }
 
-CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, uint8_t tokentype, uint256 assettokenid, int64_t expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> oprets)
+CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 assettokenid, int64_t expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> oprets)
 {
     CScript opret;
     uint8_t evalcode = EVAL_TOKENS;
