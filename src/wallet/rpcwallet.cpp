@@ -7352,7 +7352,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
     std::string name, description, hextx; 
     std::vector<uint8_t> nonfungibleData;
     int64_t supply; // changed from uin64_t to int64_t for this 'if ( supply <= 0 )' to work as expected
-	uint8_t tokentype; int64_t expiryTimeSec; double ownerperc; uint256 assettokenid;
+	std::string tokentype; int64_t expiryTimeSec; double ownerperc; uint256 assettokenid;
 
     CCerror.clear();
 
@@ -7376,9 +7376,9 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
         return(result);
     }
     
-	tokentype = atof(params[2].get_str().c_str());
-    if (!tokentype)   {
-        ERR_RESULT("Token type must not be empty");
+	tokentype = params[2].get_str();
+    if (tokentype.size() > 1)   {
+        ERR_RESULT("Token type must be 'a', 'c', 'm' or 's'");
         return(result);
     }
 	
@@ -7427,7 +7427,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
         }
     }
 
-    hextx = CreateToken(0, supply, name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, nonfungibleData);
+    hextx = CreateToken(0, supply, name, description, ownerperc, (uint8_t) tokentype, assettokenid, expiryTimeSec, nonfungibleData);
     if( hextx.size() > 0 )     {
         result.push_back(Pair("result", "success"));
         result.push_back(Pair("hex", hextx));
