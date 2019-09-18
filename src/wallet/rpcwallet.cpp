@@ -7376,7 +7376,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
         return(result);
     }
     
-	tokentype = params[2].get_str();
+	tokentype = atof(params[2].get_str().c_str())
     if (tokentype.size() <= 0)   {
         ERR_RESULT("Token type must not be empty");
         return(result);
