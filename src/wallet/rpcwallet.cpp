@@ -7357,7 +7357,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
     CCerror.clear();
 
     if ( fHelp || params.size() > 8 || params.size() < 3 )
-        throw runtime_error("tokencreate name supply tokentype [expirytime][ownerperc][assettokenid][description][data]\n");
+        throw runtime_error("tokencreate name supply tokentype [description][assettokenid][expirytime][ownerperc][data]\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
         throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
     
@@ -7383,37 +7383,37 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
     }
 	
 	if (params.size() >= 4)     {
-        expiryTimeSec = atof(params[3].get_str().c_str());
-        if (expiryTimeSec <= 0)    {
-        ERR_RESULT("Expire time must be positive");
-        return(result);
-		}
-    }
-	
-	if (params.size() >= 5)     {
-        ownerperc = atof(params[4].get_str().c_str());
-        if (ownerperc <= 0)    {
-        ERR_RESULT("owner percentage must be positive");
-        return(result);
-		}
-    }
-	
-	if (params.size() >= 6)     {
-		assettokenid = Parseuint256((char *)params[5].get_str().c_str());
-		if( assettokenid == zeroid )    {
-			ERR_RESULT("invalid assettokenid");
-			return(result);
-		}
-    }
-	
-    if (params.size() >= 7)     {
-        description = params[6].get_str();
+        description = params[3].get_str();
         if (description.size() > 4096)   {
             ERR_RESULT("Token description must be <= 4096 characters");
             return(result);
         }
     }
-    
+	
+	if (params.size() >= 5)     {
+		assettokenid = Parseuint256((char *)params[4].get_str().c_str());
+		if( (tokentype == 'm' || tokentype == 's') && assettokenid == zeroid )    {
+			ERR_RESULT("invalid assettokenid");
+			return(result);
+		}
+    }
+	
+	if (params.size() >= 6)     {
+        expiryTimeSec = atof(params[5].get_str().c_str());
+        if ((tokentype == 'm' || tokentype == 's') && expiryTimeSec <= 0)    {
+        ERR_RESULT("Expire time must be positive");
+        return(result);
+		}
+    }
+	
+	if (params.size() >= 7)     {
+        ownerperc = atof(params[6].get_str().c_str());
+        if (ownerperc <= 0)    {
+        ERR_RESULT("owner percentage must be positive");
+        return(result);
+		}
+    }
+
     if (params.size() == 8)    {
         nonfungibleData = ParseHex(params[7].get_str());
         if (nonfungibleData.size() > IGUANA_MAXSCRIPTSIZE) // opret limit
