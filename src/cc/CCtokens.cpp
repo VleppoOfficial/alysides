@@ -785,50 +785,80 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey) {
 std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, vscript_t nonfungibleData)
 {
 	//Create a mutable version of a transaction object.
-	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	CPubKey mypk; struct CCcontract_info *cp, C;
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight()); std::string rawtx;
+	
+	//Declare and initialize an CCcontract_info object with Token Module variables, such as our global CC address, our global private key, etc.
+	struct CCcontract_info *cp, C;
+	cp = CCinit(&C, EVAL_TOKENS);
+	
+	//By tradition, we use a constant fee of 10000 satoshis.
+	if (txfee == 0)
+		txfee = 10000;
+	
+	//We use the pubkey from the komodod -pubkey launch parameter as the destination address.
+	CPubKey mypk; 
+	mypk = pubkey2pk(Mypubkey());
+	
+	//Checking if the specified tokensupply is valid.
 	if (tokensupply < 0)	{
+		
+		//Defining CCerror which will be returned to rpc interface
+		
         CCerror = "negative tokensupply";
+		
+		//LOGSTREAM is debugging info, not used in later CCs
+		
         LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() =" << CCerror << "=" << tokensupply << std::endl);
 		return std::string("");
 	}
+	
+	//Checking if tokensupply is equal to 1 if nonfungibleData isn't empty
     if (!nonfungibleData.empty() && tokensupply != 1) {
         CCerror = "for non-fungible tokens tokensupply should be equal to 1";
         LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
         return std::string("");
     }
 
-	
-	cp = CCinit(&C, EVAL_TOKENS);
+	//Checking the token name and description size
 	if (name.size() > 32 || description.size() > 4096)  // this is also checked on rpc level
 	{
         LOGSTREAM((char *)"cctokens", CCLOG_DEBUG1, stream << "name len=" << name.size() << " or description len=" << description.size() << " is too big" << std::endl);
         CCerror = "name should be <= 32, description should be <= 4096";
 		return("");
 	}
-	if (txfee == 0)
-		txfee = 10000;
-	mypk = pubkey2pk(Mypubkey());
-
+	
+	//We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
 	if (AddNormalinputs(mtx, mypk, tokensupply + 2 * txfee, 64) > 0)
 	{
 
-        int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);  
+		// TotalPubkeyNormalInputs returns total of normal inputs signed with this pubkey
+        int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
         if (mypkInputs < tokensupply) {     // check that tokens amount are really issued with mypk (because in the wallet there maybe other privkeys)
             CCerror = "some inputs signed not with -pubkey=pk";
             return std::string("");
         }
 
+		//Eval code is EVAL_TOKENS
         uint8_t destEvalCode = EVAL_TOKENS;
+		
+		//???
         if( nonfungibleData.size() > 0 )
             destEvalCode = nonfungibleData.begin()[0];
 
         // NOTE: we should prevent spending fake-tokens from this marker in IsTokenvout():
+		//vout0 is a marker vout
         mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL)));            // new marker to token cc addr, burnable and validated, vout pos now changed to 0 (from 1)
+		//vout1 is the token issuance vout. For some reason, MakeTokensCC1vout has support for multiple eval codes
 		mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, tokensupply, mypk));
 		//mtx.vout.push_back(CTxOut(txfee, CScript() << ParseHex(cp->CChexstr) << OP_CHECKSIG));  // old marker (non-burnable because spending could not be validated)
         //mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL)));          // ...moved to vout=0 for matching with rogue-game token
 
+		/*
+		Finish the creation of the transaction by calling the FinalizeCCTx function along with its parameters from the cp object,
+		the mtx object itself, the owner's pubkey, and the transaction fee amount.
+		Also, an opreturn object with the data from this module instance is passed.
+		*/
+		//EncodeTokenCreateOpRet needs to have an overload for the extra params
 		return(FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, nonfungibleData)));
 	}
 
