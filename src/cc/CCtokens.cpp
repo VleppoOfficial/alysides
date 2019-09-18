@@ -785,7 +785,7 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey) {
 std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerperc, uint8_t tokentype, uint256 assettokenid, int64_t expiryTimeSec, vscript_t nonfungibleData)
 {
 	//Create a mutable version of a transaction object.
-	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight()); std::string rawtx;
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	
 	//Declare and initialize an CCcontract_info object with Token Module variables, such as our global CC address, our global private key, etc.
 	struct CCcontract_info *cp, C;
@@ -798,6 +798,9 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	//We use the pubkey from the komodod -pubkey launch parameter as the destination address.
 	CPubKey mypk; 
 	mypk = pubkey2pk(Mypubkey());
+	
+	//reference transaction for asset/master license types
+	CTransaction tokentx;
 	
 	//Checking if the specified tokensupply is valid.
 	if (tokensupply < 0)	{
@@ -842,9 +845,23 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         return std::string("");
     }
 	
-	//Check for assettoken ID for master and sublicense types
-	
-	//Check expirytime for master and sublicense types
+	//If token is "m" or "s"
+	if (tokentype == "m" || tokentype == "s") {
+		//Check if expirytime for master and sublicense types exists. If not defined, set it to 31536000 seconds.
+		if (expiryTimeSec == 0) {
+			expiryTimeSec = 31536000;
+		}
+		//checking if reference assettokenid exists
+        if (GetTransaction(assettokenid, tokentx, hashBlock, false) == 0)
+		{
+			CCerror = "cannot find reference tokenid";
+			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+			return 0;
+		}
+		//Todo:
+		// if type is "m", pass assettokenid opret and check if type is 'a'. If it isn't, throw error
+		// if type is "s", pass assettokenid opret and check if type is 'm' and it hasn't expired yet. If it isn't, throw error
+    }
 	
 	//We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
 	if (AddNormalinputs(mtx, mypk, tokensupply + 2 * txfee, 64) > 0)
