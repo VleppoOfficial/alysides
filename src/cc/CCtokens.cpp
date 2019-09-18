@@ -895,7 +895,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		Also, an opreturn object with the data from this module instance is passed.
 		*/
 		//EncodeTokenCreateOpRet needs to have an overload for the extra params
-		return(FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, nonfungibleData)));
+		return(FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, nonfungibleData)));
 	}
 
     CCerror = "cant find normal inputs";
