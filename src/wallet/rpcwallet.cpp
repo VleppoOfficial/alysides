@@ -7427,7 +7427,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
         }
     }
 
-    hextx = CreateToken(0, supply, name, description, ownerperc, (uint8_t) tokentype, assettokenid, expiryTimeSec, nonfungibleData);
+    hextx = CreateToken(0, supply, name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, nonfungibleData);
     if( hextx.size() > 0 )     {
         result.push_back(Pair("result", "success"));
         result.push_back(Pair("hex", hextx));
