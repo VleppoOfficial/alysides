@@ -426,10 +426,11 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                 if (!tx.IsCoinImport())   {
 
                     vscript_t vorigPubkey;
-                    std::string  dummyName, dummyDescription;
+                    std::string  dummyName, dummyDescription, dummyTokenType;
+					uint256 dummyAssetTokenID; double dummyOwnerperc; int64_t dummyExpiryTimeSec;
                     std::vector<std::pair<uint8_t, vscript_t>>  oprets;
 
-                    if (DecodeTokenCreateOpRet(tx.vout.back().scriptPubKey, vorigPubkey, dummyName, dummyDescription, oprets) == 0) {
+                    if (DecodeTokenCreateOpRet(tx.vout.back().scriptPubKey, vorigPubkey, dummyName, dummyDescription, dummyOwnerperc, dummyTokenType, dummyAssetTokenID, dummyExpiryTimeSec, oprets) == 0) {
                         LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << indentStr << "IsTokensvout() could not decode create opret" << " for txid=" << tx.GetHash().GetHex() << " for tokenid=" << reftokenid.GetHex() << std::endl);
                         return 0;
                     }
@@ -981,12 +982,13 @@ int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 UniValue TokenInfo(uint256 tokenid)
 {
 	UniValue result(UniValue::VOBJ); 
-    uint256 hashBlock; 
+    uint256 hashBlock, assettokenid;
     CTransaction tokenbaseTx; 
     std::vector<uint8_t> origpubkey; 
     std::vector<std::pair<uint8_t, vscript_t>>  oprets;
     vscript_t vopretNonfungible;
-    std::string name, description; 
+    std::string name, description, tokentype; 
+	double ownerperc; int64_t expiryTimeSec;
     struct CCcontract_info *cpTokens, tokensCCinfo;
 
     cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
@@ -1004,7 +1006,7 @@ UniValue TokenInfo(uint256 tokenid)
         return(result);
     }
 
-	if (tokenbaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenbaseTx.vout[tokenbaseTx.vout.size() - 1].scriptPubKey, origpubkey, name, description, oprets) != 'c')
+	if (tokenbaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenbaseTx.vout[tokenbaseTx.vout.size() - 1].scriptPubKey, origpubkey, name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, oprets) != 'c')
 	{
         LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "TokenInfo() passed tokenid isnt token creation txid" << std::endl);
 		result.push_back(Pair("result", "error"));
@@ -1022,7 +1024,16 @@ UniValue TokenInfo(uint256 tokenid)
             supply += output;
 	result.push_back(Pair("supply", supply));
 	result.push_back(Pair("description", description));
-
+	result.push_back(Pair("tokentype", tokentype));
+	
+	if (tokentype == "m" || tokentype == "s") {
+		result.push_back(Pair("assettokenid", assettokenid.GetHex()));
+		result.push_back(Pair("expiryTimeSec", expiryTimeSec));
+	}
+	if (tokentype == "a") {
+		result.push_back(Pair("ownerperc", ownerperc));
+	}
+	
     GetOpretBlob(oprets, OPRETID_NONFUNGIBLEDATA, vopretNonfungible);
     if( !vopretNonfungible.empty() )    
         result.push_back(Pair("data", HexStr(vopretNonfungible)));
@@ -1072,13 +1083,14 @@ UniValue TokenList()
 
 	struct CCcontract_info *cp, C; uint256 txid, hashBlock;
 	CTransaction vintx; std::vector<uint8_t> origpubkey;
-	std::string name, description;
+	std::string name, description, tokentype;
+	double ownerperc; int64_t expiryTimeSec; uint256 assettokenid;
 
 	cp = CCinit(&C, EVAL_TOKENS);
 
     auto addTokenId = [&](uint256 txid) {
         if (GetTransaction(txid, vintx, hashBlock, false) != 0) {
-            if (vintx.vout.size() > 0 && DecodeTokenCreateOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey, origpubkey, name, description) != 0) {
+            if (vintx.vout.size() > 0 && DecodeTokenCreateOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey, origpubkey, name, description, ownerperc, tokentype, assettokenid, expiryTimeSec) != 0) {
                 result.push_back(txid.GetHex());
             }
         }
