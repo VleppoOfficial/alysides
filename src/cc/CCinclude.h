@@ -208,9 +208,6 @@ int32_t komodo_blockload(CBlock& block,CBlockIndex *pindex);
 
 CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, vscript_t vopretNonfungible);
 CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, std::vector<std::pair<uint8_t, vscript_t>> oprets);
-//new stuff
-CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description,double ownerperc, std::string tokentype, uint256 assettokenid, int64_t expiryTimeSec, vscript_t vopretNonfungible);
-CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 assettokenid, int64_t expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> oprets);
 
 CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::pair<uint8_t, vscript_t> opretWithId);
 CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> oprets);
