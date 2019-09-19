@@ -7353,6 +7353,9 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
     std::vector<uint8_t> nonfungibleData;
     int64_t supply; // changed from uin64_t to int64_t for this 'if ( supply <= 0 )' to work as expected
 
+  std::string tokentype; int64_t expiryTimeSec = 0; double ownerperc = 50.0; uint256 assettokenid = zeroid;
+
+
     CCerror.clear();
 
     if ( fHelp || params.size() > 4 || params.size() < 2 )
