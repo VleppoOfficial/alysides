@@ -871,7 +871,6 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 
 		//Eval code is EVAL_TOKENS
         uint8_t destEvalCode = EVAL_TOKENS;
-		
 		//If nonfungibleData exists, eval code is set to the one specified within nonfungibleData
         if( nonfungibleData.size() > 0 )
             destEvalCode = nonfungibleData.begin()[0];
