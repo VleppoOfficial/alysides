@@ -981,13 +981,13 @@ int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 UniValue TokenInfo(uint256 tokenid)
 {
 	UniValue result(UniValue::VOBJ); 
-    uint256 hashBlock; 
+    uint256 hashBlock, assettokenid;
     CTransaction tokenbaseTx; 
     std::vector<uint8_t> origpubkey; 
     std::vector<std::pair<uint8_t, vscript_t>>  oprets;
     vscript_t vopretNonfungible;
     std::string name, description, tokentype; 
-	double ownerperc; uint256 assettokenid; int64_t expiryTimeSec;
+	double ownerperc; int64_t expiryTimeSec;
     struct CCcontract_info *cpTokens, tokensCCinfo;
 
     cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
@@ -1026,7 +1026,7 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("tokentype", tokentype));
 	
 	if (tokentype == "m" || tokentype == "s") {
-		result.push_back(Pair("assettokenid", assettokenid));
+		result.push_back(Pair("assettokenid", assettokenid.GetHex()));
 		result.push_back(Pair("expiryTimeSec", expiryTimeSec));
 	}
 	if (tokentype != "c" && tokentype != "m") {
