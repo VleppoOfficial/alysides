@@ -804,13 +804,9 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	
 	//Checking if the specified tokensupply is valid.
 	if (tokensupply < 0)	{
-		
 		//Defining CCerror which will be returned to rpc interface
-		
         CCerror = "negative tokensupply";
-		
 		//LOGSTREAM is debugging info, not used in later CCs
-		
         LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() =" << CCerror << "=" << tokensupply << std::endl);
 		return std::string("");
 	}
@@ -866,7 +862,6 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	//We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
 	if (AddNormalinputs(mtx, mypk, tokensupply + 2 * txfee, 64) > 0)
 	{
-
 		// TotalPubkeyNormalInputs returns total of normal inputs signed with this pubkey
         int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
         if (mypkInputs < tokensupply) {     // check that tokens amount are really issued with mypk (because in the wallet there maybe other privkeys)
