@@ -986,7 +986,8 @@ UniValue TokenInfo(uint256 tokenid)
     std::vector<uint8_t> origpubkey; 
     std::vector<std::pair<uint8_t, vscript_t>>  oprets;
     vscript_t vopretNonfungible;
-    std::string name, description; 
+    std::string name, description, tokentype; 
+	double ownerperc; uint256 assettokenid; int64_t expiryTimeSec;
     struct CCcontract_info *cpTokens, tokensCCinfo;
 
     cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
