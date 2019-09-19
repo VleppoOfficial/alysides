@@ -1004,7 +1004,7 @@ UniValue TokenInfo(uint256 tokenid)
         return(result);
     }
 
-	if (tokenbaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenbaseTx.vout[tokenbaseTx.vout.size() - 1].scriptPubKey, origpubkey, name, description, oprets) != 'c')
+	if (tokenbaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenbaseTx.vout[tokenbaseTx.vout.size() - 1].scriptPubKey, origpubkey, name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, oprets) != 'c')
 	{
         LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "TokenInfo() passed tokenid isnt token creation txid" << std::endl);
 		result.push_back(Pair("result", "error"));
@@ -1022,7 +1022,16 @@ UniValue TokenInfo(uint256 tokenid)
             supply += output;
 	result.push_back(Pair("supply", supply));
 	result.push_back(Pair("description", description));
-
+	result.push_back(Pair("tokentype", tokentype));
+	
+	if (tokentype == "m" || tokentype == "s") {
+		result.push_back(Pair("assettokenid", assettokenid));
+		result.push_back(Pair("expiryTimeSec", expiryTimeSec));
+	}
+	if (tokentype != "c" && tokentype != "m") {
+		result.push_back(Pair("ownerperc", ownerperc));
+	}
+	
     GetOpretBlob(oprets, OPRETID_NONFUNGIBLEDATA, vopretNonfungible);
     if( !vopretNonfungible.empty() )    
         result.push_back(Pair("data", HexStr(vopretNonfungible)));
