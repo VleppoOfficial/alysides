@@ -426,10 +426,11 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                 if (!tx.IsCoinImport())   {
 
                     vscript_t vorigPubkey;
-                    std::string  dummyName, dummyDescription;
+                    std::string  dummyName, dummyDescription, dummyTokenType;
+					uint256 dummyAssetTokenID; double dummyOwnerperc; int64_t dummyExpiryTimeSec;
                     std::vector<std::pair<uint8_t, vscript_t>>  oprets;
 
-                    if (DecodeTokenCreateOpRet(tx.vout.back().scriptPubKey, vorigPubkey, dummyName, dummyDescription, oprets) == 0) {
+                    if (DecodeTokenCreateOpRet(tx.vout.back().scriptPubKey, vorigPubkey, dummyName, dummyDescription, dummyOwnerperc, dummyTokenType, dummyAssetTokenID, dummyExpiryTimeSec, oprets) == 0) {
                         LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << indentStr << "IsTokensvout() could not decode create opret" << " for txid=" << tx.GetHash().GetHex() << " for tokenid=" << reftokenid.GetHex() << std::endl);
                         return 0;
                     }
@@ -1029,7 +1030,7 @@ UniValue TokenInfo(uint256 tokenid)
 		result.push_back(Pair("assettokenid", assettokenid.GetHex()));
 		result.push_back(Pair("expiryTimeSec", expiryTimeSec));
 	}
-	if (tokentype != "c" && tokentype != "m") {
+	if (tokentype == "a") {
 		result.push_back(Pair("ownerperc", ownerperc));
 	}
 	
