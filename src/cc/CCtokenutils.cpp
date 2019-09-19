@@ -221,9 +221,10 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
 {
     vscript_t vopret, vblob, dummyPubkey, vnonfungibleDummy;
     uint8_t funcId = 0, *script, dummyEvalCode, dummyFuncId, ccType, opretId = 0;
-    std::string dummyName; std::string dummyDescription;
-    uint256 dummySrcTokenId;
+    std::string dummyName; std::string dummyDescription, dummyTokenType;
+    uint256 dummySrcTokenId, dummyAssetTokenID;
     CPubKey voutPubkey1, voutPubkey2;
+	double dummyOwnerperc; int64_t dummyExpiryTimeSec;
 
     vscript_t voldstyledata;
     bool foundOldstyle = false;
@@ -247,7 +248,8 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
         switch (funcId)
         {
         case 'c':
-            return DecodeTokenCreateOpRet(scriptPubKey, dummyPubkey, dummyName, dummyDescription, oprets);
+		
+            return DecodeTokenCreateOpRet(scriptPubKey, dummyPubkey, dummyName, dummyDescription, dummyOwnerperc, dummyTokenType, dummyAssetTokenID, dummyExpiryTimeSec, oprets);
 
         case 't':
            
