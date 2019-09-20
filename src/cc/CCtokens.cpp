@@ -865,7 +865,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 				if ((output = IsTokensvout(false, true, cp, NULL, reftokentx, v, referencetokenid)) > 0)
 					refTokenSupply += output;
 			}
-			std::cerr << indentStr << "supply=" << refTokenSupply << std::endl;
+			std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << GetTokenBalance(mypk, referencetokenid) << std::endl;
 		}
 		else
 		{
