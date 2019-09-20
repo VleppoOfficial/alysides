@@ -870,7 +870,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		
 		
 		//checking if referencetokenid exists
-        if ((GetTransaction(referencetokenid, reftokentx, hashBlock, false) != 0) || referencetokenid.GetHex() != 0000000000000000000000000000000000000000000000000000000000000000)
+        if ((GetTransaction(referencetokenid, reftokentx, hashBlock, false) != 0) || referencetokenid.GetHex() != zeroid.GetHex())
 		{
 			//calculating referencetokenid supply
 			refTokenSupply = 0;
