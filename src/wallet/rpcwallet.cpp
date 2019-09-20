@@ -7391,7 +7391,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
     }
 	
 	if (params.size() >= 5)     {
-		if((tokentype == "m" || tokentype == "s") {
+		if (tokentype == "m" || tokentype == "s") {
 			referencetokenid = Parseuint256((char *)params[4].get_str().c_str());
 			if (referencetokenid == zeroid)    {
 				ERR_RESULT("invalid reference tokenid");
