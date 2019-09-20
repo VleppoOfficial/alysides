@@ -802,7 +802,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	
 	//reference transaction for asset/master license types
 	CTransaction reftokentx; uint256 hashBlock;
-	std::vector<uint8_t> dummyPubkey; int64_t dummyTokensupply, refExpiryTimeSec;
+	std::vector<uint8_t> dummyPubkey; int64_t refTokenSupply, refExpiryTimeSec, 
 	std::string dummyName, dummyDescription, refTokenType;
 	double refOwnerperc; uint256 dummyAssettokenid;
 	
@@ -855,7 +855,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         if (GetTransaction(referencetokenid, reftokentx, hashBlock, false) != 0)
 		{
 			//calculating referencetokenid supply
-			int64_t refTokenSupply = 0, output;
+			refTokenSupply = 0, output;
 			for (int v = 0; v < reftokentx.vout.size() - 1; v++) {
 				if ((output = IsTokensvout(false, true, cp, NULL, reftokentx, v, referencetokenid)) > 0)
 					refTokenSupply += output;
