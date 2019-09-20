@@ -850,7 +850,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         return std::string("");
     }
 	
-	std::cerr << indentStr << "reftokenid=" << referencetokenid.GetHex() << std::endl;
+	std::cerr << indentStr << "reftokenid=" << referencetokenid.GetHex() << "zeroid=" << zeroid.GetHex() << std::endl;
 	
 	//If token is "m" or "s"
 	if (tokentype == "m" || tokentype == "s") {
@@ -870,7 +870,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		
 		
 		//checking if referencetokenid exists
-        if (GetTransaction(referencetokenid, reftokentx, hashBlock, false) != 0)
+        if ((GetTransaction(referencetokenid, reftokentx, hashBlock, false) != 0) || referencetokenid.GetHex() != 0000000000000000000000000000000000000000000000000000000000000000)
 		{
 			//calculating referencetokenid supply
 			refTokenSupply = 0;
