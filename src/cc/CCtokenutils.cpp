@@ -192,7 +192,7 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
     uint8_t dummyEvalcode, funcid, opretId = 0;
 	std::string dummyTokentype; uint256 dummyAssettokenid; 
 	double dummyOwnerperc; int64_t dummyExpiryTimeSec;
-	return DecodeTokenCreateOpRet(scriptPubKey, origpubkey, name, description, dummyOwnerperc, dummyTokentype, dummyAssettokenid, dummyExpiryTimeSec, opretsDummy);
+	return DecodeTokenCreateOpRet(scriptPubKey, origpubkey, name, description, dummyOwnerperc, dummyTokentype, dummyAssettokenid, dummyExpiryTimeSec, oprets);
 
     /*GetOpReturnData(scriptPubKey, vopret);
     oprets.clear();
