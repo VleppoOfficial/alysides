@@ -868,10 +868,13 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		
 		//checking if referencetokenid exists
 		
-        if (GetTransaction(referencetokenid, reftokentx, hashBlock, false) == 0)
+        if (!GetTransaction(referencetokenid, reftokentx, hashBlock, false))
 		{
-			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "cant find tokenid" << std::endl);
+			/*LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "cant find tokenid" << std::endl);
 			CCerror = strprintf("cant find tokenid");
+			return 0;*/
+			CCerror = "cant find tokenid";
+			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return 0;
 		}
 		
