@@ -850,7 +850,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         return std::string("");
     }
 	
-	std::cerr << indentStr << "reftokenid=" << referencetokenid.GetHex() << " GetTransactionOutput=" << GetTransaction(referencetokenid, reftokentx, hashBlock, false) << std::endl;
+	//std::cerr << indentStr << "reftokenid=" << referencetokenid.GetHex() << " GetTransactionOutput=" << GetTransaction(referencetokenid, reftokentx, hashBlock, false) << std::endl;
 	
 	//If token is "m" or "s"
 	if (tokentype == "m" || tokentype == "s") {
@@ -859,39 +859,13 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			expiryTimeSec = 31536000;
 		}
 		
-		//checking if a referencetokenid is defined
-		if (referencetokenid.GetHex() == zeroid.GetHex()) {
-			CCerror = "license type tokens require a reference tokenid";
-			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-			return std::string("");
-		}
-		
 		//checking if referencetokenid exists
-		
-		
         if (!GetTransaction(referencetokenid, reftokentx, hashBlock, false))
 		{
-			/*LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "cant find tokenid" << std::endl);
-			CCerror = strprintf("cant find tokenid");
-			return 0;*/
 			CCerror = "cant find reference tokenid";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return std::string("");
 		}
-		
-		/*if( !GetTransaction(tokenid, tokenbaseTx, hashBlock, false) )
-		{
-			fprintf(stderr, "TokenInfo() cant find tokenid\n");
-			result.push_back(Pair("result", "error"));
-			result.push_back(Pair("error", "cant find tokenid"));
-			return(result);
-		}
-		if (hashBlock.IsNull()) {
-			result.push_back(Pair("result", "error"));
-			result.push_back(Pair("error", "the transaction is still in mempool"));
-			return(result);
-		}*/
-		
 		else
 		{	//calculating referencetokenid supply
 			refTokenSupply = 0;
@@ -912,7 +886,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			return std::string("");
 		}
 		
-		std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << ownedRefTokenBalance << "refownerperc=" << refOwnerperc << "ownedRefTokenperc=" << ownedRefTokenPerc << std::endl;
+		//std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << ownedRefTokenBalance << "refownerperc=" << refOwnerperc << "ownedRefTokenperc=" << ownedRefTokenPerc << std::endl;
 		
 		//master licenses must reference digital assets owned by the same pubkey
 		if (tokentype == "m" && (refTokenType != "a" || ownedRefTokenPerc < refOwnerperc))
@@ -929,8 +903,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			return std::string("");
 		}
 		//Todo:
-		// if type is "m", pass referencetokenid opret and check if type is 'a'. If it isn't, throw error
-		// if type is "s", pass referencetokenid opret and check if type is 'm' and it hasn't expired yet. If it isn't, throw error
+		// if type is "s", check if type is 'm' and it hasn't expired yet. If it isn't, throw error
     }
 	
 	//We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
