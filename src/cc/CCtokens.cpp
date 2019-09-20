@@ -856,6 +856,17 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		if (expiryTimeSec == 0) {
 			expiryTimeSec = 31536000;
 		}
+		
+		
+		/*if (GetTransaction(tokenid, tokentx, hashBlock, false) == 0)
+		{
+			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "cant find tokenid" << std::endl);
+			CCerror = strprintf("cant find tokenid");
+			return 0;
+		}
+		*/
+		
+		
 		//checking if referencetokenid exists
         if (GetTransaction(referencetokenid, reftokentx, hashBlock, false) != 0)
 		{
@@ -869,8 +880,11 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		}
 		else
 		{
-			CCerror = "cannot find reference tokenid";
+			/*CCerror = "cannot find reference tokenid";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+			return 0;*/
+			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "cant find tokenid" << std::endl);
+			CCerror = strprintf("cant find tokenid");
 			return 0;
 		}
 		
@@ -884,7 +898,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			return 0;
 		}
 		
-		std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << ownedRefTokenBalance << "refownerperc=" << refOwnerperc << "ownedRefTokenperc=" << ownedRefTokenPerc << std::endl;
+		std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << ownedRefTokenBalance << "refownerperc=" << refOwnerperc << "ownedRefTokenperc=" << ownedRefTokenperc << std::endl;
 		
 		//master licenses must reference digital assets owned by the same pubkey
 		if (tokentype == "m" && (refTokenType != "a" || ownedRefTokenPerc < refOwnerperc))
