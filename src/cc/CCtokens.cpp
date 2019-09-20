@@ -924,7 +924,7 @@ int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 
 UniValue TokenInfo(uint256 tokenid)
 {
-    uint64_t durationSec = 0
+    
 
 	UniValue result(UniValue::VOBJ); 
     uint256 hashBlock, assettokenid;
@@ -965,7 +965,12 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("name", name));
     result.push_back(Pair("expiryTimeSec", expiryTimeSec));
 
-	if (durationSec <= expiryTimeSec) {
+	//uint64_t durationSec = 0 
+		
+	
+	//if (durationSec <= expiryTimeSec) {
+
+        durationSec = CCduration(numblocks, tokenid);
         stream << durationSec;
         result.push_back(Pair("Duration", stream.str().c_str()));
         stream.str("");
