@@ -965,17 +965,19 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("name", name));
     result.push_back(Pair("expiryTimeSec", expiryTimeSec));
 
+	
 	//uint64_t durationSec = 0 
 		
 	
 	//if (durationSec <= expiryTimeSec) {
 
-        durationSec = CCduration(numblocks, tokenid);
+    /*    durationSec = CCduration(numblocks, tokenid);
         stream << durationSec;
         result.push_back(Pair("Duration", stream.str().c_str()));
         stream.str("");
-        stream.clear();
+        stream.clear();*/
 
+    uint64_t durationSec = 0;
     int64_t supply = 0, output;
     for (int v = 0; v < tokenbaseTx.vout.size() - 1; v++)
         if ((output = IsTokensvout(false, true, cpTokens, NULL, tokenbaseTx, v, tokenid)) > 0)
@@ -985,8 +987,13 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("tokentype", tokentype));
 	
 	if (tokentype == "m" || tokentype == "s") {
-		result.push_back(Pair("assettokenid", assettokenid.GetHex()));
-		result.push_back(Pair("expiryTimeSec", expiryTimeSec));
+        durationSec = CCduration(numblocks, tokenid);
+        stream << durationSec;
+        result.push_back(Pair("assettokenid", assettokenid.GetHex()));
+        result.push_back(Pair("expiryTimeSec", expiryTimeSec));
+        result.push_back(Pair("Duration", durationSec));
+        stream.str("");
+        stream.clear();
 	}
 	if (tokentype == "a") {
 		result.push_back(Pair("ownerperc", ownerperc));
