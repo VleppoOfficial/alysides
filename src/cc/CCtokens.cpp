@@ -857,10 +857,9 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			//calculating referencetokenid supply
 			int64_t refTokenSupply = 0, output;
 			for (int v = 0; v < reftokentx.vout.size() - 1; v++) {
-				if ((output = IsTokensvout(false, true, cpTokens, NULL, reftokentx, v, referencetokenid)) > 0)
+				if ((output = IsTokensvout(false, true, cp, NULL, reftokentx, v, referencetokenid)) > 0)
 					refTokenSupply += output;
 			}
-			std::cerr << indentStr; fprintf(stderr,"Reftokensupply is %d",refTokenSupply);
 		}
 		else
 		{
@@ -880,14 +879,14 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		
 		if (tokentype == "m" && refTokenType != "a" && (GetTokenBalance(mypk, referencetokenid) / refTokenSupply * 100) > refOwnerperc)
 		{
-			CCerror = "for master license tokens reference tokenid must be of type 'a'";
+			CCerror = "for master license tokens reference tokenid must be of type 'a' and owned by this pubkey";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return 0;
 		}
 		//sub-licenses must reference unexpired master licenses owned by the same pubkey
 		if (tokentype == "s" && refTokenType != "m" && (GetTokenBalance(mypk, referencetokenid) / refTokenSupply * 100) > refOwnerperc) //check for license expiry as well
 		{
-			CCerror = "for sub-license tokens reference tokenid must be unexpired and of type 'm'";
+			CCerror = "for sub-license tokens reference tokenid must be of type 'm', unexpired and owned by this pubkey";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return 0;
 		}
