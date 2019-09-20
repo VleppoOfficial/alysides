@@ -865,7 +865,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 				if ((output = IsTokensvout(false, true, cp, NULL, reftokentx, v, referencetokenid)) > 0)
 					refTokenSupply += output;
 			}
-			std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << GetTokenBalance(mypk, referencetokenid) << std::endl;
+			//std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << GetTokenBalance(mypk, referencetokenid) << std::endl;
 		}
 		else
 		{
@@ -874,7 +874,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			return 0;
 		}
 		
-		double ownedRefTokenperc = (GetTokenBalance(mypk, referencetokenid) / refTokenSupply * 100);
+		double ownedRefTokenBalance = GetTokenBalance(mypk, referencetokenid), ownedRefTokenPerc = (ownedRefTokenBalance / refTokenSupply * 100);
 		
 		//checking reference tokenid opret
 		if (reftokentx.vout.size() > 0 && DecodeTokenCreateOpRet(reftokentx.vout[reftokentx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerperc, refTokenType, dummyAssettokenid, refExpiryTimeSec) != 'c')
@@ -884,17 +884,17 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			return 0;
 		}
 		
-		std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << GetTokenBalance(mypk, referencetokenid) << "refownerperc=" << refOwnerperc << "ownedRefTokenperc=" << ownedRefTokenperc << std::endl;
+		std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << ownedRefTokenBalance << "refownerperc=" << refOwnerperc << "ownedRefTokenperc=" << ownedRefTokenperc << std::endl;
 		
 		//master licenses must reference digital assets owned by the same pubkey
-		if (tokentype == "m" && refTokenType != "a" && ownedRefTokenperc < refOwnerperc)
+		if (tokentype == "m" && (refTokenType != "a" || ownedRefTokenPerc < refOwnerperc))
 		{
 			CCerror = "for master license tokens reference tokenid must be of type 'a' and owned by this pubkey";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return 0;
 		}
 		//sub-licenses must reference unexpired master licenses owned by the same pubkey
-		if (tokentype == "s" && refTokenType != "m" && ownedRefTokenperc < refOwnerperc) //check for license expiry as well
+		if (tokentype == "s" && (refTokenType != "m" || ownedRefTokenPerc < refOwnerperc)) //check for license expiry as well
 		{
 			CCerror = "for sub-license tokens reference tokenid must be of type 'm', unexpired and owned by this pubkey";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
