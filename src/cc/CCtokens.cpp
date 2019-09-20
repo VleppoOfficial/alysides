@@ -850,8 +850,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         return std::string("");
     }
 	
-	bool getRefTx = GetTransaction(referencetokenid, reftokentx, hashBlock, false);
-	std::cerr << indentStr << "reftokenid=" << referencetokenid.GetHex() << " GetTransactionOutput=" << getRefTx << std::endl;
+	std::cerr << indentStr << "reftokenid=" << referencetokenid.GetHex() << " GetTransactionOutput=" << GetTransaction(referencetokenid, reftokentx, hashBlock, false) << std::endl;
 	
 	//If token is "m" or "s"
 	if (tokentype == "m" || tokentype == "s") {
@@ -870,14 +869,14 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		//checking if referencetokenid exists
 		
 		
-        if (getRefTx == 0)
+        if (!GetTransaction(referencetokenid, reftokentx, hashBlock, false))
 		{
 			/*LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "cant find tokenid" << std::endl);
 			CCerror = strprintf("cant find tokenid");
 			return 0;*/
-			CCerror = "cant find tokenid";
+			CCerror = "cant find reference tokenid";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-			return 0;
+			return std::string("");
 		}
 		
 		/*if( !GetTransaction(tokenid, tokenbaseTx, hashBlock, false) )
