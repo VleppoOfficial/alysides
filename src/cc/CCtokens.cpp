@@ -884,7 +884,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			return 0;
 		}
 		
-		std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << ownedRefTokenBalance << "refownerperc=" << refOwnerperc << "ownedRefTokenperc=" << ownedRefTokenperc << std::endl;
+		std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << ownedRefTokenBalance << "refownerperc=" << refOwnerperc << "ownedRefTokenperc=" << ownedRefTokenPerc << std::endl;
 		
 		//master licenses must reference digital assets owned by the same pubkey
 		if (tokentype == "m" && (refTokenType != "a" || ownedRefTokenPerc < refOwnerperc))
