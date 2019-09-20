@@ -874,7 +874,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			return 0;
 		}
 		
-		double ownedRefTokenperc = (GetTokenBalance(mypk, referencetokenid) / refTokenSupply * 100)
+		double ownedRefTokenperc = (GetTokenBalance(mypk, referencetokenid) / refTokenSupply * 100);
 		
 		//checking reference tokenid opret
 		if (reftokentx.vout.size() > 0 && DecodeTokenCreateOpRet(reftokentx.vout[reftokentx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerperc, refTokenType, dummyAssettokenid, refExpiryTimeSec) != 'c')
