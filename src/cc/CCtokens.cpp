@@ -822,7 +822,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         uint8_t destEvalCode = EVAL_TOKENS;
 
 		//If nonfungibleData exists, eval code is set to the one specified within nonfungibleData
-=======
+
 
         if( nonfungibleData.size() > 0 )
             destEvalCode = nonfungibleData.begin()[0];
@@ -985,12 +985,12 @@ UniValue TokenInfo(uint256 tokenid)
 	
 	if (tokentype == "m" || tokentype == "s") { 
         durationSec = CCduration(numblocks, tokenid); // VP added
-        //stream << durationSec;  // VP added
+       // stream << durationSec;  // VP added
         result.push_back(Pair("assettokenid", assettokenid.GetHex()));
         result.push_back(Pair("expiryTimeSec", expiryTimeSec));
         result.push_back(Pair("Duration", durationSec)); // VP added
-        stream.str(""); // VP added
-        stream.clear(); // VP added
+        //stream.str(""); // VP added
+        //stream.clear(); // VP added
 	}
 	if (tokentype == "a") {
 		result.push_back(Pair("ownerperc", ownerperc));
