@@ -7352,12 +7352,12 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
     std::string name, description, hextx; 
     std::vector<uint8_t> nonfungibleData;
     int64_t supply; // changed from uin64_t to int64_t for this 'if ( supply <= 0 )' to work as expected
-	std::string tokentype; int64_t expiryTimeSec = 0; double ownerperc = 50.0; uint256 assettokenid = zeroid;
+	std::string tokentype; int64_t expiryTimeSec = 0; double ownerperc = 50.0; uint256 referencetokenid = zeroid;
 
     CCerror.clear();
 
     if ( fHelp || params.size() > 8 || params.size() < 3 )
-        throw runtime_error("tokencreate name supply tokentype [description][assettokenid][expirytime][ownerperc][data]\n");
+        throw runtime_error("tokencreate name supply tokentype [description][referencetokenid][expirytime][ownerperc][data]\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
         throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
     
@@ -7391,8 +7391,8 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
     }
 	
 	if (params.size() >= 5)     {
-		assettokenid = Parseuint256((char *)params[4].get_str().c_str());
-		if((tokentype == "m" || tokentype == "s") && assettokenid == zeroid)    {
+		referencetokenid = Parseuint256((char *)params[4].get_str().c_str());
+		if((tokentype == "m" || tokentype == "s") && referencetokenid == zeroid)    {
 			ERR_RESULT("invalid reference tokenid");
 			return(result);
 		}
@@ -7427,7 +7427,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
         }
     }
 
-    hextx = CreateToken(0, supply, name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, nonfungibleData);
+    hextx = CreateToken(0, supply, name, description, ownerperc, tokentype, referencetokenid, expiryTimeSec, nonfungibleData);
     if( hextx.size() > 0 )     {
         result.push_back(Pair("result", "success"));
         result.push_back(Pair("hex", hextx));

@@ -783,7 +783,7 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey) {
 }
 
 // returns token creation signed raw tx
-std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 assettokenid, int64_t expiryTimeSec, vscript_t nonfungibleData)
+std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 referencetokenid, int64_t expiryTimeSec, vscript_t nonfungibleData)
 {
 	//Create a mutable version of a transaction object.
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
@@ -801,10 +801,10 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	mypk = pubkey2pk(Mypubkey());
 	
 	//reference transaction for asset/master license types
-	CTransaction tokentx; uint256 hashBlock;
+	CTransaction reftokentx; uint256 hashBlock;
 	std::vector<uint8_t> dummyPubkey; int64_t dummyTokensupply, refExpiryTimeSec;
 	std::string dummyName, dummyDescription, refTokenType;
-	double dummyOwnerperc; uint256 dummyAssettokenid;
+	double refOwnerperc; uint256 dummyAssettokenid;
 	
 	//Checking if the specified tokensupply is valid.
 	if (tokensupply < 0)	{
@@ -851,34 +851,49 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		if (expiryTimeSec == 0) {
 			expiryTimeSec = 31536000;
 		}
-		//checking if reference assettokenid exists
-        if (GetTransaction(assettokenid, tokentx, hashBlock, false) == 0)
+		//checking if referencetokenid exists
+        if (GetTransaction(referencetokenid, reftokentx, hashBlock, false) != 0)
+		{
+			//calculating referencetokenid supply
+			int64_t refTokenSupply = 0, output;
+			for (int v = 0; v < reftokentx.vout.size() - 1; v++) {
+				if ((output = IsTokensvout(false, true, cpTokens, NULL, reftokentx, v, referencetokenid)) > 0)
+					refTokenSupply += output;
+			}
+			std::cerr << indentStr; fprintf(stderr,"Reftokensupply is %d",refTokenSupply);
+		}
+		else
 		{
 			CCerror = "cannot find reference tokenid";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return 0;
 		}
-		if (tokentx.vout.size() > 0 && DecodeTokenCreateOpRet(tokentx.vout[tokentx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, dummyOwnerperc, refTokenType, dummyAssettokenid, refExpiryTimeSec) != 'c')
+		
+		//checking reference tokenid opret
+		if (reftokentx.vout.size() > 0 && DecodeTokenCreateOpRet(reftokentx.vout[reftokentx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerperc, refTokenType, dummyAssettokenid, refExpiryTimeSec) != 'c')
 		{
 			CCerror = "reference tokenid isn't token creation txid";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return 0;
 		}
-		if (tokentype == "m" && refTokenType != "a")
+		//master licenses must reference digital assets owned by the same pubkey
+		
+		if (tokentype == "m" && refTokenType != "a" && (GetTokenBalance(mypk, referencetokenid) / refTokenSupply * 100) > refOwnerperc)
 		{
 			CCerror = "for master license tokens reference tokenid must be of type 'a'";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return 0;
 		}
-		if (tokentype == "s" && refTokenType != "m") //check for license expiry as well
+		//sub-licenses must reference unexpired master licenses owned by the same pubkey
+		if (tokentype == "s" && refTokenType != "m" && (GetTokenBalance(mypk, referencetokenid) / refTokenSupply * 100) > refOwnerperc) //check for license expiry as well
 		{
 			CCerror = "for sub-license tokens reference tokenid must be unexpired and of type 'm'";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return 0;
 		}
 		//Todo:
-		// if type is "m", pass assettokenid opret and check if type is 'a'. If it isn't, throw error
-		// if type is "s", pass assettokenid opret and check if type is 'm' and it hasn't expired yet. If it isn't, throw error
+		// if type is "m", pass referencetokenid opret and check if type is 'a'. If it isn't, throw error
+		// if type is "s", pass referencetokenid opret and check if type is 'm' and it hasn't expired yet. If it isn't, throw error
     }
 	
 	//We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
@@ -911,7 +926,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		Also, an opreturn object with the data from this module instance is passed.
 		*/
 		//EncodeTokenCreateOpRet needs to have an overload for the extra params
-		return(FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, nonfungibleData)));
+		return(FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, ownerperc, tokentype, referencetokenid, expiryTimeSec, nonfungibleData)));
 	}
 
     CCerror = "cant find normal inputs";
@@ -1003,7 +1018,7 @@ int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 UniValue TokenInfo(uint256 tokenid)
 {
 	UniValue result(UniValue::VOBJ); 
-    uint256 hashBlock, assettokenid;
+    uint256 hashBlock, referencetokenid;
     CTransaction tokenbaseTx; 
     std::vector<uint8_t> origpubkey; 
     std::vector<std::pair<uint8_t, vscript_t>>  oprets;
@@ -1027,7 +1042,7 @@ UniValue TokenInfo(uint256 tokenid)
         return(result);
     }
 
-	if (tokenbaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenbaseTx.vout[tokenbaseTx.vout.size() - 1].scriptPubKey, origpubkey, name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, oprets) != 'c')
+	if (tokenbaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenbaseTx.vout[tokenbaseTx.vout.size() - 1].scriptPubKey, origpubkey, name, description, ownerperc, tokentype, referencetokenid, expiryTimeSec, oprets) != 'c')
 	{
         LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "TokenInfo() passed tokenid isnt token creation txid" << std::endl);
 		result.push_back(Pair("result", "error"));
@@ -1048,7 +1063,7 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("tokentype", tokentype));
 	
 	if (tokentype == "m" || tokentype == "s") {
-		result.push_back(Pair("assettokenid", assettokenid.GetHex()));
+		result.push_back(Pair("referencetokenid", referencetokenid.GetHex()));
 		result.push_back(Pair("expiryTimeSec", expiryTimeSec));
 	}
 	if (tokentype == "a") {
@@ -1105,13 +1120,13 @@ UniValue TokenList()
 	struct CCcontract_info *cp, C; uint256 txid, hashBlock;
 	CTransaction vintx; std::vector<uint8_t> origpubkey;
 	std::string name, description, tokentype;
-	double ownerperc; int64_t expiryTimeSec; uint256 assettokenid;
+	double ownerperc; int64_t expiryTimeSec; uint256 referencetokenid;
 
 	cp = CCinit(&C, EVAL_TOKENS);
 
     auto addTokenId = [&](uint256 txid) {
         if (GetTransaction(txid, vintx, hashBlock, false) != 0) {
-            if (vintx.vout.size() > 0 && DecodeTokenCreateOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey, origpubkey, name, description, ownerperc, tokentype, assettokenid, expiryTimeSec) != 0) {
+            if (vintx.vout.size() > 0 && DecodeTokenCreateOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey, origpubkey, name, description, ownerperc, tokentype, referencetokenid, expiryTimeSec) != 0) {
                 result.push_back(txid.GetHex());
             }
         }
