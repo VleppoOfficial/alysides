@@ -924,6 +924,8 @@ int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 
 UniValue TokenInfo(uint256 tokenid)
 {
+    uint64_t durationSec = 0
+
 	UniValue result(UniValue::VOBJ); 
     uint256 hashBlock, assettokenid;
     CTransaction tokenbaseTx; 
@@ -933,6 +935,7 @@ UniValue TokenInfo(uint256 tokenid)
     std::string name, description, tokentype; 
 	double ownerperc; int64_t expiryTimeSec;
     struct CCcontract_info *cpTokens, tokensCCinfo;
+
 
     cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
 
@@ -960,6 +963,13 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("tokenid", tokenid.GetHex()));
 	result.push_back(Pair("owner", HexStr(origpubkey)));
 	result.push_back(Pair("name", name));
+    result.push_back(Pair("expiryTimeSec", expiryTimeSec));
+
+	if (durationSec <= expiryTimeSec) {
+        stream << durationSec;
+        result.push_back(Pair("Duration", stream.str().c_str()));
+        stream.str("");
+        stream.clear();
 
     int64_t supply = 0, output;
     for (int v = 0; v < tokenbaseTx.vout.size() - 1; v++)
