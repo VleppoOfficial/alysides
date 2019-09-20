@@ -73,8 +73,10 @@ CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, 
     CScript opret;
     uint8_t evalcode = EVAL_TOKENS;
     funcid = 'c'; // override the param
+	std::string dummyTokenType; int64_t dummyExpiryTimeSec;
+	double dummyOwnerperc; uint256 dummyAssettokenid;
 
-    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << name << description << 50 << "a" << "" << 0;
+    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << name << description << dummyOwnerperc << dummyTokenType << dummyAssettokenid << dummyExpiryTimeSec;
     for (auto o : oprets) {
         if (o.first != 0) {
             ss << (uint8_t)o.first;
