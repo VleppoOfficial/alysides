@@ -802,7 +802,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	
 	//reference transaction for asset/master license types
 	CTransaction reftokentx; uint256 hashBlock;
-	std::vector<uint8_t> dummyPubkey; int64_t refTokenSupply, refExpiryTimeSec, 
+	std::vector<uint8_t> dummyPubkey; int64_t refTokenSupply, refExpiryTimeSec;
 	std::string dummyName, dummyDescription, refTokenType;
 	double refOwnerperc; uint256 dummyAssettokenid;
 	
