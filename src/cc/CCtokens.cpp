@@ -850,6 +850,8 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         return std::string("");
     }
 	
+	std::cerr << indentStr << "reftokenid=" << referencetokenid << std::endl;
+	
 	//If token is "m" or "s"
 	if (tokentype == "m" || tokentype == "s") {
 		//Check if expirytime for master and sublicense types exists. If not defined, set it to 31536000 seconds.
@@ -876,7 +878,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 				if ((output = IsTokensvout(false, true, cp, NULL, reftokentx, v, referencetokenid)) > 0)
 					refTokenSupply += output;
 			}
-			//std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << GetTokenBalance(mypk, referencetokenid) << std::endl;
+			
 		}
 		else
 		{
