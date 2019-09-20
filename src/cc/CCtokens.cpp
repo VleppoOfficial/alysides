@@ -1030,8 +1030,8 @@ UniValue TokenInfo(uint256 tokenid)
 		
 	
 	
-    
-	int32_t numblocks; // VP added newest
+    uint64_t timeleft;// added for timeleft
+	int32_t numblocks; // VP added 
     uint64_t durationSec = 0; // VP added
     int64_t supply = 0, output;
     for (int v = 0; v < tokenbaseTx.vout.size() - 1; v++)
@@ -1043,10 +1043,11 @@ UniValue TokenInfo(uint256 tokenid)
 	
 	if (tokentype == "m" || tokentype == "s") { 
         durationSec = CCduration(numblocks, tokenid); // VP added
+        timeleft = expiryTimeSec - durationSec; // added to caculate time left
        // stream << durationSec;  // VP added
         result.push_back(Pair("assettokenid", assettokenid.GetHex()));
         result.push_back(Pair("expiryTimeSec", expiryTimeSec));
-        result.push_back(Pair("Duration", durationSec)); // VP added
+        result.push_back(Pair("Timeleft", timeleft)); // VP changed durationsec to timeleft
         //stream.str(""); // VP added
         //stream.clear(); // VP added
 	}
