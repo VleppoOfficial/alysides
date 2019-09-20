@@ -859,35 +859,28 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			expiryTimeSec = 31536000;
 		}
 		
+		//checking if a referencetokenid is defined
+		if (referencetokenid.GetHex() == zeroid.GetHex()) {
+			CCerror = "license type tokens require a reference tokenid";
+			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+			return std::string("");
+		}
 		
-		/*if (GetTransaction(tokenid, tokentx, hashBlock, false) == 0)
+		//checking if referencetokenid exists
+        if (GetTransaction(referencetokenid, reftokentx, hashBlock, false) == 0)
 		{
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "cant find tokenid" << std::endl);
 			CCerror = strprintf("cant find tokenid");
 			return 0;
 		}
-		*/
-		
-		
-		//checking if referencetokenid exists
-        if ((GetTransaction(referencetokenid, reftokentx, hashBlock, false) != 0) || referencetokenid.GetHex() != zeroid.GetHex())
-		{
-			//calculating referencetokenid supply
+		else
+		{	//calculating referencetokenid supply
 			refTokenSupply = 0;
 			for (int v = 0; v < reftokentx.vout.size() - 1; v++) {
 				if ((output = IsTokensvout(false, true, cp, NULL, reftokentx, v, referencetokenid)) > 0)
 					refTokenSupply += output;
 			}
 			
-		}
-		else
-		{
-			/*CCerror = "cannot find reference tokenid";
-			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-			return 0;*/
-			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "cant find tokenid" << std::endl);
-			CCerror = strprintf("cant find tokenid");
-			return 0;
 		}
 		
 		double ownedRefTokenBalance = GetTokenBalance(mypk, referencetokenid), ownedRefTokenPerc = (ownedRefTokenBalance / refTokenSupply * 100);
