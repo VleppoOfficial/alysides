@@ -909,7 +909,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		{
 			CCerror = "reference tokenid isn't token creation txid";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-			return 0;
+			return std::string("");
 		}
 		
 		std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << ownedRefTokenBalance << "refownerperc=" << refOwnerperc << "ownedRefTokenperc=" << ownedRefTokenPerc << std::endl;
@@ -919,14 +919,14 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		{
 			CCerror = "for master license tokens reference tokenid must be of type 'a' and owned by this pubkey";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-			return 0;
+			return std::string("");
 		}
 		//sub-licenses must reference unexpired master licenses owned by the same pubkey
 		if (tokentype == "s" && (refTokenType != "m" || ownedRefTokenPerc < refOwnerperc)) //check for license expiry as well
 		{
 			CCerror = "for sub-license tokens reference tokenid must be of type 'm', unexpired and owned by this pubkey";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-			return 0;
+			return std::string("");
 		}
 		//Todo:
 		// if type is "m", pass referencetokenid opret and check if type is 'a'. If it isn't, throw error
