@@ -919,6 +919,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		//Eval code is EVAL_TOKENS
         uint8_t destEvalCode = EVAL_TOKENS;
 		//If nonfungibleData exists, eval code is set to the one specified within nonfungibleData
+
         if( nonfungibleData.size() > 0 )
             destEvalCode = nonfungibleData.begin()[0];
 
@@ -1027,6 +1028,8 @@ int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 
 UniValue TokenInfo(uint256 tokenid)
 {
+    
+
 	UniValue result(UniValue::VOBJ); 
     uint256 hashBlock, referencetokenid;
     CTransaction tokenbaseTx; 
@@ -1036,6 +1039,9 @@ UniValue TokenInfo(uint256 tokenid)
     std::string name, description, tokentype; 
 	double ownerperc; int64_t expiryTimeSec;
     struct CCcontract_info *cpTokens, tokensCCinfo;
+   // int32_t numblocks;        
+  //  uint64_t durationSec = 0; 
+
 
     cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
 
@@ -1063,7 +1069,11 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("tokenid", tokenid.GetHex()));
 	result.push_back(Pair("owner", HexStr(origpubkey)));
 	result.push_back(Pair("name", name));
-
+    result.push_back(Pair("expiryTimeSec", expiryTimeSec));
+  
+    uint64_t timeleft;// added for timeleft
+	int32_t numblocks; // VP added 
+    uint64_t durationSec = 0; // VP added
     int64_t supply = 0, output;
     for (int v = 0; v < tokenbaseTx.vout.size() - 1; v++)
         if ((output = IsTokensvout(false, true, cpTokens, NULL, tokenbaseTx, v, tokenid)) > 0)
@@ -1072,9 +1082,16 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("description", description));
 	result.push_back(Pair("tokentype", tokentype));
 	
-	if (tokentype == "m" || tokentype == "s") {
-		result.push_back(Pair("referencetokenid", referencetokenid.GetHex()));
-		result.push_back(Pair("expiryTimeSec", expiryTimeSec));
+	if (tokentype == "m" || tokentype == "s") { 
+        durationSec = CCduration(numblocks, tokenid); // VP added
+        timeleft = expiryTimeSec - durationSec; // added to calculate time left
+       // stream << durationSec;  // VP added
+        result.push_back(Pair("referencetokenid", referencetokenid.GetHex()));
+        result.push_back(Pair("expiryTimeSec", expiryTimeSec));
+        result.push_back(Pair("Timeleft", timeleft)); // VP changed durationsec to timeleft
+        //stream.str(""); // VP added
+        //stream.clear(); // VP added
+
 	}
 	if (tokentype == "a") {
 		result.push_back(Pair("ownerperc", ownerperc));
