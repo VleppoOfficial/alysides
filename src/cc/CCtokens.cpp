@@ -802,6 +802,9 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	
 	//reference transaction for asset/master license types
 	CTransaction tokentx; uint256 hashBlock;
+	std::vector<uint8_t> dummyPubkey; int64_t dummyTokensupply, refExpiryTimeSec;
+	std::string dummyName, dummyDescription, refTokenType;
+	double dummyOwnerperc; uint256 dummyAssettokenid;
 	
 	//Checking if the specified tokensupply is valid.
 	if (tokensupply < 0)	{
@@ -852,6 +855,24 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         if (GetTransaction(assettokenid, tokentx, hashBlock, false) == 0)
 		{
 			CCerror = "cannot find reference tokenid";
+			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+			return 0;
+		}
+		if (tokentx.vout.size() > 0 && DecodeTokenCreateOpRet(tokentx.vout[tokentx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, dummyOwnerperc, refTokenType, dummyAssettokenid, refExpiryTimeSec) != 'c')
+		{
+			CCerror = "reference tokenid isn't token creation txid";
+			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+			return 0;
+		}
+		if (tokentype == "m" && refTokenType != "a")
+		{
+			CCerror = "for master license tokens reference tokenid must be of type 'a'";
+			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+			return 0;
+		}
+		if (tokentype == "s" && refTokenType != "m") //check for license expiry as well
+		{
+			CCerror = "for sub-license tokens reference tokenid must be unexpired and of type 'm'";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return 0;
 		}
