@@ -881,6 +881,9 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return 0;
 		}
+		
+		std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << GetTokenBalance(mypk, referencetokenid) << "refownerperc=" << refOwnerperc << std::endl;
+		
 		//master licenses must reference digital assets owned by the same pubkey
 		if (tokentype == "m" && refTokenType != "a" && ((GetTokenBalance(mypk, referencetokenid) / refTokenSupply * 100) < refOwnerperc))
 		{
