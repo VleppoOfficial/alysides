@@ -1030,7 +1030,7 @@ UniValue TokenInfo(uint256 tokenid)
 		
 	
 	
-    
+    uint64_t timeleft;
 	int32_t numblocks; // VP added newest
     uint64_t durationSec = 0; // VP added
     int64_t supply = 0, output;
@@ -1043,10 +1043,11 @@ UniValue TokenInfo(uint256 tokenid)
 	
 	if (tokentype == "m" || tokentype == "s") { 
         durationSec = CCduration(numblocks, tokenid); // VP added
+        timeleft = expiryTimeSec - durationSec;
        // stream << durationSec;  // VP added
         result.push_back(Pair("assettokenid", assettokenid.GetHex()));
         result.push_back(Pair("expiryTimeSec", expiryTimeSec));
-        result.push_back(Pair("Duration", durationSec)); // VP added
+        result.push_back(Pair("Duration", timeleft)); // VP added
         //stream.str(""); // VP added
         //stream.clear(); // VP added
 	}
