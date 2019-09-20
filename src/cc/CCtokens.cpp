@@ -855,7 +855,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         if (GetTransaction(referencetokenid, reftokentx, hashBlock, false) != 0)
 		{
 			//calculating referencetokenid supply
-			refTokenSupply = 0, output;
+			refTokenSupply = 0, int64_t output;
 			for (int v = 0; v < reftokentx.vout.size() - 1; v++) {
 				if ((output = IsTokensvout(false, true, cp, NULL, reftokentx, v, referencetokenid)) > 0)
 					refTokenSupply += output;
