@@ -850,7 +850,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         return std::string("");
     }
 	
-	std::cerr << indentStr << "reftokenid=" << referencetokenid << std::endl;
+	std::cerr << indentStr << "reftokenid=" << referencetokenid.GetHex() << std::endl;
 	
 	//If token is "m" or "s"
 	if (tokentype == "m" || tokentype == "s") {
