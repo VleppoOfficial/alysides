@@ -935,8 +935,8 @@ UniValue TokenInfo(uint256 tokenid)
     std::string name, description, tokentype; 
 	double ownerperc; int64_t expiryTimeSec;
     struct CCcontract_info *cpTokens, tokensCCinfo;
- 
-
+   // int32_t numblocks;        
+  //  uint64_t durationSec = 0; 
 
 
     cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
@@ -985,7 +985,7 @@ UniValue TokenInfo(uint256 tokenid)
 	
 	if (tokentype == "m" || tokentype == "s") { 
         durationSec = CCduration(numblocks, tokenid); // VP added
-        stream << durationSec;  // VP added
+        //stream << durationSec;  // VP added
         result.push_back(Pair("assettokenid", assettokenid.GetHex()));
         result.push_back(Pair("expiryTimeSec", expiryTimeSec));
         result.push_back(Pair("Duration", durationSec)); // VP added
