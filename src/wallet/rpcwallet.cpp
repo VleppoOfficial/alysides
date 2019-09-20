@@ -7352,7 +7352,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
     std::string name, description, hextx; 
     std::vector<uint8_t> nonfungibleData;
     int64_t supply; // changed from uin64_t to int64_t for this 'if ( supply <= 0 )' to work as expected
-	std::string tokentype; int64_t expiryTimeSec = 0; double ownerperc = 50.0; uint256 referencetokenid = std::string();
+	std::string tokentype; int64_t expiryTimeSec = 0; double ownerperc = 50.0; uint256 referencetokenid;
 
     CCerror.clear();
 
@@ -7391,10 +7391,12 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
     }
 	
 	if (params.size() >= 5)     {
-		referencetokenid = Parseuint256((char *)params[4].get_str().c_str());
-		if((tokentype == "m" || tokentype == "s") && referencetokenid == zeroid)    {
-			ERR_RESULT("invalid reference tokenid");
-			return(result);
+		if((tokentype == "m" || tokentype == "s") {
+			referencetokenid = Parseuint256((char *)params[4].get_str().c_str());
+			if (referencetokenid == zeroid)    {
+				ERR_RESULT("invalid reference tokenid");
+				return(result);
+			}
 		}
     }
 	
