@@ -889,6 +889,8 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		//EncodeTokenCreateOpRet needs to have an overload for the extra params
         rawtx = FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, nonfungibleData));
         return (TokenAutoBroadcastTX(result, rawtx, broadcastflag));
+        return (result);
+
 	}
 
     CCerror = "cant find normal inputs";
