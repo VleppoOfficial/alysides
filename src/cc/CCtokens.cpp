@@ -810,6 +810,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	std::vector<uint8_t> dummyPubkey; int64_t refTokenSupply, refExpiryTimeSec, output;
 	std::string dummyName, dummyDescription, refTokenType;
 	double refOwnerperc; uint256 dummyAssettokenid;
+	int32_t numblocks;
 	
 	//Checking if the specified tokensupply is valid.
 	if (tokensupply < 0)	{
@@ -1037,10 +1038,11 @@ UniValue TokenInfo(uint256 tokenid)
     std::vector<std::pair<uint8_t, vscript_t>>  oprets;
     vscript_t vopretNonfungible;
     std::string name, description, tokentype; 
-	double ownerperc; int64_t expiryTimeSec;
+	double ownerperc;
     struct CCcontract_info *cpTokens, tokensCCinfo;
-   // int32_t numblocks;        
-  //  uint64_t durationSec = 0; 
+	int64_t timeleft, supply = 0, output, expiryTimeSec;
+	int32_t numblocks;
+    uint64_t durationSec = 0;
 
 
     cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
@@ -1070,10 +1072,7 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("owner", HexStr(origpubkey)));
 	result.push_back(Pair("name", name));
   
-    int64_t timeleft;
-	int32_t numblocks;
-    uint64_t durationSec = 0;
-    int64_t supply = 0, output;
+    
     for (int v = 0; v < tokenbaseTx.vout.size() - 1; v++)
         if ((output = IsTokensvout(false, true, cpTokens, NULL, tokenbaseTx, v, tokenid)) > 0)
             supply += output;
