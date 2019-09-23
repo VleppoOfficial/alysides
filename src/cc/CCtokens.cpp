@@ -782,6 +782,23 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey) {
     return CPubKey(); //return invalid pubkey
 }
 
+UniValue TokenAutoBroadcastTX(UniValue& result, std::string rawtx, int32_t broadcastflag)
+{
+    CTransaction tx;
+    if (rawtx.size() > 0) {
+        result.push_back(Pair("hex", rawtx));
+        if (DecodeHexTx(tx, rawtx) != 0) {
+            if (broadcastflag != 0 && myAddtomempool(tx) != 0)
+                RelayTransaction(tx);
+            result.push_back(Pair("txid", tx.GetHash().ToString()));
+            result.push_back(Pair("result", "success"));
+        } else
+            result.push_back(Pair("error", "decode hex"));
+    } else
+        result.push_back(Pair("error", "couldnt finalize CCtx"));
+    return (result);
+}
+
 // returns token creation signed raw tx
 std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 assettokenid, int64_t expiryTimeSec, vscript_t nonfungibleData)
 {
@@ -899,22 +916,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
     return std::string("");
 }
 //cc
-UniValue TokenAutoBroadcastTX(UniValue& result, std::string rawtx, int32_t broadcastflag)
-{
-    CTransaction tx;
-    if (rawtx.size() > 0) {
-        result.push_back(Pair("hex", rawtx));
-        if (DecodeHexTx(tx, rawtx) != 0) {
-            if (broadcastflag != 0 && myAddtomempool(tx) != 0)
-                RelayTransaction(tx);
-            result.push_back(Pair("txid", tx.GetHash().ToString()));
-            result.push_back(Pair("result", "success"));
-        } else
-            result.push_back(Pair("error", "decode hex"));
-    } else
-        result.push_back(Pair("error", "couldnt finalize CCtx"));
-    return (result);
-}
+
 
 // transfer tokens to another pubkey
 // param additionalEvalCode allows transfer of dual-eval non-fungible tokens
