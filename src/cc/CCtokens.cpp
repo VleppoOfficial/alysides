@@ -1069,11 +1069,10 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("tokenid", tokenid.GetHex()));
 	result.push_back(Pair("owner", HexStr(origpubkey)));
 	result.push_back(Pair("name", name));
-    result.push_back(Pair("expiryTimeSec", expiryTimeSec));
   
-    uint64_t timeleft;// added for timeleft
-	int32_t numblocks; // VP added 
-    uint64_t durationSec = 0; // VP added
+    int64_t timeleft;
+	int32_t numblocks;
+    uint64_t durationSec = 0;
     int64_t supply = 0, output;
     for (int v = 0; v < tokenbaseTx.vout.size() - 1; v++)
         if ((output = IsTokensvout(false, true, cpTokens, NULL, tokenbaseTx, v, tokenid)) > 0)
@@ -1082,18 +1081,19 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("description", description));
 	result.push_back(Pair("tokentype", tokentype));
 	
-	if (tokentype == "m" || tokentype == "s") { 
-        durationSec = CCduration(numblocks, tokenid); // VP added
+	if (tokentype == "m" || tokentype == "s")
+	{ 
+        durationSec = CCduration(numblocks, tokenid);
+		bool isExpired = (durationSec > expiryTimeSec) ? true : false;
         timeleft = expiryTimeSec - durationSec; // added to calculate time left
-       // stream << durationSec;  // VP added
         result.push_back(Pair("referencetokenid", referencetokenid.GetHex()));
-        result.push_back(Pair("expiryTimeSec", expiryTimeSec));
-        result.push_back(Pair("Timeleft", timeleft)); // VP changed durationsec to timeleft
-        //stream.str(""); // VP added
-        //stream.clear(); // VP added
-
+        result.push_back(Pair("expirytime", expiryTimeSec));
+		result.push_back(Pair("timeleft", timeleft));
+		result.push_back(Pair("isExpired", isExpired));
 	}
-	if (tokentype == "a") {
+	
+	if (tokentype == "a")
+	{
 		result.push_back(Pair("ownerperc", ownerperc));
 	}
 	
