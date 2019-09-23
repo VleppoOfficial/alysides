@@ -853,7 +853,8 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	//std::cerr << indentStr << "reftokenid=" << referencetokenid.GetHex() << " GetTransactionOutput=" << GetTransaction(referencetokenid, reftokentx, hashBlock, false) << std::endl;
 	
 	//If token is "m" or "s"
-	if (tokentype == "m" || tokentype == "s") {
+	if (tokentype == "m" || tokentype == "s")
+	{
 		//Check if expirytime for master and sublicense types exists. If not defined, set it to 31536000 seconds.
 		if (expiryTimeSec == 0) {
 			expiryTimeSec = 31536000;
@@ -889,21 +890,20 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		//std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << ownedRefTokenBalance << "refownerperc=" << refOwnerperc << "ownedRefTokenperc=" << ownedRefTokenPerc << std::endl;
 		
 		//master licenses must reference digital assets owned by the same pubkey
-		if (tokentype == "m" && (refTokenType != "a" || ownedRefTokenPerc < refOwnerperc))
+		if (tokentype == "m" && (refTokenType != "a" || ownedRefTokenPerc <= refOwnerperc))
 		{
 			CCerror = "for master license tokens reference tokenid must be of type 'a' and owned by this pubkey";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return std::string("");
 		}
+
 		//sub-licenses must reference unexpired master licenses owned by the same pubkey
-		if (tokentype == "s" && (refTokenType != "m" || ownedRefTokenPerc < refOwnerperc)) //check for license expiry as well
+		if (tokentype == "s" && (refTokenType != "m" || ownedRefTokenPerc <= refOwnerperc || CCduration(numblocks, referencetokenid) < refExpiryTimeSec))
 		{
 			CCerror = "for sub-license tokens reference tokenid must be of type 'm', unexpired and owned by this pubkey";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return std::string("");
 		}
-		//Todo:
-		// if type is "s", check if type is 'm' and it hasn't expired yet. If it isn't, throw error
     }
 	
 	//We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
