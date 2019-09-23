@@ -899,7 +899,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		}
 
 		//sub-licenses must reference unexpired master licenses owned by the same pubkey
-		if (tokentype == "s" && (refTokenType != "m" || ownedRefTokenPerc <= refOwnerperc || CCduration(numblocks, referencetokenid) < refExpiryTimeSec))
+		if (tokentype == "s" && (refTokenType != "m" || ownedRefTokenPerc <= refOwnerperc || CCduration(numblocks, referencetokenid) > refExpiryTimeSec))
 		{
 			CCerror = "for sub-license tokens reference tokenid must be of type 'm', unexpired and owned by this pubkey";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
