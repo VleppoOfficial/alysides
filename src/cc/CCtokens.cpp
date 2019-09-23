@@ -782,7 +782,7 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey) {
     return CPubKey(); //return invalid pubkey
 }
 
-UniValue TokenAutoBroadcastTX(UniValue& result, std::string rawtx, int32_t broadcastflag)
+UniValue TokenAutoBroadcast_TX(UniValue& result, std::string rawtx, int32_t broadcastflag)
 {
     CTransaction tx;
     if (rawtx.size() > 0) {
@@ -803,7 +803,7 @@ UniValue TokenAutoBroadcastTX(UniValue& result, std::string rawtx, int32_t broad
 std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 assettokenid, int64_t expiryTimeSec, vscript_t nonfungibleData)
 {
 	//Create a mutable version of a transaction object.
-	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+    CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight()); std::string rawtx;
 	
 	//Declare and initialize an CCcontract_info object with Token Module variables, such as our global CC address, our global private key, etc.
 	struct CCcontract_info *cp, C;
@@ -905,7 +905,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		*/
 		//EncodeTokenCreateOpRet needs to have an overload for the extra params
         rawtx = FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, nonfungibleData));
-        return (TokenAutoBroadcastTX(result, rawtx, broadcastflag));
+        return (TokenAutoBroadcast_TX(result, rawtx, broadcastflag));
        
 
 	}
