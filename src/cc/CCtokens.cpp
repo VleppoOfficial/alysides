@@ -802,6 +802,8 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	
 	//reference transaction for asset/master license types
 	CTransaction tokentx; uint256 hashBlock;
+        UniValue result(UniValue::VOBJ);
+        int32_t broadcastflag = 0;
 	
 	//Checking if the specified tokensupply is valid.
 	if (tokensupply < 0)	{
@@ -855,9 +857,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return 0;
 		}
-		//Todo:
-		// if type is "m", pass assettokenid opret and check if type is 'a'. If it isn't, throw error
-		// if type is "s", pass assettokenid opret and check if type is 'm' and it hasn't expired yet. If it isn't, throw error
+	
     }
 	
 	//We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
@@ -877,13 +877,9 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         if( nonfungibleData.size() > 0 )
             destEvalCode = nonfungibleData.begin()[0];
 
-        // NOTE: we should prevent spending fake-tokens from this marker in IsTokenvout():
-		//vout0 is a marker vout
         mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL)));            // new marker to token cc addr, burnable and validated, vout pos now changed to 0 (from 1)
-		//vout1 is the token issuance vout. For some reason, MakeTokensCC1vout has support for multiple eval codes
+
 		mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, tokensupply, mypk));
-		//mtx.vout.push_back(CTxOut(txfee, CScript() << ParseHex(cp->CChexstr) << OP_CHECKSIG));  // old marker (non-burnable because spending could not be validated)
-        //mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL)));          // ...moved to vout=0 for matching with rogue-game token
 
 		/*
 		Finish the creation of the transaction by calling the FinalizeCCTx function along with its parameters from the cp object,
@@ -891,12 +887,30 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		Also, an opreturn object with the data from this module instance is passed.
 		*/
 		//EncodeTokenCreateOpRet needs to have an overload for the extra params
-		return(FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, nonfungibleData)));
+        rawtx = FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, nonfungibleData));
+        return (TokenAutoBroadcastTX(result, rawtx, broadcastflag));
 	}
 
     CCerror = "cant find normal inputs";
     LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " <<  CCerror << std::endl);
     return std::string("");
+}
+//cc
+UniValue TokenAutoBroadcastTX(UniValue& result, std::string rawtx, int32_t broadcastflag)
+{
+    CTransaction tx;
+    if (rawtx.size() > 0) {
+        result.push_back(Pair("hex", rawtx));
+        if (DecodeHexTx(tx, rawtx) != 0) {
+            if (broadcastflag != 0 && myAddtomempool(tx) != 0)
+                RelayTransaction(tx);
+            result.push_back(Pair("txid", tx.GetHash().ToString()));
+            result.push_back(Pair("result", "success"));
+        } else
+            result.push_back(Pair("error", "decode hex"));
+    } else
+        result.push_back(Pair("error", "couldnt finalize CCtx"));
+    return (result);
 }
 
 // transfer tokens to another pubkey
@@ -993,8 +1007,7 @@ UniValue TokenInfo(uint256 tokenid)
     std::string name, description, tokentype; 
 	double ownerperc; int64_t expiryTimeSec;
     struct CCcontract_info *cpTokens, tokensCCinfo;
-   // int32_t numblocks;        
-  //  uint64_t durationSec = 0; 
+  
 
 
     cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
@@ -1023,16 +1036,11 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("tokenid", tokenid.GetHex()));
 	result.push_back(Pair("owner", HexStr(origpubkey)));
 	result.push_back(Pair("name", name));
-    result.push_back(Pair("expiryTimeSec", expiryTimeSec));
+    
 
-	
-	
-		
-	
-	
-    uint64_t timeleft;// added for timeleft
-	int32_t numblocks; // VP added 
-    uint64_t durationSec = 0; // VP added
+    uint64_t timeleft;// Used for "TimeLeft"
+	int32_t numblocks; // Used for "TimeLeft"
+    uint64_t durationSec = 0; // Used for "TimeLeft"
     int64_t supply = 0, output;
     for (int v = 0; v < tokenbaseTx.vout.size() - 1; v++)
         if ((output = IsTokensvout(false, true, cpTokens, NULL, tokenbaseTx, v, tokenid)) > 0)
@@ -1042,14 +1050,11 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("tokentype", tokentype));
 	
 	if (tokentype == "m" || tokentype == "s") { 
-        durationSec = CCduration(numblocks, tokenid); // VP added
-        timeleft = expiryTimeSec - durationSec; // added to caculate time left
-       // stream << durationSec;  // VP added
+        durationSec = CCduration(numblocks, tokenid);
+        timeleft = expiryTimeSec - durationSec; // Calculate TimeLeft
         result.push_back(Pair("assettokenid", assettokenid.GetHex()));
         result.push_back(Pair("expiryTimeSec", expiryTimeSec));
-        result.push_back(Pair("Timeleft", timeleft)); // VP changed durationsec to timeleft
-        //stream.str(""); // VP added
-        //stream.clear(); // VP added
+        result.push_back(Pair("Timeleft", timeleft)); 
 	}
 	if (tokentype == "a") {
 		result.push_back(Pair("ownerperc", ownerperc));
