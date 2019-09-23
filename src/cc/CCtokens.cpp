@@ -796,7 +796,7 @@ std::string TokenAutoBroadcastTX(UniValue& result, std::string rawtx, int32_t br
             result.push_back(Pair("error", "decode hex"));
     } else
         result.push_back(Pair("error", "couldnt finalize CCtx"));
-    return (result);
+    return std::string("");
 }
 
 // returns token creation signed raw tx
