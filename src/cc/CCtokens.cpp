@@ -782,7 +782,7 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey) {
     return CPubKey(); //return invalid pubkey
 }
 
-UniValue TokenAutoBroadcast_TX(UniValue& result, std::string rawtx, int32_t broadcastflag)
+std::string TokenAutoBroadcastTX(UniValue& result, std::string rawtx, int32_t broadcastflag)
 {
     CTransaction tx;
     if (rawtx.size() > 0) {
@@ -905,7 +905,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		*/
 		//EncodeTokenCreateOpRet needs to have an overload for the extra params
         rawtx = FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, nonfungibleData));
-        return (TokenAutoBroadcast_TX(result, rawtx, broadcastflag));
+        return (TokenAutoBroadcastTX(result, rawtx, broadcastflag));
        
 
 	}
