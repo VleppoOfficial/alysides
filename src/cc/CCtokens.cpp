@@ -810,6 +810,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	std::vector<uint8_t> dummyPubkey; int64_t refTokenSupply, refExpiryTimeSec, output;
 	std::string dummyName, dummyDescription, refTokenType;
 	double refOwnerperc; uint256 dummyAssettokenid;
+	int32_t numblocks;
 	
 	//Checking if the specified tokensupply is valid.
 	if (tokensupply < 0)	{
@@ -853,7 +854,8 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	//std::cerr << indentStr << "reftokenid=" << referencetokenid.GetHex() << " GetTransactionOutput=" << GetTransaction(referencetokenid, reftokentx, hashBlock, false) << std::endl;
 	
 	//If token is "m" or "s"
-	if (tokentype == "m" || tokentype == "s") {
+	if (tokentype == "m" || tokentype == "s")
+	{
 		//Check if expirytime for master and sublicense types exists. If not defined, set it to 31536000 seconds.
 		if (expiryTimeSec == 0) {
 			expiryTimeSec = 31536000;
@@ -889,21 +891,20 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		//std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << ownedRefTokenBalance << "refownerperc=" << refOwnerperc << "ownedRefTokenperc=" << ownedRefTokenPerc << std::endl;
 		
 		//master licenses must reference digital assets owned by the same pubkey
-		if (tokentype == "m" && (refTokenType != "a" || ownedRefTokenPerc < refOwnerperc))
+		if (tokentype == "m" && (refTokenType != "a" || ownedRefTokenPerc <= refOwnerperc))
 		{
 			CCerror = "for master license tokens reference tokenid must be of type 'a' and owned by this pubkey";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return std::string("");
 		}
+
 		//sub-licenses must reference unexpired master licenses owned by the same pubkey
-		if (tokentype == "s" && (refTokenType != "m" || ownedRefTokenPerc < refOwnerperc)) //check for license expiry as well
+		if (tokentype == "s" && (refTokenType != "m" || ownedRefTokenPerc <= refOwnerperc || CCduration(numblocks, referencetokenid) > refExpiryTimeSec))
 		{
 			CCerror = "for sub-license tokens reference tokenid must be of type 'm', unexpired and owned by this pubkey";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return std::string("");
 		}
-		//Todo:
-		// if type is "s", check if type is 'm' and it hasn't expired yet. If it isn't, throw error
     }
 	
 	//We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
@@ -1037,10 +1038,11 @@ UniValue TokenInfo(uint256 tokenid)
     std::vector<std::pair<uint8_t, vscript_t>>  oprets;
     vscript_t vopretNonfungible;
     std::string name, description, tokentype; 
-	double ownerperc; int64_t expiryTimeSec;
+	double ownerperc;
     struct CCcontract_info *cpTokens, tokensCCinfo;
-   // int32_t numblocks;        
-  //  uint64_t durationSec = 0; 
+	int64_t timeleft, supply = 0, output, expiryTimeSec;
+	int32_t numblocks;
+    uint64_t durationSec = 0;
 
 
     cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
@@ -1069,12 +1071,8 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("tokenid", tokenid.GetHex()));
 	result.push_back(Pair("owner", HexStr(origpubkey)));
 	result.push_back(Pair("name", name));
-    result.push_back(Pair("expiryTimeSec", expiryTimeSec));
   
-    uint64_t timeleft;// added for timeleft
-	int32_t numblocks; // VP added 
-    uint64_t durationSec = 0; // VP added
-    int64_t supply = 0, output;
+    
     for (int v = 0; v < tokenbaseTx.vout.size() - 1; v++)
         if ((output = IsTokensvout(false, true, cpTokens, NULL, tokenbaseTx, v, tokenid)) > 0)
             supply += output;
@@ -1082,18 +1080,19 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("description", description));
 	result.push_back(Pair("tokentype", tokentype));
 	
-	if (tokentype == "m" || tokentype == "s") { 
-        durationSec = CCduration(numblocks, tokenid); // VP added
+	if (tokentype == "m" || tokentype == "s")
+	{ 
+        durationSec = CCduration(numblocks, tokenid);
+		bool isExpired = (durationSec > expiryTimeSec) ? true : false;
         timeleft = expiryTimeSec - durationSec; // added to calculate time left
-       // stream << durationSec;  // VP added
         result.push_back(Pair("referencetokenid", referencetokenid.GetHex()));
-        result.push_back(Pair("expiryTimeSec", expiryTimeSec));
-        result.push_back(Pair("Timeleft", timeleft)); // VP changed durationsec to timeleft
-        //stream.str(""); // VP added
-        //stream.clear(); // VP added
-
+        result.push_back(Pair("expirytime", expiryTimeSec));
+		result.push_back(Pair("timeleft", timeleft));
+		result.push_back(Pair("isExpired", isExpired));
 	}
-	if (tokentype == "a") {
+	
+	if (tokentype == "a")
+	{
 		result.push_back(Pair("ownerperc", ownerperc));
 	}
 	
