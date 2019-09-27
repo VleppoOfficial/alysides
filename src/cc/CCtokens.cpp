@@ -1032,20 +1032,19 @@ int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 UniValue TokenInfo(uint256 tokenid)
 {
 	UniValue result(UniValue::VOBJ); 
-    uint256 hashBlock, referenceTokenId;
-    CTransaction tokenbaseTx; 
-    std::vector<uint8_t> origpubkey; 
-    std::vector<std::pair<uint8_t, vscript_t>>  oprets;
-    vscript_t vopretNonfungible;
-    std::string name, description, tokenType; 
+	uint256 hashBlock, referenceTokenId;
+	CTransaction tokenbaseTx; 
+	std::vector<uint8_t> origpubkey; 
+	std::vector<std::pair<uint8_t, vscript_t>>  oprets;
+	vscript_t vopretNonfungible;
+	std::string name, description, tokenType; 
 	double ownerPerc;
-    struct CCcontract_info *cpTokens, tokensCCinfo;
+	struct CCcontract_info *cpTokens, tokensCCinfo;
 	int64_t timeleft, supply = 0, output, expiryTimeSec;
 	int32_t numblocks;
-    uint64_t durationSec = 0;
+	uint64_t durationSec = 0;
 
-
-    cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
+	cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
 
 	if( !GetTransaction(tokenid, tokenbaseTx, hashBlock, false) )
 	{
@@ -1054,39 +1053,42 @@ UniValue TokenInfo(uint256 tokenid)
 		result.push_back(Pair("error", "cant find tokenid"));
 		return(result);
 	}
-    if (hashBlock.IsNull()) {
-        result.push_back(Pair("result", "error"));
-        result.push_back(Pair("error", "the transaction is still in mempool"));
-        return(result);
-    }
+	
+	if (hashBlock.IsNull())
+	{
+		result.push_back(Pair("result", "error"));
+		result.push_back(Pair("error", "the transaction is still in mempool"));
+		return(result);
+	}
 
 	if (tokenbaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenbaseTx.vout[tokenbaseTx.vout.size() - 1].scriptPubKey, origpubkey, name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
 	{
-        LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "TokenInfo() passed tokenid isnt token creation txid" << std::endl);
+		LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "TokenInfo() passed tokenid isnt token creation txid" << std::endl);
 		result.push_back(Pair("result", "error"));
 		result.push_back(Pair("error", "tokenid isnt token creation txid"));
-        return result;
+		return result;
 	}
+	
 	result.push_back(Pair("result", "success"));
 	result.push_back(Pair("tokenid", tokenid.GetHex()));
 	result.push_back(Pair("owner", HexStr(origpubkey)));
 	result.push_back(Pair("name", name));
-  
-    
-    for (int v = 0; v < tokenbaseTx.vout.size() - 1; v++)
-        if ((output = IsTokensvout(false, true, cpTokens, NULL, tokenbaseTx, v, tokenid)) > 0)
-            supply += output;
+
+	for (int v = 0; v < tokenbaseTx.vout.size() - 1; v++)
+		if ((output = IsTokensvout(false, true, cpTokens, NULL, tokenbaseTx, v, tokenid)) > 0)
+			supply += output;
+		
 	result.push_back(Pair("supply", supply));
 	result.push_back(Pair("description", description));
 	result.push_back(Pair("tokenType", tokenType));
-	
+
 	if (tokenType == "m" || tokenType == "s")
 	{ 
-        durationSec = CCduration(numblocks, tokenid);
+		durationSec = CCduration(numblocks, tokenid);
 		bool isExpired = (durationSec > expiryTimeSec) ? true : false;
-        timeleft = expiryTimeSec - durationSec; // added to calculate time left
-        result.push_back(Pair("referenceTokenId", referenceTokenId.GetHex()));
-        result.push_back(Pair("expirytime", expiryTimeSec));
+		timeleft = expiryTimeSec - durationSec; // added to calculate time left
+		result.push_back(Pair("referenceTokenId", referenceTokenId.GetHex()));
+		result.push_back(Pair("expirytime", expiryTimeSec));
 		result.push_back(Pair("timeleft", timeleft));
 		result.push_back(Pair("isExpired", isExpired));
 	}
@@ -1096,43 +1098,43 @@ UniValue TokenInfo(uint256 tokenid)
 		result.push_back(Pair("ownerPerc", ownerPerc));
 	}
 	
-    GetOpretBlob(oprets, OPRETID_NONFUNGIBLEDATA, vopretNonfungible);
-    if( !vopretNonfungible.empty() )    
-        result.push_back(Pair("data", HexStr(vopretNonfungible)));
+	GetOpretBlob(oprets, OPRETID_NONFUNGIBLEDATA, vopretNonfungible);
+	if( !vopretNonfungible.empty() )    
+		result.push_back(Pair("data", HexStr(vopretNonfungible)));
 
-    if (tokenbaseTx.IsCoinImport()) { // if imported token
-        ImportProof proof;
-        CTransaction burnTx;
-        std::vector<CTxOut> payouts;
-        CTxDestination importaddress;
+	if (tokenbaseTx.IsCoinImport()) { // if imported token
+		ImportProof proof;
+		CTransaction burnTx;
+		std::vector<CTxOut> payouts;
+		CTxDestination importaddress;
 
-        std::string sourceSymbol = "can't decode";
-        std::string sourceTokenId = "can't decode";
+		std::string sourceSymbol = "can't decode";
+		std::string sourceTokenId = "can't decode";
 
-        if (UnmarshalImportTx(tokenbaseTx, proof, burnTx, payouts))
-        {
-            // extract op_return to get burn source chain.
-            std::vector<uint8_t> burnOpret;
-            std::string targetSymbol;
-            uint32_t targetCCid;
-            uint256 payoutsHash;
-            std::vector<uint8_t> rawproof;
-            if (UnmarshalBurnTx(burnTx, targetSymbol, &targetCCid, payoutsHash, rawproof)) {
-                if (rawproof.size() > 0) {
-                    CTransaction tokenbasetx;
-                    E_UNMARSHAL(rawproof, ss >> sourceSymbol;
-                    if (!ss.eof())
-                        ss >> tokenbasetx);
+		if (UnmarshalImportTx(tokenbaseTx, proof, burnTx, payouts))
+		{
+			// extract op_return to get burn source chain.
+			std::vector<uint8_t> burnOpret;
+			std::string targetSymbol;
+			uint32_t targetCCid;
+			uint256 payoutsHash;
+			std::vector<uint8_t> rawproof;
+			if (UnmarshalBurnTx(burnTx, targetSymbol, &targetCCid, payoutsHash, rawproof)) {
+				if (rawproof.size() > 0) {
+					CTransaction tokenbasetx;
+					E_UNMARSHAL(rawproof, ss >> sourceSymbol;
+					if (!ss.eof())
+						ss >> tokenbasetx);
                     
-                    if (!tokenbasetx.IsNull())
-                        sourceTokenId = tokenbasetx.GetHash().GetHex();
-                }
-            }
-        }
-        result.push_back(Pair("IsImported", "yes"));
-        result.push_back(Pair("sourceChain", sourceSymbol));
-        result.push_back(Pair("sourceTokenId", sourceTokenId));
-    }
+					if (!tokenbasetx.IsNull())
+						sourceTokenId = tokenbasetx.GetHash().GetHex();
+				}
+			}
+		}
+		result.push_back(Pair("IsImported", "yes"));
+		result.push_back(Pair("sourceChain", sourceSymbol));
+		result.push_back(Pair("sourceTokenId", sourceTokenId));
+	}
 
 	return result;
 }
