@@ -787,6 +787,11 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey) {
 // returns token creation signed raw tx
 std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerPerc, std::string tokenType, uint256 referenceTokenId, int64_t expiryTimeSec, vscript_t nonfungibleData)
 {
+	CTransaction refTokenBaseTx; uint256 hashBlock;
+	std::vector<uint8_t> dummyPubkey; int64_t refTokenSupply, refExpiryTimeSec, output;
+	std::string dummyName, dummyDescription, refTokenType;
+	double refOwnerPerc; uint256 dummyRefTokenId;
+	int32_t numblocks;
 	
 	// this is just for log messages indentation for debugging recursive calls:
 	thread_local uint32_t tokenValIndentSize = 0;
@@ -794,68 +799,61 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 
 	//Creating a mutable version of a transaction object
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	
+
 	//Declaring and initializing a CCcontract_info object with Token Module variables, such as our global CC address, our global private key, etc.
 	struct CCcontract_info *cp, C;
 	cp = CCinit(&C, EVAL_TOKENS);
-	
+
 	//By tradition, we use a constant fee of 10000 satoshis.
 	if (txfee == 0)
 		txfee = 10000;
-	
+
 	//We use the pubkey from the komodod -pubkey launch parameter as the destination address.
 	CPubKey mypk = pubkey2pk(Mypubkey());
-	
-	//reference transaction for asset/master license types
-	CTransaction refTokenBaseTx; uint256 hashBlock;
-	std::vector<uint8_t> dummyPubkey; int64_t refTokenSupply, refExpiryTimeSec, output;
-	std::string dummyName, dummyDescription, refTokenType;
-	double refOwnerPerc; uint256 dummyRefTokenId;
-	int32_t numblocks;
-	
+
 	//Checking if the specified tokensupply is valid.
 	if (tokensupply < 0)
 	{
-        CCerror = "negative tokensupply"; //Defining CCerror which will be returned to rpc level
-        LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() =" << CCerror << "=" << tokensupply << std::endl);
+		CCerror = "negative tokensupply"; //Defining CCerror which will be returned to rpc level
+		LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() =" << CCerror << "=" << tokensupply << std::endl);
 		return std::string("");
 	}
-	
+
 	//Checking if tokensupply is equal to 1 if nonfungibleData isn't empty
-    if (!nonfungibleData.empty() && tokensupply != 1)
+	if (!nonfungibleData.empty() && tokensupply != 1)
 	{
-        CCerror = "for non-fungible tokens tokensupply should be equal to 1";
-        LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-        return std::string("");
-    }
+		CCerror = "for non-fungible tokens tokensupply should be equal to 1";
+		LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+		return std::string("");
+	}
 
 	//Checking the token name and description size
 	if (name.size() > 32 || description.size() > 4096)  // this is also checked on rpc level
 	{
-        LOGSTREAM((char *)"cctokens", CCLOG_DEBUG1, stream << "name len=" << name.size() << " or description len=" << description.size() << " is too big" << std::endl);
-        CCerror = "name should be <= 32, description should be <= 4096";
+		LOGSTREAM((char *)"cctokens", CCLOG_DEBUG1, stream << "name len=" << name.size() << " or description len=" << description.size() << " is too big" << std::endl);
+		CCerror = "name should be <= 32, description should be <= 4096";
 		return("");
 	}
-	
+
 	//Checking if a digital asset or contract type has data embedded
 	//TODO: Placeholder until we get proper data update functionality
-    if ((tokenType == "a" || tokenType == "c") && description.size() <= 0)
+	if ((tokenType == "a" || tokenType == "c") && description.size() <= 0)
 	{
-        CCerror = "for digital asset and contract tokens description cannot be empty";
-        LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-        return std::string("");
-    }
-	
+		CCerror = "for digital asset and contract tokens description cannot be empty";
+		LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+		return std::string("");
+	}
+
 	//Checking if tokensupply is equal to 1 if token is contract or master license type
-    if ((tokenType == "m" || tokenType == "c") && tokensupply != 1)
+	if ((tokenType == "m" || tokenType == "c") && tokensupply != 1)
 	{
-        CCerror = "for contract and master license tokens tokensupply should be equal to 1";
-        LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-        return std::string("");
-    }
-	
+		CCerror = "for contract and master license tokens tokensupply should be equal to 1";
+		LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+		return std::string("");
+	}
+
 	//std::cerr << indentStr << "reftokenid=" << referenceTokenId.GetHex() << " GetTransactionOutput=" << GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false) << std::endl;
-	
+
 	if (tokenType == "m" || tokenType == "s")
 	{
 		//Check if expirytime for master and sublicense types exists. If not defined, set it to 31536000 seconds.
@@ -863,27 +861,27 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		if (expiryTimeSec == 0) {
 			expiryTimeSec = 31536000;
 		}
-		
+
 		//checking if referenceTokenId exists
-        if (!GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false))
+		if (!GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false))
 		{
 			CCerror = "cant find reference tokenid";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return std::string("");
 		}
 		else
-		{	//calculating referenceTokenId supply
+		{
+			//calculating referenceTokenId supply
 			refTokenSupply = 0;
 			for (int v = 0; v < refTokenBaseTx.vout.size() - 1; v++) {
 				if ((output = IsTokensvout(false, true, cp, NULL, refTokenBaseTx, v, referenceTokenId)) > 0)
 					refTokenSupply += output;
 			}
-			
 		}
-		
+
 		//TODO: needs to be ported to a helper function so other methods can access these vars easily
 		double ownedRefTokenBalance = GetTokenBalance(mypk, referenceTokenId), ownedRefTokenPerc = (ownedRefTokenBalance / refTokenSupply * 100);
-		
+
 		//checking reference tokenid opret
 		if (refTokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c')
 		{
@@ -891,9 +889,9 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return std::string("");
 		}
-		
+
 		//std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << ownedRefTokenBalance << "refownerperc=" << refOwnerPerc << "ownedRefTokenperc=" << ownedRefTokenPerc << std::endl;
-		
+
 		//master licenses must reference digital assets owned by mypk
 		if (tokenType == "m" && (refTokenType != "a" || ownedRefTokenPerc <= refOwnerPerc))
 		{
@@ -909,31 +907,35 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return std::string("");
 		}
-    }
-	
+	}
+
 	//We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
 	if (AddNormalinputs(mtx, mypk, tokensupply + 2 * txfee, 64) > 0)
 	{
 		// TotalPubkeyNormalInputs returns total of normal inputs signed with this pubkey
-        int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
-        if (mypkInputs < tokensupply) {     // check that tokens amount are really issued with mypk (because in the wallet there maybe other privkeys)
-            CCerror = "some inputs signed not with -pubkey=pk";
-            return std::string("");
-        }
+		int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
+		if (mypkInputs < tokensupply)
+		{
+			// check that tokens amount are really issued with mypk (because in the wallet there maybe other privkeys)
+			CCerror = "some inputs signed not with -pubkey=pk";
+			return std::string("");
+		}
 
 		//Eval code is EVAL_TOKENS
-        uint8_t destEvalCode = EVAL_TOKENS;
-		
-		//If nonfungibleData exists, eval code is set to the one specified within nonfungibleData
-        if( nonfungibleData.size() > 0 )
-            destEvalCode = nonfungibleData.begin()[0];
+		uint8_t destEvalCode = EVAL_TOKENS;
 
-        // NOTE: we should prevent spending fake-tokens from this marker in IsTokenvout():
-        mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL)));            // new marker to token cc addr, burnable and validated, vout pos now changed to 0 (from 1)
+		//If nonfungibleData exists, eval code is set to the one specified within nonfungibleData
+		if( nonfungibleData.size() > 0 )
+			destEvalCode = nonfungibleData.begin()[0];
+
+		// NOTE: we should prevent spending fake-tokens from this marker in IsTokenvout():
+		mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL)));            // new marker to token cc addr, burnable and validated, vout pos now changed to 0 (from 1)
+		
 		//TODO: can mypk be changed to another pubkey without causing problems with validation and/or ownership?
 		mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, tokensupply, mypk));
+		
 		//mtx.vout.push_back(CTxOut(txfee, CScript() << ParseHex(cp->CChexstr) << OP_CHECKSIG));  // old marker (non-burnable because spending could not be validated)
-        //mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL)));          // ...moved to vout=0 for matching with rogue-game token
+		//mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL)));          // ...moved to vout=0 for matching with rogue-game token
 
 		/*
 		Finish the creation of the transaction by calling the FinalizeCCTx function along with its parameters from the cp object,
@@ -943,9 +945,9 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		return(FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
 	}
 
-    CCerror = "cant find normal inputs";
-    LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " <<  CCerror << std::endl);
-    return std::string("");
+	CCerror = "cant find normal inputs";
+	LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " <<  CCerror << std::endl);
+	return std::string("");
 }
 
 // transfer tokens to another pubkey
