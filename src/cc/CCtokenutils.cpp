@@ -25,26 +25,22 @@
 
 // NOTE: this inital tx won't be used by other contract
 // for tokens to be used there should be at least one 't' tx with other contract's custom opret
-CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description,double ownerperc, std::string tokentype, uint256 assettokenid, int64_t expiryTimeSec, vscript_t vopretNonfungible)
+CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description,double ownerperc, std::string tokentype, uint256 referencetokenid, int64_t expiryTimeSec, vscript_t vopretNonfungible)
 {
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
 
     if(!vopretNonfungible.empty())
         oprets.push_back(std::make_pair(OPRETID_NONFUNGIBLEDATA, vopretNonfungible));
-    return EncodeTokenCreateOpRet(funcid, origpubkey, name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, oprets);
+    return EncodeTokenCreateOpRet(funcid, origpubkey, name, description, ownerperc, tokentype, referencetokenid, expiryTimeSec, oprets);
 }
 
-CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 assettokenid, int64_t expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> oprets)
+CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 referencetokenid, int64_t expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> oprets)
 {
     CScript opret;
     uint8_t evalcode = EVAL_TOKENS;
     funcid = 'c'; // override the param
-    //ownerperc = 'p';
-    //tokentype = 't';
-    //assettokenid = 'a';
-    //expiryTimeSec = 'e';
 
-    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << name << description << ownerperc << tokentype << assettokenid << expiryTimeSec;
+    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << name << description << ownerperc << tokentype << referencetokenid << expiryTimeSec;
     for (auto o : oprets) {
         if (o.first != 0) {
             ss << (uint8_t)o.first;
@@ -77,8 +73,10 @@ CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, 
     CScript opret;
     uint8_t evalcode = EVAL_TOKENS;
     funcid = 'c'; // override the param
+	std::string dummyTokenType; int64_t dummyExpiryTimeSec;
+	double dummyOwnerperc; uint256 dummyAssettokenid;
 
-    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << name << description;
+    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << name << description << dummyOwnerperc << dummyTokenType << dummyAssettokenid << dummyExpiryTimeSec;
     for (auto o : oprets) {
         if (o.first != 0) {
             ss << (uint8_t)o.first;
@@ -149,13 +147,13 @@ CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std:
 //	return EncodeTokenOpRet(tokenid, voutPubkeys, payload);
 //}
 
-uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc, std::string &tokentype, uint256 &assettokenid, int64_t &expiryTimeSec) {
+uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc, std::string &tokentype, uint256 &referencetokenid, int64_t &expiryTimeSec) {
     //vopret_t  vopretNonfungibleDummy;
     std::vector<std::pair<uint8_t, vscript_t>>  opretsDummy;
-    return DecodeTokenCreateOpRet(scriptPubKey, origpubkey, name, description, ownerperc, tokentype, assettokenid, expiryTimeSec, opretsDummy);
+    return DecodeTokenCreateOpRet(scriptPubKey, origpubkey, name, description, ownerperc, tokentype, referencetokenid, expiryTimeSec, opretsDummy);
 }
 
-uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc, std::string &tokentype, uint256 &assettokenid, int64_t &expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> &oprets)
+uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc, std::string &tokentype, uint256 &referencetokenid, int64_t &expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> &oprets)
 {
     vscript_t vopret, vblob;
     uint8_t dummyEvalcode, funcid, opretId = 0;
@@ -165,7 +163,7 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
 
     if (vopret.size() > 2 && vopret.begin()[0] == EVAL_TOKENS && vopret.begin()[1] == 'c')
     {
-        if (E_UNMARSHAL(vopret, ss >> dummyEvalcode; ss >> funcid; ss >> origpubkey; ss >> name; ss >> description; ss >> ownerperc; ss >> tokentype; ss >> assettokenid; ss >> expiryTimeSec;
+        if (E_UNMARSHAL(vopret, ss >> dummyEvalcode; ss >> funcid; ss >> origpubkey; ss >> name; ss >> description; ss >> ownerperc; ss >> tokentype; ss >> referencetokenid; ss >> expiryTimeSec;
         while (!ss.eof()) {
             ss >> opretId;
             if (!ss.eof()) {
@@ -192,8 +190,11 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
 {
     vscript_t vopret, vblob;
     uint8_t dummyEvalcode, funcid, opretId = 0;
+	std::string dummyTokentype; uint256 dummyAssettokenid; 
+	double dummyOwnerperc; int64_t dummyExpiryTimeSec;
+	return DecodeTokenCreateOpRet(scriptPubKey, origpubkey, name, description, dummyOwnerperc, dummyTokentype, dummyAssettokenid, dummyExpiryTimeSec, oprets);
 
-    GetOpReturnData(scriptPubKey, vopret);
+    /*GetOpReturnData(scriptPubKey, vopret);
     oprets.clear();
 
     if (vopret.size() > 2 && vopret.begin()[0] == EVAL_TOKENS && vopret.begin()[1] == 'c')
@@ -211,7 +212,7 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
         }
     }
     LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "DecodeTokenCreateOpRet() incorrect token create opret" << std::endl);
-    return (uint8_t)0;
+    return (uint8_t)0;*/
 }
 
 // decode token opret: 
