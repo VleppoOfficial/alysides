@@ -787,10 +787,12 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey) {
 // returns token creation signed raw tx
 std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerPerc, std::string tokenType, uint256 referenceTokenId, int64_t expiryTimeSec, vscript_t nonfungibleData)
 {
-	CTransaction refTokenBaseTx; uint256 hashBlock;
-	std::vector<uint8_t> dummyPubkey; int64_t refTokenSupply, refExpiryTimeSec, output;
+	CTransaction refTokenBaseTx;
+	uint256 hashBlock, dummyRefTokenId;
+	std::vector<uint8_t> dummyPubkey;
+	int64_t refTokenSupply, refExpiryTimeSec, output;
 	std::string dummyName, dummyDescription, refTokenType;
-	double refOwnerPerc; uint256 dummyRefTokenId;
+	double refOwnerPerc;
 	int32_t numblocks;
 	
 	// this is just for log messages indentation for debugging recursive calls:
