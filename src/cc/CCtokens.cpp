@@ -870,8 +870,8 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		return std::string("");
 	}
 
-	//If token type is "a" and referenceTokenId is defined, check if it is valid
-	if (tokenType == "a" && referenceTokenId.GetHex() != "0000000000000000000000000000000000000000000000000000000000000000")
+	//If token type is "a" and referenceTokenId is (properly) defined, check if it is valid
+	if (tokenType == "a" && referenceTokenId != zeroid)
 	{
 		if (!GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false))
 		{
