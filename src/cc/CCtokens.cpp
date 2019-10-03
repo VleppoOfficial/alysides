@@ -889,20 +889,20 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 
         //sub-licenses must reference unexpired master licenses owned by mypk
         if (tokenType == "s" && (refTokenType != "m" || ownedRefTokenPerc <= refOwnerPerc)) {
-            CCerror = "for sub-license tokens reference tokenid must be of type 'm', unexpired and owned by this pubkey AA";
+            CCerror = "for sub-license tokens reference tokenid must be of type 'm', unexpired and owned by this pubkey";
             LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
             return std::string("");
         }
         if (refExpiryTimeSec != 0) {
             if (tokenType == "s" && (CCduration(numblocks, referenceTokenId) > refExpiryTimeSec)) {
-                CCerror = "Can't create a Sub-Licens if Master-Licens is Expired";
+                CCerror = "Can't create a sub-license if master license is expired";
                 LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
                 return std::string("");
             }
             if (tokenType == "s" && (refExpiryTimeSec - CCduration(numblocks, referenceTokenId) < expiryTimeSec))
 
             {
-                CCerror = "Sub-Licens Expiretime can't be longer then Master-Licens Expiretime";
+                CCerror = "Sub-license expire time can't be longer then master license expire time";
                 LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
                 return std::string("");
             }
@@ -1026,7 +1026,6 @@ std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, 
     }
     return ("");
 }
-
 
 int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 {
