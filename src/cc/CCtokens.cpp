@@ -871,13 +871,15 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	}
 
 	//If token type is "a" and referenceTokenId is defined, check if it is valid
-	if (tokenType == "a" || referenceTokenId != zeroid)
+	if (tokenType == "a" && referenceTokenId != zeroid)
+	{
 		if (!GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false))
 		{
 			CCerror = "cant find reference tokenid";
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return std::string("");
 		}
+	}
 	
 	//std::cerr << indentStr << "reftokenid=" << referenceTokenId.GetHex() << " GetTransactionOutput=" << GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false) << std::endl;
 
