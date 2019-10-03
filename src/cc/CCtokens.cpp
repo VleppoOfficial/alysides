@@ -921,13 +921,26 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			return std::string("");
 		}
 
-		//sub-licenses must reference unexpired master licenses owned by mypk
-		if (tokenType == "s" && (refTokenType != "m" || ownedRefTokenPerc <= refOwnerPerc || CCduration(numblocks, referenceTokenId) > refExpiryTimeSec))
-		{
-			CCerror = "for sub-license tokens reference tokenid must be of type 'm', unexpired and owned by this pubkey";
-			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-			return std::string("");
-		}
+		
+                //sub-licenses must reference unexpired master licenses owned by mypk
+                if (tokenType == "s" && (refTokenType != "m" || ownedRefTokenPerc <= refOwnerPerc)) {
+                    CCerror = "for sub-license tokens reference tokenid must be of type 'm', unexpired and owned by this pubkey AA";
+                    LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+                    return std::string("");
+                }
+                if (tokenType == "s" && (CCduration(numblocks, referenceTokenId) > refExpiryTimeSec )) 
+				{
+                    CCerror = "yoyoyoyoyoyo overtime";
+                    LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+                    return std::string("");
+                }
+                if (tokenType == "s" && (refExpiryTimeSec - CCduration(numblocks, referenceTokenId) < expiryTimeSec)) 
+				
+				{
+                    CCerror = "yoyoyoyoyoyo";
+                    LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+                    return std::string("");
+                }
 	}
 
 	//We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
