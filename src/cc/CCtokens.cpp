@@ -1123,7 +1123,8 @@ UniValue TokenInfo(uint256 tokenid)
 	{ 
 		durationSec = CCduration(numblocks, tokenid);
 		bool isExpired = (durationSec > expiryTimeSec) ? true : false;
-
+                if (expiryTimeSec == 0)
+                    isExpired = false;
 		timeleft = expiryTimeSec - durationSec; // added to calculate time left
 		result.push_back(Pair("expirytime", expiryTimeSec));
 		result.push_back(Pair("timeleft", timeleft));
