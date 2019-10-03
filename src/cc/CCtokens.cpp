@@ -885,6 +885,9 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 
 	if (tokenType == "m" || tokenType == "s")
 	{
+           /* if (expiryTimeSec == 0) {
+                IsExpiredTx = 31536000;
+            }*/
 		//Checking if tokensupply is equal to 1 if token is master license type
 		if (tokenType == "m" && tokensupply != 1)
 		{
