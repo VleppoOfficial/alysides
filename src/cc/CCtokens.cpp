@@ -930,14 +930,14 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
                 }
                 if (tokenType == "s" && (CCduration(numblocks, referenceTokenId) > refExpiryTimeSec )) 
 				{
-                    CCerror = "yoyoyoyoyoyo overtime";
+                    CCerror = "Can't create a Sub-Licens if Master-Licens is Expired";
                     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
                     return std::string("");
                 }
                 if (tokenType == "s" && (refExpiryTimeSec - CCduration(numblocks, referenceTokenId) < expiryTimeSec)) 
 				
 				{
-                    CCerror = "yoyoyoyoyoyo";
+                    CCerror = "Sub-Licens Expiretime can't be longer then Master-Licens Expiretime";
                     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
                     return std::string("");
                 }
@@ -1123,6 +1123,7 @@ UniValue TokenInfo(uint256 tokenid)
 	{ 
 		durationSec = CCduration(numblocks, tokenid);
 		bool isExpired = (durationSec > expiryTimeSec) ? true : false;
+
 		timeleft = expiryTimeSec - durationSec; // added to calculate time left
 		result.push_back(Pair("expirytime", expiryTimeSec));
 		result.push_back(Pair("timeleft", timeleft));
