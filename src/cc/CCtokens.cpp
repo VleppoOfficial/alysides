@@ -900,20 +900,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return std::string("");
 		}
-		
-		/*else
-		{
-			//calculating referenceTokenId supply
-			refTokenSupply = GetTokenSupply(referenceTokenId, cp);
-			refTokenSupply = 0;
-			for (int v = 0; v < refTokenBaseTx.vout.size() - 1; v++) {
-				if ((output = IsTokensvout(false, true, cp, NULL, refTokenBaseTx, v, referenceTokenId)) > 0)
-					refTokenSupply += output;
-			}
-		}*/
 
-		//TODO: needs to be ported to a helper function so other methods can access these vars easily
-		//double ownedRefTokenBalance = GetTokenBalance(mypk, referenceTokenId), ownedRefTokenPerc = (ownedRefTokenBalance / refTokenSupply * 100);
 		double ownedRefTokenPerc = (GetTokenBalance(mypk, referenceTokenId) / GetTokenSupply(referenceTokenId, cp) * 100);
 
 		//checking reference tokenid opret
@@ -1111,9 +1098,6 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("name", name));
 
 	supply = GetTokenSupply(tokenid, cpTokens);
-	/*for (int v = 0; v < tokenbaseTx.vout.size() - 1; v++)
-		if ((output = IsTokensvout(false, true, cpTokens, NULL, tokenbaseTx, v, tokenid)) > 0)
-			supply += output;*/
 	
 	result.push_back(Pair("supply", supply));
 	result.push_back(Pair("description", description));
