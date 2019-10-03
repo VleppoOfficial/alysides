@@ -784,6 +784,30 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey) {
     return CPubKey(); //return invalid pubkey
 }
 
+int64_t GetTokenSupply(uint256 tokenid)
+{
+	int64_t tokenSupply = 0, output;
+	uint256 hashBlock;
+	CTransaction tokenBaseTx;
+	
+	if (GetTransaction(tokenid, tokenBaseTx, hashBlock, false))
+	{
+		for (int v = 0; v < tokenBaseTx.vout.size() - 1; v++) {
+			if ((output = IsTokensvout(false, true, cp, NULL, tokenBaseTx, v, tokenid)) > 0)
+				tokenSupply += output;
+		}
+	}
+	else
+	{
+		CCerror = "cant find reference tokenid";
+		LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+		return 0;
+	}
+	return tokenSupply;
+}
+
+// GetTokenOwnershipPercentage goes here
+
 // returns token creation signed raw tx
 std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerPerc, std::string tokenType, uint256 referenceTokenId, int64_t expiryTimeSec, vscript_t nonfungibleData)
 {
@@ -837,19 +861,11 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		return("");
 	}
 
-	//Checking if a digital asset or contract type has data embedded
+	//Checking if a digital asset type has data embedded
 	//TODO: Placeholder until we get proper data update functionality
-	if ((tokenType == "a" || tokenType == "c") && description.size() <= 0)
+	if (tokenType == "a" && description.size() <= 0)
 	{
-		CCerror = "for digital asset and contract tokens description cannot be empty";
-		LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-		return std::string("");
-	}
-
-	//Checking if tokensupply is equal to 1 if token is contract or master license type
-	if ((tokenType == "m" || tokenType == "c") && tokensupply != 1)
-	{
-		CCerror = "for contract and master license tokens tokensupply should be equal to 1";
+		CCerror = "for digital asset tokens description cannot be empty";
 		LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 		return std::string("");
 	}
@@ -858,12 +874,14 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 
 	if (tokenType == "m" || tokenType == "s")
 	{
-		//Check if expirytime for master and sublicense types exists. If not defined, set it to 31536000 seconds.
-		//TODO: remove this block, since 0 should mean perpetual license
-		if (expiryTimeSec == 0) {
-			expiryTimeSec = 31536000;
+		//Checking if tokensupply is equal to 1 if token is master license type
+		if (tokenType == "m" && tokensupply != 1)
+		{
+			CCerror = "for master license tokens tokensupply should be equal to 1";
+			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+			return std::string("");
 		}
-
+		
 		//checking if referenceTokenId exists
 		if (!GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false))
 		{
@@ -874,15 +892,17 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		else
 		{
 			//calculating referenceTokenId supply
-			refTokenSupply = 0;
+			refTokenSupply = GetTokenSupply(referenceTokenId);
+			/*refTokenSupply = 0;
 			for (int v = 0; v < refTokenBaseTx.vout.size() - 1; v++) {
 				if ((output = IsTokensvout(false, true, cp, NULL, refTokenBaseTx, v, referenceTokenId)) > 0)
 					refTokenSupply += output;
-			}
+			}*/
 		}
 
 		//TODO: needs to be ported to a helper function so other methods can access these vars easily
-		double ownedRefTokenBalance = GetTokenBalance(mypk, referenceTokenId), ownedRefTokenPerc = (ownedRefTokenBalance / refTokenSupply * 100);
+		//double ownedRefTokenBalance = GetTokenBalance(mypk, referenceTokenId), ownedRefTokenPerc = (ownedRefTokenBalance / refTokenSupply * 100);
+		double ownedRefTokenPerc = (GetTokenBalance(mypk, referenceTokenId) / GetTokenSupply(referenceTokenId) * 100);
 
 		//checking reference tokenid opret
 		if (refTokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c')
@@ -1078,10 +1098,11 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("owner", HexStr(origpubkey)));
 	result.push_back(Pair("name", name));
 
-	for (int v = 0; v < tokenbaseTx.vout.size() - 1; v++)
+	supply = GetTokenSupply(tokenid);
+	/*for (int v = 0; v < tokenbaseTx.vout.size() - 1; v++)
 		if ((output = IsTokensvout(false, true, cpTokens, NULL, tokenbaseTx, v, tokenid)) > 0)
-			supply += output;
-		
+			supply += output;*/
+	
 	result.push_back(Pair("supply", supply));
 	result.push_back(Pair("description", description));
 	result.push_back(Pair("tokenType", tokenType));
