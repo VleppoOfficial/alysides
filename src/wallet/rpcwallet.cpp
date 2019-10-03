@@ -7378,7 +7378,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
     
 	tokentype = params[2].get_str();
     if (tokentype.size() > 1)   {
-        ERR_RESULT("Token type must be 'a', 'c', 'm' or 's'");
+        ERR_RESULT("Token type must be 'a', 'm' or 's'");
         return(result);
     }
 	
@@ -7391,8 +7391,9 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
     }
 	
 	if (params.size() >= 5)     {
+		referencetokenid = Parseuint256((char *)params[4].get_str().c_str());
 		if (tokentype == "m" || tokentype == "s") {
-			referencetokenid = Parseuint256((char *)params[4].get_str().c_str());
+			//referencetokenid = Parseuint256((char *)params[4].get_str().c_str());
 			if (referencetokenid == zeroid)    {
 				ERR_RESULT("invalid reference tokenid");
 				return(result);
