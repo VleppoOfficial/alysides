@@ -870,7 +870,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		return std::string("");
 	}
 
-	//If token type is "a" and referenceTokenId is (properly) defined, check if it is valid
+	//If token type is "a" and referenceTokenId is (properly) defined, check if it is valid. Else, ignore as it is optional for "a" types
 	if (tokenType == "a" && referenceTokenId != zeroid)
 	{
 		if (!GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false))
@@ -880,7 +880,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			return std::string("");
 		}
 	}
-	
+
 	//std::cerr << indentStr << "reftokenid=" << referenceTokenId.GetHex() << " GetTransactionOutput=" << GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false) << std::endl;
 
 	if (tokenType == "m" || tokenType == "s")
@@ -901,7 +901,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			return std::string("");
 		}
 
-		double ownedRefTokenPerc = (GetTokenBalance(mypk, referenceTokenId) / GetTokenSupply(referenceTokenId, cp) * 100);
+		double ownedRefTokenPerc = truncf(GetTokenBalance(mypk, referenceTokenId) / GetTokenSupply(referenceTokenId, cp) * 100);
 
 		//checking reference tokenid opret
 		if (refTokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c')
