@@ -7402,7 +7402,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
 	
 	if (params.size() >= 6)     {
 		expiryTimeSec = atof(params[5].get_str().c_str());
-		if((tokentype == "m" || tokentype == "s") && expiryTimeSec <= 0)    {
+		if((tokentype == "m" || tokentype == "s") && expiryTimeSec < 0)    {
 			ERR_RESULT("Expire time must be positive");
 			return(result);
 		}
