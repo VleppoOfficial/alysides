@@ -7377,7 +7377,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
     }
     
 	tokentype = params[2].get_str();
-    if (tokentype != "a" || tokentype != "m" || tokentype != "s")   {
+    if (tokentype != "a" && tokentype != "m" && tokentype != "s")   {
         ERR_RESULT("Token type must be 'a', 'm' or 's'");
         return(result);
     }
