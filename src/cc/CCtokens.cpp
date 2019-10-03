@@ -948,12 +948,32 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
     return std::string("");
 }
 
+/*
+	//concept method for sending many tokenids to 1 pubkey in the same tx.
+	//it creates a tx for sending entire owned balances for each tokenid in the array
+	
+token transfer logic:
+	mtx
+	set change etc.
+
+std::string TokenTransferMany(int64_t txfee, vscript_t destpubkey, uint256 tokenidarray[])
+{
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+	uint64_t mask;
+	int64_t CCchange = 0, inputs = 0;
+	vscript_t vopretNonfungible, vopretEmpty;
+	
+	struct CCcontract_info *cp, C;
+	cp = CCinit(&C, EVAL_TOKENS);
+	
+}
+*/
+
 // transfer tokens to another pubkey
 // param additionalEvalCode allows transfer of dual-eval non-fungible tokens
 std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, int64_t total)
 {
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-    CPubKey mypk;
     uint64_t mask;
     int64_t CCchange = 0, inputs = 0;
     struct CCcontract_info *cp, C;
@@ -969,7 +989,7 @@ std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, 
 
     if (txfee == 0)
         txfee = 10000;
-    mypk = pubkey2pk(Mypubkey());
+    CPubKey mypk = pubkey2pk(Mypubkey());
     if (AddNormalinputs(mtx, mypk, txfee, 3) > 0) {
         mask = ~((1LL << mtx.vin.size()) - 1); // seems, mask is not used anymore
 
