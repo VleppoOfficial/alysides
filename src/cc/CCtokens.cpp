@@ -784,7 +784,7 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey) {
     return CPubKey(); //return invalid pubkey
 }
 
-int64_t GetTokenSupply(uint256 tokenid)
+int64_t GetTokenSupply(uint256 tokenid, struct CCcontract_info *cp)
 {
 	int64_t tokenSupply = 0, output;
 	uint256 hashBlock;
@@ -892,7 +892,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		else
 		{
 			//calculating referenceTokenId supply
-			refTokenSupply = GetTokenSupply(referenceTokenId);
+			refTokenSupply = GetTokenSupply(referenceTokenId, cp);
 			/*refTokenSupply = 0;
 			for (int v = 0; v < refTokenBaseTx.vout.size() - 1; v++) {
 				if ((output = IsTokensvout(false, true, cp, NULL, refTokenBaseTx, v, referenceTokenId)) > 0)
@@ -1098,7 +1098,7 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("owner", HexStr(origpubkey)));
 	result.push_back(Pair("name", name));
 
-	supply = GetTokenSupply(tokenid);
+	supply = GetTokenSupply(tokenid, cpTokens);
 	/*for (int v = 0; v < tokenbaseTx.vout.size() - 1; v++)
 		if ((output = IsTokensvout(false, true, cpTokens, NULL, tokenbaseTx, v, tokenid)) > 0)
 			supply += output;*/
