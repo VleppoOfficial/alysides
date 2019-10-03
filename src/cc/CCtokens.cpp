@@ -784,6 +784,8 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey) {
     return CPubKey(); //return invalid pubkey
 }
 
+// returns total supply of a specified token
+// moved to separate function for accessibility
 int64_t GetTokenSupply(uint256 tokenid, struct CCcontract_info *cp)
 {
 	int64_t tokenSupply = 0, output;
@@ -806,15 +808,13 @@ int64_t GetTokenSupply(uint256 tokenid, struct CCcontract_info *cp)
 	return tokenSupply;
 }
 
-// GetTokenOwnershipPercentage goes here
-
 // returns token creation signed raw tx
 std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerPerc, std::string tokenType, uint256 referenceTokenId, int64_t expiryTimeSec, vscript_t nonfungibleData)
 {
 	CTransaction refTokenBaseTx;
 	uint256 hashBlock, dummyRefTokenId;
 	std::vector<uint8_t> dummyPubkey;
-	int64_t refTokenSupply, refExpiryTimeSec, output;
+	int64_t refTokenSupply, refExpiryTimeSec;
 	std::string dummyName, dummyDescription, refTokenType;
 	double refOwnerPerc;
 	int32_t numblocks;
@@ -889,16 +889,16 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return std::string("");
 		}
-		else
+		/*else
 		{
 			//calculating referenceTokenId supply
 			refTokenSupply = GetTokenSupply(referenceTokenId, cp);
-			/*refTokenSupply = 0;
+			refTokenSupply = 0;
 			for (int v = 0; v < refTokenBaseTx.vout.size() - 1; v++) {
 				if ((output = IsTokensvout(false, true, cp, NULL, refTokenBaseTx, v, referenceTokenId)) > 0)
 					refTokenSupply += output;
-			}*/
-		}
+			}
+		}*/
 
 		//TODO: needs to be ported to a helper function so other methods can access these vars easily
 		//double ownedRefTokenBalance = GetTokenBalance(mypk, referenceTokenId), ownedRefTokenPerc = (ownedRefTokenBalance / refTokenSupply * 100);
@@ -1064,7 +1064,7 @@ UniValue TokenInfo(uint256 tokenid)
 	std::string name, description, tokenType; 
 	double ownerPerc;
 	struct CCcontract_info *cpTokens, tokensCCinfo;
-	int64_t timeleft, supply = 0, output, expiryTimeSec;
+	int64_t timeleft, supply = 0, expiryTimeSec;
 	int32_t numblocks;
 	uint64_t durationSec = 0;
 
@@ -1107,12 +1107,14 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("description", description));
 	result.push_back(Pair("tokenType", tokenType));
 
+	if (referenceTokenId != zeroid)
+		result.push_back(Pair("referenceTokenId", referenceTokenId.GetHex()));
+	
 	if (tokenType == "m" || tokenType == "s")
 	{ 
 		durationSec = CCduration(numblocks, tokenid);
 		bool isExpired = (durationSec > expiryTimeSec) ? true : false;
 		timeleft = expiryTimeSec - durationSec; // added to calculate time left
-		result.push_back(Pair("referenceTokenId", referenceTokenId.GetHex()));
 		result.push_back(Pair("expirytime", expiryTimeSec));
 		result.push_back(Pair("timeleft", timeleft));
 		result.push_back(Pair("isExpired", isExpired));
