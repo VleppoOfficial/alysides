@@ -784,13 +784,37 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey) {
     return CPubKey(); //return invalid pubkey
 }
 
+// returns total supply of a specified token
+// moved to separate function for accessibility
+int64_t GetTokenSupply(uint256 tokenid, struct CCcontract_info *cp)
+{
+	int64_t tokenSupply = 0, output;
+	uint256 hashBlock;
+	CTransaction tokenBaseTx;
+	
+	if (GetTransaction(tokenid, tokenBaseTx, hashBlock, false))
+	{
+		for (int v = 0; v < tokenBaseTx.vout.size() - 1; v++) {
+			if ((output = IsTokensvout(false, true, cp, NULL, tokenBaseTx, v, tokenid)) > 0)
+				tokenSupply += output;
+		}
+	}
+	else
+	{
+		CCerror = "cant find reference tokenid";
+		LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+		return 0;
+	}
+	return tokenSupply;
+}
+
 // returns token creation signed raw tx
 std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerPerc, std::string tokenType, uint256 referenceTokenId, int64_t expiryTimeSec, vscript_t nonfungibleData)
 {
 	CTransaction refTokenBaseTx;
 	uint256 hashBlock, dummyRefTokenId;
 	std::vector<uint8_t> dummyPubkey;
-	int64_t refTokenSupply, refExpiryTimeSec, output;
+	int64_t refTokenSupply, refExpiryTimeSec;
 	std::string dummyName, dummyDescription, refTokenType;
 	double refOwnerPerc;
 	int32_t numblocks;
@@ -837,33 +861,38 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		return("");
 	}
 
-	//Checking if a digital asset or contract type has data embedded
+	//Checking if a digital asset type has data embedded
 	//TODO: Placeholder until we get proper data update functionality
-	if ((tokenType == "a" || tokenType == "c") && description.size() <= 0)
+	if (tokenType == "a" && description.size() <= 0)
 	{
-		CCerror = "for digital asset and contract tokens description cannot be empty";
+		CCerror = "for digital asset tokens description cannot be empty";
 		LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 		return std::string("");
 	}
 
-	//Checking if tokensupply is equal to 1 if token is contract or master license type
-	if ((tokenType == "m" || tokenType == "c") && tokensupply != 1)
+	//If token type is "a" and referenceTokenId is (properly) defined, check if it is valid. Else, ignore as it is optional for "a" types
+	if (tokenType == "a" && referenceTokenId != zeroid)
 	{
-		CCerror = "for contract and master license tokens tokensupply should be equal to 1";
-		LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-		return std::string("");
+		if (!GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false))
+		{
+			CCerror = "cant find reference tokenid";
+			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+			return std::string("");
+		}
 	}
 
 	//std::cerr << indentStr << "reftokenid=" << referenceTokenId.GetHex() << " GetTransactionOutput=" << GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false) << std::endl;
 
 	if (tokenType == "m" || tokenType == "s")
 	{
-		//Check if expirytime for master and sublicense types exists. If not defined, set it to 31536000 seconds.
-		//TODO: remove this block, since 0 should mean perpetual license
-		if (expiryTimeSec == 0) {
-			expiryTimeSec = 31536000;
+		//Checking if tokensupply is equal to 1 if token is master license type
+		if (tokenType == "m" && tokensupply != 1)
+		{
+			CCerror = "for master license tokens tokensupply should be equal to 1";
+			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+			return std::string("");
 		}
-
+		
 		//checking if referenceTokenId exists
 		if (!GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false))
 		{
@@ -871,18 +900,8 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 			LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return std::string("");
 		}
-		else
-		{
-			//calculating referenceTokenId supply
-			refTokenSupply = 0;
-			for (int v = 0; v < refTokenBaseTx.vout.size() - 1; v++) {
-				if ((output = IsTokensvout(false, true, cp, NULL, refTokenBaseTx, v, referenceTokenId)) > 0)
-					refTokenSupply += output;
-			}
-		}
 
-		//TODO: needs to be ported to a helper function so other methods can access these vars easily
-		double ownedRefTokenBalance = GetTokenBalance(mypk, referenceTokenId), ownedRefTokenPerc = (ownedRefTokenBalance / refTokenSupply * 100);
+		double ownedRefTokenPerc = (GetTokenBalance(mypk, referenceTokenId) / GetTokenSupply(referenceTokenId, cp) * 100);
 
 		//checking reference tokenid opret
 		if (refTokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c')
@@ -1044,7 +1063,7 @@ UniValue TokenInfo(uint256 tokenid)
 	std::string name, description, tokenType; 
 	double ownerPerc;
 	struct CCcontract_info *cpTokens, tokensCCinfo;
-	int64_t timeleft, supply = 0, output, expiryTimeSec;
+	int64_t timeleft, supply = 0, expiryTimeSec;
 	int32_t numblocks;
 	uint64_t durationSec = 0;
 
@@ -1078,20 +1097,20 @@ UniValue TokenInfo(uint256 tokenid)
 	result.push_back(Pair("owner", HexStr(origpubkey)));
 	result.push_back(Pair("name", name));
 
-	for (int v = 0; v < tokenbaseTx.vout.size() - 1; v++)
-		if ((output = IsTokensvout(false, true, cpTokens, NULL, tokenbaseTx, v, tokenid)) > 0)
-			supply += output;
-		
+	supply = GetTokenSupply(tokenid, cpTokens);
+	
 	result.push_back(Pair("supply", supply));
 	result.push_back(Pair("description", description));
 	result.push_back(Pair("tokenType", tokenType));
 
+	if (referenceTokenId != zeroid)
+		result.push_back(Pair("referenceTokenId", referenceTokenId.GetHex()));
+	
 	if (tokenType == "m" || tokenType == "s")
 	{ 
 		durationSec = CCduration(numblocks, tokenid);
 		bool isExpired = (durationSec > expiryTimeSec) ? true : false;
 		timeleft = expiryTimeSec - durationSec; // added to calculate time left
-		result.push_back(Pair("referenceTokenId", referenceTokenId.GetHex()));
 		result.push_back(Pair("expirytime", expiryTimeSec));
 		result.push_back(Pair("timeleft", timeleft));
 		result.push_back(Pair("isExpired", isExpired));
