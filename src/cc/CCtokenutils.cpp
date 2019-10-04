@@ -23,51 +23,9 @@
 #define IS_CHARINSTR(c, str) (std::string(str).find((char)(c)) != std::string::npos)
 #endif
 
+// Original Komodo create opret encoder, kept for compatibility with other modules
 // NOTE: this inital tx won't be used by other contract
 // for tokens to be used there should be at least one 't' tx with other contract's custom opret
-CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description,double ownerperc, std::string tokentype, uint256 referencetokenid, int64_t expiryTimeSec, vscript_t vopretNonfungible)
-{
-    std::vector<std::pair<uint8_t, vscript_t>> oprets;
-
-    if(!vopretNonfungible.empty())
-        oprets.push_back(std::make_pair(OPRETID_NONFUNGIBLEDATA, vopretNonfungible));
-    return EncodeTokenCreateOpRet(funcid, origpubkey, name, description, ownerperc, tokentype, referencetokenid, expiryTimeSec, oprets);
-}
-
-CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 referencetokenid, int64_t expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> oprets)
-{
-    CScript opret;
-    uint8_t evalcode = EVAL_TOKENS;
-    funcid = 'c'; // override the param
-
-    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << name << description << ownerperc << tokentype << referencetokenid << expiryTimeSec;
-    for (auto o : oprets) {
-        if (o.first != 0) {
-            ss << (uint8_t)o.first;
-            ss << o.second;
-        }
-    });
-    return(opret);
-}
-
-CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, vscript_t vopretNonfungible)
-{
-    /*   CScript opret;
-    uint8_t evalcode = EVAL_TOKENS;
-    funcid = 'c'; // override the param
-    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << name << description; \
-    if (!vopretNonfungible.empty()) {
-    ss << (uint8_t)OPRETID_NONFUNGIBLEDATA;
-    ss << vopretNonfungible;
-    });  */
-
-    std::vector<std::pair<uint8_t, vscript_t>> oprets;
-
-    if(!vopretNonfungible.empty())
-        oprets.push_back(std::make_pair(OPRETID_NONFUNGIBLEDATA, vopretNonfungible));
-    return EncodeTokenCreateOpRet(funcid, origpubkey, name, description, oprets);
-}
-
 CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, std::vector<std::pair<uint8_t, vscript_t>> oprets)
 {
     CScript opret;
@@ -86,7 +44,46 @@ CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, 
     return(opret);
 }
 
-// stop her
+//overload for fungible tokens
+CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, vscript_t vopretNonfungible)
+{
+    std::vector<std::pair<uint8_t, vscript_t>> oprets;
+
+    if(!vopretNonfungible.empty())
+        oprets.push_back(std::make_pair(OPRETID_NONFUNGIBLEDATA, vopretNonfungible));
+    return EncodeTokenCreateOpRet(funcid, origpubkey, name, description, oprets);
+}
+
+//Custom opret encoder, with licensing support
+CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 referencetokenid, int64_t expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> oprets)
+{
+    CScript opret;
+    uint8_t evalcode = EVAL_TOKENS;
+    funcid = 'c'; // override the param
+
+    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << name << description << ownerperc << tokentype << referencetokenid << expiryTimeSec;
+    for (auto o : oprets) {
+        if (o.first != 0) {
+            ss << (uint8_t)o.first;
+            ss << o.second;
+        }
+    });
+    return(opret);
+}
+
+//overload for fungible tokens
+CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 referencetokenid, int64_t expiryTimeSec, vscript_t vopretNonfungible)
+{
+    std::vector<std::pair<uint8_t, vscript_t>> oprets;
+
+    if(!vopretNonfungible.empty())
+        oprets.push_back(std::make_pair(OPRETID_NONFUNGIBLEDATA, vopretNonfungible));
+    return EncodeTokenCreateOpRet(funcid, origpubkey, name, description, ownerperc, tokentype, referencetokenid, expiryTimeSec, oprets);
+}
+
+//generic token opret encoders
+//TODO: convert uint256 tokenid to std::vector<uint256> tokenids
+
 CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::pair<uint8_t, vscript_t> opretWithId)
 {
     std::vector<std::pair<uint8_t, vscript_t>>  oprets;
@@ -109,9 +106,6 @@ CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std:
         LOGSTREAM((char *)"cctokens", CCLOG_DEBUG2, stream << "EncodeTokenOpRet voutPubkeys.size()=" << voutPubkeys.size() << " not supported" << std::endl);
     }
 
-    //vopret_t vpayload;
-    //GetOpReturnData(payload, vpayload);
-
     opret << OP_RETURN << E_MARSHAL(ss << evalCodeInOpret << tokenFuncId << tokenid << ccType;
     if (ccType >= 1) ss << voutPubkeys[0];
     if (ccType == 2) ss << voutPubkeys[1];
@@ -121,31 +115,17 @@ CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std:
             ss << o.second;
         }
     });
-
-    // bad opret cases (tries to attach payload without re-serialization): 
-
-    // error "64: scriptpubkey":
-    // if (payload.size() > 0) 
-    //	   opret += payload; 
-
-    // error "64: scriptpubkey":
-    // CScript opretPayloadNoOpcode(vpayload);
-    //    return opret + opretPayloadNoOpcode;
-
-    // error "sig_aborted":
-    // opret.resize(opret.size() + vpayload.size());
-    // CScript::iterator it = opret.begin() + opret.size();
-    // for (int i = 0; i < vpayload.size(); i++, it++)
-    // 	 *it = vpayload[i];
-
+	
     return opret;
 }
+/*
+CScript EncodeTokenOpRet(uint8_t tokenFuncId, std::vector<uint256> tokenids, std::vector<CPubKey> voutPubkeys, std::pair<uint8_t, vscript_t> opretWithId)
+{
+    std::vector<std::pair<uint8_t, vscript_t>>  oprets;
+    oprets.push_back(opretWithId);
+    return EncodeTokenOpRet(tokenids, voutPubkeys, oprets);
+}*/
 
-// overload for compatibility 
-//CScript EncodeTokenOpRet(uint8_t tokenFuncId, uint8_t evalCodeInOpret, uint256 tokenid, std::vector<CPubKey> voutPubkeys, CScript payload)
-//{
-//	return EncodeTokenOpRet(tokenid, voutPubkeys, payload);
-//}
 
 uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc, std::string &tokentype, uint256 &referencetokenid, int64_t &expiryTimeSec) {
     //vopret_t  vopretNonfungibleDummy;
@@ -179,13 +159,7 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
     return (uint8_t)0;
 }
 
-// overload for fungible tokens (no additional data in opret):
-uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description) {
-    //vopret_t  vopretNonfungibleDummy;
-    std::vector<std::pair<uint8_t, vscript_t>>  opretsDummy;
-    return DecodeTokenCreateOpRet(scriptPubKey, origpubkey, name, description, opretsDummy);
-}
-
+// Original Komodo create opret decoder, kept for compatibility with other modules
 uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, std::vector<std::pair<uint8_t, vscript_t>> &oprets)
 {
     vscript_t vopret, vblob;
@@ -213,6 +187,13 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
     }
     LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "DecodeTokenCreateOpRet() incorrect token create opret" << std::endl);
     return (uint8_t)0;*/
+}
+
+// overload for fungible tokens (no additional data in opret):
+uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description) {
+    //vopret_t  vopretNonfungibleDummy;
+    std::vector<std::pair<uint8_t, vscript_t>>  opretsDummy;
+    return DecodeTokenCreateOpRet(scriptPubKey, origpubkey, name, description, opretsDummy);
 }
 
 // decode token opret: 

@@ -889,7 +889,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 
         //sub-licenses must reference unexpired master licenses owned by mypk
         if (tokenType == "s" && (refTokenType != "m" || ownedRefTokenPerc <= refOwnerPerc)) {
-            CCerror = "for sub-license tokens reference tokenid must be of type 'm', unexpired and owned by this pubkey";
+            CCerror = "for sub-license tokens reference tokenid must be of type 'm' and owned by this pubkey";
             LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
             return std::string("");
         }
@@ -902,7 +902,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
             if (tokenType == "s" && (refExpiryTimeSec - CCduration(numblocks, referenceTokenId) < expiryTimeSec))
 
             {
-                CCerror = "Sub-license expire time can't be longer then master license expire time";
+                CCerror = "Sub-license expire time can't be longer then time left until master license expires";
                 LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
                 return std::string("");
             }
@@ -949,9 +949,6 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 }
 
 /*
-	//concept method for sending many tokenids to 1 pubkey in the same tx.
-	//it creates a tx for sending entire owned balances for each tokenid in the array
-	
 token transfer logic:
 	mtx
 	set CCchange and other vars.
@@ -976,23 +973,21 @@ token transfer logic:
 	else
 		errorb no coinz for txfee
 	return("")
+	
+	//concept method for sending many tokenids to 1 pubkey in the same tx.
+	//it creates a tx for sending entire owned balances for each tokenid in the array
+	
+token transfermany logic:
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+	CCchange is not needed since we're planning to send the entire owned balance
+	vscript_t vopretNonfungible, vopretEmpty;
+	CCcontract_info and cp = CCinit(&C, EVAL_TOKENS);
+	numamount is not needed
+	set txfee
+	pubkey2pk
+	
 
 std::string TokenTransferMany(int64_t txfee, vscript_t destpubkey, uint256 tokenidarray[])
-{
-	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	uint64_t mask;
-	int64_t CCchange = 0, inputs = 0;
-	vscript_t vopretNonfungible, vopretEmpty;
-	
-	struct CCcontract_info *cp, C;
-	cp = CCinit(&C, EVAL_TOKENS);
-	
-}
-*/
-
-// transfer tokens to another pubkey
-// param additionalEvalCode allows transfer of dual-eval non-fungible tokens
-std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, int64_t total)
 {
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
     uint64_t mask;
@@ -1000,7 +995,8 @@ std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, 
     struct CCcontract_info *cp, C;
     vscript_t vopretNonfungible, vopretEmpty;
 
-    if (total < 0) {
+    if (total < 0)
+	{
         CCerror = strprintf("negative total");
         LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << CCerror << "=" << total << std::endl);
         return ("");
@@ -1010,13 +1006,17 @@ std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, 
 
     if (txfee == 0)
         txfee = 10000;
+	
     CPubKey mypk = pubkey2pk(Mypubkey());
-    if (AddNormalinputs(mtx, mypk, txfee, 3) > 0) {
+	
+    if (AddNormalinputs(mtx, mypk, txfee, 3) > 0)
+	{
         mask = ~((1LL << mtx.vin.size()) - 1); // seems, mask is not used anymore
 
         if ((inputs = AddTokenCCInputs(cp, mtx, mypk, tokenid, total, 60, vopretNonfungible)) > 0) // NOTE: AddTokenCCInputs might set cp->additionalEvalCode which is used in FinalizeCCtx!
         {
-            if (inputs < total) { //added dimxy
+            if (inputs < total)
+			{ //added dimxy
                 CCerror = strprintf("insufficient token inputs");
                 LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenTransfer() " << CCerror << std::endl);
                 return std::string("");
@@ -1036,12 +1036,84 @@ std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, 
             voutTokenPubkeys.push_back(pubkey2pk(destpubkey)); // dest pubkey for validating vout
 
             return FinalizeCCTx(mask, cp, mtx, mypk, txfee, EncodeTokenOpRet(tokenid, voutTokenPubkeys, std::make_pair((uint8_t)0, vopretEmpty)));
-        } else {
+        }
+		else
+		{
             CCerror = strprintf("no token inputs");
             LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenTransfer() " << CCerror << " for amount=" << total << std::endl);
         }
-        //} else fprintf(stderr,"numoutputs.%d != numamounts.%d\n",n,(int32_t)amounts.size());
-    } else {
+    //} else fprintf(stderr,"numoutputs.%d != numamounts.%d\n",n,(int32_t)amounts.size());
+    }
+	else
+	{
+        CCerror = strprintf("insufficient normal inputs for tx fee");
+        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenTransfer() " << CCerror << std::endl);
+    }
+    return ("");
+}
+*/
+
+// transfer tokens to another pubkey
+// param additionalEvalCode allows transfer of dual-eval non-fungible tokens
+std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, int64_t total)
+{
+    CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+    uint64_t mask;
+    int64_t CCchange = 0, inputs = 0;
+    struct CCcontract_info *cp, C;
+    vscript_t vopretNonfungible, vopretEmpty;
+
+    if (total < 0)
+	{
+        CCerror = strprintf("negative total");
+        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << CCerror << "=" << total << std::endl);
+        return ("");
+    }
+
+    cp = CCinit(&C, EVAL_TOKENS);
+
+    if (txfee == 0)
+        txfee = 10000;
+	
+    CPubKey mypk = pubkey2pk(Mypubkey());
+	
+    if (AddNormalinputs(mtx, mypk, txfee, 3) > 0)
+	{
+        mask = ~((1LL << mtx.vin.size()) - 1); // seems, mask is not used anymore
+
+        if ((inputs = AddTokenCCInputs(cp, mtx, mypk, tokenid, total, 60, vopretNonfungible)) > 0) // NOTE: AddTokenCCInputs might set cp->additionalEvalCode which is used in FinalizeCCtx!
+        {
+            if (inputs < total)
+			{ //added dimxy
+                CCerror = strprintf("insufficient token inputs");
+                LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenTransfer() " << CCerror << std::endl);
+                return std::string("");
+            }
+
+            uint8_t destEvalCode = EVAL_TOKENS;
+            if (vopretNonfungible.size() > 0)
+                destEvalCode = vopretNonfungible.begin()[0];
+
+            if (inputs > total)
+                CCchange = (inputs - total);
+            mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, total, pubkey2pk(destpubkey))); // if destEvalCode == EVAL_TOKENS then it is actually MakeCC1vout(EVAL_TOKENS,...)
+            if (CCchange != 0)
+                mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, CCchange, mypk));
+
+            std::vector<CPubKey> voutTokenPubkeys;
+            voutTokenPubkeys.push_back(pubkey2pk(destpubkey)); // dest pubkey for validating vout
+
+            return FinalizeCCTx(mask, cp, mtx, mypk, txfee, EncodeTokenOpRet(tokenid, voutTokenPubkeys, std::make_pair((uint8_t)0, vopretEmpty)));
+        }
+		else
+		{
+            CCerror = strprintf("no token inputs");
+            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenTransfer() " << CCerror << " for amount=" << total << std::endl);
+        }
+    //} else fprintf(stderr,"numoutputs.%d != numamounts.%d\n",n,(int32_t)amounts.size());
+    }
+	else
+	{
         CCerror = strprintf("insufficient normal inputs for tx fee");
         LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenTransfer() " << CCerror << std::endl);
     }
