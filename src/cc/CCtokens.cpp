@@ -954,7 +954,28 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 	
 token transfer logic:
 	mtx
-	set change etc.
+	set CCchange and other vars.
+	CCcontract_info
+	vscript_t vopretNonfungible, vopretEmpty;
+	check if numamount >= 0
+	cp = CCinit(&C, EVAL_TOKENS);
+	set txfee
+	pubkey2pk
+	if AddNormalInputs
+		set mask (experiment by omitting it?)
+		if AddTokenCCInputs (for one tokenid, can't be 0)
+			check if tokeninputs >= numamount
+			destEvalCode and other non-fung data stuff
+			if tokeninputs > numamount calc CCchange
+			mtx.vout.push_back MakeTokensCC1vout (destevalcode, numamount, destpubkey)
+			if CCchange != 0, mtx.vout.push_back MakeTokensCC1vout (destevalcode, CCchange, mypk)
+			make dynamic array for destpubkey(s), push current destpubkey to vectorb
+			FinalizeCCTx (mask(0?), cp, mtx, mypk, txfee, EncodeTokenOpRet(tokenid, pubkeyarray, 0s?, vopretEmpty))
+		else
+			errorb no token inputs
+	else
+		errorb no coinz for txfee
+	return("")
 
 std::string TokenTransferMany(int64_t txfee, vscript_t destpubkey, uint256 tokenidarray[])
 {
