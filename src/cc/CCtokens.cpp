@@ -56,6 +56,10 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     uint8_t funcid, evalCodeInOpret;
     char destaddr[64], origaddr[64], CCaddr[64];
     std::vector<CPubKey> voutTokenPubkeys, vinTokenPubkeys;
+    std::string dummyName, dummyDescription, refTokenType;
+    std::vector<uint8_t> dummyPubkey;
+
+
 
     if (strcmp(ASSETCHAINS_SYMBOL, "ROGUE") == 0 && chainActive.Height() <= 12500)
         return true;
@@ -78,9 +82,9 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         return eval->Invalid("cant find token create txid");
     //else if (IsCCInput(tx.vin[0].scriptSig) != 0)
     //	return eval->Invalid("illegal token vin0");     // <-- this validation was removed because some token tx might not have normal vins
-    else if (funcid != 'c') {
+    else if (funcid != 'c') { 
         if (tokenid == zeroid)
-            return eval->Invalid("illegal tokenid");
+            return eval->Invalid("illegal tokenid"); 
         else if (!TokensExactAmounts(true, cp, inputs, outputs, eval, tx, tokenid)) {
             if (!eval->Valid())
                 return false; //TokenExactAmounts must call eval->Invalid()!
@@ -111,10 +115,12 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         //vout.n-1: opreturn EVAL_TOKENS 'c' <tokenname> <description>
         return eval->Invalid("incorrect token funcid");
 
+		if
+         
     case 't':
         // transfer
         // token tx structure for 't'
-        //vin.0: normal input
+        //vin.0: normal input 
         //vin.1 .. vin.n-1: valid CC outputs
         //vout.0 to n-2: tokenoshis output to CC
         //vout.n-2: normal output for change (if any)
@@ -122,6 +128,14 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         if (inputs == 0)
             return eval->Invalid("no token inputs for transfer");
 
+		CPubKey mypk = pubkey2pk(Mypubkey());
+		DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec)
+          
+			if (tokenType == "s" && dummyPubkey != mypk)
+			return eval->Invalid("no go bro");	
+		
+		// if (tokenType == "s" && determinate owner) 
+		 
         LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
         break; // breaking to other contract validation...
 
@@ -146,7 +160,7 @@ bool ExtractTokensCCVinPubkeys(const CTransaction& tx, std::vector<CPubKey>& vin
     vinPubkeys.clear();
 
     for (int32_t i = 0; i < tx.vin.size(); i++) {
-        // check for cc token vins:
+        // check for cc token vins
         if ((*cpTokens->ismyvin)(tx.vin[i].scriptSig)) {
             auto findEval = [](CC* cond, struct CCVisitor _) {
                 bool r = false;
@@ -870,7 +884,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 
         double ownedRefTokenPerc = (GetTokenBalance(mypk, referenceTokenId) / GetTokenSupply(referenceTokenId, cp) * 100);
 
-        //checking reference tokenid opret
+        //checking reference tokenid opret ************************
         if (refTokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c') {
             CCerror = "reference tokenid isn't token creation txid";
             LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
