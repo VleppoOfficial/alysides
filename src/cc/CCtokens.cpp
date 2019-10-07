@@ -133,11 +133,11 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             //vout.n-1: opreturn EVAL_TOKENS 't' tokenid <other contract payload>
             if (inputs == 0)
                 return eval->Invalid("no token inputs for transfer");
-    }
+    
     CPubKey mypk = pubkey2pk(Mypubkey());
     DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec);
 
-    if (tokenType == "s" && dummyPubkey != mypk) 
+    if (TokenType == "s" && dummyPubkey != mypk) 
         return eval->Invalid("no go bro");
     
 
@@ -147,7 +147,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 default:
     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "illegal tokens funcid=" << (char)(funcid ? funcid : ' ') << std::endl);
     return eval->Invalid("unexpected token funcid");
-    // }
+     }
 
     return true;
 }
