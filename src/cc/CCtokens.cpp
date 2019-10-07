@@ -134,7 +134,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (tokenType == "s" && dummyPubkey != mypk)
 			return eval->Invalid("no go bro");	
 		
-		// if (tokenType == "s" && determinate owner) 
+		
 		 
         LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
         break; // breaking to other contract validation...
