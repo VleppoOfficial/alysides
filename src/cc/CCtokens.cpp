@@ -56,16 +56,15 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     uint8_t funcid, evalCodeInOpret;
     char destaddr[64], origaddr[64], CCaddr[64];
     std::vector<CPubKey> voutTokenPubkeys, vinTokenPubkeys;
-    std::string dummyName, dummyDescription ;
+    std::string dummyName, dummyDescription;
     std::vector<uint8_t> dummyPubkey;
-    
-	CTransaction refTokenBaseTx;
+
+    CTransaction refTokenBaseTx;
     uint256 dummyRefTokenId;
     int64_t refTokenSupply, refExpiryTimeSec;
-    std::string   refTokenType;
+    std::string refTokenType;
     double refOwnerPerc;
     int32_t numblocks;
-
 
 
     if (strcmp(ASSETCHAINS_SYMBOL, "ROGUE") == 0 && chainActive.Height() <= 12500)
@@ -89,9 +88,9 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         return eval->Invalid("cant find token create txid");
     //else if (IsCCInput(tx.vin[0].scriptSig) != 0)
     //	return eval->Invalid("illegal token vin0");     // <-- this validation was removed because some token tx might not have normal vins
-    else if (funcid != 'c') { 
+    else if (funcid != 'c') {
         if (tokenid == zeroid)
-            return eval->Invalid("illegal tokenid"); 
+            return eval->Invalid("illegal tokenid");
         else if (!TokensExactAmounts(true, cp, inputs, outputs, eval, tx, tokenid)) {
             if (!eval->Valid())
                 return false; //TokenExactAmounts must call eval->Invalid()!
@@ -135,21 +134,20 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             if (inputs == 0)
                 return eval->Invalid("no token inputs for transfer");
     }
-		CPubKey mypk = pubkey2pk(Mypubkey());
+    CPubKey mypk = pubkey2pk(Mypubkey());
     DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec);
-          
-			if (tokenType == "s" && dummyPubkey != mypk)
-			return eval->Invalid("no go bro");	
-		
-		
-		 
-        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
-        break; // breaking to other contract validation...
 
-    default:
-        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "illegal tokens funcid=" << (char)(funcid ? funcid : ' ') << std::endl);
-        return eval->Invalid("unexpected token funcid");
-   // }
+    if (tokenType == "s" && dummyPubkey != mypk) {
+        return eval->Invalid("no go bro");
+    }
+
+    LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
+    break; // breaking to other contract validation...
+
+default:
+    LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "illegal tokens funcid=" << (char)(funcid ? funcid : ' ') << std::endl);
+    return eval->Invalid("unexpected token funcid");
+    // }
 
     return true;
 }
