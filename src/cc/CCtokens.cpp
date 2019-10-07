@@ -137,7 +137,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
        
         uint8_t funcid = DecodeTokenCreateOpRet(createTx.vout[createTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec);
 
-       if (refTokenType == 's' && voutTokenPubkeys.size > 1 && (voutTokenPubkeys.back() - 1) != dummyPubkey)
+       if (refTokenType == "s" && voutTokenPubkeys.size > 1 && voutTokenPubkeys[voutTokenPubkeys.back() - 1] != dummyPubkey)
             return eval->Invalid("no go bro");
 
 
