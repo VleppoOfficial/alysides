@@ -60,10 +60,9 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     std::vector<uint8_t> dummyPubkey;
     
 	CTransaction refTokenBaseTx;
-    uint256 hashBlock, dummyRefTokenId;
-    std::vector<uint8_t> dummyPubkey;
+    uint256 dummyRefTokenId;
     int64_t refTokenSupply, refExpiryTimeSec;
-    std::string dummyName, dummyDescription, refTokenType;
+    std::string   refTokenType;
     double refOwnerPerc;
     int32_t numblocks;
 
