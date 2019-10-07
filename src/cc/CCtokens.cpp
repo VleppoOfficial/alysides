@@ -144,7 +144,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
         break; // breaking to other contract validation...
 
-    default:
+		default:
         LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "illegal tokens funcid=" << (char)(funcid ? funcid : ' ') << std::endl);
         return eval->Invalid("unexpected token funcid");
     }
