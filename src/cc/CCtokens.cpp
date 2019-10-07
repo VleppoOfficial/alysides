@@ -111,8 +111,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         }
     }
 
-    switch (funcid) 
-	{
+    switch (funcid) {
     case 'c':
         // token create should not be validated as it has no CC inputs, so return 'invalid'
         // token tx structure for 'c':
@@ -124,30 +123,31 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 
 
     case 't':
-            // transfer
-            // token tx structure for 't'
-            //vin.0: normal input
-            //vin.1 .. vin.n-1: valid CC outputs
-            //vout.0 to n-2: tokenoshis output to CC
-            //vout.n-2: normal output for change (if any)
-            //vout.n-1: opreturn EVAL_TOKENS 't' tokenid <other contract payload>
+        // transfer
+        // token tx structure for 't'
+        //vin.0: normal input
+        //vin.1 .. vin.n-1: valid CC outputs
+        //vout.0 to n-2: tokenoshis output to CC
+        //vout.n-2: normal output for change (if any)
+        //vout.n-1: opreturn EVAL_TOKENS 't' tokenid <other contract payload>
         if (inputs == 0)
             return eval->Invalid("no token inputs for transfer");
-    
-    CPubKey mypk = pubkey2pk(Mypubkey());
-    DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec);
+        
+        
+        CPubKey mypk = pubkey2pk(Mypubkey());
+        DecodeTokenCreateOpRet(createTx.vout[createTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec);
 
-    if (tokenType == "s" && dummyPubkey != mypk) 
-        return eval->Invalid("no go bro");
-    
+        if (refTokenType == "s" && dummyPubkey != mypk)
+            return eval->Invalid("no go bro");
 
-    LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
-    break; // breaking to other contract validation...
 
-default:
-    LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "illegal tokens funcid=" << (char)(funcid ? funcid : ' ') << std::endl);
-    return eval->Invalid("unexpected token funcid");
-     }
+        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
+        break; // breaking to other contract validation...
+
+    default:
+        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "illegal tokens funcid=" << (char)(funcid ? funcid : ' ') << std::endl);
+        return eval->Invalid("unexpected token funcid");
+    }
 
     return true;
 }
