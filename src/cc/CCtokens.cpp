@@ -122,19 +122,19 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         //vout.n-1: opreturn EVAL_TOKENS 'c' <tokenname> <description>
         return eval->Invalid("incorrect token funcid");
 
-		if
-         
-    case 't':
-        // transfer
-        // token tx structure for 't'
-        //vin.0: normal input 
-        //vin.1 .. vin.n-1: valid CC outputs
-        //vout.0 to n-2: tokenoshis output to CC
-        //vout.n-2: normal output for change (if any)
-        //vout.n-1: opreturn EVAL_TOKENS 't' tokenid <other contract payload>
-        if (inputs == 0)
-            return eval->Invalid("no token inputs for transfer");
+        if
 
+        case 't':
+            // transfer
+            // token tx structure for 't'
+            //vin.0: normal input
+            //vin.1 .. vin.n-1: valid CC outputs
+            //vout.0 to n-2: tokenoshis output to CC
+            //vout.n-2: normal output for change (if any)
+            //vout.n-1: opreturn EVAL_TOKENS 't' tokenid <other contract payload>
+            if (inputs == 0)
+                return eval->Invalid("no token inputs for transfer");
+    }
 		CPubKey mypk = pubkey2pk(Mypubkey());
 		DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec)
           
@@ -149,7 +149,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     default:
         LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "illegal tokens funcid=" << (char)(funcid ? funcid : ' ') << std::endl);
         return eval->Invalid("unexpected token funcid");
-    }
+   // }
 
     return true;
 }
