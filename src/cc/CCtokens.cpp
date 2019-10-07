@@ -137,9 +137,9 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     CPubKey mypk = pubkey2pk(Mypubkey());
     DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec);
 
-    if (tokenType == "s" && dummyPubkey != mypk) {
+    if (tokenType == "s" && dummyPubkey != mypk) 
         return eval->Invalid("no go bro");
-    }
+    
 
     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
     break; // breaking to other contract validation...
