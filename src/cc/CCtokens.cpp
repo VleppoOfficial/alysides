@@ -56,8 +56,16 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     uint8_t funcid, evalCodeInOpret;
     char destaddr[64], origaddr[64], CCaddr[64];
     std::vector<CPubKey> voutTokenPubkeys, vinTokenPubkeys;
-    std::string dummyName, dummyDescription, refTokenType;
+    std::string dummyName, dummyDescription ;
     std::vector<uint8_t> dummyPubkey;
+    
+	CTransaction refTokenBaseTx;
+    uint256 hashBlock, dummyRefTokenId;
+    std::vector<uint8_t> dummyPubkey;
+    int64_t refTokenSupply, refExpiryTimeSec;
+    std::string dummyName, dummyDescription, refTokenType;
+    double refOwnerPerc;
+    int32_t numblocks;
 
 
 
