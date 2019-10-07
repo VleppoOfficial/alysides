@@ -65,6 +65,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     std::string refTokenType, tokenType;
     double refOwnerPerc;
     int32_t numblocks;
+    
 
 
     if (strcmp(ASSETCHAINS_SYMBOL, "ROGUE") == 0 && chainActive.Height() <= 12500)
@@ -134,7 +135,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             return eval->Invalid("no token inputs for transfer");
         
         
-        CPubKey mypk = pubkey2pk(Mypubkey());
+       
         DecodeTokenCreateOpRet(createTx.vout[createTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec);
 
         if (refTokenType == "s" && dummyPubkey != mypk)
