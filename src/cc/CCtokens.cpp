@@ -134,11 +134,10 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         if (inputs == 0)
             return eval->Invalid("no token inputs for transfer");
         
-        
        
-        DecodeTokenCreateOpRet(createTx.vout[createTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec);
+        uint8_t funcid = DecodeTokenCreateOpRet(createTx.vout[createTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec);
 
-        if (refTokenType == "s" && dummyPubkey != mypk)
+       if (refTokenType == 's' && voutTokenPubkeys.size > 1 && (voutTokenPubkeys.back() - 1) != dummyPubkey)
             return eval->Invalid("no go bro");
 
 
