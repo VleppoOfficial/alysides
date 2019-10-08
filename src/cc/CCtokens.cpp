@@ -899,7 +899,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
             return std::string("");
         }
 
-        std::cerr << indentStr << "supply=" << GetTokenSupply(referenceTokenId, cp) << "balance=" << (GetTokenBalance(mypk, referenceTokenId) << "refownerperc=" << refOwnerPerc << "ownedRefTokenperc=" << ownedRefTokenPerc << std::endl;
+        std::cerr << indentStr << "supply=" << GetTokenSupply(referenceTokenId, cp) << "balance=" << (GetTokenBalance(mypk, referenceTokenId)) << "refownerperc=" << refOwnerPerc << "ownedRefTokenperc=" << ownedRefTokenPerc << std::endl;
 
         //master licenses must reference digital assets owned by mypk
         if (tokenType == "m" && (refTokenType != "a" || ownedRefTokenPerc <= refOwnerPerc)) {
