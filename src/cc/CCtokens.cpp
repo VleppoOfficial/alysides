@@ -134,7 +134,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         if (inputs == 0)
             return eval->Invalid("no token inputs for transfer");
         
-       std::cerr << "voutpubkeys=" << voutTokenPubkeys << std::endl;
+       std::cerr << "stuff=" << HexStr(voutTokenPubkeys) << std::endl;
+
      //   uint8_t funcid = DecodeTokenCreateOpRet(createTx.vout[createTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec);
 
 		if (createTx.vout.size() > 0 && DecodeTokenCreateOpRet(createTx.vout[createTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) == 'c') 
