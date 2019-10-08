@@ -139,7 +139,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 
 		if (createTx.vout.size() > 0 && DecodeTokenCreateOpRet(createTx.vout[createTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) == 'c') 
 		{
-            if (refTokenType == "s" && voutTokenPubkeys.size() > 1 && voutTokenPubkeys[voutTokenPubkeys.size() - 1] != pubkey2pk(dummyPubkey))
+            if (refTokenType == "s") //&& voutTokenPubkeys.size() > 1 && voutTokenPubkeys[voutTokenPubkeys.size() - 1] != pubkey2pk(dummyPubkey))
                 return eval->Invalid("no go bro");
         }
    
