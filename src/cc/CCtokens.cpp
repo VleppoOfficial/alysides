@@ -867,7 +867,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
             return std::string("");
         }
 
-		double ownedRefTokenPerc = (static_cast<double>(GetTokenBalance(mypk, referenceTokenId)) / static_cast<double>(GetTokenSupply(referenceTokenId, cp)) * 100);
+		double ownedRefTokenPerc = (static_cast<double>(GetTokenBalance(mypk, referenceTokenId)) / static_cast<double>(/*GetTokenSupply(referenceTokenId, cp)*/CCfullsupply(referenceTokenId)) * 100); 
 
         //checking reference tokenid opret
         if (refTokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c') {
@@ -1181,7 +1181,8 @@ UniValue TokenInfo(uint256 tokenid)
     result.push_back(Pair("owner", HexStr(origpubkey)));
     result.push_back(Pair("name", name));
 
-    supply = GetTokenSupply(tokenid, cpTokens);
+    //supply = GetTokenSupply(tokenid, cpTokens);
+	supply = CCfullsupply(tokenid);
 
     result.push_back(Pair("supply", supply));
     result.push_back(Pair("description", description));
