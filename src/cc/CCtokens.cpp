@@ -939,7 +939,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		the mtx object itself, the owner's pubkey, and the transaction fee amount.
 		Also, an opreturn object with the data from this module instance is passed.
 		*/
-        return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
+        return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet(Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
     }
 
     CCerror = "cant find normal inputs";
