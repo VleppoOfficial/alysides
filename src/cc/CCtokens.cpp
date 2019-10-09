@@ -758,9 +758,7 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey)
     return CPubKey(); //return invalid pubkey
 }
 
-// returns total supply of a specified token
-// moved to separate function for accessibility
-int64_t GetTokenSupply(uint256 tokenid, struct CCcontract_info* cp)
+/*int64_t GetTokenSupply(uint256 tokenid, struct CCcontract_info* cp)
 {
     int64_t tokenSupply = 0, output;
     uint256 hashBlock;
@@ -777,6 +775,14 @@ int64_t GetTokenSupply(uint256 tokenid, struct CCcontract_info* cp)
         return 0;
     }
     return tokenSupply;
+}*/
+
+// returns the percentage of tokenid total supply that is owned by the provided pubkey
+// moved to separate function for accessibility
+double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid)
+{
+	static_cast<double> balance = GetTokenBalance(pk, tokenid), supply = CCfullsupply(tokenid);
+	return (balance / supply * 100);
 }
 
 // returns token creation signed raw tx
@@ -867,7 +873,8 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
             return std::string("");
         }
 
-		double ownedRefTokenPerc = (static_cast<double>(GetTokenBalance(mypk, referenceTokenId)) / static_cast<double>(/*GetTokenSupply(referenceTokenId, cp)*/CCfullsupply(referenceTokenId)) * 100); 
+		//double ownedRefTokenPerc = (static_cast<double>(GetTokenBalance(mypk, referenceTokenId)) / static_cast<double>(CCfullsupply(referenceTokenId)) * 100); 
+		double ownedRefTokenPerc = GetTokenOwnershipPercent(mypk, uint256 referenceTokenId);
 
         //checking reference tokenid opret
         if (refTokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c') {
@@ -876,7 +883,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
             return std::string("");
         }
 
-        //std::cerr << indentStr << "supply=" << refTokenSupply << "balance=" << ownedRefTokenBalance << "refownerperc=" << refOwnerPerc << "ownedRefTokenperc=" << ownedRefTokenPerc << std::endl;
+        std::cerr << indentStr << "refownerperc=" << refOwnerPerc << "ownedRefTokenperc=" << ownedRefTokenPerc << std::endl;
 
         //master licenses must reference digital assets owned by mypk
         if (tokenType == "m" && (refTokenType != "a" || ownedRefTokenPerc <= refOwnerPerc)) {
@@ -884,7 +891,6 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
             LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
             return std::string("");
         }
-
 
         //sub-licenses must reference unexpired master licenses owned by mypk
         if (tokenType == "s" && (refTokenType != "m" || ownedRefTokenPerc <= refOwnerPerc)) {
@@ -1181,7 +1187,6 @@ UniValue TokenInfo(uint256 tokenid)
     result.push_back(Pair("owner", HexStr(origpubkey)));
     result.push_back(Pair("name", name));
 
-    //supply = GetTokenSupply(tokenid, cpTokens);
 	supply = CCfullsupply(tokenid);
 
     result.push_back(Pair("supply", supply));
