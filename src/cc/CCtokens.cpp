@@ -781,7 +781,8 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey)
 // moved to separate function for accessibility
 double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid)
 {
-	static_cast<double> balance = GetTokenBalance(pk, tokenid), supply = CCfullsupply(tokenid);
+	double balance = static_cast<double>(GetTokenBalance(pk, tokenid));
+	double supply = static_cast<double>(CCfullsupply(tokenid));
 	return (balance / supply * 100);
 }
 
