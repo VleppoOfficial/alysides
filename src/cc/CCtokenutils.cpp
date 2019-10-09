@@ -460,7 +460,7 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
             return DecodeTokenCreateOpRet(scriptPubKey, dummyPubkey, dummyName, dummyDescription, oprets);
 			
 		case 't':
-			return DecodeTokenTransferOneOpRet(scriptPubKey, tokenid, voutPubkeysDummy, oprets)
+			return DecodeTokenTransferOneOpRet(scriptPubKey, tokenid, voutPubkeysDummy, oprets);
 		
 		//case 'whatever':
 			//insert new cases here
@@ -469,6 +469,7 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
             LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "DecodeTokenOpRet() illegal funcid=" << (int)funcId << std::endl);
             return (uint8_t)0;
         }
+	}
 	else
 	{
         LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "DecodeTokenOpRet() empty opret, could not parse" << std::endl);
@@ -647,7 +648,7 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
 	GetOpReturnData(scriptPubKey, vopret);
 	
 	if (vopret.size() > 2 && vopret.begin()[0] == EVAL_TOKENS && vopret.begin()[1] == 't')
-		return DecodeTokenTransferOneOpRet(scriptPubKey, tokenid, voutPubkeys, oprets)
+		return DecodeTokenTransferOneOpRet(scriptPubKey, tokenid, voutPubkeys, oprets);
 	else
 		return 'c';
 }
