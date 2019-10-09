@@ -7248,7 +7248,7 @@ UniValue diceinfo(const UniValue& params, bool fHelp)
 
 UniValue tokenlist(const UniValue& params, bool fHelp)
 {
-    uint256 tokenid;
+    uint256 tokenid; // is this needed?
     if ( fHelp || params.size() > 0 )
         throw runtime_error("tokenlist\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )

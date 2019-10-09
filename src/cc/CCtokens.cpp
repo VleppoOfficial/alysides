@@ -41,7 +41,6 @@
  ------------------------------
 */
 
-
 // tx validation
 bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& tx, uint32_t nIn)
 {
