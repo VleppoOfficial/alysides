@@ -125,10 +125,12 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     }
 
     // validate spending from token cc addr: allowed only for burned non-fungible tokens:
-    if (ExtractTokensCCVinPubkeys(tx, vinTokenPubkeys) && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), GetUnspendable(cp, NULL)) != vinTokenPubkeys.end()) {
+    if (ExtractTokensCCVinPubkeys(tx, vinTokenPubkeys) && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), GetUnspendable(cp, NULL)) != vinTokenPubkeys.end())
+	{
         // validate spending from token unspendable cc addr:
         int64_t burnedAmount = HasBurnedTokensvouts(cp, eval, tx, tokenid);
-        if (burnedAmount > 0) {
+        if (burnedAmount > 0)
+		{
             vscript_t vopretNonfungible;
             GetNonfungibleData(tokenid, vopretNonfungible);
             if (vopretNonfungible.empty())
@@ -161,7 +163,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			
 			CPubkey creatorPubkey = pubkey2pk(origpubkey);
 			
-			if (tokenType == 's' && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), creatorPubkey) != creatorPubkey)
+			if (tokenType == 's' && ExtractTokensCCVinPubkeys(tx, vinTokenPubkeys) && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), creatorPubkey) != creatorPubkey)
 				return eval->Invalid("cannot transfer sub-license from pubkey other than creator pubkey");
 			
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
