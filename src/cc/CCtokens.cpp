@@ -44,16 +44,6 @@
 // tx validation
 bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& tx, uint32_t nIn)
 {
-	/*
-	Arg list:
-	struct CCcontract_info* cp - pointer to token module vars
-	Eval* eval - Pointer to the CC dispatching object
-	const CTransaction& tx - transaction that's being evaluated
-	uint32_t nIn - "Not used in validation code"
-
-	tx.vout[numvouts - 1].scriptPubKey = the opret vout of tx
-	*/
-	
 	//Make exception for early Rogue chain
 	if (strcmp(ASSETCHAINS_SYMBOL, "ROGUE") == 0 && chainActive.Height() <= 12500)
         return true;
@@ -79,7 +69,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	
 	int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
 	
-	uint8_t evalCodeInOpret; // the eval code embedded in the opret
+	uint8_t funcid, evalCodeInOpret; // the funcid and eval code embedded in the opret
 	std::vector<std::pair<uint8_t, vscript_t>> oprets; // additional data embedded in the opret
 	
 	//std::vector<CPubKey> voutTokenPubkeys; // destpubkey(s) embedded in the opret. NOTE: no longer needed for DecodeTokenOpRet, might be deprecated
