@@ -75,6 +75,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 
 	CTransaction createTx, tokenBaseTx; //the token creation tx
 	uint256 hashBlock, tokenid, referenceTokenId;
+	CBlockIndex confHashBlock;
 	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(); //the amount of vins and vouts in tx
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
 	std::vector<CPubKey> vinTokenPubkeys; // sender pubkey(s)
@@ -120,7 +121,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 return eval->Invalid("tokens cc inputs != cc outputs");
         }
 		//get token create tx info
-		if (!eval->GetTxConfirmed(tokenid, tokenBaseTx, hashBlock) || DecodeTokenCreateOpRet(tokenBaseTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
+		if (!eval->GetTxConfirmed(tokenid, tokenBaseTx, confHashBlock) || DecodeTokenCreateOpRet(tokenBaseTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
 		{
 			//std::cerr << "validate found funcid=" << funcid << std::endl;
 			return eval->Invalid("could not get token info from token create txid");
