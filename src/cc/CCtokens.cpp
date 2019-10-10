@@ -123,7 +123,9 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 		if (DecodeTokenCreateOpRet(createTx.vout[numvouts - 1].scriptPubKey, origpubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
 			return eval->Invalid("incorrect token create txid funcid");
     }
-
+	
+	CPubkey creatorPubkey = pubkey2pk(origpubkey);
+	
     // validate spending from token cc addr: allowed only for burned non-fungible tokens:
     if (ExtractTokensCCVinPubkeys(tx, vinTokenPubkeys) && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), GetUnspendable(cp, NULL)) != vinTokenPubkeys.end())
 	{
@@ -150,7 +152,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			return eval->Invalid("incorrect token funcid");
 
 		case 't':
-		{
 			// transfer
 			// token tx structure for 't'
 			//vin.0: normal input
@@ -161,14 +162,13 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
 			
-			CPubkey creatorPubkey = pubkey2pk(origpubkey);
+			std::vector<uint8_t>::iterator it = creatorPubkey;
 			
-			if (tokenType == 's' && ExtractTokensCCVinPubkeys(tx, vinTokenPubkeys) && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), creatorPubkey) != creatorPubkey)
+			if (tokenType == 's' && ExtractTokensCCVinPubkeys(tx, vinTokenPubkeys) && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), it) != creatorPubkey)
 				return eval->Invalid("cannot transfer sub-license from pubkey other than creator pubkey");
 			
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
 			break; // breaking to other contract validation...
-		}
 		
 		//case 'whatever':
 			//tx model
