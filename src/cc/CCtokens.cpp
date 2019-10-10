@@ -158,7 +158,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
 			
-			if (tokenType == 's' && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), creatorPubkey) == vinTokenPubkeys.end())
+			if (tokenType == 's' && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(creatorPubkey)) != pubkey2pk(creatorPubkey))
 				return eval->Invalid("cannot transfer sub-license from pubkey other than creator pubkey");
 			
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
