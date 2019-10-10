@@ -79,6 +79,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
 	std::vector<CPubKey> vinTokenPubkeys; // sender pubkey(s)
 	std::vector<uint8_t> origpubkey; // token creator pubkey
+	CPubkey creatorPubkey;
 	
 	int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
 	
@@ -124,7 +125,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			return eval->Invalid("incorrect token create txid funcid");
     }
 	
-	CPubkey creatorPubkey = pubkey2pk(origpubkey);
+	creatorPubkey = pubkey2pk(origpubkey);
 	
     // validate spending from token cc addr: allowed only for burned non-fungible tokens:
     if (ExtractTokensCCVinPubkeys(tx, vinTokenPubkeys) && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), GetUnspendable(cp, NULL)) != vinTokenPubkeys.end())
