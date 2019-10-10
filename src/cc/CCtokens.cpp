@@ -120,7 +120,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 return eval->Invalid("tokens cc inputs != cc outputs");
         }
 		//get token create tx info
-		if (!GetTransaction(tokenid, tokenBaseTx, hashBlock, false) || DecodeTokenCreateOpRet(tokenBaseTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
+		if (!myGetTransaction(tokenid, tokenBaseTx, hashBlock, false) || DecodeTokenCreateOpRet(tokenBaseTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
 		{
 			//std::cerr << "validate found funcid=" << funcid << std::endl;
 			return eval->Invalid("could not get token info from token create txid");
