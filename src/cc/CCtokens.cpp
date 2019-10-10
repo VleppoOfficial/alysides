@@ -44,43 +44,71 @@
 // tx validation
 bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& tx, uint32_t nIn)
 {
+	/*
+	Arg list:
+	struct CCcontract_info* cp - pointer to token module vars
+	Eval* eval - Pointer to the CC dispatching object
+	const CTransaction& tx - transaction that's being evaluated
+	uint32_t nIn - "Not used in validation code"
+
+	tx.vout[numvouts - 1].scriptPubKey = the opret vout of tx
+	*/
+	
+	//Make exception for early Rogue chain
+	if (strcmp(ASSETCHAINS_SYMBOL, "ROGUE") == 0 && chainActive.Height() <= 12500)
+        return true;
+	
+	/*
+	Unused variables:
+	
     static uint256 zero;
     CTxDestination address;
-    CTransaction vinTx, createTx;
-    uint256 hashBlock, tokenid, tokenid2;
-    int32_t i, starti, numvins, numvouts, preventCCvins, preventCCvouts;
-    int64_t remaining_price, nValue, tokenoshis, outputs, inputs, tmpprice, totalunits, ignore;
-    std::vector<std::pair<uint8_t, vscript_t>> oprets;
-    vscript_t /*vopretExtra,*/ tmporigpubkey, ignorepubkey;
-    uint8_t funcid, evalCodeInOpret;
-    char destaddr[64], origaddr[64], CCaddr[64];
-    std::vector<CPubKey> voutTokenPubkeys, vinTokenPubkeys;
+    CTransaction vinTx;
+	uint256 tokenid2;
+	int32_t i, starti;
+	int64_t remaining_price, nValue, tokenoshis, tmpprice, totalunits, ignore;
+	vscript_t tmporigpubkey, ignorepubkey; //vscript_t vopretExtra;
+	char destaddr[64], origaddr[64], CCaddr[64];
+	*/
 
-    if (strcmp(ASSETCHAINS_SYMBOL, "ROGUE") == 0 && chainActive.Height() <= 12500)
-        return true;
-
-    numvins = tx.vin.size();
-    numvouts = tx.vout.size();
-    outputs = inputs = 0;
-    preventCCvins = preventCCvouts = -1;
+	CTransaction createTx; //the token creation tx
+	uint256 hashBlock, tokenid; // the token creation id embedded in the opret
+	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(); //the amount of vins and vouts in tx
+	int64_t outputs = 0, inputs = 0;
+	std::vector<CPubKey> vinTokenPubkeys;
+	
+	int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
+	
+	uint8_t evalCodeInOpret; // the eval code embedded in the opret
+	std::vector<std::pair<uint8_t, vscript_t>> oprets; // additional data embedded in the opret
+	
+	//std::vector<CPubKey> voutTokenPubkeys; // destpubkey(s) embedded in the opret. NOTE: no longer needed for DecodeTokenOpRet, might be deprecated
 
     // check boundaries:
     if (numvouts < 1)
         return eval->Invalid("no vouts");
 
-    if ((funcid = DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, evalCodeInOpret, tokenid, voutTokenPubkeys, oprets)) == 0)
+	// Check the tx funcid. At the same time, get embedded eval code, tokenid & extra opret data
+	
+    //if ((funcid = DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, evalCodeInOpret, tokenid, voutTokenPubkeys, oprets)) == 0)
+		
+	if ((funcid = DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, evalCodeInOpret, tokenid, oprets)) == 0)
         return eval->Invalid("TokenValidate: invalid opreturn payload");
 
     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokensValidate funcId=" << (char)(funcid ? funcid : ' ') << " evalcode=" << std::hex << (int)cp->evalcode << std::endl);
 
+	// check if token create transaction exists in chain (and/or mempool?)
     if (eval->GetTxUnconfirmed(tokenid, createTx, hashBlock) == 0)
         return eval->Invalid("cant find token create txid");
-    //else if (IsCCInput(tx.vin[0].scriptSig) != 0)
-    //	return eval->Invalid("illegal token vin0");     // <-- this validation was removed because some token tx might not have normal vins
-    else if (funcid != 'c') {
+
+    else if (funcid != 'c') //will need to be updated with 'u' in future
+	{
+		//Check if tokenid isn't just a bunch of zeros
         if (tokenid == zeroid)
             return eval->Invalid("illegal tokenid");
-        else if (!TokensExactAmounts(true, cp, inputs, outputs, eval, tx, tokenid)) {
+		//Check if token amount is the same in vins and vouts of tx
+        else if (!TokensExactAmounts(true, cp, inputs, outputs, eval, tx, tokenid))
+		{
             if (!eval->Valid())
                 return false; //TokenExactAmounts must call eval->Invalid()!
             else
@@ -100,33 +128,34 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         }
     }
 
-    switch (funcid) {
-    case 'c':
-        // token create should not be validated as it has no CC inputs, so return 'invalid'
-        // token tx structure for 'c':
-        //vin.0: normal input
-        //vout.0: issuance tokenoshis to CC
-        //vout.1: normal output for change (if any)
-        //vout.n-1: opreturn EVAL_TOKENS 'c' <tokenname> <description>
-        return eval->Invalid("incorrect token funcid");
+    switch (funcid)
+	{
+		case 'c':
+			// token create should not be validated as it has no CC inputs, so return 'invalid'
+			// token tx structure for 'c':
+			//vin.0: normal input
+			//vout.0: issuance tokenoshis to CC
+			//vout.1: normal output for change (if any)
+			//vout.n-1: opreturn EVAL_TOKENS 'c' <tokenname> <description>
+			return eval->Invalid("incorrect token funcid");
 
-    case 't':
-        // transfer
-        // token tx structure for 't'
-        //vin.0: normal input
-        //vin.1 .. vin.n-1: valid CC outputs
-        //vout.0 to n-2: tokenoshis output to CC
-        //vout.n-2: normal output for change (if any)
-        //vout.n-1: opreturn EVAL_TOKENS 't' tokenid <other contract payload>
-        if (inputs == 0)
-            return eval->Invalid("no token inputs for transfer");
+		case 't':
+			// transfer
+			// token tx structure for 't'
+			//vin.0: normal input
+			//vin.1 .. vin.n-1: valid CC outputs
+			//vout.0 to n-2: tokenoshis output to CC
+			//vout.n-2: normal output for change (if any)
+			//vout.n-1: opreturn EVAL_TOKENS 't' tokenid <other contract payload>
+			if (inputs == 0)
+				return eval->Invalid("no token inputs for transfer");
 
-        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
-        break; // breaking to other contract validation...
+			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
+			break; // breaking to other contract validation...
 
-    default:
-        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "illegal tokens funcid=" << (char)(funcid ? funcid : ' ') << std::endl);
-        return eval->Invalid("unexpected token funcid");
+		default:
+			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "illegal tokens funcid=" << (char)(funcid ? funcid : ' ') << std::endl);
+			return eval->Invalid("unexpected token funcid");
     }
 
     return true;
