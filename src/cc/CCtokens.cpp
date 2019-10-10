@@ -73,7 +73,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	createOprets //non-fung data of create tx, might be replaced with just oprets
 	*/
 
-	CTransaction createTx; //the token creation tx
+	CTransaction createTx, tokenBaseTx; //the token creation tx
 	uint256 hashBlock, tokenid, referenceTokenId;
 	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(); //the amount of vins and vouts in tx
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
@@ -102,12 +102,11 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         return eval->Invalid("TokenValidate: invalid opreturn payload");
 
     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokensValidate funcId=" << (char)(funcid ? funcid : ' ') << " evalcode=" << std::hex << (int)cp->evalcode << std::endl);
-
-	// check if token create transaction exists in chain (and/or mempool?)
+	
     if (eval->GetTxUnconfirmed(tokenid, createTx, hashBlock) == 0)
         return eval->Invalid("cant find token create txid");
-
-    else if (funcid != 'c') //will need to be updated with 'u' in future
+	
+    else if (funcid != 'c') //in case these tokens have been transferred before
 	{
 		//Check if tokenid isn't just a bunch of zeros
         if (tokenid == zeroid)
@@ -120,15 +119,14 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             else
                 return eval->Invalid("tokens cc inputs != cc outputs");
         }
-		//retrieve token info from createTx
-		if (DecodeTokenCreateOpRet(createTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
-			{
-			std::cerr << "validate found funcid=" << funcid << std::endl;
-			return eval->Invalid("incorrect token create txid funcid"); }
+		//get token create tx info
+		if (!GetTransaction(tokenid, tokenBaseTx, hashBlock, false) || DecodeTokenCreateOpRet(tokenBaseTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
+		{
+			//std::cerr << "validate found funcid=" << funcid << std::endl;
+			return eval->Invalid("could not get token info from token create txid");
+		}
     }
-	
-	//creatorPubkey = pubkey2pk(origpubkey);
-	
+
     // validate spending from token cc addr: allowed only for burned non-fungible tokens:
     if (ExtractTokensCCVinPubkeys(tx, vinTokenPubkeys) && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), GetUnspendable(cp, NULL)) != vinTokenPubkeys.end())
 	{
