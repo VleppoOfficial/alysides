@@ -78,8 +78,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(); //the amount of vins and vouts in tx
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
 	std::vector<CPubKey> vinTokenPubkeys; // sender pubkey(s)
-	std::vector<uint8_t> origpubkey; // token creator pubkey
-	CPubkey creatorPubkey;
+	std::vector<uint8_t> creatorPubkey; // token creator pubkey
+	//CPubkey creatorPubkey;
 	
 	int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
 	
@@ -121,11 +121,11 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 return eval->Invalid("tokens cc inputs != cc outputs");
         }
 		//retrieve token info from createTx
-		if (DecodeTokenCreateOpRet(createTx.vout[numvouts - 1].scriptPubKey, origpubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
+		if (DecodeTokenCreateOpRet(createTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
 			return eval->Invalid("incorrect token create txid funcid");
     }
 	
-	creatorPubkey = pubkey2pk(origpubkey);
+	//creatorPubkey = pubkey2pk(origpubkey);
 	
     // validate spending from token cc addr: allowed only for burned non-fungible tokens:
     if (ExtractTokensCCVinPubkeys(tx, vinTokenPubkeys) && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), GetUnspendable(cp, NULL)) != vinTokenPubkeys.end())
