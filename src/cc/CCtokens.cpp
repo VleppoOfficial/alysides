@@ -60,19 +60,34 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	vscript_t tmporigpubkey, ignorepubkey; //vscript_t vopretExtra;
 	char destaddr[64], origaddr[64], CCaddr[64];
 	*/
+	
+	/*
+	Needed variables:
+	origpubkey //creator of the token
+	dummyName //we don't care about the name
+	dummyDescription //we don't care about the description
+	ownerPerc // when transferring assets this doesn't matter, but might still be useful
+	tokenType // is this asset or license?
+	referenceTokenId //needs check if this id is valid
+	expiryTimeSec //possibly useful?
+	createOprets //non-fung data of create tx, might be replaced with just oprets
+	*/
 
 	CTransaction createTx; //the token creation tx
-	uint256 hashBlock, tokenid; // the token creation id embedded in the opret
+	uint256 hashBlock, tokenid, referenceTokenId;
 	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(); //the amount of vins and vouts in tx
-	int64_t outputs = 0, inputs = 0;
-	std::vector<CPubKey> vinTokenPubkeys;
+	int64_t outputs = 0, inputs = 0, expiryTimeSec;
+	std::vector<CPubKey> vinTokenPubkeys; // sender pubkey
+	std::vector<uint8_t> creatorPubkey; // token creator pubkey
 	
 	int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
 	
 	uint8_t funcid, evalCodeInOpret; // the funcid and eval code embedded in the opret
 	std::vector<std::pair<uint8_t, vscript_t>> oprets; // additional data embedded in the opret
+	std::string dummyName, dummyDescription, tokenType;
+	double ownerPerc;
 	
-	//std::vector<CPubKey> voutTokenPubkeys; // destpubkey(s) embedded in the opret. NOTE: no longer needed for DecodeTokenOpRet, might be deprecated
+	// std::vector<CPubKey> voutTokenPubkeys; // destpubkey(s) embedded in the opret. NOTE: no longer needed for DecodeTokenOpRet, might be deprecated
 
     // check boundaries:
     if (numvouts < 1)
@@ -104,6 +119,9 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             else
                 return eval->Invalid("tokens cc inputs != cc outputs");
         }
+		//retrieve token info from createTx
+		if (DecodeTokenCreateOpRet(createTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
+			return eval->Invalid("incorrect token create txid funcid");
     }
 
     // validate spending from token cc addr: allowed only for burned non-fungible tokens:
@@ -139,9 +157,17 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//vout.n-1: opreturn EVAL_TOKENS 't' tokenid <other contract payload>
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
-
+			
+			if (tokenType == 's' && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), creatorPubkey) != creatorPubkey)
+				return eval->Invalid("cannot transfer sub-license from pubkey other than creator pubkey");
+			
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
 			break; // breaking to other contract validation...
+		
+		//case 'whatever':
+			//tx model
+			//validation stuff
+			//break;
 
 		default:
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "illegal tokens funcid=" << (char)(funcid ? funcid : ' ') << std::endl);
@@ -171,7 +197,7 @@ bool ExtractTokensCCVinPubkeys(const CTransaction& tx, std::vector<CPubKey>& vin
 
                 if (cc_typeId(cond) == CC_Secp256k1) {
                     *(CPubKey*)_.context = buf2pk(cond->publicKey);
-                    std::cerr << "findEval found pubkey=" << HexStr(*(CPubKey*)_.context) << std::endl;
+                    //std::cerr << "findEval found pubkey=" << HexStr(*(CPubKey*)_.context) << std::endl;
                     r = true;
                 }
                 // false for a match, true for continue
