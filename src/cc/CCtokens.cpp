@@ -78,7 +78,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	CBlockIndex confHashBlock;
 	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(); //the amount of vins and vouts in tx
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
-	std::vector<CPubKey> vinTokenPubkeys; // sender pubkey(s)
+	std::vector<CPubKey> vinTokenPubkeys, voutTokenPubkeys; // sender pubkey(s) and destpubkey(s)
 	std::vector<uint8_t> creatorPubkey; // token creator pubkey
 	//CPubkey creatorPubkey;
 	
@@ -88,8 +88,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	std::vector<std::pair<uint8_t, vscript_t>> oprets; // additional data embedded in the opret
 	std::string dummyName, dummyDescription, tokenType;
 	double ownerPerc;
-	
-	// std::vector<CPubKey> voutTokenPubkeys; // destpubkey(s) embedded in the opret. NOTE: no longer needed for DecodeTokenOpRet, might be deprecated
 
     // check boundaries:
     if (numvouts < 1)
@@ -165,7 +163,11 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
 			
-			if (tokenType == "s" && /*ExtractTokensCCVinPubkeys(tx, vinTokenPubkeys) && */std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == vinTokenPubkeys.end())
+			if (DecodeTokenTransferOneOpRet(tx.vout[numvouts - 1].scriptPubKey, tokenid, voutTokenPubkeys, oprets) != 't')
+				return eval->Invalid("unable to verify token transfer tx funcid");
+			
+			// if token is sub-license and isn't being burned and transaction isn't from creator, return eval->Invalid
+			if (tokenType == "s" && std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end() && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == vinTokenPubkeys.end())
 				return eval->Invalid("cannot transfer sub-license from pubkey other than creator pubkey");
 			
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
