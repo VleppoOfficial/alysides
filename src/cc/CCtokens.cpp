@@ -104,10 +104,11 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 
     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokensValidate funcId=" << (char)(funcid ? funcid : ' ') << " evalcode=" << std::hex << (int)cp->evalcode << std::endl);
 	
-    if (eval->GetTxUnconfirmed(tokenid, createTx, hashBlock) == 0)
+	if (eval->GetTxUnconfirmed(tokenid, createTx, hashBlock) == 0 || !myGetTransaction(tokenid, createTx, hashBlock))
+    //if (eval->GetTxUnconfirmed(tokenid, createTx, hashBlock) == 0)
         return eval->Invalid("cant find token create txid");
 	
-    else if (funcid != 'c') //in case these tokens have been transferred before
+    else if (funcid != 'c')
 	{
 		//Check if tokenid isn't just a bunch of zeros
         if (tokenid == zeroid)
@@ -1160,7 +1161,7 @@ std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, 
             std::vector<CPubKey> voutTokenPubkeys;
             voutTokenPubkeys.push_back(pubkey2pk(destpubkey)); // dest pubkey for validating vout
 
-            return FinalizeCCTx(mask, cp, mtx, mypk, txfee, EncodeTokenOpRet(tokenid, voutTokenPubkeys, std::make_pair((uint8_t)0, vopretEmpty)));
+            return FinalizeCCTx(mask, cp, mtx, mypk, txfee, EncodeTokenTransferOneOpRet(tokenid, voutTokenPubkeys, std::make_pair((uint8_t)0, vopretEmpty)));
         }
 		else
 		{
