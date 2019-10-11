@@ -121,7 +121,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         }
 		//get token create tx info
 		//TODO: This is causing problems
-		if (createTxFuncId = DecodeTokenCreateOpRet(createTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
+		if ((createTxFuncId = DecodeTokenCreateOpRet(createTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec)) != 'c')
 		{
 			std::cerr << "validate found funcid in tokencreate=" << (char)createTxFuncId << std::endl;
 			return eval->Invalid("incorrect token create txid funcid");
