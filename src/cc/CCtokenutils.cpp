@@ -283,7 +283,7 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
             return(funcid);
         }
     }
-	std::cerr << "vopretsize=" << (int)vopret.size() << "vopretbegin[1]=" << (char)vopret.begin()[1] << std::endl;
+	//std::cerr << "vopretsize=" << (int)vopret.size() << "vopretbegin[1]=" << (char)vopret.begin()[1] << std::endl;
     LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "DecodeTokenCreateOpRet() incorrect token create opret" << std::endl);
     return (uint8_t)0;
 }
