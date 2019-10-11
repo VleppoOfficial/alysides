@@ -84,7 +84,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	
 	int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
 	
-	uint8_t funcid, evalCodeInOpret; // the funcid and eval code embedded in the opret
+	uint8_t funcid, evalCodeInOpret, createTxFuncId; // the funcid and eval code embedded in the opret
 	std::vector<std::pair<uint8_t, vscript_t>> oprets; // additional data embedded in the opret
 	std::string dummyName, dummyDescription, tokenType;
 	double ownerPerc;
@@ -121,10 +121,10 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 return eval->Invalid("tokens cc inputs != cc outputs");
         }
 		//get token create tx info
-		if (!eval->GetTxConfirmed(tokenid, tokenBaseTx, confHashBlock) || DecodeTokenCreateOpRet(tokenBaseTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
+		if (createTxFuncId = DecodeTokenCreateOpRet(tokenBaseTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
 		{
-			//std::cerr << "validate found funcid=" << funcid << std::endl;
-			return eval->Invalid("could not get token info from token create txid");
+			std::cerr << "validate found funcid in tokencreate=" << createTxFuncId << std::endl;
+			return eval->Invalid("incorrect token create txid funcid");
 		}
     }
 
