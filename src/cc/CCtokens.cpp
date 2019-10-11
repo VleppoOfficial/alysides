@@ -73,18 +73,17 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	createOprets //non-fung data of create tx, might be replaced with just oprets
 	*/
 
-	CTransaction createTx, tokenBaseTx; //the token creation tx
+	CTransaction createTx; //the token creation tx
 	uint256 hashBlock, tokenid, referenceTokenId;
 	CBlockIndex confHashBlock;
 	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(); //the amount of vins and vouts in tx
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
 	std::vector<CPubKey> vinTokenPubkeys, voutTokenPubkeys; // sender pubkey(s) and destpubkey(s)
 	std::vector<uint8_t> creatorPubkey; // token creator pubkey
-	//CPubkey creatorPubkey;
 	
 	int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
 	
-	uint8_t funcid, evalCodeInOpret, createTxFuncId; // the funcid and eval code embedded in the opret
+	uint8_t funcid, evalCodeInOpret; // the funcid and eval code embedded in the opret
 	std::vector<std::pair<uint8_t, vscript_t>> oprets; // additional data embedded in the opret
 	std::string dummyName, dummyDescription, tokenType;
 	double ownerPerc;
@@ -119,10 +118,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 return eval->Invalid("tokens cc inputs != cc outputs");
         }
 		//get token create tx info
-		//TODO: This is causing problems
-		if ((createTxFuncId = DecodeTokenCreateOpRet(createTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec)) == 0)
+		if (DecodeTokenCreateOpRet(createTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec) == 0)
 		{
-			std::cerr << "validate found funcid in tokencreate=" << (char)createTxFuncId << std::endl;
 			return eval->Invalid("incorrect token create txid funcid");
 		}
     }
