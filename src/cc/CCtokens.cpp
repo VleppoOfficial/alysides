@@ -103,7 +103,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokensValidate funcId=" << (char)(funcid ? funcid : ' ') << " evalcode=" << std::hex << (int)cp->evalcode << std::endl);
 	
 	if (eval->GetTxUnconfirmed(tokenid, createTx, hashBlock) == 0 || !myGetTransaction(tokenid, createTx, hashBlock))
-    //if (eval->GetTxUnconfirmed(tokenid, createTx, hashBlock) == 0)
         return eval->Invalid("cant find token create txid");
 	
     else if (funcid != 'c')
@@ -121,7 +120,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         }
 		//get token create tx info
 		//TODO: This is causing problems
-		if ((createTxFuncId = DecodeTokenCreateOpRet(createTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec)) != 'c')
+		if ((createTxFuncId = DecodeTokenCreateOpRet(createTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec)) == 0)
 		{
 			std::cerr << "validate found funcid in tokencreate=" << (char)createTxFuncId << std::endl;
 			return eval->Invalid("incorrect token create txid funcid");
