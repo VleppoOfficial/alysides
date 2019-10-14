@@ -47,20 +47,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	//Make exception for early Rogue chain
 	if (strcmp(ASSETCHAINS_SYMBOL, "ROGUE") == 0 && chainActive.Height() <= 12500)
         return true;
-	
-	/*
-	Unused variables:
-	
-    static uint256 zero;
-    CTxDestination address;
-    CTransaction vinTx;
-	uint256 tokenid2;
-	int32_t i, starti;
-	int64_t remaining_price, nValue, tokenoshis, tmpprice, totalunits, ignore;
-	vscript_t tmporigpubkey, ignorepubkey; //vscript_t vopretExtra;
-	char destaddr[64], origaddr[64], CCaddr[64];
-	*/
-	
+
 	/*
 	Needed variables:
 	origpubkey //creator of the token
@@ -70,7 +57,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	tokenType // is this asset or license?
 	referenceTokenId //needs check if this id is valid
 	expiryTimeSec //possibly useful?
-	createOprets //non-fung data of create tx, might be replaced with just oprets
+	oprets //non-fung data of create tx
 	*/
 
 	CTransaction createTx; //the token creation tx
@@ -93,13 +80,9 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         return eval->Invalid("no vouts");
 
 	// Check the tx funcid. At the same time, get embedded eval code, tokenid & extra opret data
-	
-    //if ((funcid = DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, evalCodeInOpret, tokenid, voutTokenPubkeys, oprets)) == 0)
-		
 	if ((funcid = DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, evalCodeInOpret, tokenid, oprets)) == 0)
         return eval->Invalid("TokenValidate: invalid opreturn payload");
 
-	//std::cerr << "findEval found funcid=" << (char)funcid << std::endl;
     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokensValidate funcId=" << (char)(funcid ? funcid : ' ') << " evalcode=" << std::hex << (int)cp->evalcode << std::endl);
 	
 	if (eval->GetTxUnconfirmed(tokenid, createTx, hashBlock) == 0 || !myGetTransaction(tokenid, createTx, hashBlock))
@@ -119,11 +102,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 return eval->Invalid("tokens cc inputs != cc outputs");
         }
 		//get token create tx info
-		std::cerr << "Cracking open opret..." << std::endl;
-		/*if (DecodeTokenCreateOpRet(createTx.vout.back().scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) == 0)
-		{
-			return eval->Invalid("incorrect token create txid funcid");
-		}*/
 		if (createTx.vout.size() > 0 && DecodeTokenCreateOpRet(createTx.vout[createTx.vout.size() - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
 		{
 			return eval->Invalid("incorrect token create txid funcid");
@@ -172,7 +150,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			
 			// if token is sub-license and isn't being burned and transaction isn't from creator, invalidate
 			if (tokenType == "s" && std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end() && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == vinTokenPubkeys.end())
-				return eval->Invalid("cannot transfer sub-license from pubkey other than creator pubkey");
+				return eval->Invalid("cannot transfer sub-license from pubkey other than creator pubkey - ");
 			
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
 			break; // breaking to other contract validation...
