@@ -1155,7 +1155,7 @@ UniValue TokenInfo(uint256 tokenid)
 	std::string ccode, batondescription;
 	
 
-	if (getCCopret(tokenbaseTx.vout[3].scriptPubKey, batonopret))
+	if (getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret))
 	{
 		if (DecodeTokenUpdateOpRet(batonopret, updaterPubkey, assetHash, value, ccode, batondescription) == 'u')
 		{

@@ -81,7 +81,7 @@ bool getCCopret(const CScript &scriptPubKey, CScript &opret)
         if ( vParams.size() == 1)
         {
             opret = CScript(vParams[0].begin()+6, vParams[0].end());
-            //fprintf(stderr, "vparams.%s\n", HexStr(vParams[0].begin(), vParams[0].end()).c_str());
+            fprintf(stderr, "vparams.%s\n", HexStr(vParams[0].begin(), vParams[0].end()).c_str());
         }
     }
     return ret;
