@@ -1157,7 +1157,7 @@ UniValue TokenInfo(uint256 tokenid)
 	int64_t value;
 	std::string ccode, batondescription;
 	
-	if (!getCCopret(tokenbaseTx.vout[2].scriptPubKey,batonopret) || DecodeTokenUpdateOpRet(batonopret, updaterPubkey, assetHash, value, ccode, batondescription) != 'u')
+	if (!getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret) || DecodeTokenUpdateOpRet(batonopret, updaterPubkey, assetHash, value, ccode, batondescription) != 'u')
 		result.push_back(Pair("isBaton", false));
 	else
 	{
