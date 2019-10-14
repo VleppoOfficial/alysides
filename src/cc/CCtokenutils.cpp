@@ -426,10 +426,13 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
 
 uint8_t DecodeTokenUpdateOpRet(const CScript scriptPubKey, std::vector<uint8_t> &pk, uint256 &assetHash, int64_t &value, std::string &ccode, std::string &description)
 {
-    vscript_t vopret;
+    //vscript_t vopret;
+	std::vector<uint8_t> vopret;
 	uint8_t evalcode, funcid;
     GetOpReturnData(scriptPubKey, vopret);
-	std::cerr << "vopret.size(): " << vopret.size() << "vopret.begin()[0]: " << vopret.begin()[0] << "vopret.begin()[1]: " << vopret.begin()[1] << std::endl;
+	auto begin0 = vopret.begin()[0];
+	auto begin1 = vopret.begin()[1];
+	std::cerr << "vopret.size(): " << vopret.size() << "vopret.begin()[0]: " << begin0 << "vopret.begin()[1]: " << begin1 << std::endl;
 	if (vopret.size() > 2 && vopret.begin()[0] == EVAL_TOKENS && vopret.begin()[1] == 'u')
 	{
 		std::cerr << "Successfully opened opret!" << std::endl;
