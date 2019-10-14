@@ -1157,7 +1157,7 @@ UniValue TokenInfo(uint256 tokenid)
 	int64_t value;
 	std::string ccode, batondescription;
 	
-	if (!getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret)
+	if (!getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret))
 	{
 		std::cerr << "getCCopret error" << std::endl;
 		result.push_back(Pair("isBaton", false));
