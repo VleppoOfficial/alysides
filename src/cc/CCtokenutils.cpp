@@ -425,7 +425,8 @@ uint8_t DecodeTokenUpdateOpRet(const CScript scriptPubKey, std::vector<uint8_t> 
     vscript_t vopret;
 	//std::vector<uint8_t> vopret;
 	uint8_t evalcode, funcid;
-    GetOpReturnData(scriptPubKey, vopret);
+    if (!GetOpReturnData(scriptPubKey, vopret))
+		std::cerr << "Opreturn decode failed" << std::endl;
 	auto saize = vopret.size();
 	std::cerr << "vopret.size(): " << saize << std::endl;
 	if (vopret.size() > 2 && vopret.begin()[0] == EVAL_TOKENS && vopret.begin()[1] == 'u')
