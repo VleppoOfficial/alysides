@@ -1150,14 +1150,14 @@ UniValue TokenInfo(uint256 tokenid)
 	//
 	CScript batonopret;
 	std::vector<uint8_t> updaterPubkey;
-	uint256 assetHash;
+	uint256 assetHash, xxxTokenId;
 	int64_t value;
 	std::string ccode, batondescription;
     //std::vector<std::vector<unsigned char>> vParams = std::vector<std::vector<unsigned char>>();
 
 	if (getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret))
 	{
-		if (DecodeTokenUpdateOpRet(batonopret, updaterPubkey, assetHash, value, ccode, batondescription) == 'u')
+		if (DecodeTokenUpdateOpRet(batonopret, updaterPubkey, xxxTokenId, assetHash, value, ccode, batondescription) == 'u')
 		{
 			result.push_back(Pair("value", value));
 		}
