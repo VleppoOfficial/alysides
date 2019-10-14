@@ -1153,7 +1153,7 @@ UniValue TokenInfo(uint256 tokenid)
 	uint256 assetHash;
 	int64_t value;
 	std::string ccode, batondescription;
-	
+    std::vector<std::vector<unsigned char>> vParams = std::vector<std::vector<unsigned char>>();
 
 	if (getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret))
 	{
