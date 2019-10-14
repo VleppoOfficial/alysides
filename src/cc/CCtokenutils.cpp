@@ -269,6 +269,7 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
 
     if (vopret.size() > 2 && vopret.begin()[0] == EVAL_TOKENS && vopret.begin()[1] == 'c')
     {
+		std::cerr << "Successfully cracked open the opret!" << std::endl;
         if (E_UNMARSHAL(vopret, ss >> dummyEvalcode; ss >> funcid; ss >> origpubkey; ss >> name; ss >> description; ss >> ownerperc; ss >> tokentype; ss >> referencetokenid; ss >> expiryTimeSec;
         while (!ss.eof())
 		{
@@ -280,6 +281,7 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
             }
         }))
         {
+			std::cerr << "Successfully retrieved the funcid!" << std::endl;
             return(funcid);
         }
     }
