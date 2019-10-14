@@ -1159,7 +1159,7 @@ UniValue TokenInfo(uint256 tokenid)
 	
 	if (tokenbaseTx.vout.size() > 0)
 	{
-		if (getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret)
+		if (getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret))
 		{
 			if (DecodeTokenUpdateOpRet(batonopret, updaterPubkey, assetHash, value, ccode, batondescription) == 'u')
 			{
