@@ -166,10 +166,11 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
 			
+			// retrieving destpubkey(s)
 			if (DecodeTokenTransferOneOpRet(tx.vout[numvouts - 1].scriptPubKey, tokenid, voutTokenPubkeys, oprets) != 't')
 				return eval->Invalid("unable to verify token transfer tx funcid");
 			
-			// if token is sub-license and isn't being burned and transaction isn't from creator, return eval->Invalid
+			// if token is sub-license and isn't being burned and transaction isn't from creator, invalidate
 			if (tokenType == "s" && std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end() && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == vinTokenPubkeys.end())
 				return eval->Invalid("cannot transfer sub-license from pubkey other than creator pubkey");
 			
