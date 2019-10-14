@@ -165,7 +165,16 @@ CScript EncodeTokenTransferOneOpRet(uint256 tokenid, std::vector<CPubKey> voutPu
 //
 //===========================================================================
 
-/* EncodeTokenUpdateOpRet coming soon */
+// NOTE: the estimated value is measured in satoshis. If specified currency code is not a cryptocurrency, treat the value as if it was convertible to satoshis.
+// 1 coin is 100000000 satoshis, therefore the maximum value in coins (or fiat) is 9223372036.854775807 (approx. 9 billion)
+CScript EncodeTokenUpdateOpRet(uint256 tokenid, CPubKey pk, uint256 assetHash, int64_t value, std::string ccode, std::string description)
+{    
+    CScript opret;
+	uint8_t funcid = 'u'; //override the param
+    uint8_t evalcode = EVAL_TOKENS;
+    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << tokenid << pk << assetHash << value << ccode << description);
+    return(opret);
+}
 
 //===========================================================================
 //
@@ -414,7 +423,18 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
 //
 //===========================================================================
 
-/* DecodeTokenUpdateOpRet coming soon */
+uint8_t DecodeTokenUpdateOpRet(const CScript scriptPubKey, CPubKey &pk, uint256 &assetHash, int64_t &value, std::string &ccode, std::string &description)
+{
+    std::vector<uint8_t> vopret;
+	uint8_t evalcode, funcid;
+    GetOpReturnData(scriptPubKey,vopret);
+	if (vopret.size() > 2 && vopret.begin()[0] == EVAL_TOKENS && vopret.begin()[1] == 'u')
+	{
+		if (E_UNMARSHAL(vopret,ss >> evalcode; ss >> funcid; ss >> pk; ss >> assetHash; ss >> value; ss >> ccode; ss >> description) != 0 && funcid == 'u')
+			return(funcid);
+	}
+    return(0);
+}
 
 //===========================================================================
 //

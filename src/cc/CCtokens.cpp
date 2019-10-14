@@ -155,6 +155,10 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
 			break; // breaking to other contract validation...
 		
+		case 'u':
+			//validation coming soon...
+			break;
+			
 		//case 'whatever':
 			//tx model
 			//validation stuff
@@ -956,9 +960,27 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 
         //mtx.vout.push_back(CTxOut(txfee, CScript() << ParseHex(cp->CChexstr) << OP_CHECKSIG));  // old marker (non-burnable because spending could not be validated)
         //mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL)));          // ...moved to vout=0 for matching with rogue-game token
+
+		//
+
+		CScript batonopret = EncodeTokenUpdateOpRet(zeroid,mypk,zeroid,60000,"USD","Baton test. Can you see me?");
+		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
+		if (makeCCopret(batonopret, vData))
+		{
+			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, mypk, &vData));  // BATON_VOUT
+			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet(Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
+		}
 		
-        return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet(Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
-    }
+		//
+		
+        //return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet(Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
+		else
+		{
+			CCerror = "couldnt embed updatable data to baton vout";
+			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+			return std::string("");
+		}
+	}
 
     CCerror = "cant find normal inputs";
     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
@@ -1020,7 +1042,7 @@ std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, 
 
             std::vector<CPubKey> voutTokenPubkeys;
             voutTokenPubkeys.push_back(pubkey2pk(destpubkey)); // dest pubkey for validating vout
-
+			
             return FinalizeCCTx(mask, cp, mtx, mypk, txfee, EncodeTokenTransferOneOpRet(tokenid, voutTokenPubkeys, std::make_pair((uint8_t)0, vopretEmpty)));
         }
 		else
@@ -1128,6 +1150,22 @@ UniValue TokenInfo(uint256 tokenid)
     if (!vopretNonfungible.empty())
         result.push_back(Pair("data", HexStr(vopretNonfungible)));
 
+	//
+	CScript batonopret;
+	std::vector<uint8_t> updaterPubkey;
+	uint256 assetHash;
+	int64_t value;
+	std::string ccode, batondescription;
+	
+	if (!getCCopret(tokenbaseTx.vout[2].scriptPubKey,batonopret) || DecodeTokenUpdateOpRet(batonopret, updaterPubkey, assetHash, value, ccode, batondescription) != 'u')
+		result.push_back(Pair("isBaton", false));
+	else
+	{
+		result.push_back(Pair("isBaton", true));
+		result.push_back(Pair("value", value));
+	}
+	//
+	
     if (tokenbaseTx.IsCoinImport()) { // if imported token
         ImportProof proof;
         CTransaction burnTx;
