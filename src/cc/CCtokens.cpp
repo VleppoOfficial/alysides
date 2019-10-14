@@ -1154,28 +1154,23 @@ UniValue TokenInfo(uint256 tokenid)
 	int64_t value;
 	std::string ccode, batondescription;
 	
-	if (tokenbaseTx.vout.size() > 0)
+
+	if (getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret))
 	{
-		if (getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret))
+		if (DecodeTokenUpdateOpRet(batonopret, updaterPubkey, assetHash, value, ccode, batondescription) == 'u')
 		{
-			if (DecodeTokenUpdateOpRet(batonopret, updaterPubkey, assetHash, value, ccode, batondescription) == 'u')
-			{
-				result.push_back(Pair("value", value));
-			}
-			else
-			{
-				std::cerr << "DecodeTokenUpdateOpRet incorrect funcid" << std::endl;
-			}
+			result.push_back(Pair("value", value));
 		}
 		else
 		{
-			std::cerr << "getCCopret failed" << std::endl;
+			std::cerr << "DecodeTokenUpdateOpRet incorrect funcid" << std::endl;
 		}
 	}
 	else
 	{
-		std::cerr << "size is 0" << std::endl;
+		std::cerr << "getCCopret failed" << std::endl;
 	}
+
 	//
 	
     if (tokenbaseTx.IsCoinImport()) { // if imported token
