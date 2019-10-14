@@ -794,25 +794,6 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey)
     return CPubKey(); //return invalid pubkey
 }
 
-/*int64_t GetTokenSupply(uint256 tokenid, struct CCcontract_info* cp)
-{
-    int64_t tokenSupply = 0, output;
-    uint256 hashBlock;
-    CTransaction tokenBaseTx;
-
-    if (GetTransaction(tokenid, tokenBaseTx, hashBlock, false)) {
-        for (int v = 0; v < tokenBaseTx.vout.size() - 1; v++) {
-            if ((output = IsTokensvout(false, true, cp, NULL, tokenBaseTx, v, tokenid)) > 0)
-                tokenSupply += output;
-        }
-    } else {
-        CCerror = "cant find reference tokenid";
-        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-        return 0;
-    }
-    return tokenSupply;
-}*/
-
 // returns the percentage of tokenid total supply that is owned by the provided pubkey
 // moved to separate function for accessibility
 double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid)
@@ -892,10 +873,8 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 
     //std::cerr << indentStr << "reftokenid=" << referenceTokenId.GetHex() << " GetTransactionOutput=" << GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false) << std::endl;
 
-    if (tokenType == "m" || tokenType == "s") {
-        /* if (expiryTimeSec == 0) {
-                IsExpiredTx = 31536000;
-            }*/
+    if (tokenType == "m" || tokenType == "s")
+	{
         //Checking if tokensupply is equal to 1 if token is master license type
         if (tokenType == "m" && tokensupply != 1) {
             CCerror = "for master license tokens tokensupply should be equal to 1";
@@ -910,7 +889,6 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
             return std::string("");
         }
 
-		//double ownedRefTokenPerc = (static_cast<double>(GetTokenBalance(mypk, referenceTokenId)) / static_cast<double>(CCfullsupply(referenceTokenId)) * 100); 
 		double ownedRefTokenPerc = GetTokenOwnershipPercent(mypk, referenceTokenId);
 
         //checking reference tokenid opret
@@ -920,7 +898,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
             return std::string("");
         }
 
-        std::cerr << indentStr << "refownerperc=" << refOwnerPerc << "ownedRefTokenperc=" << ownedRefTokenPerc << std::endl;
+        //std::cerr << indentStr << "refownerperc=" << refOwnerPerc << "ownedRefTokenperc=" << ownedRefTokenPerc << std::endl;
 
         //master licenses must reference digital assets owned by mypk
         if (tokenType == "m" && (refTokenType != "a" || ownedRefTokenPerc <= refOwnerPerc)) {
@@ -935,14 +913,16 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
             LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
             return std::string("");
         }
-        if (refExpiryTimeSec != 0) {
-            if (tokenType == "s" && (CCduration(numblocks, referenceTokenId) > refExpiryTimeSec)) {
+		
+        if (refExpiryTimeSec != 0)
+		{
+            if (tokenType == "s" && (CCduration(numblocks, referenceTokenId) > refExpiryTimeSec))
+			{
                 CCerror = "Can't create a sub-license if master license is expired";
                 LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
                 return std::string("");
             }
             if (tokenType == "s" && (refExpiryTimeSec - CCduration(numblocks, referenceTokenId) < expiryTimeSec))
-
             {
                 CCerror = "Sub-license expire time can't be longer then time left until master license expires";
                 LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
@@ -976,12 +956,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 
         //mtx.vout.push_back(CTxOut(txfee, CScript() << ParseHex(cp->CChexstr) << OP_CHECKSIG));  // old marker (non-burnable because spending could not be validated)
         //mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL)));          // ...moved to vout=0 for matching with rogue-game token
-
-        /*
-		Finish the creation of the transaction by calling the FinalizeCCTx function along with its parameters from the cp object,
-		the mtx object itself, the owner's pubkey, and the transaction fee amount.
-		Also, an opreturn object with the data from this module instance is passed.
-		*/
+		
         return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet(Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
     }
 
@@ -991,107 +966,8 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 }
 
 /*
-token transfer logic:
-	mtx
-	set CCchange and other vars.
-	CCcontract_info
-	vscript_t vopretNonfungible, vopretEmpty;
-	check if numamount >= 0
-	cp = CCinit(&C, EVAL_TOKENS);
-	set txfee
-	pubkey2pk
-	if AddNormalInputs
-		set mask (experiment by omitting it?)
-		if AddTokenCCInputs (for one tokenid, can't be 0)
-			check if tokeninputs >= numamount
-			destEvalCode and other non-fung data stuff
-			if tokeninputs > numamount calc CCchange
-			mtx.vout.push_back MakeTokensCC1vout (destevalcode, numamount, destpubkey)
-			if CCchange != 0, mtx.vout.push_back MakeTokensCC1vout (destevalcode, CCchange, mypk)
-			make dynamic array for destpubkey(s), push current destpubkey to vectorb
-			FinalizeCCTx (mask(0?), cp, mtx, mypk, txfee, EncodeTokenOpRet(tokenid, pubkeyarray, 0s?, vopretEmpty))
-		else
-			errorb no token inputs
-	else
-		errorb no coinz for txfee
-	return("")
-	
-	//concept method for sending many tokenids to 1 pubkey in the same tx.
-	//it creates a tx for sending entire owned balances for each tokenid in the array
-	
-token transfermany logic:
-	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	CCchange is not needed since we're planning to send the entire owned balance
-	vscript_t vopretNonfungible, vopretEmpty;
-	CCcontract_info and cp = CCinit(&C, EVAL_TOKENS);
-	numamount is not needed
-	set txfee
-	pubkey2pk
-	
-
 std::string TokenTransferMany(int64_t txfee, vscript_t destpubkey, uint256 tokenidarray[])
 {
-    CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-    uint64_t mask;
-    int64_t CCchange = 0, inputs = 0;
-    struct CCcontract_info *cp, C;
-    vscript_t vopretNonfungible, vopretEmpty;
-
-    if (total < 0)
-	{
-        CCerror = strprintf("negative total");
-        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << CCerror << "=" << total << std::endl);
-        return ("");
-    }
-
-    cp = CCinit(&C, EVAL_TOKENS);
-
-    if (txfee == 0)
-        txfee = 10000;
-	
-    CPubKey mypk = pubkey2pk(Mypubkey());
-	
-    if (AddNormalinputs(mtx, mypk, txfee, 3) > 0)
-	{
-        mask = ~((1LL << mtx.vin.size()) - 1); // seems, mask is not used anymore
-
-        if ((inputs = AddTokenCCInputs(cp, mtx, mypk, tokenid, total, 60, vopretNonfungible)) > 0) // NOTE: AddTokenCCInputs might set cp->additionalEvalCode which is used in FinalizeCCtx!
-        {
-            if (inputs < total)
-			{ //added dimxy
-                CCerror = strprintf("insufficient token inputs");
-                LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenTransfer() " << CCerror << std::endl);
-                return std::string("");
-            }
-
-            uint8_t destEvalCode = EVAL_TOKENS;
-            if (vopretNonfungible.size() > 0)
-                destEvalCode = vopretNonfungible.begin()[0];
-
-            if (inputs > total)
-                CCchange = (inputs - total);
-            mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, total, pubkey2pk(destpubkey))); // if destEvalCode == EVAL_TOKENS then it is actually MakeCC1vout(EVAL_TOKENS,...)
-            if (CCchange != 0)
-                mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, CCchange, mypk));
-
-            std::vector<CPubKey> voutTokenPubkeys;
-            voutTokenPubkeys.push_back(pubkey2pk(destpubkey)); // dest pubkey for validating vout
-
-            return FinalizeCCTx(mask, cp, mtx, mypk, txfee, EncodeTokenOpRet(tokenid, voutTokenPubkeys, std::make_pair((uint8_t)0, vopretEmpty)));
-        }
-		else
-		{
-            CCerror = strprintf("no token inputs");
-            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenTransfer() " << CCerror << " for amount=" << total << std::endl);
-        }
-    //} else fprintf(stderr,"numoutputs.%d != numamounts.%d\n",n,(int32_t)amounts.size());
-    }
-	else
-	{
-        CCerror = strprintf("insufficient normal inputs for tx fee");
-        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenTransfer() " << CCerror << std::endl);
-    }
-    return ("");
 }
 */
 
