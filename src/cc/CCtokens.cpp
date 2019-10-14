@@ -99,7 +99,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	if ((funcid = DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, evalCodeInOpret, tokenid, oprets)) == 0)
         return eval->Invalid("TokenValidate: invalid opreturn payload");
 
-	std::cerr << "findEval found funcid=" << (char)funcid << std::endl;
+	//std::cerr << "findEval found funcid=" << (char)funcid << std::endl;
     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokensValidate funcId=" << (char)(funcid ? funcid : ' ') << " evalcode=" << std::hex << (int)cp->evalcode << std::endl);
 	
 	if (eval->GetTxUnconfirmed(tokenid, createTx, hashBlock) == 0 || !myGetTransaction(tokenid, createTx, hashBlock))
@@ -119,6 +119,9 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 return eval->Invalid("tokens cc inputs != cc outputs");
         }
 		//get token create tx info
+
+		std::cerr << "tx hash=" << tx.GetHash().GetHex() << "createtx hash=" << createTx.GetHash().GetHex() << "tokenid=" << tokenid.GetHex() << std::endl;
+		
 		if (DecodeTokenCreateOpRet(createTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec) == 0)
 		{
 			return eval->Invalid("incorrect token create txid funcid");
