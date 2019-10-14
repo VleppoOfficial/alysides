@@ -1163,7 +1163,6 @@ UniValue TokenInfo(uint256 tokenid)
 	{
 		std::cerr << "DecodeTokenUpdateOpRet incorrect funcid" << std::endl;
 	}
-	}
 
 	//
 	
