@@ -955,19 +955,16 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         // NOTE: we should prevent spending fake-tokens from this marker in IsTokenvout():
         mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL))); // new marker to token cc addr, burnable and validated, vout pos now changed to 0 (from 1)
 
-        //TODO: can mypk be changed to another pubkey without causing problems with validation and/or ownership?
         mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, tokensupply, mypk));
-
-        //mtx.vout.push_back(CTxOut(txfee, CScript() << ParseHex(cp->CChexstr) << OP_CHECKSIG));  // old marker (non-burnable because spending could not be validated)
-        //mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL)));          // ...moved to vout=0 for matching with rogue-game token
 
 		//
 
-		std::vector<std::vector<unsigned char>> batonopret = EncodeTokenUpdateOpRet(zeroid,Mypubkey(),zeroid,60000,"USD","Baton test. Can you see me?");
+		CScript batonopret = EncodeTokenUpdateOpRet(referenceTokenId,Mypubkey(),referenceTokenId,60000,"USD","Baton test. Can you see me?");
 		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
 		if (makeCCopret(batonopret, vData))
 		{
 			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, mypk, &vData));  // BATON_VOUT
+			fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
 			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet(Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
 		}
 		
