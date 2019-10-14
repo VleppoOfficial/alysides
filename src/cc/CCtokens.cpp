@@ -963,7 +963,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 
 		//
 
-		CScript batonopret = EncodeTokenUpdateOpRet(zeroid,Mypubkey(),zeroid,60000,"USD","Baton test. Can you see me?");
+		std::vector<std::vector<unsigned char>> batonopret = EncodeTokenUpdateOpRet(zeroid,Mypubkey(),zeroid,60000,"USD","Baton test. Can you see me?");
 		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
 		if (makeCCopret(batonopret, vData))
 		{

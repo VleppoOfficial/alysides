@@ -218,7 +218,7 @@ CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std:
 CScript EncodeTokenTransferOneOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::pair<uint8_t, vscript_t> opretWithId);
 CScript EncodeTokenTransferOneOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> oprets);
 
-CScript EncodeTokenUpdateOpRet(uint256 tokenid, std::vector<uint8_t> pk, uint256 assetHash, int64_t value, std::string ccode, std::string description);
+std::vector<std::vector<unsigned char>> EncodeTokenUpdateOpRet(uint256 tokenid, std::vector<uint8_t> pk, uint256 assetHash, int64_t value, std::string ccode, std::string description);
 
 uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, uint256 &tokenid, std::vector<std::pair<uint8_t, vscript_t>> &oprets);
 
