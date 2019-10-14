@@ -435,7 +435,7 @@ uint8_t DecodeTokenUpdateOpRet(const CScript scriptPubKey, std::vector<uint8_t> 
 	if (vopret.size() > 2 && vopret.begin()[0] == EVAL_TOKENS && vopret.begin()[1] == 'u')
 	{
 		std::cerr << "Successfully opened opret!" << std::endl;
-		if (E_UNMARSHAL(vopret,ss >> evalcode; ss >> funcid; ss >> pk; ss >> assetHash; ss >> value; ss >> ccode; ss >> description) != 0 && funcid == 'u')
+		if (E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> pk; ss >> assetHash; ss >> value; ss >> ccode; ss >> description) != 0 && evalcode == EVAL_TOKENS)
 		{
 			std::cerr << "Successfully decoded value: " << value << std::endl;
 			return(funcid);
