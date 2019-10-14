@@ -306,10 +306,6 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
 // Vleppo token transfer decoder, replaces old DecodeTokenOpRet
 uint8_t DecodeTokenTransferOneOpRet(const CScript scriptPubKey, uint256 &tokenid, std::vector<CPubKey> &voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> &oprets)
 {
-	//These are unused AFAIK
-	/*vscript_t vnonfungibleDummy;
-	uint256 dummySrcTokenId;*/
-	
 	vscript_t vopret, vblob;
 	GetOpReturnData(scriptPubKey, vopret);
 	

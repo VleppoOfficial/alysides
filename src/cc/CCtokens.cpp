@@ -1162,7 +1162,7 @@ UniValue TokenInfo(uint256 tokenid)
 		std::cerr << "getCCopret error" << std::endl;
 		result.push_back(Pair("isBaton", false));
 	}
-	else if (DecodeTokenUpdateOpRet(batonopret, updaterPubkey, assetHash, value, ccode, batondescription) != 'u')
+	else if (tokenbaseTx.vout.size() > 0 && DecodeTokenUpdateOpRet(batonopret, updaterPubkey, assetHash, value, ccode, batondescription) != 'u')
 	{
 		std::cerr << "DecodeTokenUpdateOpRet error - incorrect funcid" << std::endl;
 		result.push_back(Pair("isBaton", false));
