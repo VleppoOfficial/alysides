@@ -119,8 +119,12 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 return eval->Invalid("tokens cc inputs != cc outputs");
         }
 		//get token create tx info
-		std::cerr << "Cracking open opret..." << (char)funcid << std::endl;
-		if (DecodeTokenCreateOpRet(createTx.vout[numvouts - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) == 0)
+		std::cerr << "Cracking open opret..." << std::endl;
+		/*if (DecodeTokenCreateOpRet(createTx.vout.back().scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) == 0)
+		{
+			return eval->Invalid("incorrect token create txid funcid");
+		}*/
+		if (createTx.vout.size() > 0 && DecodeTokenCreateOpRet(createTx.vout[createTx.vout.size() - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
 		{
 			return eval->Invalid("incorrect token create txid funcid");
 		}
