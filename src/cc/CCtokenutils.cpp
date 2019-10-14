@@ -173,6 +173,7 @@ CScript EncodeTokenUpdateOpRet(uint256 tokenid, std::vector<uint8_t> pk, uint256
 	uint8_t funcid = 'u'; //override the param
     uint8_t evalcode = EVAL_TOKENS;
     opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << tokenid << pk << assetHash << value << ccode << description);
+	std:cerr << "Successfully encoded value: " << value << std::endl;
     return(opret);
 }
 
@@ -430,8 +431,12 @@ uint8_t DecodeTokenUpdateOpRet(const CScript scriptPubKey, std::vector<uint8_t> 
     GetOpReturnData(scriptPubKey,vopret);
 	if (vopret.size() > 2 && vopret.begin()[0] == EVAL_TOKENS && vopret.begin()[1] == 'u')
 	{
+		std:cerr << "Successfully opened opret!" << std::endl;
 		if (E_UNMARSHAL(vopret,ss >> evalcode; ss >> funcid; ss >> pk; ss >> assetHash; ss >> value; ss >> ccode; ss >> description) != 0 && funcid == 'u')
+		{
+			std:cerr << "Successfully decoded value: " << value << std::endl;
 			return(funcid);
+		}
 	}
     return(0);
 }
