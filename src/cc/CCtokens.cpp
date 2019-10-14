@@ -74,7 +74,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	*/
 
 	CTransaction createTx; //the token creation tx
-	uint256 hashBlock, tokenid, referenceTokenId;
+	uint256 hashBlock, tokenid = zeroid, referenceTokenId;
 	CBlockIndex confHashBlock;
 	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(); //the amount of vins and vouts in tx
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
@@ -99,6 +99,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	if ((funcid = DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, evalCodeInOpret, tokenid, oprets)) == 0)
         return eval->Invalid("TokenValidate: invalid opreturn payload");
 
+	std::cerr << "findEval found funcid=" << (char)funcid << std::endl;
     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokensValidate funcId=" << (char)(funcid ? funcid : ' ') << " evalcode=" << std::hex << (int)cp->evalcode << std::endl);
 	
 	if (eval->GetTxUnconfirmed(tokenid, createTx, hashBlock) == 0 || !myGetTransaction(tokenid, createTx, hashBlock))
