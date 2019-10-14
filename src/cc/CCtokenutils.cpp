@@ -426,8 +426,8 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
 
 uint8_t DecodeTokenUpdateOpRet(const CScript scriptPubKey, std::vector<uint8_t> &pk, uint256 &assetHash, int64_t &value, std::string &ccode, std::string &description)
 {
-    //vscript_t vopret;
-	std::vector<uint8_t> vopret;
+    vscript_t vopret;
+	//std::vector<uint8_t> vopret;
 	uint8_t evalcode, funcid;
     GetOpReturnData(scriptPubKey, vopret);
 	auto saize = vopret.size();
