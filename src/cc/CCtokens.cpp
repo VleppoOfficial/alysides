@@ -957,17 +957,15 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 
         mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, tokensupply, mypk));
 
-		//
-
+		// Token Update stuff
 		CScript batonopret = EncodeTokenUpdateOpRet(referenceTokenId,Mypubkey(),referenceTokenId,60000,"USD","Baton test. Can you see me?");
 		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
 		if (makeCCopret(batonopret, vData))
 		{
 			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, mypk, &vData));  // BATON_VOUT
-			fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
+			//fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
 			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet(Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
 		}
-		
 		//
 		
         //return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet(Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));

@@ -420,38 +420,16 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
 //
 //===========================================================================
 
-//modified version of getCCopret
-/*bool getTokenUpdateCCopret(const CScript &scriptPubKey, CScript &opret)
-{
-    std::vector<std::vector<unsigned char>> vParams = std::vector<std::vector<unsigned char>>();
-    CScript dummy; bool ret = false;
-    if ( scriptPubKey.IsPayToCryptoCondition(&dummy, vParams) != 0 )
-    {
-        ret = true;
-        if ( vParams.size() == 1)
-        {
-            opret = CScript(vParams[0].begin()+7, vParams[0].end());
-            //fprintf(stderr, "vparams.%s\n", HexStr(vParams[0].begin(), vParams[0].end()).c_str());
-        }
-    }
-    return ret;
-}*/
-
 uint8_t DecodeTokenUpdateOpRet(const CScript scriptPubKey, std::vector<uint8_t> &pk, uint256 &tokenid, uint256 &assetHash, int64_t &value, std::string &ccode, std::string &description)
 {
     vscript_t vopret;
 	//std::vector<uint8_t> vopret;
 	uint8_t evalcode, funcid;
-    if (!GetOpReturnData(scriptPubKey, vopret))
-		std::cerr << "Opreturn decode failed" << std::endl;
-	auto saize = vopret.size();
-	std::cerr << "vopret.size(): " << saize << std::endl;
+    GetOpReturnData(scriptPubKey, vopret);
 	if (vopret.size() > 2 && vopret.begin()[0] == EVAL_TOKENS && vopret.begin()[1] == 'u')
 	{
-		std::cerr << "Successfully opened opret!" << std::endl;
 		if (E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> pk; ss >> tokenid; ss >> assetHash; ss >> value; ss >> ccode; ss >> description) != 0 && evalcode == EVAL_TOKENS)
 		{
-			std::cerr << "Successfully decoded value: " << value << std::endl;
 			return(funcid);
 		}
 	}
