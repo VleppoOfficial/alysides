@@ -1147,25 +1147,24 @@ UniValue TokenInfo(uint256 tokenid)
     if (!vopretNonfungible.empty())
         result.push_back(Pair("data", HexStr(vopretNonfungible)));
 
-	//
+	// Token Update stuff
 	CScript batonopret;
 	std::vector<uint8_t> updaterPubkey;
 	uint256 assetHash, xxxTokenId;
 	int64_t value;
 	std::string ccode, batondescription;
-    //std::vector<std::vector<unsigned char>> vParams = std::vector<std::vector<unsigned char>>();
 
 	if (getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret) && 
 	//fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
 	DecodeTokenUpdateOpRet(CScript(batonopret.begin()+1, batonopret.end()), updaterPubkey, xxxTokenId, assetHash, value, ccode, batondescription) == 'u')
 	{
+			result.push_back(Pair("updaterPubkey", HexStr(updaterPubkey)));
+			result.push_back(Pair("batontokenid", xxxTokenId.GetHex()));
+			result.push_back(Pair("assetHash", assetHash.GetHex()));
 			result.push_back(Pair("value", value));
+			result.push_back(Pair("ccode", ccode));
+			result.push_back(Pair("batondescription", batondescription));
 	}
-	else
-	{
-		std::cerr << "DecodeTokenUpdateOpRet incorrect funcid" << std::endl;
-	}
-
 	//
 	
     if (tokenbaseTx.IsCoinImport()) { // if imported token
