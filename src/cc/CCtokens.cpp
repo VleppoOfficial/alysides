@@ -1156,8 +1156,8 @@ UniValue TokenInfo(uint256 tokenid)
     //std::vector<std::vector<unsigned char>> vParams = std::vector<std::vector<unsigned char>>();
 
 	if (getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret) && 
-	batonopret = CScript(batonopret.begin()+1, batonopret.end()) && //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
-	DecodeTokenUpdateOpRet(batonopret, updaterPubkey, xxxTokenId, assetHash, value, ccode, batondescription) == 'u')
+	//fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
+	DecodeTokenUpdateOpRet(CScript(batonopret.begin()+1, batonopret.end()), updaterPubkey, xxxTokenId, assetHash, value, ccode, batondescription) == 'u')
 	{
 			result.push_back(Pair("value", value));
 	}
