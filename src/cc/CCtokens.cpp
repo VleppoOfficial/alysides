@@ -1254,6 +1254,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
         }
         sourcetxid = batontxid;
     }*/
+	result.push_back(Pair("woah", "update tx found?"));
     return (result);
 }
 
