@@ -93,14 +93,14 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 		//Check if tokenid isn't just a bunch of zeros
         if (tokenid == zeroid)
             return eval->Invalid("illegal tokenid");
-		//Check if token amount is the same in vins and vouts of tx
+		/*//Check if token amount is the same in vins and vouts of tx
         else if (!TokensExactAmounts(true, cp, inputs, outputs, eval, tx, tokenid))
 		{
             if (!eval->Valid())
                 return false; //TokenExactAmounts must call eval->Invalid()!
             else
                 return eval->Invalid("tokens cc inputs != cc outputs");
-        }
+        }*/
 		//get token create tx info
 		if (createTx.vout.size() > 0 && DecodeTokenCreateOpRet(createTx.vout[createTx.vout.size() - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
 		{
@@ -141,6 +141,16 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//vout.0 to n-2: tokenoshis output to CC
 			//vout.n-2: normal output for change (if any)
 			//vout.n-1: opreturn EVAL_TOKENS 't' tokenid <other contract payload>
+			//Check if token amount is the same in vins and vouts of tx
+			
+			if (!TokensExactAmounts(true, cp, inputs, outputs, eval, tx, tokenid))
+			{
+				if (!eval->Valid())
+					return false; //TokenExactAmounts must call eval->Invalid()!
+				else
+					return eval->Invalid("tokens cc inputs != cc outputs");
+			}
+			
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
 			
