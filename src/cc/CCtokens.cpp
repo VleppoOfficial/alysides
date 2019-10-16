@@ -497,7 +497,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     int64_t ccOutputs = 0;
                     for (auto vout : tx.vout)
                         if (vout.scriptPubKey.IsPayToCryptoCondition() //TODO: add voutPubkey validation
-                            && !IsTokenMarkerVout(vout))               // should not be marker here
+                            && (!IsTokenMarkerVout(vout) || !IsTokenBatonVout(tx, v)))               // should not be marker or baton here
                             ccOutputs += vout.nValue;
 
                     int64_t normalInputs = TotalPubkeyNormalInputs(tx, origPubkey); // check if normal inputs are really signed by originator pubkey (someone not cheating with originator pubkey)
@@ -516,7 +516,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     }
                 } else {
                     // imported tokens are checked in the eval::ImportCoin() validation code
-                    if (!IsTokenMarkerVout(tx.vout[v])) // exclude marker
+                    if (!IsTokenMarkerVout(tx.vout[v]) || !IsTokenBatonVout(tx, v)) // exclude marker and baton
                         return tx.vout[v].nValue;
                     else
                         return 0; // vout is good, but do not take marker into account
@@ -535,6 +535,30 @@ bool IsTokenMarkerVout(CTxOut vout)
     struct CCcontract_info *cpTokens, CCtokens_info;
     cpTokens = CCinit(&CCtokens_info, EVAL_TOKENS);
     return vout == MakeCC1vout(EVAL_TOKENS, vout.nValue, GetUnspendable(cpTokens, NULL));
+}
+/*
+how to identify a baton vout?
+-Exists in 'c' and 'u' transactions
+-Has a fixed fee (10000)
+-Is the second to last vout (tx.vout[tx.vout.size() - 2])
+-Has an embedded cc opret (getCCopret(tx.vout[tx.vout.size() - 2].scriptPubKey, opret) == true)
+BATON != TOKEN.
+*/
+bool IsTokenBatonVout(CTransaction tx, int32_t v)
+{
+	CScript opret;
+	uint256 assetHash;
+	int64_t value;
+	std::string ccode, message;
+	
+	if (v = tx.vout.size() - 2 &&
+		tx.vout[v].nValue == 10000 &&
+		getCCopret(tx.vout[v].scriptPubKey, opret) &&
+		(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u'))
+	{
+		return true;
+	}
+	return false;
 }
 
 // compares cc inputs vs cc outputs (to prevent feeding vouts from normal inputs)
@@ -578,7 +602,7 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
         }
     }
 
-    for (int32_t i = 0; i < numvouts - 2; i++) // 'numvouts-1' <-- do not check opret / 'numvouts-2' <-- do not check opret OR baton
+    for (int32_t i = 0; i < numvouts - 1; i++) // 'numvouts-1' <-- do not check opret
     {
         LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << indentStr << "TokenExactAmounts() recursively checking tx.vout[" << i << "] nValue=" << tx.vout[i].nValue << std::endl);
 
