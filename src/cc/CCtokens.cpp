@@ -506,7 +506,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     if (normalInputs >= ccOutputs) {
                         LOGSTREAM("cctokens", CCLOG_DEBUG2, stream << indentStr << "IsTokensvout() assured normalInputs >= ccOutputs"
                                                                    << " for tokenbase=" << reftokenid.GetHex() << std::endl);
-                        if (!IsTokenMarkerVout(tx.vout[v])) // exclude marker
+                        if (!IsTokenMarkerVout(tx.vout[v]) || !IsTokenBatonVout(tx, v)) // exclude marker
                             return tx.vout[v].nValue;
                         else
                             return 0; // vout is good, but do not take marker into account
@@ -551,7 +551,7 @@ bool IsTokenBatonVout(CTransaction tx, int32_t v)
 	int64_t value;
 	std::string ccode, message;
 	
-	if (v = tx.vout.size() - 2 &&
+	if (v == tx.vout.size() - 2 &&
 		tx.vout[v].nValue == 10000 &&
 		getCCopret(tx.vout[v].scriptPubKey, opret) &&
 		(DecodeTokenUpdateCCOpRet(CScript(opret.begin()+1, opret.end()), assetHash, value, ccode, message) == 'u'))
