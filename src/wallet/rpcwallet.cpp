@@ -7506,12 +7506,13 @@ UniValue tokenupdate(const UniValue& params, bool fHelp)
     int64_t value = 0;
 	uint256 tokenid = zeroid, assethash = zeroid;
     CCerror.clear();
-    if ( fHelp || params.size() > 4 || params.size() < 3 )
+    if ( fHelp || params.size() > 5 || params.size() < 4 )
         throw runtime_error("tokenupdate tokenid assethash value ccode [message]\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
         throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
     const CKeyStore& keystore = *pwalletMain;
     LOCK2(cs_main, pwalletMain->cs_wallet);
+	
 	tokenid = Parseuint256((char *)params[0].get_str().c_str()); //returns zeroid if empty or wrong length
 	if (tokenid == zeroid)
 	{
@@ -7526,7 +7527,7 @@ UniValue tokenupdate(const UniValue& params, bool fHelp)
         return(result);
     }
 	ccode = params[3].get_str();
-    if (ccode.size() != 3)
+    if (ccode.size() == 0 || ccode.size() != 3)
 	{
         ERR_RESULT("Currency code must be 3 characters");
         return(result);
