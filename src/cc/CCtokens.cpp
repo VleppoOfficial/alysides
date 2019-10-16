@@ -1058,7 +1058,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum)
 	std::string ccode, batondescription;
 
 	// special handling for token creation - in this tx, baton vout is vout2
-	if (GetTransaction(batontxid, txBaton, hashBlock, true) && 
+	if (GetTransaction(sourcetxid, txBaton, hashBlock, true) && 
 	!hashBlock.IsNull() && 
 	txBaton.vout.size() > 2 &&
 	(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c')
