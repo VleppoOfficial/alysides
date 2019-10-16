@@ -256,6 +256,7 @@ extern UniValue tokenask(const UniValue& params, bool fHelp);
 extern UniValue tokencancelask(const UniValue& params, bool fHelp);
 extern UniValue tokenfillask(const UniValue& params, bool fHelp);
 extern UniValue tokenconvert(const UniValue& params, bool fHelp);
+extern UniValue tokenupdate(const UniValue& params, bool fHelp);
 extern UniValue tokenviewupdates(const UniValue& params, bool fHelp);
 extern UniValue heiraddress(const UniValue& params, bool fHelp);
 extern UniValue heirfund(const UniValue& params, bool fHelp);

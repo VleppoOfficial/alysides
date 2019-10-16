@@ -7273,7 +7273,7 @@ UniValue tokenviewupdates(const UniValue& params, bool fHelp)
 {
     uint256 tokenid; int32_t samplenum;
     if ( fHelp || params.size() < 1 || params.size() > 2)
-        throw runtime_error("tokenviewupdates tokenid samplenum\n");
+        throw runtime_error("tokenviewupdates tokenid [samplenum]\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
         throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
     const CKeyStore& keystore = *pwalletMain;
@@ -7495,6 +7495,59 @@ UniValue tokentransfer(const UniValue& params, bool fHelp)
         result.push_back(Pair("result", "success"));
         result.push_back(Pair("hex", hex));
     }
+    return(result);
+}
+
+
+UniValue tokenupdate(const UniValue& params, bool fHelp)
+{
+    UniValue result(UniValue::VOBJ);
+    std::string ccode, message, hextx; 
+    int64_t value;
+	uint256 tokenid = zeroid; assethash = zeroid;
+    CCerror.clear();
+    if ( fHelp || params.size() > 4 || params.size() < 3 )
+        throw runtime_error("tokenupdate tokenid assethash value [message]\n");
+    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
+        throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
+    const CKeyStore& keystore = *pwalletMain;
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+	tokenid = Parseuint256((char *)params[0].get_str().c_str()); //returns zeroid if empty or wrong length
+	if (tokenid == zeroid)
+	{
+		ERR_RESULT("invalid tokenid");
+		return(result);
+	}
+	assethash = Parseuint256((char *)params[1].get_str().c_str()); //returns zeroid if empty or wrong length
+    value = atof(params[2].get_str().c_str());
+    if (value <= 0)
+	{
+        ERR_RESULT("Value must be positive");
+        return(result);
+    }
+	ccode = params[2].get_str();
+    if (ccode.size() != 3)
+	{
+        ERR_RESULT("Currency code must be 3 characters");
+        return(result);
+    }
+	if (params.size() == 4)
+	{
+        message = params[3].get_str();
+        if (message.size() > 128)
+		{
+            ERR_RESULT("Update message must be <= 128 characters");
+            return(result);
+        }
+    }
+    hextx = UpdateToken(0, tokenid, assethash, value, ccode, message);
+    if( hextx.size() > 0 )
+	{
+        result.push_back(Pair("result", "success"));
+        result.push_back(Pair("hex", hextx));
+    } 
+    else 
+        ERR_RESULT(CCerror);
     return(result);
 }
 

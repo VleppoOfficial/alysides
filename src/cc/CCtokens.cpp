@@ -982,19 +982,18 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
     return std::string("");
 }
 
-/*
-std::string TokenUpdate(int64_t txfee, uint256 tokenid, uint256 assetHash, int64_t value, std::string ccode, std::string message)
+std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64_t value, std::string ccode, std::string message)
 {
-	Variables:
+	/*Variables:
 	tokenid, obviously
 	updaterPubkey (implicit)
 	assetHash (uint256 or string)
 	value (int64_t)
 	ccode (string or chararray[3])
-	description (optional, <= 64 chars)
+	description (optional, <= 128 chars)*/
 	
 	CTransaction tokenBaseTx;
-	uint256 hashBlock, dummyRefTokenId;
+	uint256 hashBlock, dummyRefTokenId, latesttxid;
     std::vector<uint8_t> dummyPubkey;
     int64_t refExpiryTimeSec;
     std::string dummyName, dummyDescription, refTokenType;
@@ -1027,15 +1026,63 @@ std::string TokenUpdate(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	//checking if token is owned by mypk
 	if (ownedRefTokenPerc <= refOwnerPerc)
 	{
-            CCerror = "tokenid must be owned by this pubkey";
-            return std::string("");
+        CCerror = "tokenid must be owned by this pubkey";
+        return std::string("");
     }
 	
-	batontxid = OracleBatonUtxo(txfee,cp,oracletxid,batonaddr,mypk,prevdata);
+	//getting the latest update txid (can be the same as tokenid)
+	if (GetLatestTokenUpdate(tokenid, latesttxid))
+	{
+        CCerror = "cannot find latest token update";
+        return std::string("");
+    }
+		
+	//Checking the ccode and message size
+    if (ccode.size() != 3 || message.size() > 128) // this is also checked on rpc level
+    {
+        CCerror = "ccode should be 3, message should be <= 128";
+        return std::string("");
+    }
+	
+	/*batontxid = OracleBatonUtxo(txfee,cp,oracletxid,batonaddr,mypk,prevdata);
         if ( batontxid != zeroid ) // not impossible to fail, but hopefully a very rare event
-            mtx.vin.push_back(CTxIn(batontxid,1,CScript()));
+            mtx.vin.push_back(CTxIn(batontxid,1,CScript()));*/
+
+	if (AddNormalinputs(mtx, mypk, txfee, 64) > 0)
+	{
+        /*int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
+        if (mypkInputs < tokensupply) {
+            // check that tokens amount are really issued with mypk (because in the wallet there maybe other privkeys)
+            CCerror = "some inputs signed not with -pubkey=pk";
+            return std::string("");
+        }*/
+		
+		if (latesttxid == tokenid)
+			mtx.vin.push_back(CTxIn(tokenid,2,CScript()));
+		else
+			mtx.vin.push_back(CTxIn(latesttxid,0,CScript()));
+		
+        uint8_t destEvalCode = EVAL_TOKENS;
+
+		CScript batonopret = EncodeTokenUpdateCCOpRet(assetHash, value, ccode, message);
+		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
+		if (makeCCopret(batonopret, vData))
+		{
+			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, mypk, &vData));  // BATON_VOUT
+			//fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
+			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenUpdateOpRet(Mypubkey(), tokenid)));
+		}
+		else
+		{
+			CCerror = "couldnt embed updatable data to baton vout";
+			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+			return std::string("");
+		}
+	}
+
+    CCerror = "cant find normal inputs";
+    return std::string("");
 }
-*/
 
 // gets the latest baton txid of a token creation transaction
 // used in TokenUpdate and TokenViewUpdate's recursive mode
@@ -1061,9 +1108,9 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	if (!((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
 		GetTransaction(batontxid, txBaton, hashBlock, true) &&
 		!hashBlock.IsNull() &&
-		txBaton.vout.size() > 0 &&
+		txBaton.vout.size() > 1 &&
 		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' &&
-		txBaton.vout[0].nValue == 10000))
+		txBaton.vout[1].nValue == 10000))
 	{
 		latesttxid = sourcetxid;
 		std::cerr << "latest txid is tokenid" << std::endl;
@@ -1076,12 +1123,12 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	latesttxid = sourcetxid;
 	
 	// at this point sourcetxid should be a update type txid - baton vout should be vout0 from now on
-	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
+	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 1)) == 0)  // find a tx which spent the baton vout
 	{
 		if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
 			!hashBlock.IsNull() &&                           // tx not in mempool
-			txBaton.vout.size() > 0 &&             
-			txBaton.vout[0].nValue == 10000 &&     // check baton fee 
+			txBaton.vout.size() > 1 &&             
+			txBaton.vout[1].nValue == 10000 &&     // check baton fee 
 			(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u') // decode opreturn
 		{    
 			sourcetxid = batontxid;
@@ -1143,10 +1190,10 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
 		if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
 		GetTransaction(batontxid, txBaton, hashBlock, true) &&
 		!hashBlock.IsNull() &&
-		txBaton.vout.size() > 0 &&
+		txBaton.vout.size() > 1 &&
 		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' &&
-		txBaton.vout[0].nValue == 10000 &&
-		getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
+		txBaton.vout[1].nValue == 10000 &&
+		getCCopret(txBaton.vout[1].scriptPubKey, batonopret) &&
 		(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u') &&
 		samplenum >= 0 && samplenum != 1)
 		{

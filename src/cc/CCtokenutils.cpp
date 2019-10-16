@@ -159,10 +159,10 @@ CScript EncodeTokenTransferOneOpRet(uint256 tokenid, std::vector<CPubKey> voutPu
 
 // encoder for normal opreturn of 'u' tx
 // contains information necessary for validation
-CScript EncodeTokenUpdateOpRet(std::vector<uint8_t> pk, uint256 tokenid, uint256 prevbatontxid)
+CScript EncodeTokenUpdateOpRet(std::vector<uint8_t> pk, uint256 tokenid)
 {    
     CScript opret; uint8_t evalcode = EVAL_TOKENS, funcid = 'u';
-    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << pk << tokenid << prevbatontxid);
+    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << pk << tokenid);
     return(opret);
 }
 
@@ -431,13 +431,13 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
 
 // decoder for normal opreturn of 'u' tx
 // contains information necessary for validation
-uint8_t DecodeTokenUpdateOpRet(const CScript scriptPubKey, std::vector<uint8_t> &pk, uint256 &tokenid, uint256 &prevbatontxid)
+uint8_t DecodeTokenUpdateOpRet(const CScript scriptPubKey, std::vector<uint8_t> &pk, uint256 &tokenid)
 {
     std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
     GetOpReturnData(scriptPubKey,vopret);
     if ( vopret.size() > 2 && vopret.begin()[0] == EVAL_TOKENS && vopret.begin()[1] == 'u')
 	{
-		if (E_UNMARSHAL(vopret,ss >> evalcode; ss >> funcid; ss >> pk; ss >> tokenid; ss >> prevbatontxid) != 0 && evalcode == EVAL_TOKENS)
+		if (E_UNMARSHAL(vopret,ss >> evalcode; ss >> funcid; ss >> pk; ss >> tokenid) != 0 && evalcode == EVAL_TOKENS)
 		{
 			return(funcid);
 		}
