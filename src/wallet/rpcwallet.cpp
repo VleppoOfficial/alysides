@@ -7507,7 +7507,7 @@ UniValue tokenupdate(const UniValue& params, bool fHelp)
 	uint256 tokenid = zeroid, assethash = zeroid;
     CCerror.clear();
     if ( fHelp || params.size() > 4 || params.size() < 3 )
-        throw runtime_error("tokenupdate tokenid assethash value [message]\n");
+        throw runtime_error("tokenupdate tokenid assethash value ccode [message]\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
         throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
     const CKeyStore& keystore = *pwalletMain;
@@ -7525,15 +7525,15 @@ UniValue tokenupdate(const UniValue& params, bool fHelp)
         ERR_RESULT("Value must be positive");
         return(result);
     }
-	ccode = params[2].get_str();
+	ccode = params[3].get_str();
     if (ccode.size() != 3)
 	{
         ERR_RESULT("Currency code must be 3 characters");
         return(result);
     }
-	if (params.size() == 4)
+	if (params.size() == 5)
 	{
-        message = params[3].get_str();
+        message = params[4].get_str();
         if (message.size() > 128)
 		{
             ERR_RESULT("Update message must be <= 128 characters");
