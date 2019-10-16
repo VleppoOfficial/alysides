@@ -259,6 +259,13 @@ uint8_t ValidateTokenOpret(CTransaction tx, uint256 tokenid)
         } else {
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG1, stream << indentStr << "ValidateTokenOpret() not my tokenid=" << tokenidOpret.GetHex() << std::endl);
         }
+	} else if (funcid == 'u') {
+        if (tokenid != zeroid && tokenid == tokenidOpret) {
+            LOGSTREAM((char*)"cctokens", CCLOG_DEBUG1, stream << indentStr << "ValidateTokenOpret() this is a tokenupdate 'u' tx, txid=" << tx.GetHash().GetHex() << " returning true" << std::endl);
+            return funcid;
+        } else {
+            LOGSTREAM((char*)"cctokens", CCLOG_DEBUG1, stream << indentStr << "ValidateTokenOpret() not my tokenid=" << tokenidOpret.GetHex() << std::endl);
+        }
     } else {
         LOGSTREAM((char*)"cctokens", CCLOG_DEBUG1, stream << indentStr << "ValidateTokenOpret() not supported funcid=" << (char)funcid << " tokenIdOpret=" << tokenidOpret.GetHex() << " txid=" << tx.GetHash().GetHex() << std::endl);
     }
@@ -819,26 +826,21 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
     int32_t numblocks;
 
     // this is just for log messages indentation for debugging recursive calls:
-    thread_local uint32_t tokenValIndentSize = 0;
-    std::string indentStr = std::string().append(tokenValIndentSize, '.');
+    /*thread_local uint32_t tokenValIndentSize = 0;
+    std::string indentStr = std::string().append(tokenValIndentSize, '.');*/
 
-    //Creating a mutable version of a transaction object
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-
-    //Declaring and initializing a CCcontract_info object with Token Module variables, such as our global CC address, our global private key, etc.
     struct CCcontract_info *cp, C;
     cp = CCinit(&C, EVAL_TOKENS);
 
-    //By tradition, we use a constant fee of 10000 satoshis.
     if (txfee == 0)
         txfee = 10000;
 
-    //We use the pubkey from the komodod -pubkey launch parameter as the destination address.
     CPubKey mypk = pubkey2pk(Mypubkey());
 
-    //Checking if the specified tokensupply is valid.
+    //Checking if the specified tokensupply is valid
     if (tokensupply < 0) {
-        CCerror = "negative tokensupply"; //Defining CCerror which will be returned to rpc level
+        CCerror = "negative tokensupply";
         LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() =" << CCerror << "=" << tokensupply << std::endl);
         return std::string("");
     }
@@ -935,9 +937,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         }
     }
 
-    //We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
     if (AddNormalinputs(mtx, mypk, tokensupply + 2 * txfee, 64) > 0) {
-        // TotalPubkeyNormalInputs returns total of normal inputs signed with this pubkey
         int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
         if (mypkInputs < tokensupply) {
             // check that tokens amount are really issued with mypk (because in the wallet there maybe other privkeys)
@@ -945,20 +945,20 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
             return std::string("");
         }
 
-        //Eval code is EVAL_TOKENS
         uint8_t destEvalCode = EVAL_TOKENS;
 
         //If nonfungibleData exists, eval code is set to the one specified within nonfungibleData
         if (nonfungibleData.size() > 0)
             destEvalCode = nonfungibleData.begin()[0];
 
+		// vout0 is a marker vout
         // NOTE: we should prevent spending fake-tokens from this marker in IsTokenvout():
         mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL))); // new marker to token cc addr, burnable and validated, vout pos now changed to 0 (from 1)
-
+		// vout1 issues the tokens to mypk
         mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, tokensupply, mypk));
 
 		// Token Update stuff
-		CScript batonopret = EncodeTokenUpdateOpRet(referenceTokenId,Mypubkey(),referenceTokenId,60000,"USD","Baton test. Can you see me?");
+		CScript batonopret = EncodeTokenUpdateCCOpRet(referenceTokenId,60000,"USD","Baton test. Can you see me?");
 		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
 		if (makeCCopret(batonopret, vData))
 		{
@@ -981,6 +981,102 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
     return std::string("");
 }
+
+/*
+std::string TokenUpdate(int64_t txfee, uint256 tokenid, uint256 assetHash, int64_t value, std::string ccode, std::string message)
+{
+	Variables:
+	tokenid, obviously
+	updaterPubkey (implicit)
+	assetHash (uint256 or string)
+	value (int64_t)
+	ccode (string or chararray[3])
+	description (optional, <= 64 chars)
+	
+	CTransaction tokenBaseTx;
+	uint256 hashBlock, dummyRefTokenId;
+    std::vector<uint8_t> dummyPubkey;
+    int64_t refExpiryTimeSec;
+    std::string dummyName, dummyDescription, refTokenType;
+    double refOwnerPerc;
+	
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+    struct CCcontract_info *cp, C;
+    cp = CCinit(&C, EVAL_TOKENS);
+	
+	if (txfee == 0)
+        txfee = 10000;
+
+    CPubKey mypk = pubkey2pk(Mypubkey());
+	
+	if (GetTransaction(tokenid, tokenBaseTx, hashBlock, false) == 0)
+	{
+        CCerror = "cant find tokenid";
+        return std::string("");
+    }
+	
+	double ownedRefTokenPerc = GetTokenOwnershipPercent(mypk, tokenid);
+
+    //checking tokenid create opret
+    if (tokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenBaseTx.vout[tokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c')
+	{
+        CCerror = "tokenid isn't token creation txid";
+        return std::string("");
+    }
+	
+	//checking if token is owned by mypk
+	if (ownedRefTokenPerc <= refOwnerPerc)
+	{
+            CCerror = "tokenid must be owned by this pubkey";
+            return std::string("");
+    }
+	
+	batontxid = OracleBatonUtxo(txfee,cp,oracletxid,batonaddr,mypk,prevdata);
+        if ( batontxid != zeroid ) // not impossible to fail, but hopefully a very rare event
+            mtx.vin.push_back(CTxIn(batontxid,1,CScript()));
+}
+*/
+
+/*
+std::string TokenViewUpdates(uint256 tokenid, int32_t numsamples)
+{
+    int64_t total = 0LL;
+    int32_t vini;
+    int32_t height;
+    int32_t retcode;
+
+    uint256 batontxid;
+    uint256 sourcetxid = tokenid;
+
+    // iterate through the tx spending the baton, adding up amount from the tx opreturn
+
+    while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, BATON_VOUT)) == 0)  // find a tx which spent the baton vout
+    {
+        CTransaction txBaton;
+        uint256 hashBlock;
+        uint8_t funcId;
+        int64_t amount;
+
+        if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
+            !hashBlock.IsNull() &&                           // tx not in mempool
+            txBaton.vout.size() > BATON_VOUT &&             
+            txBaton.vout[BATON_VOUT].nValue == 10000 &&     // check baton fee 
+            (funcId = DecodeOpReturn(txBaton.vout.back().scriptPubKey, amount)) != 0) // decode opreturn
+        {    
+             total += amount;
+        }
+        else
+        {
+
+            // some error:
+
+            return -1;
+        }
+        sourcetxid = batontxid;
+    }
+    return total;
+}
+*/
 
 /*
 std::string TokenTransferMany(int64_t txfee, vscript_t destpubkey, uint256 tokenidarray[])
@@ -1153,8 +1249,7 @@ UniValue TokenInfo(uint256 tokenid)
 	std::string ccode, batondescription;
 
 	if (getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret) && 
-	//fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
-	DecodeTokenUpdateOpRet(CScript(batonopret.begin()+1, batonopret.end()), updaterPubkey, xxxTokenId, assetHash, value, ccode, batondescription) == 'u')
+	DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, batondescription) == 'u') //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
 	{
 			result.push_back(Pair("updaterPubkey", HexStr(updaterPubkey)));
 			result.push_back(Pair("batontokenid", xxxTokenId.GetHex()));
