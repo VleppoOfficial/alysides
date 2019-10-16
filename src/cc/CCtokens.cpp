@@ -1190,7 +1190,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
 		if (GetLatestTokenUpdate(tokenid, latesttxid))
 		{
 			result.push_back(Pair("result", "success"));
-			result.push_back(Pair("latesttxid", latesttxid));
+			result.push_back(Pair("latesttxid", latesttxid.GetHex()));
 			return (result);
 		}
 		else
