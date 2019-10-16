@@ -554,7 +554,7 @@ bool IsTokenBatonVout(CTransaction tx, int32_t v)
 	if (v = tx.vout.size() - 2 &&
 		tx.vout[v].nValue == 10000 &&
 		getCCopret(tx.vout[v].scriptPubKey, opret) &&
-		(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u'))
+		(DecodeTokenUpdateCCOpRet(CScript(opret.begin()+1, opret.end()), assetHash, value, ccode, message) == 'u'))
 	{
 		return true;
 	}
