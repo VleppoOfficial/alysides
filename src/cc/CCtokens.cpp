@@ -1058,10 +1058,12 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum)
 	std::string ccode, batondescription;
 
 	// special handling for token creation - in this tx, baton vout is vout2
-	if (GetTransaction(batontxid, txBaton, hashBlock, true) && !hashBlock.IsNull() && (funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c')
+	if (GetTransaction(batontxid, txBaton, hashBlock, true) && 
+	!hashBlock.IsNull() && 
+	txBaton.vout.size() > 2 &&
+	(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c')
 	{
-		if (txBaton.vout.size() > 2 &&
-		txBaton.vout[2].nValue == 10000 &&
+		if (txBaton.vout[2].nValue == 10000 &&
 		getCCopret(txBaton.vout[2].scriptPubKey, batonopret) && 
 		(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, batondescription) == 'u')) //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
 		{
@@ -1277,7 +1279,7 @@ UniValue TokenInfo(uint256 tokenid)
         result.push_back(Pair("data", HexStr(vopretNonfungible)));
 
 	// Token Update stuff
-	CScript batonopret;
+	/*CScript batonopret;
 	uint256 assetHash;
 	int64_t value;
 	std::string ccode, batondescription;
@@ -1290,7 +1292,7 @@ UniValue TokenInfo(uint256 tokenid)
 			result.push_back(Pair("ccode", ccode));
 			result.push_back(Pair("batondescription", batondescription));
 	}
-	//
+	*/
 	
     if (tokenbaseTx.IsCoinImport()) { // if imported token
         ImportProof proof;
