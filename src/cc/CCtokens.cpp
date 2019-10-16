@@ -1059,12 +1059,12 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
 	if (!recursive)
 	{
 		// special handling for token creation tx - in this tx, baton vout is vout2
-		if (GetTransaction(tokenid, txBaton, hashBlock, true) && // get tokenid tx
-		!hashBlock.IsNull() && // make sure token creation tx is not in mempool
-		txBaton.vout.size() > 2 && // does the baton vout exist?
-		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' && // does tokenbase tx have correct funcid?
-		txBaton.vout[2].nValue == 10000 && // is the baton fee correct?
-		getCCopret(txBaton.vout[2].scriptPubKey, batonopret) && // get ccopret data
+		if (GetTransaction(tokenid, txBaton, hashBlock, true) &&
+		!hashBlock.IsNull() &&
+		txBaton.vout.size() > 2 &&
+		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
+		txBaton.vout[2].nValue == 10000 &&
+		getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
 		(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u')) //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
 		{
 				total++;
@@ -1081,11 +1081,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
 			return (result);
 		}
 		
-		//result.push_back(Pair("result", "success"));
-		//result.push_back(Pair(tokenid.GetHex(), data));
-		//result.push_back(Pair("data", data));
-		
-		// find an update tx which spent the baton vout, if it exists
+		// find an update tx which spent the token create baton vout, if it exists
 		if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
 		GetTransaction(tokenid, txBaton, hashBlock, true) &&
 		!hashBlock.IsNull() &&
@@ -1097,6 +1093,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
 		samplenum >= 0 && samplenum != 1)
 		{
 			total++;
+			data.clear();
 			data.push_back(Pair("assetHash", assetHash.GetHex()));
 			data.push_back(Pair("value", value));
 			data.push_back(Pair("ccode", ccode));
@@ -1107,6 +1104,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
 		else
 			return (result);
 		
+		// at this point sourcetxid should be a update type txid - baton vout should be vout0 from now on
 		/*while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, BATON_VOUT)) == 0)  // find a tx which spent the baton vout
 		{
 
@@ -1125,8 +1123,9 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
 				return (result);
 			}
 			sourcetxid = batontxid;
-		}
-		return (result);*/
+		}*/
+		result.push_back(Pair("woah", "update tx found?"));
+		return (result);
 	}
 	else
 	{
@@ -1254,8 +1253,6 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
         }
         sourcetxid = batontxid;
     }*/
-	result.push_back(Pair("woah", "update tx found?"));
-    return (result);
 }
 
 
