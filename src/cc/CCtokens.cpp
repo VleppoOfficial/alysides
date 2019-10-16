@@ -1037,25 +1037,60 @@ std::string TokenUpdate(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 }
 */
 
-/*
-std::string TokenViewUpdates(uint256 tokenid, int32_t numsamples)
+UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum)
 {
-    int64_t total = 0LL;
-    int32_t vini;
-    int32_t height;
-    int32_t retcode;
+	UniValue result(UniValue::VOBJ);
+	UniValue data(UniValue::VOBJ);
+    int64_t total = 0LL, amount;
+    int32_t vini, height, retcode;
+	std::vector<std::pair<uint8_t, vscript_t>> oprets;
 
-    uint256 batontxid;
-    uint256 sourcetxid = tokenid;
+    uint256 batontxid, sourcetxid = tokenid;
 
-    // iterate through the tx spending the baton, adding up amount from the tx opreturn
+	CTransaction txBaton;
+    uint256 hashBlock;
+    uint8_t funcId, evalcode;
+	
+	// Token Update stuff
+	CScript batonopret;
+	uint256 assetHash;
+	int64_t value;
+	std::string ccode, batondescription;
 
+	// special handling for token creation - in this tx, baton vout is vout2
+	if (GetTransaction(batontxid, txBaton, hashBlock, true) && !hashBlock.IsNull() && (funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c')
+	{
+		if (txBaton.vout.size() > 2 &&
+		txBaton.vout[2].nValue == 10000 &&
+		getCCopret(txBaton.vout[2].scriptPubKey, batonopret) && 
+		(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, batondescription) == 'u')) //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
+		{
+			data.push_back(Pair("assetHash", assetHash.GetHex()));
+			data.push_back(Pair("value", value));
+			data.push_back(Pair("ccode", ccode));
+			data.push_back(Pair("batondescription", batondescription));
+		}
+		else
+		{
+			result.push_back(Pair("result", "error"));
+			result.push_back(Pair("error", "couldn't find baton vout in token creation txid"));
+			return (result);
+		}
+	}
+	else
+	{
+		result.push_back(Pair("result", "error"));
+        result.push_back(Pair("error", "couldn't decode token creation txid"));
+        return (result);
+	}
+	
+	result.push_back(Pair("result", "success"));
+	result.push_back(Pair("updatenum", batontxid.GetHex()));
+	result.push_back(Pair("data", data));
+	
+	/*
     while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, BATON_VOUT)) == 0)  // find a tx which spent the baton vout
     {
-        CTransaction txBaton;
-        uint256 hashBlock;
-        uint8_t funcId;
-        int64_t amount;
 
         if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
             !hashBlock.IsNull() &&                           // tx not in mempool
@@ -1073,10 +1108,10 @@ std::string TokenViewUpdates(uint256 tokenid, int32_t numsamples)
             return -1;
         }
         sourcetxid = batontxid;
-    }
-    return total;
+    }*/
+    return (result);
 }
-*/
+
 
 /*
 std::string TokenTransferMany(int64_t txfee, vscript_t destpubkey, uint256 tokenidarray[])

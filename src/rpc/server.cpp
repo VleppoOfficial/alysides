@@ -552,6 +552,8 @@ static const CRPCCommand vRPCCommands[] =
     { "tokens",       "tokenfillask",     &tokenfillask,      true },
     //{ "tokens",       "tokenfillswap",    &tokenfillswap,     true },
     { "tokens",       "tokenconvert", &tokenconvert, true },
+	// new
+	{ "tokens",       "tokenviewupdates", &tokenviewupdates,  true },
 
     /* Address index */
     { "addressindex",       "getaddressmempool",      &getaddressmempool,      true  },
