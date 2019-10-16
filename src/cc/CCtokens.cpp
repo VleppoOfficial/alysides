@@ -578,7 +578,7 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
         }
     }
 
-    for (int32_t i = 0; i < numvouts - 1; i++) // 'numvouts-1' <-- do not check opret
+    for (int32_t i = 0; i < numvouts - 2; i++) // 'numvouts-1' <-- do not check opret / 'numvouts-2' <-- do not check opret OR baton
     {
         LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << indentStr << "TokenExactAmounts() recursively checking tx.vout[" << i << "] nValue=" << tx.vout[i].nValue << std::endl);
 
