@@ -93,14 +93,14 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 		//Check if tokenid isn't just a bunch of zeros
         if (tokenid == zeroid)
             return eval->Invalid("illegal tokenid");
-		/*//Check if token amount is the same in vins and vouts of tx
+		//Check if token amount is the same in vins and vouts of tx
         else if (!TokensExactAmounts(true, cp, inputs, outputs, eval, tx, tokenid))
 		{
             if (!eval->Valid())
                 return false; //TokenExactAmounts must call eval->Invalid()!
             else
                 return eval->Invalid("tokens cc inputs != cc outputs");
-        }*/
+        }
 		//get token create tx info
 		if (createTx.vout.size() > 0 && DecodeTokenCreateOpRet(createTx.vout[createTx.vout.size() - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
 		{
@@ -143,13 +143,13 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//vout.n-1: opreturn EVAL_TOKENS 't' tokenid <other contract payload>
 			//Check if token amount is the same in vins and vouts of tx
 			
-			if (!TokensExactAmounts(true, cp, inputs, outputs, eval, tx, tokenid))
+			/*if (!TokensExactAmounts(true, cp, inputs, outputs, eval, tx, tokenid))
 			{
 				if (!eval->Valid())
 					return false; //TokenExactAmounts must call eval->Invalid()!
 				else
 					return eval->Invalid("tokens cc inputs != cc outputs");
-			}
+			}*/
 			
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
@@ -1067,10 +1067,12 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
             return std::string("");
         }*/
 		
-		if (latesttxid == tokenid)
+		if (latesttxid == tokenid || latesttxid != zeroid)
+			std::cerr << "latest txid is tokenid, vin2 selected" << std::endl;
 			mtx.vin.push_back(CTxIn(tokenid,2,CScript()));
 		else
-			mtx.vin.push_back(CTxIn(latesttxid,0,CScript()));
+			std::cerr << "latest txid is tokenid, vin0 selected" << std::endl;
+			mtx.vin.push_back(CTxIn(latesttxid,1,CScript()));
 		
         uint8_t destEvalCode = EVAL_TOKENS;
 
