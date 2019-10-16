@@ -1037,6 +1037,64 @@ std::string TokenUpdate(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 }
 */
 
+// gets the latest baton txid of a token creation transaction
+// used in TokenUpdate and TokenViewUpdate's recursive mode
+bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
+{
+    int32_t vini, height, retcode;
+	std::vector<std::pair<uint8_t, vscript_t>> oprets;
+    uint256 batontxid, sourcetxid = tokenid, hashBlock;
+	CTransaction txBaton;
+    uint8_t funcId, evalcode;
+
+	// special handling for token creation tx - in this tx, baton vout is vout2
+	if (!(GetTransaction(tokenid, txBaton, hashBlock, true) &&
+		!hashBlock.IsNull() &&
+		txBaton.vout.size() > 2 &&
+		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
+		txBaton.vout[2].nValue == 10000))
+	{
+		return 0;
+	}
+
+	// find an update tx which spent the token create baton vout, if it exists
+	if (!((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
+		GetTransaction(batontxid, txBaton, hashBlock, true) &&
+		!hashBlock.IsNull() &&
+		txBaton.vout.size() > 0 &&
+		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' &&
+		txBaton.vout[0].nValue == 10000))
+	{
+		latesttxid = sourcetxid;
+		std::cerr << "latest txid is tokenid" << std::endl;
+		return 1;
+	}
+	else
+	{
+		sourcetxid = batontxid;
+	}
+	latesttxid = sourcetxid;
+	
+	// at this point sourcetxid should be a update type txid - baton vout should be vout0 from now on
+	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
+	{
+		if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
+			!hashBlock.IsNull() &&                           // tx not in mempool
+			txBaton.vout.size() > 0 &&             
+			txBaton.vout[0].nValue == 10000 &&     // check baton fee 
+			(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u') // decode opreturn
+		{    
+			sourcetxid = batontxid;
+		}
+		else
+		{
+			return 0;
+		}
+	std::cerr << "latest txid is NOT tokenid" << std::endl;
+	latesttxid = sourcetxid;
+	}
+}
+
 UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
 {
 	UniValue result(UniValue::VOBJ);
@@ -1045,7 +1103,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
     int32_t vini, height, retcode;
 	std::vector<std::pair<uint8_t, vscript_t>> oprets;
 
-    uint256 batontxid, sourcetxid = tokenid;
+    uint256 batontxid, sourcetxid = tokenid, latesttxid;
 
 	CTransaction txBaton;
     uint256 hashBlock;
@@ -1083,12 +1141,12 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
 		
 		// find an update tx which spent the token create baton vout, if it exists
 		if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
-		GetTransaction(tokenid, txBaton, hashBlock, true) &&
+		GetTransaction(batontxid, txBaton, hashBlock, true) &&
 		!hashBlock.IsNull() &&
-		txBaton.vout.size() > 1 &&
+		txBaton.vout.size() > 0 &&
 		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' &&
-		txBaton.vout[1].nValue == 10000 &&
-		getCCopret(txBaton.vout[1].scriptPubKey, batonopret) &&
+		txBaton.vout[0].nValue == 10000 &&
+		getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
 		(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u') &&
 		samplenum >= 0 && samplenum != 1)
 		{
@@ -1129,9 +1187,18 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
 	}
 	else
 	{
+		if (GetLatestTokenUpdate(tokenid, latesttxid))
+		{
+			result.push_back(Pair("result", "success"));
+			result.push_back(Pair("latesttxid", latesttxid));
+			return (result);
+		}
+		else
+		{
 		result.push_back(Pair("result", "error"));
 		result.push_back(Pair("error", "recursive mode not supported yet"));
 		return (result);
+		}
 	}
 	
 	/*
