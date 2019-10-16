@@ -7283,7 +7283,7 @@ UniValue tokenviewupdates(const UniValue& params, bool fHelp)
 		samplenum = atoi((char *)params[1].get_str().c_str());
 	else
 		samplenum = 0;
-    return(TokenViewUpdates(tokenid, samplenum, true));
+    return(TokenViewUpdates(tokenid, samplenum, false));
 }
 
 UniValue tokenorders(const UniValue& params, bool fHelp)
