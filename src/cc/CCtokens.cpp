@@ -1243,16 +1243,13 @@ UniValue TokenInfo(uint256 tokenid)
 
 	// Token Update stuff
 	CScript batonopret;
-	std::vector<uint8_t> updaterPubkey;
-	uint256 assetHash, xxxTokenId;
+	uint256 assetHash;
 	int64_t value;
 	std::string ccode, batondescription;
 
 	if (getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret) && 
 	DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, batondescription) == 'u') //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
 	{
-			result.push_back(Pair("updaterPubkey", HexStr(updaterPubkey)));
-			result.push_back(Pair("batontokenid", xxxTokenId.GetHex()));
 			result.push_back(Pair("assetHash", assetHash.GetHex()));
 			result.push_back(Pair("value", value));
 			result.push_back(Pair("ccode", ccode));
