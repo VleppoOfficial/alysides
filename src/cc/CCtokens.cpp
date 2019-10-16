@@ -352,7 +352,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
 
         // token opret most important checks (tokenid == reftokenid, tokenid is non-zero, tx is 'tokenbase'):
         const uint8_t funcId = ValidateTokenOpret(tx, reftokenid);
-        //std::cerr << indentStr << "IsTokensvout() ValidateTokenOpret returned=" << (char)(funcId?funcId:' ') << " for txid=" << tx.GetHash().GetHex() << " for tokenid=" << reftokenid.GetHex() << std::endl;
+        std::cerr << indentStr << "IsTokensvout() ValidateTokenOpret returned=" << (char)(funcId?funcId:' ') << " for txid=" << tx.GetHash().GetHex() << " for tokenid=" << reftokenid.GetHex() << std::endl;
         if (funcId != 0) {
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << indentStr << "IsTokensvout() ValidateTokenOpret returned not-null funcId=" << (char)(funcId ? funcId : ' ') << " for txid=" << tx.GetHash().GetHex() << " for tokenid=" << reftokenid.GetHex() << std::endl);
 
@@ -524,9 +524,9 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
             }
             LOGSTREAM("cctokens", CCLOG_DEBUG1, stream << indentStr << "IsTokensvout() no valid vouts evalCode=" << (int)evalCode1 << " evalCode2=" << (int)evalCode2 << " for txid=" << tx.GetHash().GetHex() << " for tokenid=" << reftokenid.GetHex() << std::endl);
         }
-        //std::cerr << indentStr; fprintf(stderr,"IsTokensvout() CC vout v.%d of n=%d amount=%.8f txid=%s\n",v,n,(double)0/COIN, tx.GetHash().GetHex().c_str());
+        std::cerr << indentStr; fprintf(stderr,"IsTokensvout() CC vout v.%d of n=%d amount=%.8f txid=%s\n",v,n,(double)0/COIN, tx.GetHash().GetHex().c_str());
     }
-    //std::cerr << indentStr; fprintf(stderr,"IsTokensvout() normal output v.%d %.8f\n",v,(double)tx.vout[v].nValue/COIN);
+    std::cerr << indentStr; fprintf(stderr,"IsTokensvout() normal output v.%d %.8f\n",v,(double)tx.vout[v].nValue/COIN);
     return (0);
 }
 
@@ -972,7 +972,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
 		if (makeCCopret(batonopret, vData))
 		{
-			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, mypk, &vData));  // BATON_VOUT
+			mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, 10000, mypk, &vData));  // BATON_VOUT
 			//fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
 			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet(Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
 		}
@@ -1058,7 +1058,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         if ( batontxid != zeroid ) // not impossible to fail, but hopefully a very rare event
             mtx.vin.push_back(CTxIn(batontxid,1,CScript()));*/
 
-	if (AddNormalinputs(mtx, mypk, txfee, 64) > 0)
+	if (AddNormalinputs(mtx, mypk, 2 * txfee, 64) > 0)
 	{
         /*int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
         if (mypkInputs < tokensupply) {
