@@ -7504,7 +7504,7 @@ UniValue tokenupdate(const UniValue& params, bool fHelp)
     UniValue result(UniValue::VOBJ);
     std::string ccode, message, hextx; 
     int64_t value;
-	uint256 tokenid = zeroid; assethash = zeroid;
+	uint256 tokenid = zeroid, assethash = zeroid;
     CCerror.clear();
     if ( fHelp || params.size() > 4 || params.size() < 3 )
         throw runtime_error("tokenupdate tokenid assethash value [message]\n");
