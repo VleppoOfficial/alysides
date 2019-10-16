@@ -37,6 +37,6 @@ bool IsTokenMarkerVout(CTxOut vout);
 int64_t GetTokenBalance(CPubKey pk, uint256 tokenid);
 UniValue TokenInfo(uint256 tokenid);
 UniValue TokenList();
-UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum);
+UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive = false);
 
 #endif

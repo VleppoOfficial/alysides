@@ -1037,7 +1037,7 @@ std::string TokenUpdate(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 }
 */
 
-UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum)
+UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive = false)
 {
 	UniValue result(UniValue::VOBJ);
 	UniValue data(UniValue::VOBJ);
@@ -1051,26 +1051,169 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum)
     uint256 hashBlock;
     uint8_t funcId, evalcode;
 	
-	// Token Update stuff
 	CScript batonopret;
 	uint256 assetHash;
 	int64_t value;
-	std::string ccode, batondescription;
+	std::string ccode, message;
 
+	if (!recursive)
+	{
+		// special handling for token creation tx - in this tx, baton vout is vout2
+		if (GetTransaction(tokenid, txBaton, hashBlock, true) && // get tokenid tx
+		!hashBlock.IsNull() && // make sure token creation tx is not in mempool
+		txBaton.vout.size() > 2 && // does the baton vout exist?
+		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' && // does tokenbase tx have correct funcid?
+		txBaton.vout[2].nValue == 10000 && // is the baton fee correct?
+		getCCopret(txBaton.vout[2].scriptPubKey, batonopret) && // get ccopret data
+		(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u')) //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
+		{
+				total++;
+				data.push_back(Pair("assetHash", assetHash.GetHex()));
+				data.push_back(Pair("value", value));
+				data.push_back(Pair("ccode", ccode));
+				data.push_back(Pair("message", message));
+				result.push_back(Pair(tokenid.GetHex(), data));
+		}
+		else
+		{
+			result.push_back(Pair("result", "error"));
+			result.push_back(Pair("error", "couldn't decode token creation txid"));
+			return (result);
+		}
+		
+		//result.push_back(Pair("result", "success"));
+		//result.push_back(Pair(tokenid.GetHex(), data));
+		//result.push_back(Pair("data", data));
+		
+		// find an update tx which spent the baton vout, if it exists
+		if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
+		GetTransaction(tokenid, txBaton, hashBlock, true) &&
+		!hashBlock.IsNull() &&
+		txBaton.vout.size() > 1 &&
+		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' &&
+		txBaton.vout[1].nValue == 10000 &&
+		getCCopret(txBaton.vout[1].scriptPubKey, batonopret) &&
+		(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u') &&
+		samplenum >= 0 && samplenum != 1)
+		{
+			total++;
+			data.push_back(Pair("assetHash", assetHash.GetHex()));
+			data.push_back(Pair("value", value));
+			data.push_back(Pair("ccode", ccode));
+			data.push_back(Pair("message", message));
+			result.push_back(Pair(batontxid.GetHex(), data));
+			sourcetxid = batontxid;
+		}
+		else
+			return (result);
+		
+		/*while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, BATON_VOUT)) == 0)  // find a tx which spent the baton vout
+		{
+
+			if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
+				!hashBlock.IsNull() &&                           // tx not in mempool
+				txBaton.vout.size() > BATON_VOUT &&             
+				txBaton.vout[BATON_VOUT].nValue == 10000 &&     // check baton fee 
+				(funcId = DecodeOpReturn(txBaton.vout.back().scriptPubKey, amount)) != 0) // decode opreturn
+			{    
+				 total += amount;
+			}
+			else
+			{
+				data.push_back(Pair("error", "couldn't decode this tx"));
+				result.push_back(Pair(tokenid.GetHex(), data));
+				return (result);
+			}
+			sourcetxid = batontxid;
+		}
+		return (result);*/
+	}
+	else
+	{
+		result.push_back(Pair("result", "error"));
+		result.push_back(Pair("error", "recursive mode not supported yet"));
+		return (result);
+	}
+	
+	/*
+	if (recursive = false)
+		
+		if (get tokentx from tokenid, verify normal opret funcid and retrieve its cc opret data first)
+			data.push_back(stuff, stuff)
+			//result.push_back(success)
+			result.push_back(tokenid, data)
+			total++
+		else
+			result.push_back(error)
+			result.push_back(couldn't decode token creation txid)
+			return result;
+		if (samplenum > 1) continue
+		while (retcode = current tx baton has been spent && total <= samplenum)
+			if (get new tx, verify, and retrieve its cc opret data)
+				data.push_back(stuff, stuff)
+				result.push_back(sourceid, data)
+				total++
+			else
+				data.push_back(error, couldn't decode this tx)
+				result.push_back(sourceid, data)
+				return result;
+		return result;
+		
+	else //if recursive = true
+		
+		//verifying tokenid
+		if !(get tokentx from tokenid and verify normal opret funcid)
+			result.push_back(error)
+			result.push_back(tokenid isn't token creation txid)
+			return result;
+			
+		//locating latest batontxid
+		while (retcode = current tx baton has been spent)
+			if (get baton tx, verify normal opret funcid)
+            	sourcetxid = batontxid;
+			else
+				result.push_back(error)
+				result.push_back(couldn't find latest token update)
+				return result;
+		//(at this point sourcetxid should be latest update txid)
+		
+		//walking back and printing data
+		//result.push_back(success)
+		while (get source tx and retrieve its cc opret data && total <= samplenum)
+			if (sourcetxid != tokenid)
+				total++
+				if (tx normal opret funcid == 'u' and get prevbatontxid)
+					sourcetxid = prevbatontxid;
+					data.push_back(stuff, stuff) //can be from cc opret and normal opret
+					result.push_back(sourceid, data)
+					continue;
+				else
+					data.push_back(error, this tx is not an update tx)
+					result.push_back(sourceid, data)
+					return result;
+			else
+				data.push_back(stuff, stuff) //only cc opret
+				result.push_back(sourceid, data)
+				return result;
+		result.push_back(error)
+		result.push_back(couldn't decode this tx)
+		return result;
+	*/
+	
 	// special handling for token creation - in this tx, baton vout is vout2
-	if (GetTransaction(sourcetxid, txBaton, hashBlock, true) && 
+	/*if (GetTransaction(tokenid, txBaton, hashBlock, true) && 
 	!hashBlock.IsNull() && 
 	txBaton.vout.size() > 2 &&
 	(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c')
 	{
 		if (txBaton.vout[2].nValue == 10000 &&
 		getCCopret(txBaton.vout[2].scriptPubKey, batonopret) && 
-		(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, batondescription) == 'u')) //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
+		(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u')) //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
 		{
 			data.push_back(Pair("assetHash", assetHash.GetHex()));
 			data.push_back(Pair("value", value));
 			data.push_back(Pair("ccode", ccode));
-			data.push_back(Pair("batondescription", batondescription));
+			data.push_back(Pair("message", message));
 		}
 		else
 		{
@@ -1088,7 +1231,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum)
 	
 	result.push_back(Pair("result", "success"));
 	result.push_back(Pair("updatenum", batontxid.GetHex()));
-	result.push_back(Pair("data", data));
+	result.push_back(Pair("data", data));*/
 	
 	/*
     while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, BATON_VOUT)) == 0)  // find a tx which spent the baton vout
@@ -1282,15 +1425,15 @@ UniValue TokenInfo(uint256 tokenid)
 	/*CScript batonopret;
 	uint256 assetHash;
 	int64_t value;
-	std::string ccode, batondescription;
+	std::string ccode, message;
 
 	if (getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret) && 
-	DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, batondescription) == 'u') //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
+	DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u') //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
 	{
 			result.push_back(Pair("assetHash", assetHash.GetHex()));
 			result.push_back(Pair("value", value));
 			result.push_back(Pair("ccode", ccode));
-			result.push_back(Pair("batondescription", batondescription));
+			result.push_back(Pair("message", message));
 	}
 	*/
 	
