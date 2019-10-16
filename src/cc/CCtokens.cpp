@@ -558,7 +558,7 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
 
     for (int32_t i = 0; i < numvins; i++) { // check for additional contracts which may send tokens to the Tokens contract
         if ((*cpTokens->ismyvin)(tx.vin[i].scriptSig) /*|| IsVinAllowed(tx.vin[i].scriptSig) != 0*/) {
-            //std::cerr << indentStr << "TokensExactAmounts() eval is true=" << (eval != NULL) << " ismyvin=ok for_i=" << i << std::endl;
+            std::cerr << indentStr << "TokensExactAmounts() eval is true=" << (eval != NULL) << " ismyvin=ok for_i=" << i << std::endl;
             // we are not inside the validation code -- dimxy
             if ((eval && eval->GetTxUnconfirmed(tx.vin[i].prevout.hash, vinTx, hashBlock) == 0) || (!eval && !myGetTransaction(tx.vin[i].prevout.hash, vinTx, hashBlock))) {
                 LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << indentStr << "TokensExactAmounts() cannot read vintx for i." << i << " numvins." << numvins << std::endl);
@@ -594,12 +594,12 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
         }
     }
 
-    //std::cerr << indentStr << "TokensExactAmounts() inputs=" << inputs << " outputs=" << outputs << " for txid=" << tx.GetHash().GetHex() << std::endl;
+    std::cerr << indentStr << "TokensExactAmounts() inputs=" << inputs << " outputs=" << outputs << " for txid=" << tx.GetHash().GetHex() << std::endl;
 
     if (inputs != outputs) {
         if (tx.GetHash() != reftokenid)
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG1, stream << indentStr << "TokenExactAmounts() found unequal token cc inputs=" << inputs << " vs cc outputs=" << outputs << " for txid=" << tx.GetHash().GetHex() << " and this is not the create tx" << std::endl);
-        //fprintf(stderr,"inputs %llu vs outputs %llu\n",(long long)inputs,(long long)outputs);
+        fprintf(stderr,"inputs %llu vs outputs %llu\n",(long long)inputs,(long long)outputs);
         return false; // do not call eval->Invalid() here!
     } else
         return true;
@@ -1067,15 +1067,22 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
             return std::string("");
         }*/
 		
-		if (latesttxid == tokenid || latesttxid != zeroid)
+		if (latesttxid == tokenid)
 		{
-			std::cerr << "latest txid is tokenid, vin2 selected" << std::endl;
 			mtx.vin.push_back(CTxIn(tokenid,2,CScript()));
+			std::cerr << "latest txid is tokenid, vin2 selected" << std::endl;
+			fprintf(stderr, "vin size.%li\n", mtx.vin.size());
+		}
+		else if (latesttxid != zeroid)
+		{
+			mtx.vin.push_back(CTxIn(latesttxid,1,CScript()));
+			std::cerr << "latest txid is tokenid, vin0 selected" << std::endl;
+			fprintf(stderr, "vin size.%li\n", mtx.vin.size());
 		}
 		else
 		{
-			std::cerr << "latest txid is tokenid, vin0 selected" << std::endl;
-			mtx.vin.push_back(CTxIn(latesttxid,1,CScript()));
+			CCerror = "latest update txid invalid";
+			return std::string("");
 		}
 		
         uint8_t destEvalCode = EVAL_TOKENS;
@@ -1085,13 +1092,12 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 		if (makeCCopret(batonopret, vData))
 		{
 			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, mypk, &vData));  // BATON_VOUT
-			//fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
+			fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
 			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenUpdateOpRet(Mypubkey(), tokenid)));
 		}
 		else
 		{
 			CCerror = "couldnt embed updatable data to baton vout";
-			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
 			return std::string("");
 		}
 	}
