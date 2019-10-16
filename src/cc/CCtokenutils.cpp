@@ -452,7 +452,7 @@ uint8_t DecodeTokenUpdateCCOpRet(const CScript scriptPubKey, uint256 &assetHash,
     vscript_t vopret;
 	uint8_t evalcode, funcid;
     GetOpReturnData(scriptPubKey, vopret);
-	if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> assetHash; ss >> value; ss >> ccode; ss >> description) != 0 && evalcode == EVAL_TOKENS)
+	if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> assetHash; ss >> value; ss >> ccode; ss >> message) != 0 && evalcode == EVAL_TOKENS)
 	{
 		return(funcid);
 	}
