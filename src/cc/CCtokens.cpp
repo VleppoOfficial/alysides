@@ -1037,7 +1037,7 @@ std::string TokenUpdate(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 }
 */
 
-UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive = false)
+UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
 {
 	UniValue result(UniValue::VOBJ);
 	UniValue data(UniValue::VOBJ);
