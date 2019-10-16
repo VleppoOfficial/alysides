@@ -7503,7 +7503,7 @@ UniValue tokenupdate(const UniValue& params, bool fHelp)
 {
     UniValue result(UniValue::VOBJ);
     std::string ccode, message, hextx; 
-    int64_t value;
+    int64_t value = 0;
 	uint256 tokenid = zeroid, assethash = zeroid;
     CCerror.clear();
     if ( fHelp || params.size() > 4 || params.size() < 3 )
@@ -7519,8 +7519,8 @@ UniValue tokenupdate(const UniValue& params, bool fHelp)
 		return(result);
 	}
 	assethash = Parseuint256((char *)params[1].get_str().c_str()); //returns zeroid if empty or wrong length
-    value = atof(params[2].get_str().c_str());
-    if (value <= 0)
+	value = atof(params[0].get_str().c_str()) * COIN + 0.00000000499999;
+    if (value < 0)
 	{
         ERR_RESULT("Value must be positive");
         return(result);

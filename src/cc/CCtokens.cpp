@@ -1031,7 +1031,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
     }
 	
 	//getting the latest update txid (can be the same as tokenid)
-	if (GetLatestTokenUpdate(tokenid, latesttxid))
+	if (!GetLatestTokenUpdate(tokenid, latesttxid))
 	{
         CCerror = "cannot find latest token update";
         return std::string("");
