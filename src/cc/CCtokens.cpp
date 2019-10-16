@@ -556,6 +556,7 @@ bool IsTokenBatonVout(CTransaction tx, int32_t v)
 		getCCopret(tx.vout[v].scriptPubKey, opret) &&
 		(DecodeTokenUpdateCCOpRet(CScript(opret.begin()+1, opret.end()), assetHash, value, ccode, message) == 'u'))
 	{
+		std::cerr << "Found batons here!!!" << std::endl;
 		return true;
 	}
 	return false;
