@@ -226,7 +226,7 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
 			return DecodeTokenTransferOneOpRet(scriptPubKey, tokenid, voutPubkeysDummy, oprets);
 		
 		case 'u':
-			return DecodeTokenUpdateOpRet(scriptPubKey, (vscript_t)dummyPubkey, tokenid, dummyPrevBatonTxId)
+			return DecodeTokenUpdateOpRet(scriptPubKey, (vscript_t)dummyPubkey, tokenid, dummyPrevBatonTxId);
 			
 		//case 'whatever':
 			//insert new cases here
