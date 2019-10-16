@@ -176,7 +176,7 @@ CScript EncodeTokenUpdateCCOpRet(uint256 assetHash, int64_t value, std::string c
 	uint8_t evalcode = EVAL_TOKENS;
 	uint8_t funcid = 'u'; // override the param
 	
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << assetHash << value << ccode << description);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << assetHash << value << ccode << message);
     return(opret);
 }
 
