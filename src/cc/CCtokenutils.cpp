@@ -203,7 +203,7 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
 	std::vector<CPubKey> voutPubkeysDummy;
 	
 	//dummies for tokenupdate
-	uint256 dummyPrevBatonTxId;
+	//uint256 dummyPrevBatonTxId;
 	
     if (script != NULL && vopret.size() > 2) //checking if opret is empty
     {
@@ -226,7 +226,7 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
 			return DecodeTokenTransferOneOpRet(scriptPubKey, tokenid, voutPubkeysDummy, oprets);
 		
 		case 'u':
-			return DecodeTokenUpdateOpRet(scriptPubKey, dummyPubkey, tokenid, dummyPrevBatonTxId);
+			return DecodeTokenUpdateOpRet(scriptPubKey, dummyPubkey, tokenid);
 			
 		//case 'whatever':
 			//insert new cases here
