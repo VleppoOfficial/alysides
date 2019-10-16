@@ -1068,11 +1068,15 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         }*/
 		
 		if (latesttxid == tokenid || latesttxid != zeroid)
+		{
 			std::cerr << "latest txid is tokenid, vin2 selected" << std::endl;
 			mtx.vin.push_back(CTxIn(tokenid,2,CScript()));
+		}
 		else
+		{
 			std::cerr << "latest txid is tokenid, vin0 selected" << std::endl;
 			mtx.vin.push_back(CTxIn(latesttxid,1,CScript()));
+		}
 		
         uint8_t destEvalCode = EVAL_TOKENS;
 
@@ -1132,7 +1136,6 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	{
 		sourcetxid = batontxid;
 	}
-	latesttxid = sourcetxid;
 	
 	// at this point sourcetxid should be a update type txid - baton vout should be vout0 from now on
 	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 1)) == 0)  // find a tx which spent the baton vout
