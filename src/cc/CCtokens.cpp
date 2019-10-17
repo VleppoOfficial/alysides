@@ -1249,8 +1249,8 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			txBaton.vout[0].nValue == 10000 && 
 			(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' &&
 			getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
-			(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u') &&
-			(total <= samplenum || samplenum == 0))
+			(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u')/* &&
+			(total <= samplenum || samplenum == 0)*/)
 		{
 			std::cerr << "found a txid that spent the tokencreate baton" << std::endl;
 			total++;
