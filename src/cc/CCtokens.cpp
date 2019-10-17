@@ -1183,7 +1183,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	}*/
 	
 	// baton vout should be vout(tx.vout.size() - 2) from now on
-	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, txBaton.vout[txBaton.vout.size() - 2])) == 0)  // find a tx which spent the baton vout
+	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, txBaton.vout.size() - 2)) == 0)  // find a tx which spent the baton vout
 	{
 		if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
 			!hashBlock.IsNull() &&                           // tx not in mempool
@@ -1272,7 +1272,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
 		
 		// find an update tx which spent the token create baton vout, if it exists
 		// baton vout should be vout(tx.vout.size() - 2) from now on
-		while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, txBaton.vout[txBaton.vout.size() - 2])) == 0)  // find a tx which spent the baton vout
+		while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, txBaton.vout.size() - 2)) == 0)  // find a tx which spent the baton vout
 		{
 			if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
 				!hashBlock.IsNull() &&                           // tx not in mempool
