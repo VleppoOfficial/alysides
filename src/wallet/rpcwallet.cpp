@@ -7271,19 +7271,21 @@ UniValue tokeninfo(const UniValue& params, bool fHelp)
 
 UniValue tokenviewupdates(const UniValue& params, bool fHelp)
 {
-    uint256 tokenid; int32_t samplenum;
-    if ( fHelp || params.size() < 1 || params.size() > 2)
-        throw runtime_error("tokenviewupdates tokenid [samplenum]\n");
+    uint256 tokenid; int32_t samplenum; bool recursive = false;
+    if ( fHelp || params.size() < 1 || params.size() > 3)
+        throw runtime_error("tokenviewupdates tokenid [samplenum][recursive]\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
         throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
     const CKeyStore& keystore = *pwalletMain;
     LOCK2(cs_main, pwalletMain->cs_wallet);
     tokenid = Parseuint256((char *)params[0].get_str().c_str());
-	if (params.size() == 2)
+	if (params.size() >= 2)
 		samplenum = atoi((char *)params[1].get_str().c_str());
 	else
 		samplenum = 0;
-    return(TokenViewUpdates(tokenid, samplenum, false));
+	if (params.size() == 3)
+		recursive = params[2].get_bool();
+    return(TokenViewUpdates(tokenid, samplenum, recursive));
 }
 
 UniValue tokenorders(const UniValue& params, bool fHelp)
