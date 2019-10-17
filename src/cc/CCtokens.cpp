@@ -1315,8 +1315,8 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			if (!(total < samplenum || samplenum == 0))
 				break;
 			
-			if (GetTransaction(txBaton.vin[1].prevout.hash.GetHex(), txBaton, hashBlock) && !hashBlock.IsNull())
-				std::cerr << "prev txid " << txBaton.vin[1].prevout.hash.GetHex() << std::endl;
+			if (GetTransaction((batontxid = txBaton.vin[1].prevout.hash), txBaton, hashBlock) && !hashBlock.IsNull())
+				std::cerr << "prev txid " << batontxid.GetHex() << std::endl;
 			break;
 		}
 		result.push_back(Pair("result", "error"));
