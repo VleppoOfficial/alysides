@@ -1289,7 +1289,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			total++;
 			if((batontxid = txBaton.vin[0].prevout.hash) != zeroid)
 			//GetTransaction(tx.vin[i].prevout.hash, vinTx, hashBlock)
-				std::cerr << "found batontxid " << batontxid << std::endl;
+				std::cerr << "found batontxid " << batontxid.GetHex() << std::endl;
 			break;
 		}
 		result.push_back(Pair("result", "error"));
