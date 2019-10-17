@@ -35,7 +35,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 int64_t HasBurnedTokensvouts(struct CCcontract_info *cp, Eval* eval, const CTransaction& tx, uint256 reftokenid);
 CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey);
 bool IsTokenMarkerVout(CTxOut vout);
-bool IsTokenBatonVout(CTransaction tx, int32_t v);
+bool IsTokenBatonVout(CTxOut vout);
 bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid);
 
 int64_t GetTokenBalance(CPubKey pk, uint256 tokenid);
