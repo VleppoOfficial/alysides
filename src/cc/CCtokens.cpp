@@ -1197,7 +1197,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 {
 	UniValue result(UniValue::VOBJ);
-	UniValue data(UniValue::VOBJ);
+	//UniValue data(UniValue::VOBJ);
     int64_t total = 0LL, amount;
     int32_t vini, height, retcode;
 	std::vector<std::pair<uint8_t, vscript_t>> oprets;
@@ -1225,6 +1225,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u')) //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
 		{
 				total++;
+				UniValue data(UniValue::VOBJ);
 				data.push_back(Pair("assetHash", assetHash.GetHex()));
 				data.push_back(Pair("value", value));
 				data.push_back(Pair("ccode", ccode));
@@ -1254,8 +1255,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		{
 			std::cerr << "found a txid that spent the tokencreate baton" << std::endl;
 			total++;
-			data.clear();
-			data.resize(0);
+			UniValue data(UniValue::VOBJ);
 			data.push_back(Pair("assetHash", assetHash.GetHex()));
 			data.push_back(Pair("value", value));
 			data.push_back(Pair("ccode", ccode));
@@ -1308,8 +1308,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				(total <= samplenum || samplenum == 0))
 			{
 				total++;
-				data.clear();
-				data.resize(0);
+				UniValue data(UniValue::VOBJ);
 				data.push_back(Pair("assetHash", assetHash.GetHex()));
 				data.push_back(Pair("value", value));
 				data.push_back(Pair("ccode", ccode));
@@ -1320,9 +1319,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			}
 			else
 			{
-				data.clear();
-				data.push_back(Pair("error", "couldn't decode this txid"));
-				result.push_back(Pair(batontxid.GetHex(), data));
+				result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
 				return (result);
 			}
 			std::cerr << "looping to find another spending txid" << std::endl;
