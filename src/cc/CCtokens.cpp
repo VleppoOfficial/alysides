@@ -1149,7 +1149,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	}
 	
 	std::cerr << "verified token create baton existence" << std::endl;
-	
+
 	// find an update tx which spent the token create baton vout, if it exists
 	if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
 		GetTransaction(batontxid, txBaton, hashBlock, true) &&
@@ -1167,6 +1167,8 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 		std::cerr << "latest txid is tokenid" << std::endl;
 		return 1;
 	}
+	
+	latesttxid = sourcetxid;
 	
 	// baton vout should be vout0 from now on
 	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
