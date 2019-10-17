@@ -7368,15 +7368,15 @@ UniValue tokenbalance(const UniValue& params, bool fHelp)
 UniValue tokencreate(const UniValue& params, bool fHelp)
 {
     UniValue result(UniValue::VOBJ);
-    std::string name, description, hextx; 
+    std::string name, description, ccode, hextx; 
     std::vector<uint8_t> nonfungibleData;
     int64_t supply; // changed from uin64_t to int64_t for this 'if ( supply <= 0 )' to work as expected
-	std::string tokentype; int64_t expiryTimeSec = 0; double ownerperc = 50.0; uint256 referencetokenid = zeroid;
+	std::string tokentype; int64_t expiryTimeSec = 0, value; double ownerperc = 50.0; uint256 referencetokenid = zeroid, assetHash;
 
     CCerror.clear();
 
     if ( fHelp || params.size() > 8 || params.size() < 3 )
-        throw runtime_error("tokencreate name supply tokentype [description][referencetokenid][expirytime][ownerperc][data]\n");
+        throw runtime_error("tokencreate name supply tokentype [description][assetHash][value][ccode][referencetokenid][expirytime][ownerperc][data]\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
         throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
     
@@ -7403,14 +7403,44 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
 	
 	if (params.size() >= 4)     {
         description = params[3].get_str();
-        if (description.size() > 4096)   {
-            ERR_RESULT("Token description must be <= 4096 characters");
+        if (description.size() > 1024)   {
+            ERR_RESULT("Token description must be <= 1024 characters");
             return(result);
         }
     }
 	
 	if (params.size() >= 5)     {
-		referencetokenid = Parseuint256((char *)params[4].get_str().c_str()); //returns zeroid if empty or wrong length
+		assetHash = Parseuint256((char *)params[4].get_str().c_str()); //returns zeroid if empty or wrong length
+    }
+	else
+		assetHash = zeroid;
+	
+	if (params.size() >= 6)
+	{
+		value = atof(params[5].get_str().c_str()) * COIN;
+		if (value < 0)
+		{
+			ERR_RESULT("Value must be positive");
+			return(result);
+		}
+    }
+	else
+		value = 0;
+	
+	if (params.size() >= 7)
+	{
+		ccode = params[6].get_str();
+		if (ccode.size() == 0 || ccode.size() != 3)
+		{
+			ERR_RESULT("Currency code must be 3 characters");
+			return(result);
+		}
+    }
+	else
+		ccode = "USD";
+	
+	if (params.size() >= 8)     {
+		referencetokenid = Parseuint256((char *)params[7].get_str().c_str()); //returns zeroid if empty or wrong length
 		if (tokentype == "m" || tokentype == "s") {
 			if (referencetokenid == zeroid)    {
 				ERR_RESULT("invalid reference tokenid");
@@ -7419,24 +7449,24 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
 		}
     }
 	
-	if (params.size() >= 6)     {
-		expiryTimeSec = atof(params[5].get_str().c_str());
+	if (params.size() >= 9)     {
+		expiryTimeSec = atof(params[8].get_str().c_str());
 		if((tokentype == "m" || tokentype == "s") && expiryTimeSec < 0)    {
 			ERR_RESULT("Expire time must be positive");
 			return(result);
 		}
     }
 	
-	if (params.size() >= 7)     {
-        ownerperc = atof(params[6].get_str().c_str());
+	if (params.size() >= 10)     {
+        ownerperc = atof(params[9].get_str().c_str());
         if (ownerperc <= 0)    {
         ERR_RESULT("owner percentage must be positive");
         return(result);
 		}
     }
 
-    if (params.size() == 8)    {
-        nonfungibleData = ParseHex(params[7].get_str());
+    if (params.size() == 11)    {
+        nonfungibleData = ParseHex(params[10].get_str());
         if (nonfungibleData.size() > IGUANA_MAXSCRIPTSIZE) // opret limit
         {
             ERR_RESULT("Non-fungible data size must be <= " + std::to_string(IGUANA_MAXSCRIPTSIZE));
@@ -7448,7 +7478,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
         }
     }
 
-    hextx = CreateToken(0, supply, name, description, ownerperc, tokentype, referencetokenid, expiryTimeSec, nonfungibleData);
+    hextx = CreateToken(0, supply, name, description, ownerperc, tokentype, assetHash, value, ccode, referencetokenid, expiryTimeSec, nonfungibleData);
     if( hextx.size() > 0 )     {
         result.push_back(Pair("result", "success"));
         result.push_back(Pair("hex", hextx));
