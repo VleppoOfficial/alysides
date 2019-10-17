@@ -547,7 +547,8 @@ bool IsTokenBatonVout(CTxOut vout)
 	
 	if (vout.nValue == 10000 &&
 		getCCopret(vout.scriptPubKey, opret) &&
-		(DecodeTokenUpdateCCOpRet(CScript(opret.begin()+1, opret.end()), assetHash, value, ccode, message) == 'u'))
+		(DecodeTokenUpdateCCOpRet(opret, assetHash, value, ccode, message) == 'u' ||
+		DecodeTokenUpdateCCOpRet(CScript(opret.begin()+1, opret.end()), assetHash, value, ccode, message) == 'u'))
 	{
 		//std::cerr << "Located a baton vout" << std::endl;
 		return true;
@@ -1190,7 +1191,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
 		txBaton.vout[2].nValue == 10000 &&
 		getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
-		(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u')) //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
+		(funcId = DecodeTokenUpdateCCOpRet(batonopret/*CScript(batonopret.begin()+1, batonopret.end())*/, assetHash, value, ccode, message) == 'u')) //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
 		{
 				total++;
 				UniValue data(UniValue::VOBJ);
@@ -1514,22 +1515,6 @@ UniValue TokenInfo(uint256 tokenid)
     GetOpretBlob(oprets, OPRETID_NONFUNGIBLEDATA, vopretNonfungible);
     if (!vopretNonfungible.empty())
         result.push_back(Pair("data", HexStr(vopretNonfungible)));
-
-	// Token Update stuff
-	/*CScript batonopret;
-	uint256 assetHash;
-	int64_t value;
-	std::string ccode, message;
-
-	if (getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret) && 
-	DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u') //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
-	{
-			result.push_back(Pair("assetHash", assetHash.GetHex()));
-			result.push_back(Pair("value", value));
-			result.push_back(Pair("ccode", ccode));
-			result.push_back(Pair("message", message));
-	}
-	*/
 	
     if (tokenbaseTx.IsCoinImport()) { // if imported token
         ImportProof proof;
