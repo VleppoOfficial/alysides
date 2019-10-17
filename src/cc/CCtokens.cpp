@@ -547,8 +547,7 @@ bool IsTokenBatonVout(CTxOut vout)
 	
 	if (vout.nValue == 10000 &&
 		getCCopret(vout.scriptPubKey, opret) &&
-		(DecodeTokenUpdateCCOpRet(opret, assetHash, value, ccode, message) == 'u' ||
-		DecodeTokenUpdateCCOpRet(CScript(opret.begin()+1, opret.end()), assetHash, value, ccode, message) == 'u'))
+		(DecodeTokenUpdateCCOpRet(opret, assetHash, value, ccode, message) == 'u'))
 	{
 		//std::cerr << "Located a baton vout" << std::endl;
 		return true;
