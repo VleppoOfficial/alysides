@@ -506,7 +506,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     if (normalInputs >= ccOutputs) {
                         LOGSTREAM("cctokens", CCLOG_DEBUG2, stream << indentStr << "IsTokensvout() assured normalInputs >= ccOutputs"
                                                                    << " for tokenbase=" << reftokenid.GetHex() << std::endl);
-                        if (!IsTokenMarkerVout(tx.vout[v]) && !IsTokenBatonVout(tx.vout[v]) // exclude marker and baton
+                        if (!IsTokenMarkerVout(tx.vout[v]) && !IsTokenBatonVout(tx.vout[v])) // exclude marker and baton
                             return tx.vout[v].nValue;
                         else
                             return 0; // vout is good, but do not take marker into account
@@ -516,7 +516,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     }
                 } else {
                     // imported tokens are checked in the eval::ImportCoin() validation code
-                    if (!IsTokenMarkerVout(tx.vout[v]) && !IsTokenBatonVout(tx.vout[v]) // exclude marker and baton
+                    if (!IsTokenMarkerVout(tx.vout[v]) && !IsTokenBatonVout(tx.vout[v])) // exclude marker and baton
                         return tx.vout[v].nValue;
                     else
                         return 0; // vout is good, but do not take marker into account
