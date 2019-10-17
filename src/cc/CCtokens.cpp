@@ -1208,8 +1208,9 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			return (result);
 		}
 		
-		
 		//std::cerr << "verified token create baton existence" << std::endl;
+		if (total <= samplenum || samplenum == 0)
+			return (result);
 
 		// find an update tx which spent the token create baton vout, if it exists
 		if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
@@ -1219,8 +1220,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			txBaton.vout[0].nValue == 10000 &&
 			(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' &&
 			getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
-			(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u') &&
-			(total <= samplenum || samplenum == 0))
+			(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
 		{
 			//std::cerr << "found a txid that spent the tokencreate baton" << std::endl;
 			total++;
@@ -1238,7 +1238,10 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			//std::cerr << "no further updates from tokencreate found" << std::endl;
 			return (result);
 		}
-
+	
+		if (total <= samplenum || samplenum == 0)
+			return (result);
+		
 		// baton vout should be vout0 from now on
 		while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
 		{
@@ -1249,8 +1252,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				txBaton.vout[0].nValue == 10000 &&     // check baton fee 
 				(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' && // decode opreturn
 				getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
-				(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u') &&
-				(total <= samplenum || samplenum == 0))
+				(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
 			{
 				total++;
 				UniValue data(UniValue::VOBJ);
@@ -1268,6 +1270,8 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
 				return (result);
 			}
+		if (total <= samplenum || samplenum == 0)
+			break;
 		}
 		return (result);
 	}
