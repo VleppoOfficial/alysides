@@ -708,7 +708,6 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
 
             if ((nValue = IsTokensvout(true, true /*<--add only valid token uxtos */, cp, NULL, vintx, vout, tokenid)) > 0 && myIsutxo_spentinmempool(ignoretxid, ignorevin, vintxid, vout) == 0) {
                 //for non-fungible tokens check payload:
-				std::cerr << "Found nValue=" << nValue << std::endl;
                 if (!vopretNonfungible.empty()) {
                     vscript_t vopret;
 
