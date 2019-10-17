@@ -1187,8 +1187,8 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 			std::cerr << "baton tx validation fail" << std::endl;
 			return 0;
 		}
-	std::cerr << "looping to find another spending txid" << std::endl;
-	latesttxid = sourcetxid;
+		std::cerr << "looping to find another spending txid" << std::endl;
+		latesttxid = sourcetxid;
 	}
 	std::cerr << "returning latesttxid" << std::endl;
 	return 1;
@@ -1238,8 +1238,39 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			return (result);
 		}
 		
+		
+		std::cerr << "verified token create baton existence" << std::endl;
+
 		// find an update tx which spent the token create baton vout, if it exists
 		if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
+			GetTransaction(batontxid, txBaton, hashBlock, true) &&
+			!hashBlock.IsNull() &&
+			txBaton.vout.size() > 0 &&
+			txBaton.vout[0].nValue == 10000 && 
+			(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' &&
+			getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
+			(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u') &&
+			(total <= samplenum || samplenum == 0))
+		{
+			std::cerr << "found a txid that spent the tokencreate baton" << std::endl;
+			total++;
+			data.clear();
+			data.push_back(Pair("assetHash", assetHash.GetHex()));
+			data.push_back(Pair("value", value));
+			data.push_back(Pair("ccode", ccode));
+			data.push_back(Pair("message", message));
+			result.push_back(Pair(batontxid.GetHex(), data));
+			sourcetxid = batontxid;
+		}
+		else
+		{
+			std::cerr << "no further updates from tokencreate found" << std::endl;
+			return (result);
+		}
+		
+		
+		// find an update tx which spent the token create baton vout, if it exists
+		/*if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
 		GetTransaction(batontxid, txBaton, hashBlock, true) &&
 		!hashBlock.IsNull() &&
 		txBaton.vout.size() > 0 &&
@@ -1260,11 +1291,47 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		}
 		else
 			std::cerr << "no further updates from tokencreate found" << std::endl;
-			return (result);
+			return (result);*/
+
+		// baton vout should be vout0 from now on
+		while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
+		{
+			std::cerr << "found a txid that spent the baton" << std::endl;
+			if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
+				!hashBlock.IsNull() &&                           // tx not in mempool
+				txBaton.vout.size() > 0 &&             
+				txBaton.vout[0].nValue == 10000 &&     // check baton fee 
+				(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' && // decode opreturn
+				getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
+				(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u') &&
+				(total <= samplenum || samplenum == 0))
+			{
+				total++;
+				data.clear();
+				data.push_back(Pair("assetHash", assetHash.GetHex()));
+				data.push_back(Pair("value", value));
+				data.push_back(Pair("ccode", ccode));
+				data.push_back(Pair("message", message));
+				result.push_back(Pair(batontxid.GetHex(), data));
+				sourcetxid = batontxid;
+				continue;
+			}
+			else
+			{
+				data.clear();
+				data.push_back(Pair("error", "couldn't decode this txid"));
+				result.push_back(Pair(batontxid.GetHex(), data));
+				return (result);
+			}
+			std::cerr << "looping to find another spending txid" << std::endl;
+		}
+		std::cerr << "returning full result" << std::endl;
+		return (result);
+		
 		
 		
 		// baton vout should be vout0 from now on
-		while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
+		/*while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
 		{
 			std::cerr << "found a txid that spent the baton" << std::endl;
 			if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
@@ -1293,7 +1360,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				result.push_back(Pair(batontxid.GetHex(), data));
 				return (result);
 			}
-		}
+		}*/
 
 		// at this point sourcetxid should be a update type txid - baton vout should be vout0 from now on
 		/*while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, BATON_VOUT)) == 0)  // find a tx which spent the baton vout
@@ -1316,7 +1383,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			sourcetxid = batontxid;
 		}*/
 		//result.push_back(Pair("woah", "update tx found?"));
-		return (result);
+		//return (result);
 	}
 	else
 	{
