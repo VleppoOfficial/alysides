@@ -1323,7 +1323,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		if (!(total < samplenum || samplenum == 0))
 			return (result);
 		// special handling for token creation tx - in this tx, baton vout is vout2
-		if (sourcetxid == txBaton.vin[1].prevout.hash && txBaton.vin[1].prevout.hash == tokenid) //unlikely to fail, hopefully
+		if (sourcetxid == tokenid) //unlikely to fail, hopefully
 		{
 			if (GetTransaction(sourcetxid, txBaton, hashBlock, true) &&
 			!hashBlock.IsNull() &&
