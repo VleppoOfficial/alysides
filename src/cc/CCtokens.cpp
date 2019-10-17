@@ -1194,7 +1194,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	return 1;
 }
 
-UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
+UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 {
 	UniValue result(UniValue::VOBJ);
 	UniValue data(UniValue::VOBJ);
@@ -1213,7 +1213,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive)
 	int64_t value;
 	std::string ccode, message;
 
-	if (!recursive)
+	if (recursive == 0)
 	{
 		// special handling for token creation tx - in this tx, baton vout is vout2
 		if (GetTransaction(tokenid, txBaton, hashBlock, true) &&

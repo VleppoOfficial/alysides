@@ -41,6 +41,6 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid);
 int64_t GetTokenBalance(CPubKey pk, uint256 tokenid);
 UniValue TokenInfo(uint256 tokenid);
 UniValue TokenList();
-UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, bool recursive = false);
+UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive);
 
 #endif

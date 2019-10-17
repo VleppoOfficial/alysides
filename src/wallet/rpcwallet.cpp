@@ -7271,7 +7271,7 @@ UniValue tokeninfo(const UniValue& params, bool fHelp)
 
 UniValue tokenviewupdates(const UniValue& params, bool fHelp)
 {
-    uint256 tokenid; int32_t samplenum; bool recursive = false;
+    uint256 tokenid; int32_t samplenum; int recursive = 0;
     if ( fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error("tokenviewupdates tokenid [samplenum][recursive]\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
@@ -7284,7 +7284,7 @@ UniValue tokenviewupdates(const UniValue& params, bool fHelp)
 	else
 		samplenum = 0;
 	if (params.size() == 3)
-		recursive = params[2].get_bool();
+		recursive = atoi((char *)params[2].get_str().c_str());
     return(TokenViewUpdates(tokenid, samplenum, recursive));
 }
 
