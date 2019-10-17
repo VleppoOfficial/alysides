@@ -1190,7 +1190,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
 		txBaton.vout[2].nValue == 10000 &&
 		getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
-		(funcId = DecodeTokenUpdateCCOpRet(batonopret/*CScript(batonopret.begin()+1, batonopret.end())*/, assetHash, value, ccode, message) == 'u')) //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
+		(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u')) //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
 		{
 				total++;
 				UniValue data(UniValue::VOBJ);
@@ -1303,7 +1303,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				data.push_back(Pair("ccode", ccode));
 				if (!message.empty())
 					data.push_back(Pair("message", message));
-				result.push_back(Pair(batontxid.GetHex(), data));
+				result.push_back(Pair(sourcetxid.GetHex(), data));
 				//sourcetxid = batontxid;
 				//continue;
 			}
@@ -1312,8 +1312,10 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
 				return (result);
 			}
-			//if (!(total < samplenum || samplenum == 0))
+			if (!(total < samplenum || samplenum == 0))
 				break;
+			if (GetTransaction(txBaton.vin[1].prevout.GetHash(), txBaton, hashBlock) && !hashBlock.IsNull())
+				std::cerr << "prev txid " << txBaton.vin[1].prevout.GetHash().GetHex() << std::endl;
 		}
 		result.push_back(Pair("result", "error"));
 		result.push_back(Pair("error", "recursive mode not supported yet"));
