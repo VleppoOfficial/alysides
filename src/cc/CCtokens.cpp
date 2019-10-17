@@ -1277,18 +1277,24 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 	}
 	else //from latest to earliest
 	{
-		if (GetLatestTokenUpdate(tokenid, latesttxid))
+		if (!GetLatestTokenUpdate(tokenid, latesttxid))
 		{
-			result.push_back(Pair("result", "success"));
-			result.push_back(Pair("latesttxid", latesttxid.GetHex()));
+			result.push_back(Pair("result", "error"));
+			result.push_back(Pair("error", "tokenid isnt token creation txid"));
 			return (result);
 		}
-		else
+		sourcetxid = latesttxid;
+		while (sourcetxid != tokenid)
 		{
+			total++;
+			if((batontxid = txBaton.vin[0].prevout.hash) != zeroid)
+			//GetTransaction(tx.vin[i].prevout.hash, vinTx, hashBlock)
+				result.push_back(Pair("prevtxid", batontxid.GetHex()));
+			break;
+		}
 		result.push_back(Pair("result", "error"));
 		result.push_back(Pair("error", "recursive mode not supported yet"));
 		return (result);
-		}
 	}
 	
 	/*

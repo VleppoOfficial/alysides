@@ -7284,7 +7284,11 @@ UniValue tokenviewupdates(const UniValue& params, bool fHelp)
 	else
 		samplenum = 0;
 	if (params.size() == 3)
+	{
 		recursive = atoi((char *)params[2].get_str().c_str());
+		if (recursive < 0)
+			recursive = 0;
+    }
     return(TokenViewUpdates(tokenid, samplenum, recursive));
 }
 
