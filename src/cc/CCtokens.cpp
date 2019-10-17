@@ -1248,23 +1248,20 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			txBaton.vout.size() > 0 &&
 			txBaton.vout[0].nValue == 10000 &&
 			(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' &&
-			getCCopret(txBaton.vout[0].scriptPubKey, batonopret)) //&&
+			getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
+			(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u') &&
+			(total <= samplenum || samplenum == 0))
 		{
-			std::cerr << "normal opret of update tx is good, cc opret works" << std::endl;
-				if(
-				(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u')/* &&
-				(total <= samplenum || samplenum == 0)*/)
-			{
 			std::cerr << "found a txid that spent the tokencreate baton" << std::endl;
 			total++;
 			data.clear();
+			data.resize(0);
 			data.push_back(Pair("assetHash", assetHash.GetHex()));
 			data.push_back(Pair("value", value));
 			data.push_back(Pair("ccode", ccode));
 			data.push_back(Pair("message", message));
 			result.push_back(Pair(batontxid.GetHex(), data));
 			sourcetxid = batontxid;
-			}
 		}
 		else
 		{
@@ -1312,6 +1309,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			{
 				total++;
 				data.clear();
+				data.resize(0);
 				data.push_back(Pair("assetHash", assetHash.GetHex()));
 				data.push_back(Pair("value", value));
 				data.push_back(Pair("ccode", ccode));
