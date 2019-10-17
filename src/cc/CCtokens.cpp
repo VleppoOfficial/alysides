@@ -1198,7 +1198,8 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				data.push_back(Pair("assetHash", assetHash.GetHex()));
 				data.push_back(Pair("value", value));
 				data.push_back(Pair("ccode", ccode));
-				data.push_back(Pair("message", message));
+				if (!message.empty())
+					data.push_back(Pair("message", message));
 				result.push_back(Pair(tokenid.GetHex(), data));
 		}
 		else
@@ -1228,7 +1229,8 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			data.push_back(Pair("assetHash", assetHash.GetHex()));
 			data.push_back(Pair("value", value));
 			data.push_back(Pair("ccode", ccode));
-			data.push_back(Pair("message", message));
+			if (!message.empty())
+					data.push_back(Pair("message", message));
 			result.push_back(Pair(batontxid.GetHex(), data));
 			sourcetxid = batontxid;
 		}
