@@ -1263,7 +1263,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 					data.push_back(Pair("message", message));
 				result.push_back(Pair(batontxid.GetHex(), data));
 				sourcetxid = batontxid;
-				continue;
+				//continue;
 			}
 			else
 			{
@@ -1284,14 +1284,36 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			return (result);
 		}
 		sourcetxid = latesttxid;
-		std::cerr << "Got latest update " << sourcetxid.GetHex() << std::endl;
+		std::cerr << "Got latest update: " << sourcetxid.GetHex() << std::endl;
 		while (sourcetxid != tokenid)
 		{
-			total++;
-			//if((batontxid = txBaton.vin[0].prevout.hash) != zeroid)
-			//GetTransaction(tx.vin[i].prevout.hash, vinTx, hashBlock)
-				//std::cerr << "found batontxid " << batontxid.GetHex() << std::endl;
-			break;
+			//std::cerr << "current txid " << sourcetxid.GetHex() << std::endl;
+			if (GetTransaction(sourcetxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
+				!hashBlock.IsNull() &&                           // tx not in mempool
+				txBaton.vout.size() > 0 &&             
+				txBaton.vout[0].nValue == 10000 &&     // check baton fee 
+				(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' && // decode opreturn
+				getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
+				(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
+			{
+				total++;
+				UniValue data(UniValue::VOBJ);
+				data.push_back(Pair("assetHash", assetHash.GetHex()));
+				data.push_back(Pair("value", value));
+				data.push_back(Pair("ccode", ccode));
+				if (!message.empty())
+					data.push_back(Pair("message", message));
+				result.push_back(Pair(batontxid.GetHex(), data));
+				//sourcetxid = batontxid;
+				//continue;
+			}
+			else
+			{
+				result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
+				return (result);
+			}
+			//if (!(total < samplenum || samplenum == 0))
+				break;
 		}
 		result.push_back(Pair("result", "error"));
 		result.push_back(Pair("error", "recursive mode not supported yet"));
@@ -1324,25 +1346,9 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		
 	else //if recursive = true
 		
-		//verifying tokenid
-		if !(get tokentx from tokenid and verify normal opret funcid)
-			result.push_back(error)
-			result.push_back(tokenid isn't token creation txid)
-			return result;
-			
-		//locating latest batontxid
-		while (retcode = current tx baton has been spent)
-			if (get baton tx, verify normal opret funcid)
-            	sourcetxid = batontxid;
-			else
-				result.push_back(error)
-				result.push_back(couldn't find latest token update)
-				return result;
-		//(at this point sourcetxid should be latest update txid)
+		we have batontxid as the latest update
 		
-		//walking back and printing data
-		//result.push_back(success)
-		while (get source tx and retrieve its cc opret data && total <= samplenum)
+		while (get baton tx and retrieve its cc opret data && total <= samplenum)
 			if (sourcetxid != tokenid)
 				total++
 				if (tx normal opret funcid == 'u' and get prevbatontxid)
