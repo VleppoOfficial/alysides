@@ -451,9 +451,16 @@ uint8_t DecodeTokenUpdateCCOpRet(const CScript scriptPubKey, uint256 &assetHash,
 {
     vscript_t vopret;
 	uint8_t evalcode, funcid;
-    if (!GetOpReturnData(scriptPubKey, vopret) || !GetOpReturnData(CScript(scriptPubKey.begin()+1, scriptPubKey.end()), vopret)); //fix for extra hex num
-		std::cerr << "cc opret data fetch unsuccessful" << std::endl;
-		return(uint8_t)0;
+	GetOpReturnData(scriptPubKey, vopret);
+	if (vopret.size() == 0)
+	{
+		GetOpReturnData(CScript(scriptPubKey.begin()+1, scriptPubKey.end()), vopret); //fix for extra hex num
+		if (vopret.size() == 0)
+		{
+			std::cerr << "cc opret data fetch unsuccessful" << std::endl;
+			return(uint8_t)0;
+		}
+	}
 	//std::cerr << "vopret size" << vopret.size() << std::endl;
 	if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> assetHash; ss >> value; ss >> ccode; ss >> message) != 0 && evalcode == EVAL_TOKENS)
 	{
