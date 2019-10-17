@@ -1190,7 +1190,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
 		txBaton.vout[2].nValue == 10000 &&
 		getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
-		(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u')) //fix for removing extra hex num before OP_RETURN opcode in tx. not sure why this is happening - dan
+		(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
 		{
 				total++;
 				UniValue data(UniValue::VOBJ);
@@ -1320,7 +1320,36 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				sourcetxid = batontxid;
 			}
 		}
-		//special handling for token creation goes here
+		if (!(total < samplenum || samplenum == 0))
+			return (result);
+		// special handling for token creation tx - in this tx, baton vout is vout2
+		if (sourcetxid == txBaton.vin[1].prevout.hash && txBaton.vin[1].prevout.hash == tokenid) //unlikely to fail, hopefully
+		{
+			if (GetTransaction(sourcetxid, txBaton, hashBlock, true) &&
+			!hashBlock.IsNull() &&
+			txBaton.vout.size() > 2 &&
+			(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
+			txBaton.vout[2].nValue == 10000 &&
+			getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
+			(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
+			{
+				total++;
+				UniValue data(UniValue::VOBJ);
+				data.push_back(Pair("assetHash", assetHash.GetHex()));
+				data.push_back(Pair("value", value));
+				data.push_back(Pair("ccode", ccode));
+				if (!message.empty())
+					data.push_back(Pair("message", message));
+				result.push_back(Pair(tokenid.GetHex(), data));
+			}
+			else
+			{
+				result.push_back(Pair("error", "couldn't decode token creation txid"));
+				return (result);
+			}
+		}
+		else
+			result.push_back(Pair("error", "initial sample txid isnt token creation txid"));
 		return (result);
 	}
 	
