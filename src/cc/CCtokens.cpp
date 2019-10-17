@@ -1062,14 +1062,12 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 		if (latesttxid == tokenid)
 		{
 			mtx.vin.push_back(CTxIn(tokenid,2,CScript()));
-			//std::cerr << "latest txid is tokenid, vin2 selected" << std::endl;
-			fprintf(stderr, "vin size.%li\n", mtx.vin.size());
+			//fprintf(stderr, "vin size.%li\n", mtx.vin.size());
 		}
 		else if (latesttxid != zeroid)
 		{
 			mtx.vin.push_back(CTxIn(latesttxid,0,CScript()));
-			//std::cerr << "latest txid is not tokenid, vin0 selected" << std::endl;
-			fprintf(stderr, "vin size.%li\n", mtx.vin.size());
+			//fprintf(stderr, "vin size.%li\n", mtx.vin.size());
 		}
 		else
 		{
@@ -1188,8 +1186,8 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		{
 				total++;
 				UniValue data(UniValue::VOBJ);
-				data.push_back(Pair("assetHash", assetHash.GetHex()));
-				data.push_back(Pair("value", value));
+				data.push_back(Pair("assetHash", assetHash.GetHex())); 
+				data.push_back(Pair("value", (double)value/COIN));
 				data.push_back(Pair("ccode", ccode));
 				if (!message.empty())
 					data.push_back(Pair("message", message));
@@ -1220,7 +1218,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			total++;
 			UniValue data(UniValue::VOBJ);
 			data.push_back(Pair("assetHash", assetHash.GetHex()));
-			data.push_back(Pair("value", value));
+			data.push_back(Pair("value", (double)value/COIN));
 			data.push_back(Pair("ccode", ccode));
 			if (!message.empty())
 					data.push_back(Pair("message", message));
@@ -1251,7 +1249,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				total++;
 				UniValue data(UniValue::VOBJ);
 				data.push_back(Pair("assetHash", assetHash.GetHex()));
-				data.push_back(Pair("value", value));
+				data.push_back(Pair("value", (double)value/COIN));
 				data.push_back(Pair("ccode", ccode));
 				if (!message.empty())
 					data.push_back(Pair("message", message));
@@ -1293,7 +1291,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				total++;
 				UniValue data(UniValue::VOBJ);
 				data.push_back(Pair("assetHash", assetHash.GetHex()));
-				data.push_back(Pair("value", value));
+				data.push_back(Pair("value", (double)value/COIN));
 				data.push_back(Pair("ccode", ccode));
 				if (!message.empty())
 					data.push_back(Pair("message", message));
@@ -1330,7 +1328,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				total++;
 				UniValue data(UniValue::VOBJ);
 				data.push_back(Pair("assetHash", assetHash.GetHex()));
-				data.push_back(Pair("value", value));
+				data.push_back(Pair("value", (double)value/COIN));
 				data.push_back(Pair("ccode", ccode));
 				if (!message.empty())
 					data.push_back(Pair("message", message));
