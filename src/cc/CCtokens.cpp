@@ -467,12 +467,12 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                 if (!tx.IsCoinImport()) {
                     vscript_t vorigPubkey;
                     std::string dummyName, dummyDescription, dummyTokenType;
-                    uint256 dummyAssetTokenID;
-                    double dummyOwnerperc;
+                    uint256 dummyRefTokenId;
+                    double dummyOwnerPerc;
                     int64_t dummyExpiryTimeSec;
                     std::vector<std::pair<uint8_t, vscript_t>> oprets;
 
-                    if (DecodeTokenCreateOpRet(tx.vout.back().scriptPubKey, vorigPubkey, dummyName, dummyDescription, dummyOwnerperc, dummyTokenType, dummyAssetTokenID, dummyExpiryTimeSec, oprets) == 0) {
+                    if (DecodeTokenCreateOpRet(tx.vout.back().scriptPubKey, vorigPubkey, dummyName, dummyDescription, dummyOwnerPerc, dummyTokenType, dummyRefTokenId, dummyExpiryTimeSec, oprets) == 0) {
                         LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << indentStr << "IsTokensvout() could not decode create opret"
                                                                         << " for txid=" << tx.GetHash().GetHex() << " for tokenid=" << reftokenid.GetHex() << std::endl);
                         return 0;
@@ -497,7 +497,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     int64_t ccOutputs = 0;
                     for (auto vout : tx.vout)
                         if (vout.scriptPubKey.IsPayToCryptoCondition() //TODO: add voutPubkey validation
-                            && (!IsTokenMarkerVout(vout) || !IsTokenBatonVout(tx, v)))               // should not be marker or baton here
+                            && (!IsTokenMarkerVout(vout) && !IsTokenBatonVout(tx.vout[v])))               // should not be marker or baton here
                             ccOutputs += vout.nValue;
 
                     int64_t normalInputs = TotalPubkeyNormalInputs(tx, origPubkey); // check if normal inputs are really signed by originator pubkey (someone not cheating with originator pubkey)
@@ -506,7 +506,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     if (normalInputs >= ccOutputs) {
                         LOGSTREAM("cctokens", CCLOG_DEBUG2, stream << indentStr << "IsTokensvout() assured normalInputs >= ccOutputs"
                                                                    << " for tokenbase=" << reftokenid.GetHex() << std::endl);
-                        if (!IsTokenMarkerVout(tx.vout[v]) || !IsTokenBatonVout(tx, v)) // exclude marker
+                        if (!IsTokenMarkerVout(tx.vout[v]) && !IsTokenBatonVout(tx.vout[v]) // exclude marker and baton
                             return tx.vout[v].nValue;
                         else
                             return 0; // vout is good, but do not take marker into account
@@ -516,7 +516,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     }
                 } else {
                     // imported tokens are checked in the eval::ImportCoin() validation code
-                    if (!IsTokenMarkerVout(tx.vout[v]) || !IsTokenBatonVout(tx, v)) // exclude marker and baton
+                    if (!IsTokenMarkerVout(tx.vout[v]) && !IsTokenBatonVout(tx.vout[v]) // exclude marker and baton
                         return tx.vout[v].nValue;
                     else
                         return 0; // vout is good, but do not take marker into account
@@ -544,16 +544,15 @@ how to identify a baton vout?
 -Has an embedded cc opret (getCCopret(tx.vout[tx.vout.size() - 2].scriptPubKey, opret) == true)
 BATON != TOKEN.
 */
-bool IsTokenBatonVout(CTransaction tx, int32_t v)
+bool IsTokenBatonVout(CTxOut vout)
 {
 	CScript opret;
 	uint256 assetHash;
 	int64_t value;
 	std::string ccode, message;
 	
-	if (v == tx.vout.size() - 2 &&
-		tx.vout[v].nValue == 10000 &&
-		getCCopret(tx.vout[v].scriptPubKey, opret) &&
+	if (vout.nValue == 10000 &&
+		getCCopret(vout.scriptPubKey, opret) &&
 		(DecodeTokenUpdateCCOpRet(CScript(opret.begin()+1, opret.end()), assetHash, value, ccode, message) == 'u'))
 	{
 		std::cerr << "Found batons here!!!" << std::endl;
