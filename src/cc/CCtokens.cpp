@@ -1314,8 +1314,8 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			}
 			if (!(total < samplenum || samplenum == 0))
 				break;
-			if (GetTransaction(txBaton.vin[1].prevout.GetHash(), txBaton, hashBlock) && !hashBlock.IsNull())
-				std::cerr << "prev txid " << txBaton.vin[1].prevout.GetHash().GetHex() << std::endl;
+			if (GetTransaction(txBaton.vin[1].prevout.hash, txBaton, hashBlock) && !hashBlock.IsNull())
+				std::cerr << "prev txid " << txBaton.vin[1].prevout.hash.GetHex() << std::endl;
 		}
 		result.push_back(Pair("result", "error"));
 		result.push_back(Pair("error", "recursive mode not supported yet"));
