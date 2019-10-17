@@ -1166,19 +1166,13 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 {
 	UniValue result(UniValue::VOBJ);
-    int64_t total = 0LL, amount;
+    int64_t total = 0LL, amount, value;
     int32_t vini, height, retcode;
 	std::vector<std::pair<uint8_t, vscript_t>> oprets;
-
-    uint256 batontxid, sourcetxid = tokenid, latesttxid;
-
+    uint256 batontxid, sourcetxid = tokenid, latesttxid, assetHash, hashBlock;
 	CTransaction txBaton;
-    uint256 hashBlock;
     uint8_t funcId, evalcode;
-	
 	CScript batonopret;
-	uint256 assetHash;
-	int64_t value;
 	std::string ccode, message;
 
 	if (recursive == 0) //from earliest to latest
@@ -1284,7 +1278,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			return (result);
 		}
 		sourcetxid = latesttxid;
-		std::cerr << "Got latest update: " << sourcetxid.GetHex() << std::endl;
+		//std::cerr << "Got latest update: " << sourcetxid.GetHex() << std::endl;
 		while (sourcetxid != tokenid)
 		{
 			//std::cerr << "current txid " << sourcetxid.GetHex() << std::endl;
@@ -1316,7 +1310,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				break;
 			if (GetTransaction((batontxid = txBaton.vin[1].prevout.hash), txBaton, hashBlock) && !hashBlock.IsNull())
 			{
-				std::cerr << "prev txid " << batontxid.GetHex() << std::endl;
+				//std::cerr << "prev txid " << batontxid.GetHex() << std::endl;
 				sourcetxid = batontxid;
 			}
 		}
@@ -1352,55 +1346,6 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			result.push_back(Pair("error", "initial sample txid isnt token creation txid"));
 		return (result);
 	}
-	
-	/*
-	if (recursive = false)
-		
-		if (get tokentx from tokenid, verify normal opret funcid and retrieve its cc opret data first)
-			data.push_back(stuff, stuff)
-			//result.push_back(success)
-			result.push_back(tokenid, data)
-			total++
-		else
-			result.push_back(error)
-			result.push_back(couldn't decode token creation txid)
-			return result;
-		if (samplenum > 1) continue
-		while (retcode = current tx baton has been spent && total <= samplenum)
-			if (get new tx, verify, and retrieve its cc opret data)
-				data.push_back(stuff, stuff)
-				result.push_back(sourceid, data)
-				total++
-			else
-				data.push_back(error, couldn't decode this tx)
-				result.push_back(sourceid, data)
-				return result;
-		return result;
-		
-	else //if recursive = true
-		
-		we have batontxid as the latest update
-		
-		while (get baton tx and retrieve its cc opret data && total <= samplenum)
-			if (sourcetxid != tokenid)
-				total++
-				if (tx normal opret funcid == 'u' and get prevbatontxid)
-					sourcetxid = prevbatontxid;
-					data.push_back(stuff, stuff) //can be from cc opret and normal opret
-					result.push_back(sourceid, data)
-					continue;
-				else
-					data.push_back(error, this tx is not an update tx)
-					result.push_back(sourceid, data)
-					return result;
-			else
-				data.push_back(stuff, stuff) //only cc opret
-				result.push_back(sourceid, data)
-				return result;
-		result.push_back(error)
-		result.push_back(couldn't decode this tx)
-		return result;
-	*/
 }
 
 
