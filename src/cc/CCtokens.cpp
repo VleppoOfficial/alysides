@@ -315,6 +315,13 @@ void FilterOutNonCCOprets(const std::vector<std::pair<uint8_t, vscript_t>>& opre
 // goDeeper is true: the func also validates amounts of the passed transaction:
 // it should be either sum(cc vins) == sum(cc vouts) or the transaction is the 'tokenbase' ('c') tx
 // checkPubkeys is true: validates if the vout is token vout1 or token vout1of2. Should always be true!
+
+// (1)AddTokenCCInputs:
+//IsTokensvout(goDeeper = true, true /*<--add only valid token uxtos */, cp, eval = NULL, tx = vintx, v = vout, reftokenid = tokenid))
+
+// (3)TokensExactAmounts:
+// tokenoshis = IsTokensvout(goDeeper - false /*<--do not recursion here*/, true /*<--exclude non-tokens vouts*/, cpTokens, eval = NULL, tx, v = i, reftokenid);
+
 int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true*/, struct CCcontract_info* cp, Eval* eval, const CTransaction& tx, int32_t v, uint256 reftokenid)
 {
     // this is just for log messages indentation fur debugging recursive calls:
@@ -353,7 +360,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
         // token opret most important checks (tokenid == reftokenid, tokenid is non-zero, tx is 'tokenbase'):
         const uint8_t funcId = ValidateTokenOpret(tx, reftokenid);
         std::cerr << indentStr << "IsTokensvout() ValidateTokenOpret returned=" << (char)(funcId?funcId:' ') << " for txid=" << tx.GetHash().GetHex() << " for tokenid=" << reftokenid.GetHex() << std::endl;
-        if (funcId != 0) {
+		if (funcId != 0) {
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << indentStr << "IsTokensvout() ValidateTokenOpret returned not-null funcId=" << (char)(funcId ? funcId : ' ') << " for txid=" << tx.GetHash().GetHex() << " for tokenid=" << reftokenid.GetHex() << std::endl);
 
             uint8_t dummyEvalCode;
@@ -369,7 +376,8 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
             // test vouts for possible token use-cases:
             std::vector<std::pair<CTxOut, std::string>> testVouts;
 
-            DecodeTokenOpRet(tx.vout.back().scriptPubKey, dummyEvalCode, tokenIdOpret, voutPubkeysInOpret, oprets);
+            //DecodeTokenOpRet(tx.vout.back().scriptPubKey, dummyEvalCode, tokenIdOpret, voutPubkeysInOpret, oprets);
+			DecodeTokenOpRet(tx.vout.back().scriptPubKey, dummyEvalCode, tokenIdOpret, oprets);
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << "IsTokensvout() oprets.size()=" << oprets.size() << std::endl);
 
             // get assets/channels/gateways token data:
@@ -497,7 +505,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     int64_t ccOutputs = 0;
                     for (auto vout : tx.vout)
                         if (vout.scriptPubKey.IsPayToCryptoCondition() //TODO: add voutPubkey validation
-                            && (!IsTokenMarkerVout(vout)/* && !IsTokenBatonVout(tx.vout[v])*/))               // should not be marker or baton here
+                            && (!IsTokenMarkerVout(vout) && !IsTokenBatonVout(vout)))               // should not be marker or baton here
                             ccOutputs += vout.nValue;
 
                     int64_t normalInputs = TotalPubkeyNormalInputs(tx, origPubkey); // check if normal inputs are really signed by originator pubkey (someone not cheating with originator pubkey)
@@ -506,7 +514,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     if (normalInputs >= ccOutputs) {
                         LOGSTREAM("cctokens", CCLOG_DEBUG2, stream << indentStr << "IsTokensvout() assured normalInputs >= ccOutputs"
                                                                    << " for tokenbase=" << reftokenid.GetHex() << std::endl);
-                        if (!IsTokenMarkerVout(tx.vout[v])/* && !IsTokenBatonVout(tx.vout[v])*/) // exclude marker and baton
+                        if (!IsTokenMarkerVout(tx.vout[v]) && !IsTokenBatonVout(tx.vout[v])) // exclude marker and baton
                             return tx.vout[v].nValue;
                         else
                             return 0; // vout is good, but do not take marker into account
@@ -516,7 +524,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     }
                 } else {
                     // imported tokens are checked in the eval::ImportCoin() validation code
-                    if (!IsTokenMarkerVout(tx.vout[v])/* && !IsTokenBatonVout(tx.vout[v])*/) // exclude marker and baton
+                    if (!IsTokenMarkerVout(tx.vout[v]) && !IsTokenBatonVout(tx.vout[v])) // exclude marker and baton
                         return tx.vout[v].nValue;
                     else
                         return 0; // vout is good, but do not take marker into account
@@ -562,6 +570,10 @@ bool IsTokenBatonVout(CTxOut vout)
 }
 
 // compares cc inputs vs cc outputs (to prevent feeding vouts from normal inputs)
+
+// (2) IsTokensVout:
+//bool isEqual = TokensExactAmounts(goDeeper = false, cp, inputs = myCCVinsAmount = 0, outputs = myCCVoutsAmount = 0, eval = NULL, tx, reftokenid)
+
 bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inputs, int64_t& outputs, Eval* eval, const CTransaction& tx, uint256 reftokenid)
 {
     CTransaction vinTx;
@@ -601,6 +613,8 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
             }
         }
     }
+
+	std::cerr << "TokensExactAmounts() numvouts in tx=" << numvouts << std::endl; //dan
 
     for (int32_t i = 0; i < numvouts - 1; i++) // 'numvouts-1' <-- do not check opret
     {
