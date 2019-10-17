@@ -1247,10 +1247,11 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			!hashBlock.IsNull() &&
 			txBaton.vout.size() > 0 &&
 			txBaton.vout[0].nValue == 10000 &&
-			(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u') //&&
+			(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' &&
+			getCCopret(txBaton.vout[0].scriptPubKey, batonopret)) //&&
 		{
-			std::cerr << "normal opret of update tx is good" << std::endl;
-				if(getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
+			std::cerr << "normal opret of update tx is good, cc opret works" << std::endl;
+				if(
 				(funcId = DecodeTokenUpdateCCOpRet(CScript(batonopret.begin()+1, batonopret.end()), assetHash, value, ccode, message) == 'u')/* &&
 				(total <= samplenum || samplenum == 0)*/)
 			{
