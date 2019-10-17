@@ -1066,7 +1066,14 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         CCerror = "cannot find latest token update";
         return std::string("");
     }
-		
+	
+	//Checking the estimated value
+    if (value < 0)
+    {
+        CCerror = "Estimated value must be positive";
+        return std::string("");
+    }
+	
 	//Checking the ccode and message size
     if (ccode.size() != 3 || message.size() > 128) // this is also checked on rpc level
     {
