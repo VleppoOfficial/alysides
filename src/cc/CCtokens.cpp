@@ -315,13 +315,6 @@ void FilterOutNonCCOprets(const std::vector<std::pair<uint8_t, vscript_t>>& opre
 // goDeeper is true: the func also validates amounts of the passed transaction:
 // it should be either sum(cc vins) == sum(cc vouts) or the transaction is the 'tokenbase' ('c') tx
 // checkPubkeys is true: validates if the vout is token vout1 or token vout1of2. Should always be true!
-
-// (1)AddTokenCCInputs:
-//IsTokensvout(goDeeper = true, true /*<--add only valid token uxtos */, cp, eval = NULL, tx = vintx, v = vout, reftokenid = tokenid))
-
-// (3)TokensExactAmounts:
-// tokenoshis = IsTokensvout(goDeeper - false /*<--do not recursion here*/, true /*<--exclude non-tokens vouts*/, cpTokens, eval = NULL, tx, v = i, reftokenid);
-
 int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true*/, struct CCcontract_info* cp, Eval* eval, const CTransaction& tx, int32_t v, uint256 reftokenid)
 {
     // this is just for log messages indentation fur debugging recursive calls:
@@ -544,14 +537,7 @@ bool IsTokenMarkerVout(CTxOut vout)
     cpTokens = CCinit(&CCtokens_info, EVAL_TOKENS);
     return vout == MakeCC1vout(EVAL_TOKENS, vout.nValue, GetUnspendable(cpTokens, NULL));
 }
-/*
-how to identify a baton vout?
--Exists in 'c' and 'u' transactions
--Has a fixed fee (10000)
--Is the second to last vout (tx.vout[tx.vout.size() - 2])
--Has an embedded cc opret (getCCopret(tx.vout[tx.vout.size() - 2].scriptPubKey, opret) == true)
-BATON != TOKEN.
-*/
+
 bool IsTokenBatonVout(CTxOut vout)
 {
 	CScript opret;
@@ -563,17 +549,13 @@ bool IsTokenBatonVout(CTxOut vout)
 		getCCopret(vout.scriptPubKey, opret) &&
 		(DecodeTokenUpdateCCOpRet(CScript(opret.begin()+1, opret.end()), assetHash, value, ccode, message) == 'u'))
 	{
-		std::cerr << "Found batons here!!!" << std::endl;
+		//std::cerr << "Located a baton vout" << std::endl;
 		return true;
 	}
 	return false;
 }
 
 // compares cc inputs vs cc outputs (to prevent feeding vouts from normal inputs)
-
-// (2) IsTokensVout:
-//bool isEqual = TokensExactAmounts(goDeeper = false, cp, inputs = myCCVinsAmount = 0, outputs = myCCVoutsAmount = 0, eval = NULL, tx, reftokenid)
-
 bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inputs, int64_t& outputs, Eval* eval, const CTransaction& tx, uint256 reftokenid)
 {
     CTransaction vinTx;
@@ -614,7 +596,7 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
         }
     }
 
-	std::cerr << "TokensExactAmounts() numvouts in tx=" << numvouts << std::endl; //dan
+	//std::cerr << "TokensExactAmounts() numvouts in tx=" << numvouts << std::endl; //dan
 
     for (int32_t i = 0; i < numvouts - 1; i++) // 'numvouts-1' <-- do not check opret
     {
@@ -632,7 +614,7 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
         }
     }
 
-    std::cerr << indentStr << "TokensExactAmounts() inputs=" << inputs << " outputs=" << outputs << " for txid=" << tx.GetHash().GetHex() << std::endl;
+    //std::cerr << indentStr << "TokensExactAmounts() inputs=" << inputs << " outputs=" << outputs << " for txid=" << tx.GetHash().GetHex() << std::endl;
 
     if (inputs != outputs) {
         if (tx.GetHash() != reftokenid)
