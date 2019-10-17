@@ -1209,7 +1209,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		}
 		
 		//std::cerr << "verified token create baton existence" << std::endl;
-		if (total <= samplenum || samplenum == 0)
+		if (!(total <= samplenum || samplenum == 0))
 			return (result);
 
 		// find an update tx which spent the token create baton vout, if it exists
@@ -1239,7 +1239,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			return (result);
 		}
 	
-		if (total <= samplenum || samplenum == 0)
+		if (!(total <= samplenum || samplenum == 0))
 			return (result);
 		
 		// baton vout should be vout0 from now on
@@ -1270,7 +1270,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
 				return (result);
 			}
-		if (total <= samplenum || samplenum == 0)
+		if (!(total <= samplenum || samplenum == 0))
 			break;
 		}
 		return (result);
