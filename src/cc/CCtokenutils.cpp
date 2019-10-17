@@ -454,8 +454,10 @@ uint8_t DecodeTokenUpdateCCOpRet(const CScript scriptPubKey, uint256 &assetHash,
     GetOpReturnData(scriptPubKey, vopret);
 	if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> assetHash; ss >> value; ss >> ccode; ss >> message) != 0 && evalcode == EVAL_TOKENS)
 	{
+		std::cerr << "cc opret decode successful, return funcid" << std::endl;
 		return(funcid);
 	}
+	std::cerr << "cc opret decode unsuccessful" << std::endl;
     return(uint8_t)0;
 }
 
