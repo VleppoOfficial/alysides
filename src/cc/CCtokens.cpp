@@ -128,9 +128,11 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			// token create should not be validated as it has no CC inputs, so return 'invalid'
 			// token tx structure for 'c':
 			//vin.0: normal input
-			//vout.0: issuance tokenoshis to CC
-			//vout.1: normal output for change (if any)
-			//vout.n-1: opreturn EVAL_TOKENS 'c' <tokenname> <description>
+			//vout.0: normal marker
+			//vout.1: issuance tokenoshis to CC
+			//vout.2: token update baton with cc opret
+			//vout.3 to n-2: normal output for change (if any)
+			//vout.n-1: opreturn EVAL_TOKENS 'c' <tokenname> <description> <etc>
 			return eval->Invalid("incorrect token funcid");
 
 		case 't':
@@ -142,14 +144,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//vout.n-2: normal output for change (if any)
 			//vout.n-1: opreturn EVAL_TOKENS 't' tokenid <other contract payload>
 			//Check if token amount is the same in vins and vouts of tx
-			
-			/*if (!TokensExactAmounts(true, cp, inputs, outputs, eval, tx, tokenid))
-			{
-				if (!eval->Valid())
-					return false; //TokenExactAmounts must call eval->Invalid()!
-				else
-					return eval->Invalid("tokens cc inputs != cc outputs");
-			}*/
 			
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
@@ -166,6 +160,14 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			break; // breaking to other contract validation...
 		
 		case 'u':
+			// token update
+			// token tx structure for 'u':
+			//vin.0: previous token update baton
+			//vin.1: normal input
+			//vout.0: next token update baton with cc opret
+			//vout.1 to n-2: normal output for change (if any)
+			//vout.n-1: opreturn EVAL_TOKENS 'u' pk tokenid
+			
 			//validation coming soon...
 			break;
 			
@@ -844,258 +846,6 @@ double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid)
 	return (balance / supply * 100);
 }
 
-// returns token creation signed raw tx
-std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerPerc, std::string tokenType, uint256 assetHash, int64_t value, std::string ccode, uint256 referenceTokenId, int64_t expiryTimeSec, vscript_t nonfungibleData)
-{
-    CTransaction refTokenBaseTx;
-    uint256 hashBlock, dummyRefTokenId;
-    std::vector<uint8_t> dummyPubkey;
-    int64_t refTokenSupply, refExpiryTimeSec;
-    std::string dummyName, dummyDescription, refTokenType;
-    double refOwnerPerc;
-    int32_t numblocks;
-
-    CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-    struct CCcontract_info *cp, C;
-    cp = CCinit(&C, EVAL_TOKENS);
-
-    if (txfee == 0)
-        txfee = 10000;
-
-    CPubKey mypk = pubkey2pk(Mypubkey());
-
-    //Checking if the specified tokensupply is valid
-    if (tokensupply < 0) {
-        CCerror = "negative tokensupply";
-        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() =" << CCerror << "=" << tokensupply << std::endl);
-        return std::string("");
-    }
-
-    //Checking if tokensupply is equal to 1 if nonfungibleData isn't empty
-    if (!nonfungibleData.empty() && tokensupply != 1) {
-        CCerror = "for non-fungible tokens tokensupply should be equal to 1";
-        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-        return std::string("");
-    }
-
-    //Checking the token name and description size
-    if (name.size() > 32 || description.size() > 1024) // this is also checked on rpc level
-    {
-        LOGSTREAM((char*)"cctokens", CCLOG_DEBUG1, stream << "name len=" << name.size() << " or description len=" << description.size() << " is too big" << std::endl);
-        CCerror = "name should be <= 32, description should be <= 1024";
-        return ("");
-    }
-
-    //Checking if a digital asset type has data embedded
-    //TODO: Placeholder until we get proper data update functionality
-    if (tokenType == "a" && description.size() <= 0) {
-        CCerror = "for digital asset tokens description cannot be empty";
-        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-        return std::string("");
-    }
-
-    //If token type is "a" and referenceTokenId is (properly) defined, check if it is valid. Else, ignore as it is optional for "a" types
-    if (tokenType == "a" && referenceTokenId != zeroid) {
-        if (!GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false)) {
-            CCerror = "cant find reference tokenid";
-            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-            return std::string("");
-        }
-    }
-
-    if (tokenType == "m" || tokenType == "s")
-	{
-        //Checking if tokensupply is equal to 1 if token is master license type
-        if (tokenType == "m" && tokensupply != 1) {
-            CCerror = "for master license tokens tokensupply should be equal to 1";
-            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-            return std::string("");
-        }
-
-        //checking if referenceTokenId exists
-        if (!GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false)) {
-            CCerror = "cant find reference tokenid";
-            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-            return std::string("");
-        }
-
-		double ownedRefTokenPerc = GetTokenOwnershipPercent(mypk, referenceTokenId);
-
-        //checking reference tokenid opret
-        if (refTokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c') {
-            CCerror = "reference tokenid isn't token creation txid";
-            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-            return std::string("");
-        }
-
-        //master licenses must reference digital assets owned by mypk
-        if (tokenType == "m" && (refTokenType != "a" || ownedRefTokenPerc <= refOwnerPerc)) {
-            CCerror = "for master license tokens reference tokenid must be of type 'a' and owned by this pubkey";
-            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-            return std::string("");
-        }
-
-        //sub-licenses must reference unexpired master licenses owned by mypk
-        if (tokenType == "s" && (refTokenType != "m" || ownedRefTokenPerc <= refOwnerPerc)) {
-            CCerror = "for sub-license tokens reference tokenid must be of type 'm' and owned by this pubkey";
-            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-            return std::string("");
-        }
-		
-        if (refExpiryTimeSec != 0)
-		{
-            if (tokenType == "s" && (CCduration(numblocks, referenceTokenId) > refExpiryTimeSec))
-			{
-                CCerror = "Can't create a sub-license if master license is expired";
-                LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-                return std::string("");
-            }
-            if (tokenType == "s" && (refExpiryTimeSec - CCduration(numblocks, referenceTokenId) < expiryTimeSec))
-            {
-                CCerror = "Sub-license expire time can't be longer then time left until master license expires";
-                LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-                return std::string("");
-            }
-        }
-    }
-
-    if (AddNormalinputs(mtx, mypk, tokensupply + 2 * txfee, 64) > 0) {
-        int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
-        if (mypkInputs < tokensupply) {
-            // check that tokens amount are really issued with mypk (because in the wallet there maybe other privkeys)
-            CCerror = "some inputs signed not with -pubkey=pk";
-            return std::string("");
-        }
-
-        uint8_t destEvalCode = EVAL_TOKENS;
-
-        //If nonfungibleData exists, eval code is set to the one specified within nonfungibleData
-        if (nonfungibleData.size() > 0)
-            destEvalCode = nonfungibleData.begin()[0];
-
-		// vout0 is a marker vout
-        // NOTE: we should prevent spending fake-tokens from this marker in IsTokenvout():
-        mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL))); // new marker to token cc addr, burnable and validated, vout pos now changed to 0 (from 1)
-		// vout1 issues the tokens to mypk
-        mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, tokensupply, mypk));
-
-		// vout2 is a baton vout containing arbitrary updatable data
-		CScript batonopret = EncodeTokenUpdateCCOpRet(assetHash,value,ccode,"");
-		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
-		if (makeCCopret(batonopret, vData))
-		{
-			mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, 10000, GetUnspendable(cp, NULL)/*mypk*/, &vData));  // BATON_VOUT
-			//fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
-			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet(Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
-		}
-		//
-		
-        //return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet(Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
-		else
-		{
-			CCerror = "couldnt embed updatable data to baton vout";
-			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-			return std::string("");
-		}
-	}
-    CCerror = "cant find normal inputs";
-    LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-    return std::string("");
-}
-
-std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64_t value, std::string ccode, std::string message)
-{
-	CTransaction tokenBaseTx;
-	uint256 hashBlock, dummyRefTokenId, latesttxid;
-    std::vector<uint8_t> dummyPubkey;
-    int64_t refExpiryTimeSec;
-    std::string dummyName, dummyDescription, refTokenType;
-    double refOwnerPerc;
-	
-	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-    struct CCcontract_info *cp, C;
-    cp = CCinit(&C, EVAL_TOKENS);
-	
-	if (txfee == 0)
-        txfee = 10000;
-
-    CPubKey mypk = pubkey2pk(Mypubkey());
-	
-	if (GetTransaction(tokenid, tokenBaseTx, hashBlock, false) == 0)
-	{
-        CCerror = "cant find tokenid";
-        return std::string("");
-    }
-	double ownedRefTokenPerc = GetTokenOwnershipPercent(mypk, tokenid);
-    //checking tokenid create opret
-    if (tokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenBaseTx.vout[tokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c')
-	{
-        CCerror = "tokenid isn't token creation txid";
-        return std::string("");
-    }
-	//checking if token is owned by mypk
-	if (ownedRefTokenPerc <= refOwnerPerc)
-	{
-        CCerror = "tokenid must be owned by this pubkey";
-        return std::string("");
-    }
-	//getting the latest update txid (can be the same as tokenid)
-	if (!GetLatestTokenUpdate(tokenid, latesttxid))
-	{
-        CCerror = "cannot find latest token update";
-        return std::string("");
-    }
-	//Checking the estimated value
-    if (value < 0)
-    {
-        CCerror = "Estimated value must be positive";
-        return std::string("");
-    }
-	//Checking the ccode and message size
-    if (ccode.size() != 3 || message.size() > 128) // this is also checked on rpc level
-    {
-        CCerror = "ccode should be 3, message should be <= 128";
-        return std::string("");
-    }
-	if (AddNormalinputs(mtx, mypk, 2 * txfee, 64) > 0)
-	{
-		if (latesttxid == tokenid)
-		{
-			mtx.vin.push_back(CTxIn(tokenid,2,CScript()));
-			//fprintf(stderr, "vin size.%li\n", mtx.vin.size());
-		}
-		else if (latesttxid != zeroid)
-		{
-			mtx.vin.push_back(CTxIn(latesttxid,0,CScript()));
-			//fprintf(stderr, "vin size.%li\n", mtx.vin.size());
-		}
-		else
-		{
-			CCerror = "latest update txid invalid";
-			return std::string("");
-		}
-		
-        uint8_t destEvalCode = EVAL_TOKENS;
-
-		CScript batonopret = EncodeTokenUpdateCCOpRet(assetHash, value, ccode, message);
-		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
-		if (makeCCopret(batonopret, vData))
-		{
-			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, GetUnspendable(cp, NULL)/*mypk*/, &vData));  // BATON_VOUT
-			//fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
-			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenUpdateOpRet(Mypubkey(), tokenid)));
-		}
-		else
-		{
-			CCerror = "couldnt embed updatable data to baton vout";
-			return std::string("");
-		}
-	}
-
-    CCerror = "cant find normal inputs";
-    return std::string("");
-}
-
 // gets the latest baton txid of a token creation transaction
 // used in TokenUpdate and TokenViewUpdate's recursive mode
 bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
@@ -1159,6 +909,244 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	}
 	//std::cerr << "returning latesttxid" << std::endl;
 	return 1;
+}
+
+// returns token creation signed raw tx
+std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerPerc, std::string tokenType, uint256 assetHash, int64_t value, std::string ccode, uint256 referenceTokenId, int64_t expiryTimeSec, vscript_t nonfungibleData)
+{
+    CTransaction refTokenBaseTx;
+    uint256 hashBlock, dummyRefTokenId;
+    std::vector<uint8_t> dummyPubkey;
+    int64_t refTokenSupply, refExpiryTimeSec;
+    std::string dummyName, dummyDescription, refTokenType;
+    double refOwnerPerc;
+    int32_t numblocks;
+
+    CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+    struct CCcontract_info *cp, C;
+    cp = CCinit(&C, EVAL_TOKENS);
+
+    if (txfee == 0)
+        txfee = 10000;
+
+    CPubKey mypk = pubkey2pk(Mypubkey());
+
+    //Checking if the specified tokensupply is valid
+    if (tokensupply < 0) {
+        CCerror = "negative tokensupply";
+        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() =" << CCerror << "=" << tokensupply << std::endl);
+        return std::string("");
+    }
+    //Checking if tokensupply is equal to 1 if nonfungibleData isn't empty
+    if (!nonfungibleData.empty() && tokensupply != 1) {
+        CCerror = "for non-fungible tokens tokensupply should be equal to 1";
+        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+        return std::string("");
+    }
+    //Checking the token name and description size
+    if (name.size() > 32 || description.size() > 1024) // this is also checked on rpc level
+    {
+        LOGSTREAM((char*)"cctokens", CCLOG_DEBUG1, stream << "name len=" << name.size() << " or description len=" << description.size() << " is too big" << std::endl);
+        CCerror = "name should be <= 32, description should be <= 1024";
+        return ("");
+    }
+	//Checking the estimated value
+    if (value < 0.00000001 && value != 0 )
+    {
+        CCerror = "Estimated value must be positive and cannot be less than 1 satoshi if not 0";
+        return std::string("");
+    }
+    /*//Checking if a digital asset type has data embedded
+    //TODO: Placeholder until we get proper data update functionality
+    if (tokenType == "a" && description.size() <= 0) {
+        CCerror = "for digital asset tokens description cannot be empty";
+        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+        return std::string("");
+    }*/
+    //If token type is "a" and referenceTokenId is (properly) defined, check if it is valid. Else, ignore as it is optional for "a" types
+    if (tokenType == "a" && referenceTokenId != zeroid) {
+        if (!GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false)) {
+            CCerror = "cant find reference tokenid";
+            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+            return std::string("");
+        }
+    }
+    if (tokenType == "m" || tokenType == "s")
+	{
+        //Checking if tokensupply is equal to 1 if token is master license type
+        if (tokenType == "m" && tokensupply != 1) {
+            CCerror = "for master license tokens tokensupply should be equal to 1";
+            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+            return std::string("");
+        }
+        //checking if referenceTokenId exists
+        if (!GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false)) {
+            CCerror = "cant find reference tokenid";
+            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+            return std::string("");
+        }
+		double ownedRefTokenPerc = GetTokenOwnershipPercent(mypk, referenceTokenId);
+        //checking reference tokenid opret
+        if (refTokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c') {
+            CCerror = "reference tokenid isn't token creation txid";
+            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+            return std::string("");
+        }
+        //master licenses must reference digital assets owned by mypk
+        if (tokenType == "m" && (refTokenType != "a" || ownedRefTokenPerc <= refOwnerPerc)) {
+            CCerror = "for master license tokens reference tokenid must be of type 'a' and owned by this pubkey";
+            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+            return std::string("");
+        }
+        //sub-licenses must reference unexpired master licenses owned by mypk
+        if (tokenType == "s" && (refTokenType != "m" || ownedRefTokenPerc <= refOwnerPerc)) {
+            CCerror = "for sub-license tokens reference tokenid must be of type 'm' and owned by this pubkey";
+            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+            return std::string("");
+        }
+        if (refExpiryTimeSec != 0)
+		{
+            if (tokenType == "s" && (CCduration(numblocks, referenceTokenId) > refExpiryTimeSec))
+			{
+                CCerror = "Can't create a sub-license if master license is expired";
+                LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+                return std::string("");
+            }
+            if (tokenType == "s" && (refExpiryTimeSec - CCduration(numblocks, referenceTokenId) < expiryTimeSec))
+            {
+                CCerror = "Sub-license expire time can't be longer then time left until master license expires";
+                LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+                return std::string("");
+            }
+        }
+    }
+
+    if (AddNormalinputs(mtx, mypk, tokensupply + 2 * txfee, 64) > 0) {
+        int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
+        if (mypkInputs < tokensupply) {
+            // check that tokens amount are really issued with mypk (because in the wallet there maybe other privkeys)
+            CCerror = "some inputs signed not with -pubkey=pk";
+            return std::string("");
+        }
+        uint8_t destEvalCode = EVAL_TOKENS;
+        //If nonfungibleData exists, eval code is set to the one specified within nonfungibleData
+        if (nonfungibleData.size() > 0)
+            destEvalCode = nonfungibleData.begin()[0];
+
+		// vout0 is a marker vout
+        // NOTE: we should prevent spending fake-tokens from this marker in IsTokenvout():
+        mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL))); // new marker to token cc addr, burnable and validated, vout pos now changed to 0 (from 1)
+		// vout1 issues the tokens to mypk
+        mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, tokensupply, mypk));
+		// vout2 is a baton vout containing arbitrary updatable data
+		CScript batonopret = EncodeTokenUpdateCCOpRet(assetHash,value,ccode,"");
+		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
+		if (makeCCopret(batonopret, vData))
+		{
+			mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, 10000, GetUnspendable(cp, NULL)/*mypk*/, &vData));  // BATON_VOUT
+			//fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
+			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet(Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
+		}
+		else
+		{
+			CCerror = "couldnt embed updatable data to baton vout";
+			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+			return std::string("");
+		}
+	}
+    CCerror = "cant find normal inputs";
+    LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+    return std::string("");
+}
+
+std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64_t value, std::string ccode, std::string message)
+{
+	CTransaction tokenBaseTx;
+	uint256 hashBlock, dummyRefTokenId, latesttxid;
+    std::vector<uint8_t> dummyPubkey;
+    int64_t refExpiryTimeSec;
+    std::string dummyName, dummyDescription, refTokenType;
+    double refOwnerPerc;
+	
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+    struct CCcontract_info *cp, C;
+    cp = CCinit(&C, EVAL_TOKENS);
+	
+	if (txfee == 0)
+        txfee = 10000;
+
+    CPubKey mypk = pubkey2pk(Mypubkey());
+	
+	if (GetTransaction(tokenid, tokenBaseTx, hashBlock, false) == 0)
+	{
+        CCerror = "cant find tokenid";
+        return std::string("");
+    }
+	double ownedRefTokenPerc = GetTokenOwnershipPercent(mypk, tokenid);
+    //checking tokenid create opret
+    if (tokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenBaseTx.vout[tokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c')
+	{
+        CCerror = "tokenid isn't token creation txid";
+        return std::string("");
+    }
+	//checking if token is owned by mypk
+	if (ownedRefTokenPerc <= refOwnerPerc)
+	{
+        CCerror = "tokenid must be owned by this pubkey";
+        return std::string("");
+    }
+	//getting the latest update txid (can be the same as tokenid)
+	if (!GetLatestTokenUpdate(tokenid, latesttxid))
+	{
+        CCerror = "cannot find latest token update";
+        return std::string("");
+    }
+	//Checking the estimated value
+    if (value < 0.00000001 && value != 0 )
+    {
+        CCerror = "Estimated value must be positive and cannot be less than 1 satoshi if not 0";
+        return std::string("");
+    }
+	//Checking the ccode and message size
+    if (ccode.size() != 3 || message.size() > 128) // this is also checked on rpc level
+    {
+        CCerror = "ccode should be 3, message should be <= 128";
+        return std::string("");
+    }
+	if (AddNormalinputs(mtx, mypk, 2 * txfee, 64) > 0)
+	{
+		if (latesttxid == tokenid)
+		{
+			mtx.vin.push_back(CTxIn(tokenid,2,CScript()));
+			//fprintf(stderr, "vin size.%li\n", mtx.vin.size());
+		}
+		else if (latesttxid != zeroid)
+		{
+			mtx.vin.push_back(CTxIn(latesttxid,0,CScript()));
+			//fprintf(stderr, "vin size.%li\n", mtx.vin.size());
+		}
+		else
+		{
+			CCerror = "latest update txid invalid";
+			return std::string("");
+		}
+        uint8_t destEvalCode = EVAL_TOKENS;
+		CScript batonopret = EncodeTokenUpdateCCOpRet(assetHash, value, ccode, message);
+		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
+		if (makeCCopret(batonopret, vData))
+		{
+			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, GetUnspendable(cp, NULL)/*mypk*/, &vData));  // BATON_VOUT
+			//fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
+			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenUpdateOpRet(Mypubkey(), tokenid)));
+		}
+		else
+		{
+			CCerror = "couldnt embed updatable data to baton vout";
+			return std::string("");
+		}
+	}
+    CCerror = "cant find normal inputs";
+    return std::string("");
 }
 
 UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
@@ -1346,13 +1334,6 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 	}
 }
 
-
-/*
-std::string TokenTransferMany(int64_t txfee, vscript_t destpubkey, uint256 tokenidarray[])
-{
-}
-*/
-
 // transfer tokens to another pubkey
 // param additionalEvalCode allows transfer of dual-eval non-fungible tokens
 std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, int64_t total)
@@ -1419,6 +1400,12 @@ std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, 
     }
     return ("");
 }
+
+/*
+std::string TokenTransferMany(int64_t txfee, vscript_t destpubkey, uint256 tokenidarray[])
+{
+}
+*/
 
 int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 {
