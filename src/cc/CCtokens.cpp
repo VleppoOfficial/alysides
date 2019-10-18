@@ -984,7 +984,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
 		if (makeCCopret(batonopret, vData))
 		{
-			mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, 10000, mypk, &vData));  // BATON_VOUT
+			mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, 10000, GetUnspendable(cp, NULL)/*mypk*/, &vData));  // BATON_VOUT
 			//fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
 			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet(Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
 		}
@@ -1081,7 +1081,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
 		if (makeCCopret(batonopret, vData))
 		{
-			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, mypk, &vData));  // BATON_VOUT
+			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, GetUnspendable(cp, NULL)/*mypk*/, &vData));  // BATON_VOUT
 			//fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
 			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenUpdateOpRet(Mypubkey(), tokenid)));
 		}
