@@ -346,7 +346,13 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
             if (!isEqual) {
                 // if ccInputs != ccOutputs and it is not the tokenbase tx
                 // this means it is possibly a fake tx (dimxy):
+				
+				std::cerr << indentStr << "vout" << v << " has unequal cc inputs/outputs" << std::endl;
+				
                 if (reftokenid != tx.GetHash()) { // checking that this is the true tokenbase tx, by verifying that funcid=c, is done further in this function (dimxy)
+					
+					std::cerr << indentStr << "vout" << v << " has is not tokencreate tx, returning 0" << std::endl;
+					
                     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << indentStr << "IsTokensvout() warning: for the verified tx detected a bad vintx=" << tx.GetHash().GetHex() << ": cc inputs != cc outputs and not the 'tokenbase' tx, skipping the verified tx" << std::endl);
                     return 0;
                 }
