@@ -243,15 +243,15 @@ uint8_t CClibCCpriv[32] = { 0x57, 0xcf, 0x49, 0x71, 0x7d, 0xb4, 0x15, 0x1b, 0x4f
 #undef EVALCODE
 
 //Agreements
-#define FUNCNAME IsAgreementsInput
-#define EVALCODE EVAL_AGREEMENTS
-const char* AgreementsCCaddr = "";
-const char* AgreementsNormaladdr = "RJANYgW7ckuedzKjM2ZGySoFUTtzVtSuzx";
-char AgreementsCChexstr[67] = {"0278fe169c72d081aab9a76708cacfc71e4a6e421aadf2cdd342bab32efc09cd7a"};
-uint8_t AgreementsCCpriv[32] = {};
-#include "CCcustom.inc"
-#undef FUNCNAME
-#undef EVALCODE
+//#define FUNCNAME IsAgreementsInput
+//#define EVALCODE EVAL_AGREEMENTS
+//const char* AgreementsCCaddr = "";
+//const char* AgreementsNormaladdr = "RJANYgW7ckuedzKjM2ZGySoFUTtzVtSuzx";
+//char AgreementsCChexstr[67] = {"0278fe169c72d081aab9a76708cacfc71e4a6e421aadf2cdd342bab32efc09cd7a"};
+//uint8_t AgreementsCCpriv[32] = {};
+//#include "CCcustom.inc"
+//#undef FUNCNAME
+//#undef EVALCODE
 
 // ImportGateway
 #define FUNCNAME IsImportGatewayInput
