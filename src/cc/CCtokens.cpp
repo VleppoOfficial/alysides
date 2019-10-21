@@ -766,8 +766,7 @@ int64_t HasBurnedTokensvouts(struct CCcontract_info* cp, Eval* eval, const CTran
         return (0);
     }
 
-
-    if (DecodeTokenOpRet(tx.vout.back().scriptPubKey, dummyEvalCode, tokenIdOpret, voutPubkeysDummy, oprets) == 0) {
+    if (DecodeTokenOpRet(tx.vout.back().scriptPubKey, dummyEvalCode, tokenIdOpret, oprets) == 0) {
         LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "HasBurnedTokensvouts() cannot parse opret DecodeTokenOpRet returned 0, txid=" << tx.GetHash().GetHex() << std::endl);
         return 0;
     }
