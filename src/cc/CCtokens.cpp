@@ -501,7 +501,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     int64_t ccOutputs = 0;
                     for (auto vout : tx.vout)
                         if (vout.scriptPubKey.IsPayToCryptoCondition() //TODO: add voutPubkey validation
-                            && (!IsTokenMarkerVout(vout)/* && !IsTokenBatonVout(vout))*/)               // should not be marker or baton here
+                            && (!IsTokenMarkerVout(vout)/* && !IsTokenBatonVout(vout)*/))               // should not be marker or baton here
                             ccOutputs += vout.nValue;
 
                     int64_t normalInputs = TotalPubkeyNormalInputs(tx, origPubkey); // check if normal inputs are really signed by originator pubkey (someone not cheating with originator pubkey)
