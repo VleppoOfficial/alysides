@@ -450,7 +450,7 @@ struct CCcontract_info *CCinit(struct CCcontract_info *cp, uint8_t evalcode)
 			cp->ismyvin = IsTokensInput;
 			break;
 
-        case EVAL_ AGREEMENTS:
+        case EVAL_AGREEMENTS:
             strcpy(cp->unspendableCCaddr, AgreementsCCaddr);
             strcpy(cp->normaladdr, AgreementsNormaladdr);
             strcpy(cp->CChexstr, AgreementsCChexstr);
