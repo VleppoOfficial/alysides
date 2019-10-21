@@ -513,6 +513,7 @@ extern UniValue pricesaddfunding(const UniValue& params, bool fHelp);
 extern UniValue pricesgetorderbook(const UniValue& params, bool fHelp);
 extern UniValue pricesrefillfund(const UniValue& params, bool fHelp);
 
+extern UniValue agreementaddress(const UniValue& params, bool fHelp); //new agreement
 
 
 #endif // BITCOIN_RPCSERVER_H

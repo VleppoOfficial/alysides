@@ -57,6 +57,7 @@
         EVAL(EVAL_PAYMENTS, 0xf0) \
         EVAL(EVAL_GATEWAYS, 0xf1) \
 		EVAL(EVAL_TOKENS, 0xf2) \
+        EVAL(EVAL_ AGREEMENTS, 0xa7) \
         EVAL(EVAL_IMPORTGATEWAY, 0xf3)  \
 
 
