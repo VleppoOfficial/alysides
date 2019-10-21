@@ -5917,7 +5917,7 @@ UniValue agreementaddress(const UniValue& params, bool fHelp) //new agreement
 {
     struct CCcontract_info *cp, C;
     std::vector<unsigned char> pubkey;
-    cp = CCinit(&C, EVAL_ AGREEMENTS);
+    cp = CCinit(&C, EVAL_AGREEMENTS);
     if (fHelp || params.size() > 1)
         throw runtime_error("agreementaddress [pubkey]\n");
     if (ensure_CCrequirements(0) < 0)
