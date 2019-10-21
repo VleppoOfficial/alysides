@@ -145,6 +145,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//vout.n-1: opreturn EVAL_TOKENS 't' tokenid <other contract payload>
 			//Check if token amount is the same in vins and vouts of tx
 			
+			std::cerr << "token transfer DETECTED" << std::endl;
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
 			
