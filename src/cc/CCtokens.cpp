@@ -296,6 +296,8 @@ void FilterOutTokensUnspendablePk(const std::vector<CPubKey>& sourcePubkeys, std
     for (auto pk : sourcePubkeys)
         if (pk != tokensUnspendablePk)
             destPubkeys.push_back(pk);
+		else
+			std::cerr << "Removed unspendable pk from destpubkey array" << std::endl;
 }
 
 void FilterOutNonCCOprets(const std::vector<std::pair<uint8_t, vscript_t>>& oprets, vscript_t& vopret)
@@ -303,7 +305,8 @@ void FilterOutNonCCOprets(const std::vector<std::pair<uint8_t, vscript_t>>& opre
     vopret.clear();
 
     if (oprets.size() > 2)
-        LOGSTREAM("cctokens", CCLOG_INFO, stream << "FilterOutNonCCOprets() warning!! oprets.size > 2 currently not supported" << oprets.size() << std::endl);
+        //LOGSTREAM("cctokens", CCLOG_INFO, stream << "FilterOutNonCCOprets() warning!! oprets.size > 2 currently not supported" << oprets.size() << std::endl);
+		std::cerr << "FilterOutNonCCOprets() warning!! oprets.size > 2 currently not supported" << oprets.size() << std::endl;
 
     for (auto o : oprets) {
         if (o.first < OPRETID_FIRSTNONCCDATA) { // skip burn, import, etc opret data
