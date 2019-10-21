@@ -454,7 +454,7 @@ bool Myprivkey(uint8_t myprivkey[])
             if ( pwalletMain->GetKey(keyID,vchSecret) != 0 )
             {
                 memcpy(myprivkey,vchSecret.begin(),32);
-                if ( 1 ) // tror det er her
+                if ( 0 ) // tror det er her
                 {
                     for (i=0; i<32; i++)
                         fprintf(stderr,"0x%02x, ",myprivkey[i]);
