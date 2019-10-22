@@ -382,7 +382,9 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
             std::vector<std::pair<CTxOut, std::string>> testVouts;
 
             //DecodeTokenOpRet(tx.vout.back().scriptPubKey, dummyEvalCode, tokenIdOpret, voutPubkeysInOpret, oprets);
-			DecodeTokenOpRet(tx.vout.back().scriptPubKey, dummyEvalCode, tokenIdOpret, oprets);
+			
+			//DecodeTokenTransferOneOpRet used here since destpubkey array is expected to be returned
+			DecodeTokenTransferOneOpRet(tx.vout.back().scriptPubKey, /*dummyEvalCode, */tokenIdOpret, voutPubkeysInOpret, oprets);
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << "IsTokensvout() oprets.size()=" << oprets.size() << std::endl);
 
             // get assets/channels/gateways token data:
@@ -614,7 +616,7 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
     {
         LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << indentStr << "TokenExactAmounts() recursively checking tx.vout[" << i << "] nValue=" << tx.vout[i].nValue << std::endl);
 
-	std::cerr << "TokenExactAmounts() recursively checking txid[" << tx.GetHash().GetHex() << "].vout[" << i << "] nValue=" << tx.vout[i].nValue << std::endl; //dan
+		std::cerr << "TokenExactAmounts() recursively checking txid[" << tx.GetHash().GetHex() << "].vout[" << i << "] nValue=" << tx.vout[i].nValue << std::endl; //dan
 		
         // Note: we pass in here IsTokenvout(false,...) because we don't need to call TokenExactAmounts() recursively from IsTokensvout here
         // indeed, if we pass 'true' we'll be checking this tx vout again
@@ -859,7 +861,7 @@ double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid)
 	return (balance / supply * 100);
 }
 
-// gets the latest baton txid of a token creation transaction
+// gets the latest baton txid of a token
 // used in TokenUpdate and TokenViewUpdate's recursive mode
 bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 {
@@ -969,13 +971,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         CCerror = "Estimated value must be positive and cannot be less than 1 satoshi if not 0";
         return std::string("");
     }
-    /*//Checking if a digital asset type has data embedded
-    //TODO: Placeholder until we get proper data update functionality
-    if (tokenType == "a" && description.size() <= 0) {
-        CCerror = "for digital asset tokens description cannot be empty";
-        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-        return std::string("");
-    }*/
+
     //If token type is "a" and referenceTokenId is (properly) defined, check if it is valid. Else, ignore as it is optional for "a" types
     if (tokenType == "a" && referenceTokenId != zeroid) {
         if (!GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false)) {
@@ -1148,7 +1144,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
 		if (makeCCopret(batonopret, vData))
 		{
-			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, GetUnspendable(cp, NULL)/*mypk*/, &vData));  // BATON_VOUT
+			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, GetUnspendable(cp, NULL)/*mypk*/, &vData));
 			//fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
 			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenUpdateOpRet(Mypubkey(), tokenid)));
 		}
