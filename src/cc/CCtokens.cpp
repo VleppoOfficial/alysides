@@ -48,18 +48,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	if (strcmp(ASSETCHAINS_SYMBOL, "ROGUE") == 0 && chainActive.Height() <= 12500)
         return true;
 
-	/*
-	Needed variables:
-	origpubkey //creator of the token
-	dummyName //we don't care about the name
-	dummyDescription //we don't care about the description
-	ownerPerc // when transferring assets this doesn't matter, but might still be useful
-	tokenType // is this asset or license?
-	referenceTokenId //needs check if this id is valid
-	expiryTimeSec //possibly useful?
-	oprets //non-fung data of create tx
-	*/
-
 	CTransaction createTx; //the token creation tx
 	uint256 hashBlock, tokenid = zeroid, referenceTokenId;
 	CBlockIndex confHashBlock;
@@ -122,6 +110,23 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         }
     }
 
+	/*
+	Licensing validation
+	
+	if tokentype != 'a' && 'm' && 's':
+		invalidate (invalid tokentype)
+	else if tokentype == 'm' || 's':
+		if (CCduration(numblocks, reftokenid) > expiryTimeSec && expiryTimeSec != 0)
+			invalidate (expired)
+		if referenceTokenId == zeroid
+			invalidate (invalid reftokenid)
+		else if
+			!GetTX(referencetokenid) && 
+			DecodeTokenCreateOpret(referencetokenid,...,reftokentype) != 'c' &&
+			!((tokentype == 'm' && reftokentype == 'a') || (tokentype == 's' && reftokentype == 'm'))
+				invalidate (incorrect relation between tokencreate id and reftokenid)
+	*/
+	
     switch (funcid)
 	{
 		case 'c':
@@ -296,8 +301,8 @@ void FilterOutTokensUnspendablePk(const std::vector<CPubKey>& sourcePubkeys, std
     for (auto pk : sourcePubkeys)
         if (pk != tokensUnspendablePk)
             destPubkeys.push_back(pk);
-		else
-			std::cerr << "Removed unspendable pk from destpubkey array" << std::endl;
+		//else
+		//	std::cerr << "Removed unspendable pk from destpubkey array" << std::endl;
 }
 
 void FilterOutNonCCOprets(const std::vector<std::pair<uint8_t, vscript_t>>& oprets, vscript_t& vopret)
@@ -546,8 +551,6 @@ bool IsTokenMarkerVout(CTxOut vout)
 {
     struct CCcontract_info *cpTokens, CCtokens_info;
     cpTokens = CCinit(&CCtokens_info, EVAL_TOKENS);
-	/*if (IsTokenBatonVout(vout))
-			return true;*/
     return vout == MakeCC1vout(EVAL_TOKENS, vout.nValue, GetUnspendable(cpTokens, NULL));
 }
 
@@ -875,12 +878,8 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
 		txBaton.vout[2].nValue == 10000))
 	{
-		//std::cerr << "couldn't verify that token create baton exists" << std::endl;
 		return 0;
 	}
-	
-	//std::cerr << "verified token create baton existence" << std::endl;
-
 	// find an update tx which spent the token create baton vout, if it exists
 	if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
 		GetTransaction(batontxid, txBaton, hashBlock, true) &&
@@ -894,7 +893,6 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	else
 	{
 		latesttxid = sourcetxid;
-		//std::cerr << "latest txid is tokenid" << std::endl;
 		return 1;
 	}
 	
@@ -903,7 +901,6 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	// baton vout should be vout0 from now on
 	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
 	{
-		//std::cerr << "found a txid that spent the baton" << std::endl;
 		if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
 			!hashBlock.IsNull() &&                           // tx not in mempool
 			txBaton.vout.size() > 0 &&             
@@ -914,12 +911,10 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 		}
 		else
 		{
-			//std::cerr << "baton tx validation fail" << std::endl;
 			return 0;
 		}
 		latesttxid = sourcetxid;
 	}
-	//std::cerr << "returning latesttxid" << std::endl;
 	return 1;
 }
 
@@ -1141,7 +1136,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
 		if (makeCCopret(batonopret, vData))
 		{
-			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, GetUnspendable(cp, NULL)/*mypk*/, &vData));
+			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, GetUnspendable(cp, NULL), &vData));
 			//fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
 			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenUpdateOpRet(Mypubkey(), tokenid)));
 		}
