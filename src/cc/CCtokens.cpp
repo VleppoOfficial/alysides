@@ -168,6 +168,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//vout.1 to n-2: normal output for change (if any)
 			//vout.n-1: opreturn EVAL_TOKENS 'u' pk tokenid
 			
+			std::cerr << "Entered token update validation!" << std::endl;
 			//validation coming soon...
 			break;
 			
@@ -237,7 +238,7 @@ uint8_t ValidateTokenOpret(CTransaction tx, uint256 tokenid)
     uint256 tokenidOpret = zeroid;
     uint8_t funcid;
     uint8_t dummyEvalCode;
-    std::vector<CPubKey> voutPubkeysDummy;
+    //std::vector<CPubKey> voutPubkeysDummy;
     std::vector<std::pair<uint8_t, vscript_t>> opretsDummy;
 
     // this is just for log messages indentation fur debugging recursive calls:
@@ -246,7 +247,7 @@ uint8_t ValidateTokenOpret(CTransaction tx, uint256 tokenid)
     if (tx.vout.size() == 0)
         return (uint8_t)0;
 
-    if ((funcid = DecodeTokenOpRet(tx.vout.back().scriptPubKey, dummyEvalCode, tokenidOpret, voutPubkeysDummy, opretsDummy)) == 0) {
+    if ((funcid = DecodeTokenOpRet(tx.vout.back().scriptPubKey, dummyEvalCode, tokenidOpret, /*voutPubkeysDummy, */opretsDummy)) == 0) {
         LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << indentStr << "ValidateTokenOpret() DecodeTokenOpret could not parse opret for txid=" << tx.GetHash().GetHex() << std::endl);
         return (uint8_t)0;
     } else if (funcid == 'c') {
@@ -380,7 +381,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
             std::vector<std::pair<CTxOut, std::string>> testVouts;
 
 			//DecodeTokenTransferOneOpRet used here since destpubkey array is expected to be returned
-			DecodeTokenTransferOneOpRet(tx.vout.back().scriptPubKey, /*dummyEvalCode, */tokenIdOpret, voutPubkeysInOpret, oprets);
+			DecodeTokenTransferOneOpRet(tx.vout.back().scriptPubKey, tokenIdOpret, voutPubkeysInOpret, oprets);
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << "IsTokensvout() oprets.size()=" << oprets.size() << std::endl);
 
             // get assets/channels/gateways token data:
@@ -1173,8 +1174,6 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		if (GetTransaction(tokenid, txBaton, hashBlock, true) &&
 		!hashBlock.IsNull() &&
 		txBaton.vout.size() > 2 &&
-		//DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)
-		//(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
 		(funcId = DecodeTokenCreateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription)) == 'c' &&
 		txBaton.vout[2].nValue == 10000 &&
 		getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
@@ -1197,7 +1196,6 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			return (result);
 		}
 		
-		//std::cerr << "verified token create baton existence" << std::endl;
 		if (!(total < samplenum || samplenum == 0))
 			return (result);
 
@@ -1207,12 +1205,10 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			!hashBlock.IsNull() &&
 			txBaton.vout.size() > 0 &&
 			txBaton.vout[0].nValue == 10000 &&
-			//(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' &&
 			(funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' &&
 			getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
 			(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
 		{
-			//std::cerr << "found a txid that spent the tokencreate baton" << std::endl;
 			total++;
 			UniValue data(UniValue::VOBJ);
 			data.push_back(Pair("updaterPubkey", HexStr(updaterPubkey))); 
@@ -1226,7 +1222,6 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		}
 		else
 		{
-			//std::cerr << "no further updates from tokencreate found" << std::endl;
 			return (result);
 		}
 	
@@ -1236,12 +1231,10 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		// baton vout should be vout0 from now on
 		while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
 		{
-			//std::cerr << "found a txid that spent the baton" << std::endl;
 			if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
 				!hashBlock.IsNull() &&                           // tx not in mempool
 				txBaton.vout.size() > 0 &&             
 				txBaton.vout[0].nValue == 10000 &&     // check baton fee 
-				//(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' &&
 				(funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' && // decode opreturn
 				getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
 				(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
@@ -1277,15 +1270,12 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			return (result);
 		}
 		sourcetxid = latesttxid;
-		//std::cerr << "Got latest update: " << sourcetxid.GetHex() << std::endl;
 		while (sourcetxid != tokenid)
 		{
-			//std::cerr << "current txid " << sourcetxid.GetHex() << std::endl;
 			if (GetTransaction(sourcetxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
 				!hashBlock.IsNull() &&                           // tx not in mempool
 				txBaton.vout.size() > 0 &&             
 				txBaton.vout[0].nValue == 10000 &&     // check baton fee 
-				//(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' && 
 				(funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' && // decode opreturn
 				getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
 				(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
@@ -1299,8 +1289,6 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				if (!message.empty())
 					data.push_back(Pair("message", message));
 				result.push_back(Pair(sourcetxid.GetHex(), data));
-				//sourcetxid = batontxid;
-				//continue;
 			}
 			else
 			{
@@ -1311,7 +1299,6 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				break;
 			if (GetTransaction((batontxid = txBaton.vin[1].prevout.hash), txBaton, hashBlock) && !hashBlock.IsNull())
 			{
-				//std::cerr << "prev txid " << batontxid.GetHex() << std::endl;
 				sourcetxid = batontxid;
 			}
 		}
@@ -1323,7 +1310,6 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			if (GetTransaction(sourcetxid, txBaton, hashBlock, true) &&
 			!hashBlock.IsNull() &&
 			txBaton.vout.size() > 2 &&
-			//(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
 			(funcId = DecodeTokenCreateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription)) == 'c' &&
 			txBaton.vout[2].nValue == 10000 &&
 			getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
