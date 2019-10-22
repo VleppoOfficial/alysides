@@ -145,7 +145,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//vout.n-1: opreturn EVAL_TOKENS 't' tokenid <other contract payload>
 			//Check if token amount is the same in vins and vouts of tx
 			
-			std::cerr << "token transfer DETECTED" << std::endl;
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
 			
@@ -304,9 +303,10 @@ void FilterOutNonCCOprets(const std::vector<std::pair<uint8_t, vscript_t>>& opre
 {
     vopret.clear();
 
-    if (oprets.size() > 2)
-        //LOGSTREAM("cctokens", CCLOG_INFO, stream << "FilterOutNonCCOprets() warning!! oprets.size > 2 currently not supported" << oprets.size() << std::endl);
+    if (oprets.size() > 2) {
+        LOGSTREAM("cctokens", CCLOG_INFO, stream << "FilterOutNonCCOprets() warning!! oprets.size > 2 currently not supported" << oprets.size() << std::endl);
 		std::cerr << "FilterOutNonCCOprets() warning!! oprets.size > 2 currently not supported" << oprets.size() << std::endl;
+	}
 
     for (auto o : oprets) {
         if (o.first < OPRETID_FIRSTNONCCDATA) { // skip burn, import, etc opret data
@@ -350,12 +350,10 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                 // if ccInputs != ccOutputs and it is not the tokenbase tx
                 // this means it is possibly a fake tx (dimxy):
 				
-				std::cerr << indentStr << "vout" << v << " has unequal cc inputs/outputs" << std::endl;
-				
+				//std::cerr << indentStr << "vout" << v << " has unequal cc inputs/outputs" << std::endl;
                 if (reftokenid != tx.GetHash()) { // checking that this is the true tokenbase tx, by verifying that funcid=c, is done further in this function (dimxy)
 					
-					std::cerr << indentStr << "vout" << v << " has is not tokencreate tx, returning 0" << std::endl;
-					
+					//std::cerr << indentStr << "vout" << v << " has is not tokencreate tx, returning 0" << std::endl;
                     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << indentStr << "IsTokensvout() warning: for the verified tx detected a bad vintx=" << tx.GetHash().GetHex() << ": cc inputs != cc outputs and not the 'tokenbase' tx, skipping the verified tx" << std::endl);
                     return 0;
                 }
@@ -381,8 +379,6 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
             // test vouts for possible token use-cases:
             std::vector<std::pair<CTxOut, std::string>> testVouts;
 
-            //DecodeTokenOpRet(tx.vout.back().scriptPubKey, dummyEvalCode, tokenIdOpret, voutPubkeysInOpret, oprets);
-			
 			//DecodeTokenTransferOneOpRet used here since destpubkey array is expected to be returned
 			DecodeTokenTransferOneOpRet(tx.vout.back().scriptPubKey, /*dummyEvalCode, */tokenIdOpret, voutPubkeysInOpret, oprets);
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << "IsTokensvout() oprets.size()=" << oprets.size() << std::endl);
@@ -565,7 +561,7 @@ bool IsTokenBatonVout(CTxOut vout)
 		getCCopret(vout.scriptPubKey, opret) &&
 		(DecodeTokenUpdateCCOpRet(opret, assetHash, value, ccode, message) == 'u'))
 	{
-		std::cerr << "Located a baton vout" << std::endl;
+		//std::cerr << "Located a baton vout" << std::endl;
 		return true;
 	}
 	return false;
@@ -616,7 +612,7 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
     {
         LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << indentStr << "TokenExactAmounts() recursively checking tx.vout[" << i << "] nValue=" << tx.vout[i].nValue << std::endl);
 
-		std::cerr << "TokenExactAmounts() recursively checking txid[" << tx.GetHash().GetHex() << "].vout[" << i << "] nValue=" << tx.vout[i].nValue << std::endl; //dan
+		//std::cerr << "TokenExactAmounts() recursively checking txid[" << tx.GetHash().GetHex() << "].vout[" << i << "] nValue=" << tx.vout[i].nValue << std::endl; //dan
 		
         // Note: we pass in here IsTokenvout(false,...) because we don't need to call TokenExactAmounts() recursively from IsTokensvout here
         // indeed, if we pass 'true' we'll be checking this tx vout again
@@ -624,7 +620,7 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
         tokenoshis = IsTokensvout(false /*<--do not recursion here*/, true /*<--exclude non-tokens vouts*/, cpTokens, eval, tx, i, reftokenid);
         tokenValIndentSize--;
 
-		std::cerr << "received tokenoshis value=" << tokenoshis << std::endl; //dan
+		//std::cerr << "received tokenoshis value=" << tokenoshis << std::endl; //dan
 		
         if (tokenoshis != 0) {
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG1, stream << indentStr << "TokensExactAmounts() adding tx.vout[" << i << "] tokenoshis=" << tokenoshis << std::endl);
@@ -637,7 +633,7 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
     if (inputs != outputs) {
         if (tx.GetHash() != reftokenid)
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG1, stream << indentStr << "TokenExactAmounts() found unequal token cc inputs=" << inputs << " vs cc outputs=" << outputs << " for txid=" << tx.GetHash().GetHex() << " and this is not the create tx" << std::endl);
-        fprintf(stderr,"inputs %llu vs outputs %llu\n",(long long)inputs,(long long)outputs);
+        //fprintf(stderr,"inputs %llu vs outputs %llu\n",(long long)inputs,(long long)outputs);
         return false; // do not call eval->Invalid() here!
     } else
         return true;
