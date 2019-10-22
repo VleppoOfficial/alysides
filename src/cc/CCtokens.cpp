@@ -1160,11 +1160,12 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
     int64_t total = 0LL, amount, value;
     int32_t vini, height, retcode;
 	std::vector<std::pair<uint8_t, vscript_t>> oprets;
-    uint256 batontxid, sourcetxid = tokenid, latesttxid, assetHash, hashBlock;
+	std::vector<uint8_t> updaterPubkey;
+    uint256 batontxid, sourcetxid = tokenid, latesttxid, assetHash, hashBlock, tokenIdInOpret;
 	CTransaction txBaton;
     uint8_t funcId, evalcode;
 	CScript batonopret;
-	std::string ccode, message;
+	std::string ccode, message, dummyName, origdescription;
 
 	if (recursive == 0) //from earliest to latest
 	{
@@ -1172,18 +1173,21 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		if (GetTransaction(tokenid, txBaton, hashBlock, true) &&
 		!hashBlock.IsNull() &&
 		txBaton.vout.size() > 2 &&
-		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
+		//DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)
+		//(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
+		(funcId = DecodeTokenCreateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription)) == 'c' &&
 		txBaton.vout[2].nValue == 10000 &&
 		getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
 		(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
 		{
 				total++;
 				UniValue data(UniValue::VOBJ);
+				data.push_back(Pair("creatorPubkey", HexStr(updaterPubkey))); 
 				data.push_back(Pair("assetHash", assetHash.GetHex())); 
 				data.push_back(Pair("value", (double)value/COIN));
 				data.push_back(Pair("ccode", ccode));
-				if (!message.empty())
-					data.push_back(Pair("message", message));
+				if (!origdescription.empty())
+					data.push_back(Pair("description", origdescription));
 				result.push_back(Pair(tokenid.GetHex(), data));
 		}
 		else
@@ -1203,13 +1207,15 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			!hashBlock.IsNull() &&
 			txBaton.vout.size() > 0 &&
 			txBaton.vout[0].nValue == 10000 &&
-			(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' &&
+			//(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' &&
+			(funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' &&
 			getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
 			(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
 		{
 			//std::cerr << "found a txid that spent the tokencreate baton" << std::endl;
 			total++;
 			UniValue data(UniValue::VOBJ);
+			data.push_back(Pair("updaterPubkey", HexStr(updaterPubkey))); 
 			data.push_back(Pair("assetHash", assetHash.GetHex()));
 			data.push_back(Pair("value", (double)value/COIN));
 			data.push_back(Pair("ccode", ccode));
@@ -1235,12 +1241,14 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				!hashBlock.IsNull() &&                           // tx not in mempool
 				txBaton.vout.size() > 0 &&             
 				txBaton.vout[0].nValue == 10000 &&     // check baton fee 
-				(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' && // decode opreturn
+				//(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' &&
+				(funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' && // decode opreturn
 				getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
 				(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
 			{
 				total++;
 				UniValue data(UniValue::VOBJ);
+				data.push_back(Pair("updaterPubkey", HexStr(updaterPubkey))); 
 				data.push_back(Pair("assetHash", assetHash.GetHex()));
 				data.push_back(Pair("value", (double)value/COIN));
 				data.push_back(Pair("ccode", ccode));
@@ -1277,12 +1285,14 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				!hashBlock.IsNull() &&                           // tx not in mempool
 				txBaton.vout.size() > 0 &&             
 				txBaton.vout[0].nValue == 10000 &&     // check baton fee 
-				(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' && // decode opreturn
+				//(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u' && 
+				(funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' && // decode opreturn
 				getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
 				(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
 			{
 				total++;
 				UniValue data(UniValue::VOBJ);
+				data.push_back(Pair("updaterPubkey", HexStr(updaterPubkey))); 
 				data.push_back(Pair("assetHash", assetHash.GetHex()));
 				data.push_back(Pair("value", (double)value/COIN));
 				data.push_back(Pair("ccode", ccode));
@@ -1313,18 +1323,20 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			if (GetTransaction(sourcetxid, txBaton, hashBlock, true) &&
 			!hashBlock.IsNull() &&
 			txBaton.vout.size() > 2 &&
-			(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
+			//(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
+			(funcId = DecodeTokenCreateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription)) == 'c' &&
 			txBaton.vout[2].nValue == 10000 &&
 			getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
 			(funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
 			{
 				total++;
 				UniValue data(UniValue::VOBJ);
+				data.push_back(Pair("creatorPubkey", HexStr(updaterPubkey))); 
 				data.push_back(Pair("assetHash", assetHash.GetHex()));
 				data.push_back(Pair("value", (double)value/COIN));
 				data.push_back(Pair("ccode", ccode));
 				if (!message.empty())
-					data.push_back(Pair("message", message));
+					data.push_back(Pair("description", origdescription));
 				result.push_back(Pair(tokenid.GetHex(), data));
 			}
 			else
