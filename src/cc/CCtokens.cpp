@@ -1335,7 +1335,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				data.push_back(Pair("assetHash", assetHash.GetHex()));
 				data.push_back(Pair("value", (double)value/COIN));
 				data.push_back(Pair("ccode", ccode));
-				if (!message.empty())
+				if (!origdescription.empty())
 					data.push_back(Pair("description", origdescription));
 				result.push_back(Pair(tokenid.GetHex(), data));
 			}
