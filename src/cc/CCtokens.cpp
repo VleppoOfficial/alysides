@@ -954,7 +954,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid, Eval* eval)
 		!hashBlock.IsNull() &&
 		txBaton.vout.size() > 2 &&
 		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
-		txBaton.vout[2].nValue == 10000))
+		txBaton.vout[2].nValue == 10000)
 	{
 		return 0;
 	}
