@@ -154,25 +154,29 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 				return eval->Invalid("no token inputs for transfer");
 			
 			// Tokencreate baton vout cannot be spent by transfer
+			std::cerr << "Entering GetLatestTokenUpdate..." << std::endl;
 			if(GetLatestTokenUpdate(tokenid, latesttxid))
 			{
+				std::cerr << "latesttxid= " << latesttxid.GetHex() << std::endl;
 				if(latesttxid == tokenid)
 				{
+					std::cerr << "latesttxid is tokenid " << std::endl;
 					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 2) == 0 && 
 						spentbatontxid == tx.GetHash())
 						return eval->Invalid("attempting to spend update batonvout in non-update tx");
+					std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
 				}
 				else
 				{
+					std::cerr << "latesttxid is not tokenid " << std::endl;
 					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 0) == 0 && 
 						spentbatontxid == tx.GetHash())
 						return eval->Invalid("attempting to spend update batonvout in non-update tx");
+					std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
 				}
 			}
 			else
 				return eval->Invalid("error in update batonvout validation");
-			
-			std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
 			
 			// retrieving destpubkey(s)
 			if (DecodeTokenTransferOneOpRet(tx.vout[numvouts - 1].scriptPubKey, tokenid, voutTokenPubkeys, oprets) != 't')
