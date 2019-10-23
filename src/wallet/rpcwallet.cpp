@@ -5913,6 +5913,19 @@ UniValue tokenaddress(const UniValue& params, bool fHelp)
         pubkey = ParseHex(params[0].get_str().c_str());
     return(CCaddress(cp,(char *)"Tokens", pubkey));
 }
+UniValue agreementaddress(const UniValue& params, bool fHelp) //new agreement
+{
+    struct CCcontract_info *cp, C;
+    std::vector<unsigned char> pubkey;
+    cp = CCinit(&C, EVAL_AGREEMENTS);
+    if (fHelp || params.size() > 1)
+        throw runtime_error("agreementaddress [pubkey]\n");
+    if (ensure_CCrequirements(0) < 0)
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    if (params.size() == 1)
+        pubkey = ParseHex(params[0].get_str().c_str());
+    return (CCaddress(cp, (char*)"Agreements", pubkey));
+}
 
 UniValue importgatewayaddress(const UniValue& params, bool fHelp)
 {
