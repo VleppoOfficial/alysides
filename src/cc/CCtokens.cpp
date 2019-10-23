@@ -49,7 +49,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         return true;
 
 	CTransaction createTx, prevCreateTx; //the token creation tx
-	uint256 hashBlock, tokenid = zeroid, referenceTokenId, dummyRefTokenId, spentbatontxid;
+	uint256 hashBlock, tokenid = zeroid, referenceTokenId, dummyRefTokenId, latesttxid, spentbatontxid;
 	CBlockIndex confHashBlock;
 	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(), numblocks, vini, height; //the amount of vins and vouts in tx
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
