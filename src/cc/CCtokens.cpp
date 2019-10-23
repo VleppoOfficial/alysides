@@ -78,10 +78,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	
     else if (funcid != 'c')
 	{
-		//Check if tokenid isn't just a bunch of zeros
         if (tokenid == zeroid)
             return eval->Invalid("illegal tokenid");
-		//Check if token amount is the same in vins and vouts of tx
         else if (!TokensExactAmounts(true, cp, inputs, outputs, eval, tx, tokenid))
 		{
             if (!eval->Valid())
@@ -153,15 +151,24 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
 			
+			for (int32_t i = 0; i < numvins; i++)
+			{
+				if(IsTokenBatonVout(tx.vin[i].prevout))
+				{
+					return eval->Invalid("attempting to spend update batonvout in non-update tx");
+				}
+				std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevouthash.GetHex() << std::endl;
+			}
 			// Tokencreate baton vout cannot be spent by transfer
-			std::cerr << "Entering GetLatestTokenUpdate..." << std::endl;
+			/*std::cerr << "Entering GetLatestTokenUpdate..." << std::endl;
 			if(GetLatestTokenUpdate(tokenid, latesttxid))
 			{
 				std::cerr << "latesttxid= " << latesttxid.GetHex() << std::endl;
 				if(latesttxid == tokenid)
 				{
 					std::cerr << "latesttxid is tokenid " << std::endl;
-					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 2) == 0 && 
+					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 2) == 0 && //<- this doesn't work, needs to be able to check mempool
+					tx.vin[2].prevout.hash
 						spentbatontxid == tx.GetHash())
 						return eval->Invalid("attempting to spend update batonvout in non-update tx");
 					std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
@@ -169,14 +176,14 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 				else
 				{
 					std::cerr << "latesttxid is not tokenid " << std::endl;
-					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 0) == 0 && 
+					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 0) == 0 && //<- this doesn't work, needs to be able to check mempool
 						spentbatontxid == tx.GetHash())
 						return eval->Invalid("attempting to spend update batonvout in non-update tx");
 					std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
 				}
 			}
 			else
-				return eval->Invalid("error in update batonvout validation");
+				return eval->Invalid("error in update batonvout validation");*/
 			
 			// retrieving destpubkey(s)
 			if (DecodeTokenTransferOneOpRet(tx.vout[numvouts - 1].scriptPubKey, tokenid, voutTokenPubkeys, oprets) != 't')
@@ -208,15 +215,19 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if license:
 				other stuff
 			*/
+			
+			if (inputs != 0)
+				return eval->Invalid("update tx cannot have token inputs");
+			
 			// Does this work?
-			std::cerr << "Entering GetLatestTokenUpdate..." << std::endl;
+			/*std::cerr << "Entering GetLatestTokenUpdate..." << std::endl;
 			if(GetLatestTokenUpdate(tokenid, latesttxid))
 			{
 				std::cerr << "latesttxid= " << latesttxid.GetHex() << std::endl;
 				if(latesttxid == tokenid)
 				{
 					std::cerr << "latesttxid is tokenid " << std::endl;
-					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 2) == 0 && 
+					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 2) == 0 &&  //<- this doesn't work, needs to be able to check mempool
 						spentbatontxid == tx.GetHash())
 						return eval->Invalid("attempting to spend update batonvout in update tx");
 					std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
@@ -224,14 +235,14 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 				else
 				{
 					std::cerr << "latesttxid is not tokenid " << std::endl;
-					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 0) == 0 && 
+					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 0) == 0 && //<- this doesn't work, needs to be able to check mempool
 						spentbatontxid == tx.GetHash())
 						return eval->Invalid("attempting to spend update batonvout in update tx");
 					std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
 				}
 			}
 			else
-				return eval->Invalid("error in update batonvout validation");
+				return eval->Invalid("error in update batonvout validation");*/
 			
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token update preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
 			break;
