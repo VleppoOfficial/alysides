@@ -220,7 +220,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			
 			// Does this work?
 			std::cerr << "Entering GetLatestTokenUpdate..." << std::endl;
-			if(GetLatestTokenUpdate(tokenid, latesttxid))
+			if(GetLatestTokenUpdate(tokenid, latesttxid, eval))
 			{
 				std::cerr << "latesttxid= " << latesttxid.GetHex() << std::endl;
 				if(latesttxid == tokenid)
