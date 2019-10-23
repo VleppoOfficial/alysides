@@ -235,12 +235,26 @@ uint8_t TokensCCpriv[32] = { 0x1d, 0x0d, 0x0d, 0xce, 0x2d, 0xd2, 0xe1, 0x9d, 0xf
 
 #define FUNCNAME IsCClibInput
 #define EVALCODE EVAL_FIRSTUSER
-const char *CClibNormaladdr = "RVVeUg43rNcq3mZFnvZ8yqagyzqFgUnq4u";
-char CClibCChexstr[67] = { "032447d97655da079729dc024c61088ea415b22f4c15d4810ddaf2069ac6468d2f" };
+const char *CClibNormaladdr = "RR6kAB2oLWBU3qC3ZGAbNsqLiUKhtVZ95j";
+char CClibCChexstr[67] = { "023717ff480cc881a9e7581c70c4f2d9a8b879600251dba526586096a603d07d6d" };
 uint8_t CClibCCpriv[32] = { 0x57, 0xcf, 0x49, 0x71, 0x7d, 0xb4, 0x15, 0x1b, 0x4f, 0x98, 0xc5, 0x45, 0x8d, 0x26, 0x52, 0x4b, 0x7b, 0xe9, 0xbd, 0x55, 0xd8, 0x20, 0xd6, 0xc4, 0x82, 0x0f, 0xf5, 0xec, 0x6c, 0x1c, 0xa0, 0xc0 };
 #include "CCcustom.inc"
 #undef FUNCNAME
 #undef EVALCODE
+
+//Agreements
+#define FUNCNAME IsAgreementsInput
+#define EVALCODE EVAL_AGREEMENTS
+const char* AgreementsCCaddr = "RXhqnWiuRKVC1hnrMpU8snquvLJpvD5mUH";
+const char* AgreementsNormaladdr = "RJANYgW7ckuedzKjM2ZGySoFUTtzVtSuzx";
+char AgreementsCChexstr[67] = { "0278fe169c72d081aab9a76708cacfc71e4a6e421aadf2cdd342bab32efc09cd7a" };
+uint8_t AgreementsCCpriv[32] = { 0xa2, 0x30, 0xe9, 0x64, 0x48, 0x6c, 0x67, 0x75, 0x44, 0x4e, 0xf7, 0x4e, 0x7c, 0x06, 0x00, 0x29, 0x85, 0x87, 0xe1, 0x5d, 0x93, 0x88, 0x2c, 0x5f, 0x49, 0x47, 0xf0, 0x78, 0x8e, 0x36, 0x47, 0x19 };
+#include "CCcustom.inc"
+#undef FUNCNAME
+#undef EVALCODE
+
+
+
 
 // ImportGateway
 #define FUNCNAME IsImportGatewayInput
@@ -435,6 +449,16 @@ struct CCcontract_info *CCinit(struct CCcontract_info *cp, uint8_t evalcode)
 			cp->validate = TokensValidate;
 			cp->ismyvin = IsTokensInput;
 			break;
+
+        case EVAL_AGREEMENTS:
+            strcpy(cp->unspendableCCaddr, AgreementsCCaddr);
+            strcpy(cp->normaladdr, AgreementsNormaladdr);
+            strcpy(cp->CChexstr, AgreementsCChexstr);
+            memcpy(cp->CCpriv, AgreementsCCpriv, 32);
+            cp->validate = ImportGatewayValidate; // <- for now, use any existing validation code
+            cp->ismyvin = IsAgreementsInput;
+            break;
+
         case EVAL_IMPORTGATEWAY:
 			strcpy(cp->unspendableCCaddr, ImportGatewayCCaddr);
 			strcpy(cp->normaladdr, ImportGatewayNormaladdr);
