@@ -119,7 +119,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			return eval->Invalid("license token is expired");
 		if (referenceTokenId == zeroid)
 			return eval->Invalid("license reftokenid is null");
-		else if ((eval->GetTxUnconfirmed(referenceTokenId, prevCreateTx, hashBlock) == 0 || !myGetTransaction(referenceTokenId, prevCreateTx, hashBlock)) &&
+		else if ((eval->GetTxUnconfirmed(referenceTokenId, prevCreateTx, hashBlock) == 0 || !myGetTransaction(referenceTokenId, prevCreateTx, hashBlock)) ||
 			//DecodeTokenCreateOpRet(prevCreateTx.vout[prevCreateTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, ownerPerc, refTokenType, dummyRefTokenId, expiryTimeSec)
 			DecodeTokenCreateOpRet(prevCreateTx.vout[prevCreateTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, ownerPerc, refTokenType, dummyRefTokenId, expiryTimeSec, refoprets) != 'c')
 			return eval->Invalid("couldn't find and decode reftokenid transaction for license");
