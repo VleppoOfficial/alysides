@@ -1,88 +1,179 @@
 #include "CCagreement.h"
 
-//opret encode / decode
-CScript custom_opret(uint8_t funcid, CPubKey pk)
+//Encoder for Proposals
+CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash)
 {
     CScript opret;
-    uint8_t evalcode = EVAL_CUSTOM;
-    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << pk);
+    uint8_t evalcode = EVAL_AGREEMENT;
+    uint8_t funcid = 'p'; // override the param
+
+
+
+    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << duration << assetHash);
+
+    //kig på dette
+    for (auto o : oprets) {
+           if (o.first != 0) {
+               ss << (uint8_t)o.first;
+               ss << o.second;
+           }
+       });
+
     return (opret);
 }
 
-uint8_t custom_opretdecode(CPubKey& pk, CScript scriptPubKey)
+//Decoder for Proposals
+uint8_t DecodeInitialProposalOpret(const CScript& scriptPubKey, std::vector<uint8_t>& origpubkey, int64_t& duration, uint256& assetHash, std::vector<std::pair<uint8_t, vscript_t>>& oprets)
 {
-    std::vector<uint8_t> vopret;
-    uint8_t e, f;
+    std::vector<uint8_t> vopret, vblob;
+    uint8_t dummyEvalcode, funcid, opretId = 0;
+
     GetOpReturnData(scriptPubKey, vopret);
-    if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> e; ss >> f; ss >> pk) != 0 && e == EVAL_CUSTOM) {
-        return (f);
+    oprets.clear();
+    if (vopret.size() > 2 && vopret.begin()[0] == EVAL_AGREEMENTS && vopret.begin()[1] == 'p')
+	{
+        if (E_UNMARSHAL(
+                vopret, ss >> dummyEvalcode; ss >> funcid; ss >> origpubkey; ss >> duration; ss >> assetHash;
+                while (!ss.eof()) 
+				{
+                    ss >> opretId;
+                    if (!ss.eof())
+					{
+                        ss >> vblob;
+                        oprets.push_back(std::make_pair(opretId, vblob));
+                    }
+                }))
+            /* if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> e; ss >> f; ss >> pk) != 0 && e == EVAL_AGREEMENTS) {
+            return (funcid);*/ //det er måske denne her der skal bruges
+        {
+            return (0);
+        }
     }
-    return (0);
+    LOGSTREAM((char*)"ccagreements", CCLOG_INFO, stream << "DecodeInitialProposalOpret() incorrect proposal opret" << std::endl);
+    return (uint8_t)0;
 }
 
 
-//validate
+//validate - need moew work but isn't needed yet, but when work begins on the accepted proposal it will need to be implementet
 bool AgreementsValidate(struct CCcontract_info* cpAgreement, Eval* eval, const CTransaction& tx, uint32_t nIn)
 {
     int32_t numvins = tx.vin.size();
     int32_t numvouts = tx.vout.size();
 }
+
 // Create the InitialProposal
-std::string InitialProposal(int64_t txfee, int64_t duration, uint256 assetHash )
+std::string InitialProposal(int64_t txfee, int64_t duration, uint256 assetHash)
 {
-
-
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
     struct CCcontract_info *cp, C;
-    cp = CCinit(&C, EVAL_TOKENS);
+    cp = CCinit(&C, EVAL_AGREEMENTS);
 
     if (txfee == 0)
         txfee = 10000;
 
-	CPubKey mypk = pubkey2pk(Mypubkey());
+    CPubKey mypk = pubkey2pk(Mypubkey());
 
 
+    // kig på dette
+    //We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
+    if (AddNormalinputs(mtx, mypk, tokensupply + 2 * txfee, 64) > 0) {
+        // TotalPubkeyNormalInputs returns total of normal inputs signed with this pubkey
+        int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
+        if (mypkInputs < tokensupply) {
+            // check that tokens amount are really issued with mypk (because in the wallet there maybe other privkeys)
+            CCerror = "some inputs signed not with -pubkey=pk";
+            return std::string("");
+        }
 
-// kig på dette
-if (AddNormalinputs(mtx, mypk, tokensupply + 2 * txfee, 64) > 0)
-{
-    int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
-    if (mypkInputs < tokensupply)
-	{
-        // check that tokens amount are really issued with mypk (because in the wallet there maybe other privkeys)
-        CCerror = "some inputs signed not with -pubkey=pk";
-        return std::string("");
+        //Eval code is EVAL_AGREEMENTS
+        uint8_t destEvalCode = EVAL_AGREEMENTS;
+
+        // NOTE: we should prevent spending fake-tokens from this marker in IsTokenvout():
+        //  mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, txfee, GetUnspendable(cp, NULL))); // new marker to token cc addr, burnable and validated, vout pos now changed to 0 (from 1)
+
+        //TODO: can mypk be changed to another pubkey without causing problems with validation and/or ownership?
+        //   mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, tokensupply, mypk));
+
+        return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeValidateProposalopret(Mypubkey(), duration, assetHash)));
     }
-    uint8_t destEvalCode = EVAL_TOKENS;
-    //If nonfungibleData exists, eval code is set to the one specified within nonfungibleData
-    if (nonfungibleData.size() > 0)
-        destEvalCode = nonfungibleData.begin()[0];
 
-    // vout0 is a marker vout
-    // NOTE: we should prevent spending fake-tokens from this marker in IsTokenvout():
-    mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL))); // new marker to token cc addr, burnable and validated, vout pos now changed to 0 (from 1)
-                                                                                   // vout1 issues the tokens to mypk
-    mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, tokensupply, mypk));
-    // vout2 is a baton vout containing arbitrary updatable data
-    CScript batonopret = EncodeTokenUpdateCCOpRet(assetHash, value, ccode, "");
-    std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
-    if (makeCCopret(batonopret, vData)) 
-	{
-        mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, 10000, GetUnspendable(cp, NULL), &vData)); // BATON_VOUT
-        //fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
-        return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet(Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
-    } else 
-	{
-        CCerror = "couldnt embed updatable data to baton vout";
-        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-        return std::string("");
-    }
-}
-CCerror = "cant find normal inputs";
-LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-return std::string("");
+    CCerror = "cant find normal inputs";
+    LOGSTREAM((char*)"ccagreements", CCLOG_INFO, stream << "InitialProposal() " << CCerror << std::endl);
+    return std::string("");
 }
 
-UniValue ProposalList()
+//ProposalInfo
+UniValue InitialProposalInfo(uint256 proposalid)
 {
+    UniValue result(UniValue::VOBJ);
+    std::vector<std::pair<uint8_t, vscript_t>> oprets;
+    uint256 hashBlock;
+    CTransaction proposalbaseTx;
+    int64_t duration;
+    uint256 assetHash;
+    struct CCcontract_info *cpProposal, proposalCCinfo;
+
+    cpProposal = CCinit(&proposalCCinfo, EVAL_AGREEMENTS);
+
+    if (!GetTransaction(tokenid, proposalbaseTx, hashBlock, false)) {
+        fprintf(stderr, "InitialProposalInfo() cant find proposalid\n");
+        result.push_back(Pair("result", "error"));
+        result.push_back(Pair("error", "cant find proposalid"));
+        return (result);
+    }
+
+    if (hashBlock.IsNull()) {
+        result.push_back(Pair("result", "error"));
+        result.push_back(Pair("error", "the transaction is still in mempool"));
+        return (result);
+    }
+
+    result.push_back(Pair("result", "success"));
+    result.push_back(Pair("proposalid", proposalid.GetHex()));
+    result.push_back(Pair("owner", HexStr(origpubkey)));
+
+    result.push_back(Pair("duration", duration));
+    result.push_back(Pair("assetHash", assetHash));
+
+    //maybe calculation for duration like we do with tokens expiretime
+
+    return result;
+}
+
+//ProposalList
+UniValue InitialProposalList()
+{
+    UniValue result(UniValue::VARR);
+    std::vector<std::pair<CAddressIndexKey, CAmount>> addressIndex;
+    std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue>> addressIndexCCMarker;
+
+    struct CCcontract_info *cp, C;
+    uint256 txid, hashBlock;
+    CTransaction vintx;
+    std::vector<uint8_t> origpubkey;
+    int64_t duration;
+    uint256 assetHash;
+
+
+    cp = CCinit(&C, EVAL_AGREEMENTS);
+
+    auto addProposalId = [&](uint256 txid) {
+        if (GetTransaction(txid, vintx, hashBlock, false) != 0) {
+            if (vintx.vout.size() > 0 && DecodeInitialProposalOpret(vintx.vout[vintx.vout.size() - 1].scriptPubKey, origpubkey, duration, assetHash) != 0) {
+                result.push_back(txid.GetHex());
+            }
+        }
+    };
+
+    SetCCtxids(addressIndex, cp->normaladdr, false); // find by old normal addr marker
+    for (std::vector<std::pair<CAddressIndexKey, CAmount>>::const_iterator it = addressIndex.begin(); it != addressIndex.end(); it++) {
+        addProposalId(it->first.txhash);
+    }
+
+    SetCCunspents(addressIndexCCMarker, cp->unspendableCCaddr, true); // find by burnable validated cc addr marker
+    for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue>>::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++) {
+        addProposalId(it->first.txhash);
+    }
+
+    return (result);
 }
