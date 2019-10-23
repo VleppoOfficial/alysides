@@ -76,10 +76,13 @@ std::string InitialProposal(int64_t txfee, int64_t duration, uint256 assetHash)
 
     // kig på dette
     //We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
-    if (AddNormalinputs(mtx, mypk, tokensupply + 2 * txfee, 64) > 0) {
+	// find the equlivant to tokensupply for proposal - also if it's even needed or if it can be removed/modified.
+    if (AddNormalinputs(mtx, mypk, tokensupply + 2 * txfee, 64) > 0)
+	{
         // TotalPubkeyNormalInputs returns total of normal inputs signed with this pubkey
         int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
-        if (mypkInputs < tokensupply) {
+        if (mypkInputs < tokensupply) 
+		{
             // check that tokens amount are really issued with mypk (because in the wallet there maybe other privkeys)
             CCerror = "some inputs signed not with -pubkey=pk";
             return std::string("");
@@ -87,12 +90,6 @@ std::string InitialProposal(int64_t txfee, int64_t duration, uint256 assetHash)
 
         //Eval code is EVAL_AGREEMENTS
         uint8_t destEvalCode = EVAL_AGREEMENTS;
-
-        // NOTE: we should prevent spending fake-tokens from this marker in IsTokenvout():
-        //  mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, txfee, GetUnspendable(cp, NULL))); // new marker to token cc addr, burnable and validated, vout pos now changed to 0 (from 1)
-
-        //TODO: can mypk be changed to another pubkey without causing problems with validation and/or ownership?
-        //   mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, tokensupply, mypk));
 
         return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeValidateProposalopret(Mypubkey(), duration, assetHash)));
     }
