@@ -123,7 +123,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//DecodeTokenCreateOpRet(prevCreateTx.vout[prevCreateTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, ownerPerc, refTokenType, dummyRefTokenId, expiryTimeSec)
 			DecodeTokenCreateOpRet(prevCreateTx.vout[prevCreateTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, ownerPerc, refTokenType, dummyRefTokenId, expiryTimeSec, refoprets) != 'c')
 			return eval->Invalid("couldn't find and decode reftokenid transaction for license");
-		std::cerr << "reftokenid=" << referenceTokenId.GetHex() << " prevcreatehash=" << prevCreateTx.GetHash().GetHex() << " tokentype=" << tokenType << " reftokentype=" << refTokenType << std::endl;
+		std::cerr << "refName=" << dummyName << " refDescription=" << dummyDescription << " tokentype=" << tokenType << " reftokentype=" << refTokenType << std::endl;
 		if (!((tokenType == "m" && refTokenType == "a") || (tokenType == "s" && refTokenType == "m")))
 			return eval->Invalid("incorrect relation between tokentype and reftokentype for license");
 	}
