@@ -153,7 +153,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			
 			// Tokencreate baton vout cannot be spent by transfer
 			std::cerr << "Entering GetLatestTokenUpdate..." << std::endl;
-			if(GetLatestTokenUpdate(tokenid, latesttxid))
+			if(GetLatestTokenUpdate(tokenid, latesttxid, eval))
 			{
 				std::cerr << "latesttxid= " << latesttxid.GetHex() << std::endl;
 				if(latesttxid == tokenid)
@@ -219,29 +219,37 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 				return eval->Invalid("update tx cannot have token inputs");
 			
 			// Does this work?
-			/*std::cerr << "Entering GetLatestTokenUpdate..." << std::endl;
+			std::cerr << "Entering GetLatestTokenUpdate..." << std::endl;
 			if(GetLatestTokenUpdate(tokenid, latesttxid))
 			{
 				std::cerr << "latesttxid= " << latesttxid.GetHex() << std::endl;
 				if(latesttxid == tokenid)
 				{
 					std::cerr << "latesttxid is tokenid " << std::endl;
-					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 2) == 0 &&  //<- this doesn't work, needs to be able to check mempool
-						spentbatontxid == tx.GetHash())
-						return eval->Invalid("attempting to spend update batonvout in update tx");
-					std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
+					for (int32_t i = 0; i < numvins; i++)
+					{
+						if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 2)
+						{
+							return eval->Invalid("attempting to spend update batonvout in non-update tx");
+						}
+						std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
+					}
 				}
 				else
 				{
 					std::cerr << "latesttxid is not tokenid " << std::endl;
-					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 0) == 0 && //<- this doesn't work, needs to be able to check mempool
-						spentbatontxid == tx.GetHash())
-						return eval->Invalid("attempting to spend update batonvout in update tx");
-					std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
+					for (int32_t i = 0; i < numvins; i++)
+					{
+						if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 0)
+						{
+							return eval->Invalid("attempting to spend update batonvout in non-update tx");
+						}
+						std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
+					}
 				}
 			}
 			else
-				return eval->Invalid("error in update batonvout validation");*/
+				return eval->Invalid("error in update batonvout validation");
 			
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token update preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
 			break;
@@ -932,7 +940,7 @@ double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid)
 
 // gets the latest baton txid of a token
 // used in validation, TokenUpdate and TokenViewUpdate's recursive mode
-bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
+bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid, Eval* eval)
 {
     int32_t vini, height, retcode;
 	std::vector<std::pair<uint8_t, vscript_t>> oprets;
@@ -941,7 +949,8 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
     uint8_t funcId, evalcode;
 
 	// special handling for token creation tx - in this tx, baton vout is vout2
-	if (!(myGetTransaction(tokenid, txBaton, hashBlock/*, true*/) &&
+	if (((eval && eval->GetTxUnconfirmed(tokenid, txBaton, hashBlock) == 0) || (!eval && !GetTransaction(tokenid, txBaton, hashBlock, true))) &&
+	//if (!(myGetTransaction(tokenid, txBaton, hashBlock, true) &&
 		!hashBlock.IsNull() &&
 		txBaton.vout.size() > 2 &&
 		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
@@ -951,7 +960,8 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	}
 	// find an update tx which spent the token create baton vout, if it exists
 	if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
-		myGetTransaction(batontxid, txBaton, hashBlock/*, true*/) &&
+		((eval && eval->GetTxUnconfirmed(tokenid, txBaton, hashBlock) != 0) || (!eval && GetTransaction(tokenid, txBaton, hashBlock, true))) &&
+		//myGetTransaction(batontxid, txBaton, hashBlock, true) &&
 		!hashBlock.IsNull() &&
 		txBaton.vout.size() > 0 &&
 		txBaton.vout[0].nValue == 10000 && 
@@ -970,7 +980,8 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	// baton vout should be vout0 from now on
 	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
 	{
-		if (myGetTransaction(batontxid, txBaton, hashBlock/*, true*/) &&  // load the transaction which spent the baton
+		if(((eval && eval->GetTxUnconfirmed(tokenid, txBaton, hashBlock) != 0) || (!eval && GetTransaction(tokenid, txBaton, hashBlock, true))) &&
+		//if (myGetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
 			!hashBlock.IsNull() &&                           // tx not in mempool
 			txBaton.vout.size() > 0 &&             
 			txBaton.vout[0].nValue == 10000 &&     // check baton fee 
@@ -1166,7 +1177,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         return std::string("");
     }*/
 	//getting the latest update txid (can be the same as tokenid)
-	if (!GetLatestTokenUpdate(tokenid, latesttxid))
+	if (!GetLatestTokenUpdate(tokenid, latesttxid, NULL))
 	{
         CCerror = "cannot find latest token update";
         return std::string("");
@@ -1327,7 +1338,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 	}
 	else //from latest to earliest
 	{
-		if (!GetLatestTokenUpdate(tokenid, latesttxid))
+		if (!GetLatestTokenUpdate(tokenid, latesttxid, NULL))
 		{
 			result.push_back(Pair("result", "error"));
 			result.push_back(Pair("error", "tokenid isnt token creation txid"));
