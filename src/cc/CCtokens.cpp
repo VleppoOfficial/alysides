@@ -59,7 +59,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
 	
 	uint8_t funcid, evalCodeInOpret; // the funcid and eval code embedded in the opret
-	std::vector<std::pair<uint8_t, vscript_t>> oprets; // additional data embedded in the opret
+	std::vector<std::pair<uint8_t, vscript_t>> oprets, refoprets; // additional data embedded in the opret
 	std::string dummyName, dummyDescription, tokenType, refTokenType;
 	double ownerPerc;
 
@@ -120,7 +120,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 		if (referenceTokenId == zeroid)
 			return eval->Invalid("license reftokenid is null");
 		else if ((eval->GetTxUnconfirmed(referenceTokenId, prevCreateTx, hashBlock) == 0 || !myGetTransaction(referenceTokenId, prevCreateTx, hashBlock)) &&
-			DecodeTokenCreateOpRet(prevCreateTx.vout[prevCreateTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, ownerPerc, refTokenType, dummyRefTokenId, expiryTimeSec) != 'c')
+			//DecodeTokenCreateOpRet(prevCreateTx.vout[prevCreateTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, ownerPerc, refTokenType, dummyRefTokenId, expiryTimeSec)
+			DecodeTokenCreateOpRet(prevCreateTx.vout[prevCreateTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, ownerPerc, refTokenType, dummyRefTokenId, expiryTimeSec, refoprets) != 'c')
 			return eval->Invalid("couldn't find and decode reftokenid transaction for license");
 		std::cerr << "reftokenid=" << referenceTokenId.GetHex() << " prevcreatehash=" << prevCreateTx.GetHash().GetHex() << " tokentype=" << tokenType << " reftokentype=" << refTokenType << std::endl;
 		if (!((tokenType == "m" && refTokenType == "a") || (tokenType == "s" && refTokenType == "m")))
