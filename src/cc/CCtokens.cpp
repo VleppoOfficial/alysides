@@ -1033,7 +1033,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         return ("");
     }
 	//Checking the estimated value
-    if (value < 0.00000001 && value != 0 )
+    if (value < 1 && value != 0 )
     {
         CCerror = "Estimated value must be positive and cannot be less than 1 satoshi if not 0";
         return std::string("");
@@ -1166,11 +1166,11 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         return std::string("");
     }
 	//checking if token is owned by mypk
-	/*if (ownedRefTokenPerc <= refOwnerPerc)
+	if (ownedRefTokenPerc <= refOwnerPerc)
 	{
         CCerror = "tokenid must be owned by this pubkey";
         return std::string("");
-    }*/
+    }
 	//getting the latest update txid (can be the same as tokenid)
 	if (!GetLatestTokenUpdate(tokenid, latesttxid))
 	{
@@ -1178,7 +1178,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         return std::string("");
     }
 	//Checking the estimated value
-    if (value < 0.00000001 && value != 0 )
+    if (value < 1 && value != 0 )
     {
         CCerror = "Estimated value must be positive and cannot be less than 1 satoshi if not 0";
         return std::string("");

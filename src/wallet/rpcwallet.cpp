@@ -7435,7 +7435,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
 	if (params.size() >= 6)
 	{
 		value = atof(params[5].get_str().c_str()) * COIN;
-		if (value < 0.00000001 && value != 0 )
+		if (value < 1 && value != 0 )
 		{
 			ERR_RESULT("Value cannot be less than 1 satoshi if it is not zero");
 			return(result);
@@ -7570,7 +7570,7 @@ UniValue tokenupdate(const UniValue& params, bool fHelp)
 	}
 	assethash = Parseuint256((char *)params[1].get_str().c_str()); //returns zeroid if empty or wrong length
 	value = atof(params[2].get_str().c_str()) * COIN;
-    if (value < 0.00000001 && value != 0 )
+    if (value < 1 && value != 0 )
 	{
 		ERR_RESULT("Value cannot be less than 1 satoshi if it is not zero");
 		return(result);
