@@ -154,8 +154,23 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 				return eval->Invalid("no token inputs for transfer");
 			
 			// Tokencreate baton vout cannot be spent by transfer
-			if(CCgetspenttxid(spentbatontxid, vini, height, tokenid, 2) == 0 && spentbatontxid == tx.GetHash())
-				return eval->Invalid("attempting to spend update batonvout in non-update tx");
+			if(GetLatestTokenUpdate(uint256 tokenid, latesttxid))
+			{
+				if(latesttxid == tokenid)
+				{
+					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 2) == 0 && 
+						spentbatontxid == tx.GetHash())
+						return eval->Invalid("attempting to spend update batonvout in non-update tx");
+				}
+				else
+				{
+					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 0) == 0 && 
+						spentbatontxid == tx.GetHash())
+						return eval->Invalid("attempting to spend update batonvout in non-update tx");
+				}
+			}
+			else
+				return eval->Invalid("error in update batonvout validation");
 			
 			std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
 			
@@ -877,7 +892,7 @@ double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid)
 }
 
 // gets the latest baton txid of a token
-// used in TokenUpdate and TokenViewUpdate's recursive mode
+// used in validation, TokenUpdate and TokenViewUpdate's recursive mode
 bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 {
     int32_t vini, height, retcode;
