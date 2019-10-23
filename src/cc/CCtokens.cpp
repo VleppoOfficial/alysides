@@ -151,42 +151,38 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
 			
-			/*CCoinsViewCache& view
-			const CTxOut &prevout = view.GetOutputFor(tx.vin[j]);*/
-			
-			for (int32_t i = 0; i < numvins; i++)
-			{
-				if(IsTokenBatonVout(tx.vin[i].prevout.n))
-				{
-					return eval->Invalid("attempting to spend update batonvout in non-update tx");
-				}
-				std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
-			}
 			// Tokencreate baton vout cannot be spent by transfer
-			/*std::cerr << "Entering GetLatestTokenUpdate..." << std::endl;
+			std::cerr << "Entering GetLatestTokenUpdate..." << std::endl;
 			if(GetLatestTokenUpdate(tokenid, latesttxid))
 			{
 				std::cerr << "latesttxid= " << latesttxid.GetHex() << std::endl;
 				if(latesttxid == tokenid)
 				{
 					std::cerr << "latesttxid is tokenid " << std::endl;
-					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 2) == 0 && //<- this doesn't work, needs to be able to check mempool
-					tx.vin[2].prevout.hash
-						spentbatontxid == tx.GetHash())
-						return eval->Invalid("attempting to spend update batonvout in non-update tx");
-					std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
+					for (int32_t i = 0; i < numvins; i++)
+					{
+						if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 2)
+						{
+							return eval->Invalid("attempting to spend update batonvout in non-update tx");
+						}
+						std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
+					}
 				}
 				else
 				{
 					std::cerr << "latesttxid is not tokenid " << std::endl;
-					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 0) == 0 && //<- this doesn't work, needs to be able to check mempool
-						spentbatontxid == tx.GetHash())
-						return eval->Invalid("attempting to spend update batonvout in non-update tx");
-					std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
+					for (int32_t i = 0; i < numvins; i++)
+					{
+						if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 0)
+						{
+							return eval->Invalid("attempting to spend update batonvout in non-update tx");
+						}
+						std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
+					}
 				}
 			}
 			else
-				return eval->Invalid("error in update batonvout validation");*/
+				return eval->Invalid("error in update batonvout validation");
 			
 			// retrieving destpubkey(s)
 			if (DecodeTokenTransferOneOpRet(tx.vout[numvouts - 1].scriptPubKey, tokenid, voutTokenPubkeys, oprets) != 't')
@@ -945,7 +941,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
     uint8_t funcId, evalcode;
 
 	// special handling for token creation tx - in this tx, baton vout is vout2
-	if (!(GetTransaction(tokenid, txBaton, hashBlock, true) &&
+	if (!(myGetTransaction(tokenid, txBaton, hashBlock/*, true*/) &&
 		!hashBlock.IsNull() &&
 		txBaton.vout.size() > 2 &&
 		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
@@ -955,7 +951,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	}
 	// find an update tx which spent the token create baton vout, if it exists
 	if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
-		GetTransaction(batontxid, txBaton, hashBlock, true) &&
+		myGetTransaction(batontxid, txBaton, hashBlock/*, true*/) &&
 		!hashBlock.IsNull() &&
 		txBaton.vout.size() > 0 &&
 		txBaton.vout[0].nValue == 10000 && 
@@ -974,7 +970,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	// baton vout should be vout0 from now on
 	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
 	{
-		if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
+		if (myGetTransaction(batontxid, txBaton, hashBlock/*, true*/) &&  // load the transaction which spent the baton
 			!hashBlock.IsNull() &&                           // tx not in mempool
 			txBaton.vout.size() > 0 &&             
 			txBaton.vout[0].nValue == 10000 &&     // check baton fee 
