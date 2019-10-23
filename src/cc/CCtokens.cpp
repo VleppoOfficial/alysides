@@ -154,7 +154,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 				return eval->Invalid("no token inputs for transfer");
 			
 			// Tokencreate baton vout cannot be spent by transfer
-			if(GetLatestTokenUpdate(uint256 tokenid, latesttxid))
+			if(GetLatestTokenUpdate(tokenid, latesttxid))
 			{
 				if(latesttxid == tokenid)
 				{
