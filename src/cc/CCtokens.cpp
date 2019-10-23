@@ -208,6 +208,31 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if license:
 				other stuff
 			*/
+			// Does this work?
+			std::cerr << "Entering GetLatestTokenUpdate..." << std::endl;
+			if(GetLatestTokenUpdate(tokenid, latesttxid))
+			{
+				std::cerr << "latesttxid= " << latesttxid.GetHex() << std::endl;
+				if(latesttxid == tokenid)
+				{
+					std::cerr << "latesttxid is tokenid " << std::endl;
+					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 2) == 0 && 
+						spentbatontxid == tx.GetHash())
+						return eval->Invalid("attempting to spend update batonvout in update tx");
+					std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
+				}
+				else
+				{
+					std::cerr << "latesttxid is not tokenid " << std::endl;
+					if(CCgetspenttxid(spentbatontxid, vini, height, latesttxid, 0) == 0 && 
+						spentbatontxid == tx.GetHash())
+						return eval->Invalid("attempting to spend update batonvout in update tx");
+					std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
+				}
+			}
+			else
+				return eval->Invalid("error in update batonvout validation");
+			
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token update preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
 			break;
 			
