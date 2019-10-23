@@ -111,19 +111,18 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     }
 
 	//asset and licensing validation
-	//if (tokenType != "a" && tokenType != "m" && tokenType != "s") //might break other chain validation, don't use
-	//	return eval->Invalid("invalid tokentype");
+	/*if (tokenType != "a" && tokenType != "m" && tokenType != "s") //might break other chain validation, don't use
+		return eval->Invalid("invalid tokentype");*/
 	if (tokenType == "m" || tokenType == "s")
 	{
-		if (CCduration(numblocks, referenceTokenId) > expiryTimeSec && expiryTimeSec != 0)
+		if (CCduration(numblocks, tokenid) > expiryTimeSec && expiryTimeSec != 0)
 			return eval->Invalid("license token is expired");
 		if (referenceTokenId == zeroid)
 			return eval->Invalid("license reftokenid is null");
-		else if ((eval->GetTxUnconfirmed(referenceTokenId, prevCreateTx, hashBlock) == 0 || !myGetTransaction(referenceTokenId, prevCreateTx, hashBlock)) ||
-			//DecodeTokenCreateOpRet(prevCreateTx.vout[prevCreateTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, ownerPerc, refTokenType, dummyRefTokenId, expiryTimeSec)
+		else if (eval->GetTxUnconfirmed(referenceTokenId, prevCreateTx, hashBlock) == 0 ||
+			!myGetTransaction(referenceTokenId, prevCreateTx, hashBlock) ||
 			DecodeTokenCreateOpRet(prevCreateTx.vout[prevCreateTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, ownerPerc, refTokenType, dummyRefTokenId, expiryTimeSec, refoprets) != 'c')
 			return eval->Invalid("couldn't find and decode reftokenid transaction for license");
-		std::cerr << "refName=" << dummyName << " refDescription=" << dummyDescription << " tokentype=" << tokenType << " reftokentype=" << refTokenType << std::endl;
 		if (!((tokenType == "m" && refTokenType == "a") || (tokenType == "s" && refTokenType == "m")))
 			return eval->Invalid("incorrect relation between tokentype and reftokentype for license");
 	}
