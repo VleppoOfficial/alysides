@@ -154,7 +154,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 				return eval->Invalid("no token inputs for transfer");
 			
 			// Tokencreate baton vout cannot be spent by transfer
-			if(CCgetspenttxid(spentbatontxid, vini, height, tokenid, 2) == 0 && spentbatontxid == tx.GetHash().GetHex())
+			if(CCgetspenttxid(spentbatontxid, vini, height, tokenid, 2) == 0 && spentbatontxid == tx.GetHash())
 				return eval->Invalid("attempting to spend update batonvout in non-update tx");
 			
 			std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
