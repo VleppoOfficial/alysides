@@ -157,7 +157,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 				{
 					return eval->Invalid("attempting to spend update batonvout in non-update tx");
 				}
-				std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevouthash.GetHex() << std::endl;
+				std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
 			}
 			// Tokencreate baton vout cannot be spent by transfer
 			/*std::cerr << "Entering GetLatestTokenUpdate..." << std::endl;
