@@ -48,19 +48,19 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	if (strcmp(ASSETCHAINS_SYMBOL, "ROGUE") == 0 && chainActive.Height() <= 12500)
         return true;
 
-	CTransaction createTx; //the token creation tx
-	uint256 hashBlock, tokenid = zeroid, referenceTokenId;
+	CTransaction createTx, prevCreateTx; //the token creation tx
+	uint256 hashBlock, tokenid = zeroid, referenceTokenId, dummyRefTokenId;
 	CBlockIndex confHashBlock;
-	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(); //the amount of vins and vouts in tx
+	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(), numblocks; //the amount of vins and vouts in tx
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
 	std::vector<CPubKey> vinTokenPubkeys, voutTokenPubkeys; // sender pubkey(s) and destpubkey(s)
-	std::vector<uint8_t> creatorPubkey; // token creator pubkey
+	std::vector<uint8_t> creatorPubkey, dummyPubkey; // token creator pubkey
 	
 	int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
 	
 	uint8_t funcid, evalCodeInOpret; // the funcid and eval code embedded in the opret
 	std::vector<std::pair<uint8_t, vscript_t>> oprets; // additional data embedded in the opret
-	std::string dummyName, dummyDescription, tokenType;
+	std::string dummyName, dummyDescription, tokenType, refTokenType;
 	double ownerPerc;
 
     // check boundaries:
@@ -110,22 +110,21 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         }
     }
 
-	/*
-	Licensing validation
-	
-	if tokentype != 'a' && 'm' && 's':
-		invalidate (invalid tokentype)
-	else if tokentype == 'm' || 's':
-		if (CCduration(numblocks, reftokenid) > expiryTimeSec && expiryTimeSec != 0)
-			invalidate (expired)
-		if referenceTokenId == zeroid
-			invalidate (invalid reftokenid)
-		else if
-			!GetTX(referencetokenid) && 
-			DecodeTokenCreateOpret(referencetokenid,...,reftokentype) != 'c' &&
-			!((tokentype == 'm' && reftokentype == 'a') || (tokentype == 's' && reftokentype == 'm'))
-				invalidate (incorrect relation between tokencreate id and reftokenid)
-	*/
+	//asset and licensing validation
+	//if (tokenType != "a" && tokenType != "m" && tokenType != "s") //might break other chain validation, don't use
+	//	return eval->Invalid("invalid tokentype");
+	if (tokenType == "m" || tokenType == "s")
+	{
+		if (CCduration(numblocks, referenceTokenId) > expiryTimeSec && expiryTimeSec != 0)
+			return eval->Invalid("license token is expired");
+		if (referenceTokenId == zeroid)
+			return eval->Invalid("license reftokenid is null");
+		else if (!myGetTransaction(referenceTokenId, prevCreateTx, hashBlock) &&
+			DecodeTokenCreateOpRet(prevCreateTx.vout.back().scriptPubKey, dummyPubkey, dummyName, dummyDescription, ownerPerc, refTokenType, dummyRefTokenId, expiryTimeSec) != 'c')
+			return eval->Invalid("couldn't find and decode reftokenid transaction for license");
+		if (!((tokenType == "m" && refTokenType == "a") || (tokenType == "s" && refTokenType == "m")))
+			return eval->Invalid("incorrect relation between tokentype and reftokentype for license");
+	}
 	
     switch (funcid)
 	{
