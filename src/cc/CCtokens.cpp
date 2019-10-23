@@ -49,9 +49,9 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         return true;
 
 	CTransaction createTx, prevCreateTx; //the token creation tx
-	uint256 hashBlock, tokenid = zeroid, referenceTokenId, dummyRefTokenId;
+	uint256 hashBlock, tokenid = zeroid, referenceTokenId, dummyRefTokenId, spentbatontxid;
 	CBlockIndex confHashBlock;
-	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(), numblocks; //the amount of vins and vouts in tx
+	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(), numblocks, vini, height; //the amount of vins and vouts in tx
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
 	std::vector<CPubKey> vinTokenPubkeys, voutTokenPubkeys; // sender pubkey(s) and destpubkey(s)
 	std::vector<uint8_t> creatorPubkey, dummyPubkey; // token creator pubkey
@@ -153,6 +153,12 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
 			
+			// Tokencreate baton vout cannot be spent by transfer
+			if(CCgetspenttxid(spentbatontxid, vini, height, tokenid, 2) == 0 && spentbatontxid == tx.GetHash().GetHex())
+				return eval->Invalid("attempting to spend update batonvout in non-update tx");
+			
+			std::cerr << "spentbatontxid=" << spentbatontxid.GetHex() << std::endl;
+			
 			// retrieving destpubkey(s)
 			if (DecodeTokenTransferOneOpRet(tx.vout[numvouts - 1].scriptPubKey, tokenid, voutTokenPubkeys, oprets) != 't')
 				return eval->Invalid("unable to verify token transfer tx funcid");
@@ -174,7 +180,16 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//vout.n-1: opreturn EVAL_TOKENS 'u' pk tokenid
 			
 			std::cerr << "Entered token update validation!" << std::endl;
-			//validation coming soon...
+			/*
+			update validation:
+			check if tokenid ownership percent > ownerperc
+			check if the baton vout is the only thing being spent (and it must be spent)
+			if asset:
+				stuff
+			if license:
+				other stuff
+			*/
+			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token update preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
 			break;
 			
 		//case 'whatever':
@@ -872,7 +887,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
     uint8_t funcId, evalcode;
 
 	// special handling for token creation tx - in this tx, baton vout is vout2
-	if (!(GetTransaction(tokenid, txBaton, hashBlock, true) &&
+	if (!(myGetTransaction(tokenid, txBaton, hashBlock/*, true*/) &&
 		!hashBlock.IsNull() &&
 		txBaton.vout.size() > 2 &&
 		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
@@ -882,7 +897,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	}
 	// find an update tx which spent the token create baton vout, if it exists
 	if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
-		GetTransaction(batontxid, txBaton, hashBlock, true) &&
+		myGetTransaction(batontxid, txBaton, hashBlock/*, true*/) &&
 		!hashBlock.IsNull() &&
 		txBaton.vout.size() > 0 &&
 		txBaton.vout[0].nValue == 10000 && 
@@ -901,7 +916,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	// baton vout should be vout0 from now on
 	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
 	{
-		if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
+		if (myGetTransaction(batontxid, txBaton, hashBlock/*, true*/) &&  // load the transaction which spent the baton
 			!hashBlock.IsNull() &&                           // tx not in mempool
 			txBaton.vout.size() > 0 &&             
 			txBaton.vout[0].nValue == 10000 &&     // check baton fee 
@@ -1091,11 +1106,11 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         return std::string("");
     }
 	//checking if token is owned by mypk
-	if (ownedRefTokenPerc <= refOwnerPerc)
+	/*if (ownedRefTokenPerc <= refOwnerPerc)
 	{
         CCerror = "tokenid must be owned by this pubkey";
         return std::string("");
-    }
+    }*/
 	//getting the latest update txid (can be the same as tokenid)
 	if (!GetLatestTokenUpdate(tokenid, latesttxid))
 	{
