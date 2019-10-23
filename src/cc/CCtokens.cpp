@@ -156,8 +156,9 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			
 			for (int32_t i = 0; i < numvins; i++)
 			{
-				CCoinsViewCache j;
-				if(IsTokenBatonVout(CTxOut(j.GetOutputFor(tx.vin[i]))))
+				CCoinsView dummy;
+				CCoinsViewCache view(&dummy);
+				if(IsTokenBatonVout(const CTxOut(view.GetOutputFor(tx.vin[i]))))
 				{
 					return eval->Invalid("attempting to spend update batonvout in non-update tx");
 				}
