@@ -151,9 +151,12 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
 			
+			/*CCoinsViewCache& view
+			const CTxOut &prevout = view.GetOutputFor(tx.vin[j]);*/
+			
 			for (int32_t i = 0; i < numvins; i++)
 			{
-				if(IsTokenBatonVout(tx.vin[i].prevout))
+				if(IsTokenBatonVout(CTxOut(GetOutputFor(tx.vin[i]))))
 				{
 					return eval->Invalid("attempting to spend update batonvout in non-update tx");
 				}
