@@ -202,9 +202,6 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
 	//dummies for tokentransferone
 	std::vector<CPubKey> voutPubkeysDummy;
 	
-	//dummies for tokenupdate
-	//uint256 dummyPrevBatonTxId;
-	
     if (script != NULL && vopret.size() > 2) //checking if opret is empty
     {
         evalCodeTokens = script[0]; //retrieving embedded eval code, should be EVAL_TOKENS
