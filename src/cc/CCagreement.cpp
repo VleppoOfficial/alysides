@@ -151,7 +151,7 @@ UniValue InitialProposalInfo(uint256 proposalid)
     result.push_back(Pair("owner", HexStr(origpubkey)));
 
     result.push_back(Pair("duration", duration));
-    result.push_back(Pair("assetHash", assetHash));
+    //result.push_back(Pair("assetHash", assetHash));
 
 	GetOpretBlob(oprets, OPRETID_NONFUNGIBLEDATA, vopretNonfungible);
     if (!vopretNonfungible.empty())
