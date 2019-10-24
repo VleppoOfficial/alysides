@@ -583,7 +583,10 @@ static const CRPCCommand vRPCCommands[] =
     { "hidden",             "setmocktime",            &setmocktime,            true  },
     
 	/* Agreement*/
-    {"agreements",          "agreementaddress",       &agreementaddress,       true  },
+    { "agreements",          "agreementaddress",       &agreementaddress,       true  },
+    { "agreements",          "initialproposal",        &initialproposal,        true  },
+    { "agreements",          "initialproposalinfo",    &initialproposalinfo,    true  },
+    { "agreements",          "initialproposallist",    &initialproposallist,    true  },
 
 #ifdef ENABLE_WALLET
     /* Wallet */

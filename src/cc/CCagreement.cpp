@@ -12,7 +12,7 @@ CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t dur
     return EncodeValidateProposalopret(origpubkey, duration, assetHash, oprets);
 }
 //
-CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash)
+CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash, std::vector<std::pair<uint8_t, vscript_t>> oprets)
 {
     CScript opret;
     uint8_t evalcode = EVAL_AGREEMENT;
@@ -34,7 +34,7 @@ CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t dur
 }
 
 //Decoder for Proposals
-uint8_t DecodeInitialProposalOpret(const CScript& scriptPubKey, std::vector<uint8_t>& origpubkey, int64_t& duration, uint256& assetHash, std::vector<std::pair<uint8_t, vscript_t>>& oprets)
+uint8_t DecodeInitialProposalOpret(const CScript& scriptPubKey, std::vector<uint8_t>& origpubkey, int64_t& duration, uint256& assetHash)
 {
     std::vector<std::pair<uint8_t, vscript_t>> opretsDummy;
     return DecodeInitialProposalOpret(scriptPubKey, origpubkey, duration, assetHash);
@@ -72,11 +72,11 @@ uint8_t DecodeInitialProposalOpret(const CScript& scriptPubKey, std::vector<uint
 
 
 //validate - need more work but isn't needed yet, but when work begins on the accepted proposal it will need to be implementet
-bool AgreementsValidate(struct CCcontract_info* cpAgreement, Eval* eval, const CTransaction& tx, uint32_t nIn)
-{
-    int32_t numvins = tx.vin.size();
-    int32_t numvouts = tx.vout.size();
-}
+//bool AgreementsValidate(struct CCcontract_info* cpAgreement, Eval* eval, const CTransaction& tx, uint32_t nIn)
+//{
+//    int32_t numvins = tx.vin.size();
+//    int32_t numvouts = tx.vout.size();
+//}
 
 // Create the InitialProposal
 std::string InitialProposal(int64_t txfee, int64_t duration, uint256 assetHash)
@@ -90,22 +90,21 @@ std::string InitialProposal(int64_t txfee, int64_t duration, uint256 assetHash)
 
     CPubKey mypk = pubkey2pk(Mypubkey());
 
-
-    // kig på dette
     //We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
 	// find the equlivant to tokensupply for proposal - also if it's even needed or if it can be removed/modified.
-    if (AddNormalinputs(mtx, mypk, tokensupply + 2 * txfee, 64) > 0)
+    if (AddNormalinputs(mtx, mypk, 2 * txfee, 64) > 0)
 	{
-        // TotalPubkeyNormalInputs returns total of normal inputs signed with this pubkey
-        int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
-        if (mypkInputs < tokensupply) 
-		{
-            // check that amount are really issued with mypk (because in the wallet there maybe other privkeys)
-            CCerror = "some inputs signed not with -pubkey=pk";
-            return std::string("");
-        }
+  //      // TotalPubkeyNormalInputs returns total of normal inputs signed with this pubkey
+  //      int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
+  //      if (mypkInputs < tokensupply) 
+		//{
+  //          // check that amount are really issued with mypk (because in the wallet there maybe other privkeys)
+  //          CCerror = "some inputs signed not with -pubkey=pk";
+  //          return std::string("");
+  //      }
 
-        uint8_t destEvalCode = EVAL_AGREEMENTS;
+       // uint8_t destEvalCode = EVAL_AGREEMENTS; // not used
+        mtx.vout.push_back(MakeCC1vout(cp->evalcode, txfee, mypk));
 
         return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeValidateProposalopret(Mypubkey(), duration, assetHash)));
     }
