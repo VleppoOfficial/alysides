@@ -12,8 +12,8 @@ CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t dur
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
 
    /* if (!vopretNonfungible.empty())
-        oprets.push_back(std::make_pair(OPRETID_NONFUNGIBLEDATA, vopretNonfungible));
-    return EncodeValidateProposalopret(origpubkey, duration, assetHash, oprets);*/
+        oprets.push_back(std::make_pair(OPRETID_NONFUNGIBLEDATA, vopretNonfungible));*/
+    return EncodeValidateProposalopret(origpubkey, duration, assetHash);
 }
 //
 CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash)
