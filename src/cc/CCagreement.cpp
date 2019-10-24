@@ -1,6 +1,17 @@
 #include "CCagreement.h"
 
+//Encoder and Decoder for ÍnitialProposal
+
 //Encoder for Proposals
+CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash, vscript_t vopretNonfungible)
+{
+    std::vector<std::pair<uint8_t, vscript_t>> oprets;
+
+    if (!vopretNonfungible.empty())
+        oprets.push_back(std::make_pair(OPRETID_NONFUNGIBLEDATA, vopretNonfungible));
+    return EncodeValidateProposalopret(origpubkey, duration, assetHash, oprets);
+}
+//
 CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash)
 {
     CScript opret;
@@ -25,6 +36,12 @@ CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t dur
 //Decoder for Proposals
 uint8_t DecodeInitialProposalOpret(const CScript& scriptPubKey, std::vector<uint8_t>& origpubkey, int64_t& duration, uint256& assetHash, std::vector<std::pair<uint8_t, vscript_t>>& oprets)
 {
+    std::vector<std::pair<uint8_t, vscript_t>> opretsDummy;
+    return DecodeInitialProposalOpret(scriptPubKey, origpubkey, duration, assetHash);
+}
+//
+uint8_t DecodeInitialProposalOpret(const CScript& scriptPubKey, std::vector<uint8_t>& origpubkey, int64_t& duration, uint256& assetHash, std::vector<std::pair<uint8_t, vscript_t>>& oprets)
+{
     std::vector<uint8_t> vopret, vblob;
     uint8_t dummyEvalcode, funcid, opretId = 0;
 
@@ -46,7 +63,7 @@ uint8_t DecodeInitialProposalOpret(const CScript& scriptPubKey, std::vector<uint
             /* if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> e; ss >> f; ss >> pk) != 0 && e == EVAL_AGREEMENTS) {
             return (funcid);*/ //det er måske denne her der skal bruges
         {
-            return (0);
+            return (funcid);
         }
     }
     LOGSTREAM((char*)"ccagreements", CCLOG_INFO, stream << "DecodeInitialProposalOpret() incorrect proposal opret" << std::endl);
@@ -54,7 +71,7 @@ uint8_t DecodeInitialProposalOpret(const CScript& scriptPubKey, std::vector<uint
 }
 
 
-//validate - need moew work but isn't needed yet, but when work begins on the accepted proposal it will need to be implementet
+//validate - need more work but isn't needed yet, but when work begins on the accepted proposal it will need to be implementet
 bool AgreementsValidate(struct CCcontract_info* cpAgreement, Eval* eval, const CTransaction& tx, uint32_t nIn)
 {
     int32_t numvins = tx.vin.size();
@@ -83,12 +100,11 @@ std::string InitialProposal(int64_t txfee, int64_t duration, uint256 assetHash)
         int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
         if (mypkInputs < tokensupply) 
 		{
-            // check that tokens amount are really issued with mypk (because in the wallet there maybe other privkeys)
+            // check that amount are really issued with mypk (because in the wallet there maybe other privkeys)
             CCerror = "some inputs signed not with -pubkey=pk";
             return std::string("");
         }
 
-        //Eval code is EVAL_AGREEMENTS
         uint8_t destEvalCode = EVAL_AGREEMENTS;
 
         return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeValidateProposalopret(Mypubkey(), duration, assetHash)));
@@ -105,7 +121,7 @@ UniValue InitialProposalInfo(uint256 proposalid)
     UniValue result(UniValue::VOBJ);
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
     uint256 hashBlock;
-    CTransaction proposalbaseTx;
+    CTransaction proposalbaseTx; x	
     int64_t duration;
     uint256 assetHash;
     struct CCcontract_info *cpProposal, proposalCCinfo;

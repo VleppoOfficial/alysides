@@ -7966,6 +7966,7 @@ UniValue heirlist(const UniValue& params, bool fHelp)
 
     return (HeirList());
 }
+
 //RPC for Proposals - Start
 UniValue initialproposal(const UniValue& params, bool fHelp)
 {
@@ -7979,8 +7980,8 @@ UniValue initialproposal(const UniValue& params, bool fHelp)
 	 const CKeyStore& keystore = *pwalletMain;
         LOCK2(cs_main, pwalletMain->cs_wallet);
 
-		if (params.size() >= 2) {
-            assetHash = Parseuint256((char*)params[4].get_str().c_str()); //returns zeroid if empty or wrong length
+		if (params.size() >= 3) {
+            assetHash = Parseuint256((char*)params[2].get_str().c_str()); //returns zeroid if empty or wrong length
         } else
             assetHash = zeroid;
 
