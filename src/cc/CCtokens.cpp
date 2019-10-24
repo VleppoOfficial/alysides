@@ -126,32 +126,16 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			return eval->Invalid("incorrect relation between tokentype and reftokentype for license");
 	}
 	
-	// Tokencreate baton vout cannot be spent by non-update transactions
+	//Non-update transactions cannot spend update baton
 	if (funcid != 'u')
 	{
-		if(GetLatestTokenUpdate(tokenid, latesttxid, eval))
+		for (int32_t i = 0; i < numvins; i++)
 		{
-			if(latesttxid == tokenid)
-			{
-				for (int32_t i = 0; i < numvins; i++)
-				{
-					if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 2) //in tokencreate tx, baton vout is vout2
-						return eval->Invalid("attempting to spend update batonvout in non-update tx");
-					//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
-				}
-			}
-			else
-			{
-				for (int32_t i = 0; i < numvins; i++)
-				{
-					if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 0) //in update tx, baton vout is vout0
-						return eval->Invalid("attempting to spend update batonvout in non-update tx");
-					//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
-				}
-			}
+			if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || (tx.vin[i].prevout.hash != tokenid && tx.vin[i].prevout.n == 0))
+				return eval->Invalid("attempting to spend update batonvout in non-update tx");
+			//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
 		}
-		else
-			return eval->Invalid("error in update batonvout validation");
+		std::cerr << "Non-update tx passed check for baton spend!" << std::endl;
 	}
 	
     switch (funcid)
@@ -239,34 +223,15 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (inputs != 0)
 				return eval->Invalid("update tx cannot have token inputs");
 			
-			// Making sure update tx is actually spending the baton
-			if(GetLatestTokenUpdate(tokenid, latesttxid, eval))
+			//Checking if update tx is spending the baton (in tokenid tx, baton vout is vout2; in update tx, baton vout is vout0)
+			for (int32_t i = 0; i < numvins; i++)
 			{
-				if(latesttxid == tokenid)
-				{
-					for (int32_t i = 0; i < numvins; i++)
-					{
-						if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 2)
-							isSpendingBaton = true;
-						//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
-					}
-					if (!isSpendingBaton)
-						return eval->Invalid("update tx is not spending update baton");
-				}
-				else
-				{
-					for (int32_t i = 0; i < numvins; i++)
-					{
-						if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 0)
-							isSpendingBaton = true;
-						//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
-					}
-					if (!isSpendingBaton)
-						return eval->Invalid("update tx is not spending update baton");
-				}
+				if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || (tx.vin[i].prevout.hash != tokenid && tx.vin[i].prevout.n == 0))
+					isSpendingBaton = true;
+				//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
 			}
-			else
-				return eval->Invalid("error in update batonvout validation");
+			if (!isSpendingBaton)
+				return eval->Invalid("update tx is not spending update baton");
 			
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token update preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
 			break;
