@@ -83,7 +83,7 @@ uint8_t DecodeInitialProposalOpret(const CScript& scriptPubKey, std::vector<uint
 //}
 
 // Create the InitialProposal
-std::string InitialProposal(int64_t txfee, int64_t duration, uint256 assetHash)
+std::string InitialProposal(int64_t txfee, int64_t duration, uint256 assetHash ,vscript_t nonfungibleData)
 {
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
     struct CCcontract_info *cp, C;
@@ -110,7 +110,7 @@ std::string InitialProposal(int64_t txfee, int64_t duration, uint256 assetHash)
        // uint8_t destEvalCode = EVAL_AGREEMENTS; // not used
         mtx.vout.push_back(MakeCC1vout(cp->evalcode, txfee, mypk));
 
-        return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeValidateProposalopret(Mypubkey(), duration, assetHash)));
+        return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeValidateProposalopret(Mypubkey(), duration, assetHash, nonfungibleData)));
     }
 	
     CCerror = "cant find normal inputs";
@@ -125,6 +125,7 @@ UniValue InitialProposalInfo(uint256 proposalid)
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
     uint256 hashBlock;
     CTransaction proposalbaseTx; 
+	vscript_t vopretNonfungible;
     int64_t duration;
     std::vector<uint8_t> origpubkey;
     uint256 assetHash;
@@ -151,6 +152,10 @@ UniValue InitialProposalInfo(uint256 proposalid)
 
     result.push_back(Pair("duration", duration));
     result.push_back(Pair("assetHash", assetHash));
+
+	GetOpretBlob(oprets, OPRETID_NONFUNGIBLEDATA, vopretNonfungible);
+    if (!vopretNonfungible.empty())
+        result.push_back(Pair("data", HexStr(vopretNonfungible)));
 
     //maybe calculation for duration like we do with tokens expiretime
 
