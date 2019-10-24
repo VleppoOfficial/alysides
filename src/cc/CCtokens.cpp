@@ -959,8 +959,9 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid, Eval* eval)
 		return 0;
 	}
 	// find an update tx which spent the token create baton vout, if it exists
-	if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
-		((eval && eval->GetTxUnconfirmed(tokenid, txBaton, hashBlock) != 0) || (!eval && GetTransaction(tokenid, txBaton, hashBlock, true))) &&
+	if (
+		(retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
+		((eval && eval->GetTxUnconfirmed(batontxid, txBaton, hashBlock) != 0) || (!eval && GetTransaction(batontxid, txBaton, hashBlock, true))) &&
 		//myGetTransaction(batontxid, txBaton, hashBlock, true) &&
 		!hashBlock.IsNull() &&
 		txBaton.vout.size() > 0 &&
@@ -971,7 +972,6 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid, Eval* eval)
 	}
 	else
 	{
-		std::cerr << "didn't find anything past tokenid" << std::endl;
 		latesttxid = sourcetxid;
 		return 1;
 	}
@@ -981,8 +981,8 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid, Eval* eval)
 	// baton vout should be vout0 from now on
 	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
 	{
-		if(((eval && eval->GetTxUnconfirmed(tokenid, txBaton, hashBlock) != 0) || (!eval && GetTransaction(tokenid, txBaton, hashBlock, true))) &&
-		//if (myGetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
+		if(((eval && eval->GetTxUnconfirmed(batontxid, txBaton, hashBlock) != 0) || (!eval && GetTransaction(batontxid, txBaton, hashBlock, true))) && // load the transaction which spent the baton
+		//if (myGetTransaction(batontxid, txBaton, hashBlock, true) &&  
 			!hashBlock.IsNull() &&                           // tx not in mempool
 			txBaton.vout.size() > 0 &&             
 			txBaton.vout[0].nValue == 10000 &&     // check baton fee 
