@@ -7316,7 +7316,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
     int64_t expiryTimeSec = 0;
     double ownerperc = 50.0;
     uint256 referencetokenid = zeroid;
-
+	
     CCerror.clear();
 
     if (fHelp || params.size() > 8 || params.size() < 3)
@@ -7979,6 +7979,11 @@ UniValue initialproposal(const UniValue& params, bool fHelp)
     uint256 assetHash;
 
 	CCerror.clear();
+
+	if (fHelp || params.size() > 2 || params.size() < 2)
+            throw runtime_error("create duration assethash\n");
+        if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
+            throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
 
 	 const CKeyStore& keystore = *pwalletMain;
         LOCK2(cs_main, pwalletMain->cs_wallet);
