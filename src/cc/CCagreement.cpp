@@ -114,48 +114,48 @@ std::string CreateProposal(int64_t txfee, int64_t duration, uint256 assetHash )
 }
 
 //ProposalInfo
-//UniValue InitialProposalInfo(uint256 proposalid)
-//{
-//    UniValue result(UniValue::VOBJ);
-//    std::vector<std::pair<uint8_t, vscript_t>> oprets;
-//    uint256 hashBlock;
-//    CTransaction proposalbaseTx; 
-//	vscript_t vopretNonfungible;
-//    int64_t duration;
-//    std::vector<uint8_t> origpubkey;
-//    uint256 assetHash;
-//    struct CCcontract_info *cpProposal, proposalCCinfo;
-//
-//    cpProposal = CCinit(&proposalCCinfo, EVAL_AGREEMENTS);
-//
-//    if (!GetTransaction(proposalid, proposalbaseTx, hashBlock, false)) {
-//        fprintf(stderr, "InitialProposalInfo() cant find proposalid\n");
-//        result.push_back(Pair("result", "error"));
-//        result.push_back(Pair("error", "cant find proposalid"));
-//        return (result);
-//    }
-//
-//    if (hashBlock.IsNull()) {
-//        result.push_back(Pair("result", "error"));
-//        result.push_back(Pair("error", "the transaction is still in mempool"));
-//        return (result);
-//    }
-//
-//    result.push_back(Pair("result", "success"));
-//    result.push_back(Pair("proposalid", proposalid.GetHex()));
-//    result.push_back(Pair("owner", HexStr(origpubkey)));
-//
-//    result.push_back(Pair("duration", duration));
-//    //result.push_back(Pair("assetHash", assetHash));
-//
-//	GetOpretBlob(oprets, OPRETID_NONFUNGIBLEDATA, vopretNonfungible);
-//    if (!vopretNonfungible.empty())
-//        result.push_back(Pair("data", HexStr(vopretNonfungible)));
-//
-//    //maybe calculation for duration like we do with tokens expiretime
-//
-//    return result;
-//}
+UniValue InitialProposalInfo(uint256 proposalid)
+{
+    UniValue result(UniValue::VOBJ);
+    std::vector<std::pair<uint8_t, vscript_t>> oprets;
+    uint256 hashBlock;
+    CTransaction proposalbaseTx; 
+	vscript_t vopretNonfungible;
+    int64_t duration;
+    std::vector<uint8_t> origpubkey;
+    uint256 assetHash;
+    struct CCcontract_info *cpProposal, proposalCCinfo;
+
+    cpProposal = CCinit(&proposalCCinfo, EVAL_AGREEMENTS);
+
+    if (!GetTransaction(proposalid, proposalbaseTx, hashBlock, false)) {
+        fprintf(stderr, "InitialProposalInfo() cant find proposalid\n");
+        result.push_back(Pair("result", "error"));
+        result.push_back(Pair("error", "cant find proposalid"));
+        return (result);
+    }
+
+    if (hashBlock.IsNull()) {
+        result.push_back(Pair("result", "error"));
+        result.push_back(Pair("error", "the transaction is still in mempool"));
+        return (result);
+    }
+
+    result.push_back(Pair("result", "success"));
+    result.push_back(Pair("proposalid", proposalid.GetHex()));
+    result.push_back(Pair("owner", HexStr(origpubkey)));
+
+    result.push_back(Pair("duration", duration));
+    //result.push_back(Pair("assetHash", assetHash));
+
+	GetOpretBlob(oprets, OPRETID_NONFUNGIBLEDATA, vopretNonfungible);
+    if (!vopretNonfungible.empty())
+        result.push_back(Pair("data", HexStr(vopretNonfungible)));
+
+    //maybe calculation for duration like we do with tokens expiretime
+
+    return result;
+}
 
 //ProposalList
 //UniValue InitialProposalList()

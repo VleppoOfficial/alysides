@@ -8009,21 +8009,21 @@ UniValue initialproposal(const UniValue& params, bool fHelp)
         return (result);
 }
 
-//UniValue initialproposalinfo(const UniValue& params, bool fHelp)
-//{
-//    uint256 proposalid;
-//    if (fHelp || params.size() != 1)
-//        throw runtime_error("initialproposalinfo proposalid\n");
-//
-//    if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
-//        throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
-//    
-//	const CKeyStore& keystore = *pwalletMain;
-//    LOCK2(cs_main, pwalletMain->cs_wallet);
-//    proposalid = Parseuint256((char*)params[0].get_str().c_str());
-//   
-//	return (InitialProposalInfo(proposalid));
-//}
+UniValue initialproposalinfo(const UniValue& params, bool fHelp)
+{
+    uint256 proposalid;
+    if (fHelp || params.size() != 1)
+        throw runtime_error("initialproposalinfo proposalid\n");
+
+    if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
+        throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
+    
+	const CKeyStore& keystore = *pwalletMain;
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+    proposalid = Parseuint256((char*)params[0].get_str().c_str());
+   
+	return (InitialProposalInfo(proposalid));
+}
 
 //UniValue initialproposallist(const UniValue& params, bool fHelp)
 //{

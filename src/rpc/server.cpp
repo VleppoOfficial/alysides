@@ -585,8 +585,8 @@ static const CRPCCommand vRPCCommands[] =
 	/* Agreement*/
     { "agreements",          "agreementaddress",       &agreementaddress,       true  },
     { "agreements",          "initialproposal",        &initialproposal,        true  },
-   /* { "agreements",          "initialproposalinfo",    &initialproposalinfo,    true  },
-    { "agreements",          "initialproposallist",    &initialproposallist,    true  },*/
+    { "agreements",          "initialproposalinfo",    &initialproposalinfo,    true  },
+   // { "agreements",          "initialproposallist",    &initialproposallist,    true  },
 
 #ifdef ENABLE_WALLET
     /* Wallet */
