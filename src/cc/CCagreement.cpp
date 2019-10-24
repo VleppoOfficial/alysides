@@ -7,16 +7,16 @@
 //Encoder and Decoder for ÍnitialProposal
 
 //Encoder for Proposals
-CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash, vscript_t vopretNonfungible)
+CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash)
 {
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
 
-    if (!vopretNonfungible.empty())
+   /* if (!vopretNonfungible.empty())
         oprets.push_back(std::make_pair(OPRETID_NONFUNGIBLEDATA, vopretNonfungible));
-    return EncodeValidateProposalopret(origpubkey, duration, assetHash, oprets);
+    return EncodeValidateProposalopret(origpubkey, duration, assetHash, oprets);*/
 }
 //
-CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash, std::vector<std::pair<uint8_t, vscript_t>> oprets)
+CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash)
 {
     CScript opret;
     uint8_t evalcode = EVAL_AGREEMENTS;
