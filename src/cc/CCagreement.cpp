@@ -77,7 +77,12 @@ uint8_t DecodeInitialProposalOpret(const CScript& scriptPubKey, std::vector<uint
 }
 
 
-
+//validate - need more work but isn't needed yet, but when work begins on the accepted proposal it will need to be implementet
+//bool AgreementsValidate(struct CCcontract_info* cpAgreement, Eval* eval, const CTransaction& tx, uint32_t nIn)
+//{
+//    int32_t numvins = tx.vin.size();
+//    int32_t numvouts = tx.vout.size();
+//}
 
 // Create the InitialProposal
 std::string CreateProposal(int64_t txfee, int64_t duration, uint256 assetHash )
