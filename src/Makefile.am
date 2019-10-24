@@ -391,6 +391,7 @@ libbitcoin_wallet_a_SOURCES = \
   wallet/rpcdisclosure.cpp \
   wallet/rpcdump.cpp \
   cc/CCtokens.cpp \
+  cc/CCagreement.cpp \
   cc/CCassetsCore.cpp \
   cc/CCassetstx.cpp \
   cc/CCtx.cpp \

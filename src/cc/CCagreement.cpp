@@ -1,8 +1,8 @@
 #include "CCagreement.h"
 
-//#ifndef IS_CHARINSTR
-//#define IS_CHARINSTR(c, str) (std::string(str).find((char)(c)) != std::string::npos)
-//#endif
+#ifndef IS_CHARINSTR
+#define IS_CHARINSTR(c, str) (std::string(str).find((char)(c)) != std::string::npos)
+#endif
 
 //Encoder and Decoder for ÍnitialProposal
 
