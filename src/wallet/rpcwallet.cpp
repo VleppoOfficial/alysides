@@ -7974,7 +7974,6 @@ UniValue initialproposal(const UniValue& params, bool fHelp)
 {
     UniValue result(UniValue::VOBJ);
     std::string hextx;
-    int64_t txfee;
     int64_t duration; // set default
     uint256 assetHash;
 
@@ -8004,7 +8003,8 @@ UniValue initialproposal(const UniValue& params, bool fHelp)
 		{
             result.push_back(Pair("result", "success"));
             result.push_back(Pair("hex", hextx));
-        } else
+        } 
+		else
             ERR_RESULT(CCerror);
         return (result);
 }

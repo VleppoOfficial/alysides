@@ -31,6 +31,7 @@
 #include "CCPayments.h"
 #include "CCGateways.h"
 #include "CCtokens.h"
+#include "CCagreement.h"
 #include "CCImportGateway.h"
 
 /*
