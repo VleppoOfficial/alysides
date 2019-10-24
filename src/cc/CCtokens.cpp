@@ -898,7 +898,7 @@ double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid)
 	Getscriptaddress(coinaddr,CScript() << ParseHex(HexStr(pk)) << OP_CHECKSIG);
 	std::cerr << "coinaddr=" << coinaddr << std::endl;
 	GetCCaddress(cp,coinaddr,pk);
-	td::cerr << "CCaddr=" << coinaddr << std::endl;
+	std::cerr << "CCaddr=" << coinaddr << std::endl;
 	double balance = static_cast<double>(CCtoken_balance(coinaddr, tokenid));
 	double supply = static_cast<double>(CCfullsupply(tokenid));
 	std::cerr << "balance=" << (balance) << std::endl;
