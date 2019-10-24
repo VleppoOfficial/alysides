@@ -214,6 +214,7 @@ CScript EncodeTokenCreateOpRet(std::vector<uint8_t> origpubkey, std::string name
 
 //agreement
 std::string CreateProposal(int64_t txfee, int64_t duration, uint256 assetHash);
+UniValue InitialProposalInfo(uint256 proposalid);
 
 CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash);
 CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash, std::vector<std::pair<uint8_t, vscript_t>> oprets);
