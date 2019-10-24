@@ -7971,6 +7971,7 @@ UniValue heirlist(const UniValue& params, bool fHelp)
 UniValue initialproposal(const UniValue& params, bool fHelp)
 {
     UniValue result(UniValue::VOBJ);
+    std::string hextx;
     int64_t txfee;
     int64_t duration; // set default
     uint256 assetHash;
