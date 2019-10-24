@@ -48,7 +48,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	if (strcmp(ASSETCHAINS_SYMBOL, "ROGUE") == 0 && chainActive.Height() <= 12500)
         return true;
 
-	CTransaction createTx, prevCreateTx; //the token creation tx
+	CTransaction createTx, referenceTx; //the token creation tx
 	uint256 hashBlock, tokenid = zeroid, referenceTokenId, dummyRefTokenId, latesttxid, spentbatontxid;
 	CBlockIndex confHashBlock;
 	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(), numblocks, vini, height; //the amount of vins and vouts in tx
@@ -118,30 +118,29 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			return eval->Invalid("license token is expired");
 		if (referenceTokenId == zeroid)
 			return eval->Invalid("license reftokenid is null");
-		else if (eval->GetTxUnconfirmed(referenceTokenId, prevCreateTx, hashBlock) == 0 ||
-			!myGetTransaction(referenceTokenId, prevCreateTx, hashBlock) ||
-			DecodeTokenCreateOpRet(prevCreateTx.vout[prevCreateTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, ownerPerc, refTokenType, dummyRefTokenId, expiryTimeSec, refoprets) != 'c')
+		else if (eval->GetTxUnconfirmed(referenceTokenId, referenceTx, hashBlock) == 0 ||
+			!myGetTransaction(referenceTokenId, referenceTx, hashBlock) ||
+			DecodeTokenCreateOpRet(referenceTx.vout[referenceTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, ownerPerc, refTokenType, dummyRefTokenId, expiryTimeSec, refoprets) != 'c')
 			return eval->Invalid("couldn't find and decode reftokenid transaction for license");
 		if (!((tokenType == "m" && refTokenType == "a") || (tokenType == "s" && refTokenType == "m")))
 			return eval->Invalid("incorrect relation between tokentype and reftokentype for license");
 	}
 	
 	//Non-update transactions cannot spend update baton
-	if (funcid != 'u')
+	for (int32_t i = 0; i < numvins; i++)
 	{
-		for (int32_t i = 0; i < numvins; i++)
-		{
-			if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || 
-				(eval->GetTxUnconfirmed(tx.vin[i].prevout.hash, prevCreateTx, hashBlock) != 0 && 
-				myGetTransaction(tx.vin[i].prevout.hash, prevCreateTx, hashBlock) &&
-				DecodeTokenUpdateOpRet(prevCreateTx.vout[prevCreateTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyRefTokenId) != 'u' &&
-				tx.vin[i].prevout.n == 0))
-				return eval->Invalid("attempting to spend update batonvout in non-update tx");
-			//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
-		}
-		std::cerr << "Non-update tx passed check for baton spend!" << std::endl;
+		if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || 
+			(eval->GetTxUnconfirmed(tx.vin[i].prevout.hash, referenceTx, hashBlock) != 0 && myGetTransaction(tx.vin[i].prevout.hash, referenceTx, hashBlock) &&
+			DecodeTokenUpdateOpRet(referenceTx.vout[referenceTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyRefTokenId) == 'u' &&
+			tx.vin[i].prevout.n == 0))
+			isSpendingBaton = true;
+		//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
 	}
+	if (funcid != 'u' && isSpendingBaton)
+		return eval->Invalid("attempting to spend update batonvout in non-update tx");
 	
+	std::cerr << "Passed check for baton spend!" << std::endl;
+
     switch (funcid)
 	{
 		case 'c':
@@ -228,16 +227,16 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 				return eval->Invalid("update tx cannot have token inputs");
 			
 			//Checking if update tx is spending the baton (in tokenid tx, baton vout is vout2; in update tx, baton vout is vout0)
-			for (int32_t i = 0; i < numvins; i++)
+			/*for (int32_t i = 0; i < numvins; i++)
 			{
 				if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || 
-					(eval->GetTxUnconfirmed(tx.vin[i].prevout.hash, prevCreateTx, hashBlock) != 0 && 
-					myGetTransaction(tx.vin[i].prevout.hash, prevCreateTx, hashBlock) &&
-					DecodeTokenUpdateOpRet(prevCreateTx.vout[prevCreateTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyRefTokenId) != 'u' &&
+					(eval->GetTxUnconfirmed(tx.vin[i].prevout.hash, referenceTx, hashBlock) != 0 && 
+					myGetTransaction(tx.vin[i].prevout.hash, referenceTx, hashBlock) &&
+					DecodeTokenUpdateOpRet(referenceTx.vout[referenceTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyRefTokenId) != 'u' &&
 					tx.vin[i].prevout.n == 0))
 					isSpendingBaton = true;
 				//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
-			}
+			}*/
 			if (!isSpendingBaton)
 				return eval->Invalid("update tx is not spending update baton");
 			
