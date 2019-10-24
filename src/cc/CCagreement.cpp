@@ -97,17 +97,9 @@ std::string CreateProposal(int64_t txfee, int64_t duration, uint256 assetHash )
     CPubKey mypk = pubkey2pk(Mypubkey());
 
     //We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
-	// find the equlivant to tokensupply for proposal - also if it's even needed or if it can be removed/modified.
+
     if (AddNormalinputs(mtx, mypk, 2 * txfee, 64) > 0)
 	{
-  //      // TotalPubkeyNormalInputs returns total of normal inputs signed with this pubkey
-  //      int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
-  //      if (mypkInputs < tokensupply) 
-		//{
-  //          // check that amount are really issued with mypk (because in the wallet there maybe other privkeys)
-  //          CCerror = "some inputs signed not with -pubkey=pk";
-  //          return std::string("");
-  //      }
 
        // uint8_t destEvalCode = EVAL_AGREEMENTS; // not used
         mtx.vout.push_back(MakeCC1vout(cp->evalcode, txfee, mypk));
