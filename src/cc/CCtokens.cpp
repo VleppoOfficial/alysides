@@ -891,7 +891,7 @@ double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid)
 }
 
 // gets the latest baton txid of a token
-// used in validation, TokenUpdate and TokenViewUpdate's recursive mode
+// used in TokenUpdate and TokenViewUpdate's recursive mode
 bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 {
     int32_t vini, height, retcode;
