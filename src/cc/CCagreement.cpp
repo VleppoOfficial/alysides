@@ -19,7 +19,7 @@ CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t dur
 CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash, std::vector<std::pair<uint8_t, vscript_t>> oprets)
 {
     CScript opret;
-    uint8_t evalcode = EVAL_AGREEMENT;
+    uint8_t evalcode = EVAL_AGREEMENTS;
     uint8_t funcid = 'p'; // override the param
 
 
