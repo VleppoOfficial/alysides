@@ -7997,7 +7997,7 @@ UniValue initialproposal(const UniValue& params, bool fHelp)
             ERR_RESULT("Duration must be positive");
             return (result);
         }
-
+		
     hextx = CreateProposal(0, duration, assetHash);
         if (hextx.size() > 0) 
 		{
