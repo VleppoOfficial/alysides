@@ -129,15 +129,24 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	//Non-update transactions cannot spend update baton
 	for (int32_t i = 0; i < numvins; i++)
 	{
-		if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || 
+		if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || //in tokenid tx, baton vout is vout2
 			(eval->GetTxUnconfirmed(tx.vin[i].prevout.hash, referenceTx, hashBlock) != 0 && myGetTransaction(tx.vin[i].prevout.hash, referenceTx, hashBlock) &&
 			DecodeTokenUpdateOpRet(referenceTx.vout[referenceTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyRefTokenId) == 'u' &&
-			tx.vin[i].prevout.n == 0))
+			tx.vin[i].prevout.n == 0)) //in update tx, baton vout is vout0
 			isSpendingBaton = true;
 		//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
 	}
 	if (funcid != 'u' && isSpendingBaton)
 		return eval->Invalid("attempting to spend update batonvout in non-update tx");
+	
+	// Iterate over all elements in Vector
+	for (CPubKey& itpubkey : vinTokenPubkeys)
+	{
+		if (itpubkey.isValid())
+		{
+			std::cerr << "Found pubkey: " << HexStr(itpubkey) << " with token " << tokenid.GetHex() << " ownership percent=" << GetTokenOwnershipPercent(itpubkey, tokenid) << std::endl;
+		}
+	}
 	
     switch (funcid)
 	{
@@ -169,9 +178,11 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (DecodeTokenTransferOneOpRet(tx.vout[numvouts - 1].scriptPubKey, tokenid, voutTokenPubkeys, oprets) != 't')
 				return eval->Invalid("unable to verify token transfer tx funcid");
 			
-			// if token is sub-license and isn't being burned and transaction isn't from creator, invalidate
-			if (tokenType == "s" && std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end() && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == vinTokenPubkeys.end())
-				return eval->Invalid("cannot transfer sub-license from pubkey other than creator pubkey - ");
+			// if token is sub-license and isn't being burned and transaction vin isn't from creator vout, invalidate
+			if (tokenType == "s" && 
+				std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end() && //NOTE: this is not secure as it relies on opreturn data, which could be anything - dan
+				std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == vinTokenPubkeys.end())
+				return eval->Invalid("cannot transfer sub-license from pubkey other than creator pubkey");
 			
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
 			break; // breaking to other contract validation...
@@ -179,21 +190,20 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 		case 'u':
 			// token update
 			// token tx structure for 'u':
-			//vin.0: previous token update baton
+			//vin.0: previous token CC update baton
 			//vin.1: normal input
 			//vout.0: next token update baton with cc opret
 			//vout.1 to n-2: normal output for change (if any)
 			//vout.n-1: opreturn EVAL_TOKENS 'u' pk tokenid
 			
 			std::cerr << "Entered token update validation!" << std::endl;
+			
 			/*
 			update validation:
+			if asset or master license
 			check if tokenid ownership percent > ownerperc
-			check if the baton vout is the only thing being spent (and it must be spent)
-			if asset:
-				stuff
-			if license:
-				other stuff
+			if master or sub license:
+				must be creator
 			*/
 			
 			if (inputs != 0)
@@ -885,8 +895,11 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey)
 // moved to separate function for accessibility
 double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid)
 {
-	double balance = static_cast<double>(GetTokenBalance(pk, tokenid));
+	char coinaddr[64];
+	Getscriptaddress(coinaddr,CScript() << ParseHex(HexStr(pk)) << OP_CHECKSIG);
+	double balance = static_cast<double>(CCtoken_balance(pk, tokenid));
 	double supply = static_cast<double>(CCfullsupply(tokenid));
+	std::cerr << "ownership=" << (balance / supply * 100) << std::endl;
 	return (balance / supply * 100);
 }
 
@@ -901,7 +914,6 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
     uint8_t funcId, evalcode;
 
 	// special handling for token creation tx - in this tx, baton vout is vout2
-	//if (((eval && eval->GetTxUnconfirmed(tokenid, txBaton, hashBlock) == 0) || (!eval && !GetTransaction(tokenid, txBaton, hashBlock, true))) &&
 	if (!(GetTransaction(tokenid, txBaton, hashBlock, true) &&
 		!hashBlock.IsNull() &&
 		txBaton.vout.size() > 2 &&
@@ -912,7 +924,6 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	}
 	// find an update tx which spent the token create baton vout, if it exists
 	if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
-		//((eval && eval->GetTxUnconfirmed(batontxid, txBaton, hashBlock) != 0) || (!eval && GetTransaction(batontxid, txBaton, hashBlock, true))) &&
 		GetTransaction(batontxid, txBaton, hashBlock, true) &&
 		!hashBlock.IsNull() &&
 		txBaton.vout.size() > 0 &&
@@ -932,7 +943,6 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 	// baton vout should be vout0 from now on
 	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
 	{
-		//if(((eval && eval->GetTxUnconfirmed(batontxid, txBaton, hashBlock) != 0) || (!eval && GetTransaction(batontxid, txBaton, hashBlock, true))) && 
 		if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
 			!hashBlock.IsNull() &&                           // tx not in mempool
 			txBaton.vout.size() > 0 &&             
