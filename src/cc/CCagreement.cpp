@@ -119,83 +119,83 @@ std::string InitialProposal(int64_t txfee, int64_t duration, uint256 assetHash ,
 }
 
 //ProposalInfo
-UniValue InitialProposalInfo(uint256 proposalid)
-{
-    UniValue result(UniValue::VOBJ);
-    std::vector<std::pair<uint8_t, vscript_t>> oprets;
-    uint256 hashBlock;
-    CTransaction proposalbaseTx; 
-	vscript_t vopretNonfungible;
-    int64_t duration;
-    std::vector<uint8_t> origpubkey;
-    uint256 assetHash;
-    struct CCcontract_info *cpProposal, proposalCCinfo;
-
-    cpProposal = CCinit(&proposalCCinfo, EVAL_AGREEMENTS);
-
-    if (!GetTransaction(proposalid, proposalbaseTx, hashBlock, false)) {
-        fprintf(stderr, "InitialProposalInfo() cant find proposalid\n");
-        result.push_back(Pair("result", "error"));
-        result.push_back(Pair("error", "cant find proposalid"));
-        return (result);
-    }
-
-    if (hashBlock.IsNull()) {
-        result.push_back(Pair("result", "error"));
-        result.push_back(Pair("error", "the transaction is still in mempool"));
-        return (result);
-    }
-
-    result.push_back(Pair("result", "success"));
-    result.push_back(Pair("proposalid", proposalid.GetHex()));
-    result.push_back(Pair("owner", HexStr(origpubkey)));
-
-    result.push_back(Pair("duration", duration));
-    //result.push_back(Pair("assetHash", assetHash));
-
-	GetOpretBlob(oprets, OPRETID_NONFUNGIBLEDATA, vopretNonfungible);
-    if (!vopretNonfungible.empty())
-        result.push_back(Pair("data", HexStr(vopretNonfungible)));
-
-    //maybe calculation for duration like we do with tokens expiretime
-
-    return result;
-}
+//UniValue InitialProposalInfo(uint256 proposalid)
+//{
+//    UniValue result(UniValue::VOBJ);
+//    std::vector<std::pair<uint8_t, vscript_t>> oprets;
+//    uint256 hashBlock;
+//    CTransaction proposalbaseTx; 
+//	vscript_t vopretNonfungible;
+//    int64_t duration;
+//    std::vector<uint8_t> origpubkey;
+//    uint256 assetHash;
+//    struct CCcontract_info *cpProposal, proposalCCinfo;
+//
+//    cpProposal = CCinit(&proposalCCinfo, EVAL_AGREEMENTS);
+//
+//    if (!GetTransaction(proposalid, proposalbaseTx, hashBlock, false)) {
+//        fprintf(stderr, "InitialProposalInfo() cant find proposalid\n");
+//        result.push_back(Pair("result", "error"));
+//        result.push_back(Pair("error", "cant find proposalid"));
+//        return (result);
+//    }
+//
+//    if (hashBlock.IsNull()) {
+//        result.push_back(Pair("result", "error"));
+//        result.push_back(Pair("error", "the transaction is still in mempool"));
+//        return (result);
+//    }
+//
+//    result.push_back(Pair("result", "success"));
+//    result.push_back(Pair("proposalid", proposalid.GetHex()));
+//    result.push_back(Pair("owner", HexStr(origpubkey)));
+//
+//    result.push_back(Pair("duration", duration));
+//    //result.push_back(Pair("assetHash", assetHash));
+//
+//	GetOpretBlob(oprets, OPRETID_NONFUNGIBLEDATA, vopretNonfungible);
+//    if (!vopretNonfungible.empty())
+//        result.push_back(Pair("data", HexStr(vopretNonfungible)));
+//
+//    //maybe calculation for duration like we do with tokens expiretime
+//
+//    return result;
+//}
 
 //ProposalList
-UniValue InitialProposalList()
-{
-    UniValue result(UniValue::VARR);
-    std::vector<std::pair<CAddressIndexKey, CAmount>> addressIndex;
-    std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue>> addressIndexCCMarker;
-
-    struct CCcontract_info *cp, C;
-    uint256 txid, hashBlock;
-    CTransaction vintx;
-    std::vector<uint8_t> origpubkey;
-    int64_t duration;
-    uint256 assetHash;
-
-
-    cp = CCinit(&C, EVAL_AGREEMENTS);
-
-    auto addProposalId = [&](uint256 txid) {
-        if (GetTransaction(txid, vintx, hashBlock, false) != 0) {
-            if (vintx.vout.size() > 0 && DecodeInitialProposalOpret(vintx.vout[vintx.vout.size() - 1].scriptPubKey, origpubkey, duration, assetHash) != 0) {
-                result.push_back(txid.GetHex());
-            }
-        }
-    };
-
-    SetCCtxids(addressIndex, cp->normaladdr, false); // find by old normal addr marker
-    for (std::vector<std::pair<CAddressIndexKey, CAmount>>::const_iterator it = addressIndex.begin(); it != addressIndex.end(); it++) {
-        addProposalId(it->first.txhash);
-    }
-
-    SetCCunspents(addressIndexCCMarker, cp->unspendableCCaddr, true); // find by burnable validated cc addr marker
-    for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue>>::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++) {
-        addProposalId(it->first.txhash);
-    }
-
-    return (result);
-}
+//UniValue InitialProposalList()
+//{
+//    UniValue result(UniValue::VARR);
+//    std::vector<std::pair<CAddressIndexKey, CAmount>> addressIndex;
+//    std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue>> addressIndexCCMarker;
+//
+//    struct CCcontract_info *cp, C;
+//    uint256 txid, hashBlock;
+//    CTransaction vintx;
+//    std::vector<uint8_t> origpubkey;
+//    int64_t duration;
+//    uint256 assetHash;
+//
+//
+//    cp = CCinit(&C, EVAL_AGREEMENTS);
+//
+//    auto addProposalId = [&](uint256 txid) {
+//        if (GetTransaction(txid, vintx, hashBlock, false) != 0) {
+//            if (vintx.vout.size() > 0 && DecodeInitialProposalOpret(vintx.vout[vintx.vout.size() - 1].scriptPubKey, origpubkey, duration, assetHash) != 0) {
+//                result.push_back(txid.GetHex());
+//            }
+//        }
+//    };
+//
+//    SetCCtxids(addressIndex, cp->normaladdr, false); // find by old normal addr marker
+//    for (std::vector<std::pair<CAddressIndexKey, CAmount>>::const_iterator it = addressIndex.begin(); it != addressIndex.end(); it++) {
+//        addProposalId(it->first.txhash);
+//    }
+//
+//    SetCCunspents(addressIndexCCMarker, cp->unspendableCCaddr, true); // find by burnable validated cc addr marker
+//    for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue>>::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++) {
+//        addProposalId(it->first.txhash);
+//    }
+//
+//    return (result);
+//}
