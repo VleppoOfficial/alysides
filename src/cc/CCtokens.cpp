@@ -230,7 +230,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 					{
 						if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 2)
 						{
-							return eval->Invalid("attempting to spend update batonvout in non-update tx");
+							return eval->Invalid("attempting to spend update batonvout in update tx");
 						}
 						std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
 					}
@@ -242,7 +242,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 					{
 						if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 0)
 						{
-							return eval->Invalid("attempting to spend update batonvout in non-update tx");
+							return eval->Invalid("attempting to spend update batonvout in update tx");
 						}
 						std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
 					}
