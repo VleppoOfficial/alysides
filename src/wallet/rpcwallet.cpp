@@ -8025,17 +8025,17 @@ UniValue initialproposalinfo(const UniValue& params, bool fHelp)
 	return (InitialProposalInfo(proposalid));
 }
 
-//UniValue initialproposallist(const UniValue& params, bool fHelp)
-//{
-//    uint256 proposalid; // is this needed?
-//    if (fHelp || params.size() > 0)
-//        throw runtime_error("proposallist\n");
-//
-//    if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
-//        throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
-//   
-//	return (InitialProposalList());
-//}
+UniValue initialproposallist(const UniValue& params, bool fHelp)
+{
+    uint256 proposalid; // is this needed?
+    if (fHelp || params.size() > 0)
+        throw runtime_error("proposallist\n");
+
+    if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
+        throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
+   
+	return (InitialProposalList());
+}
 
 // RPC for Proposals - End
 
