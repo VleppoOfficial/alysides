@@ -110,7 +110,7 @@ std::string CreateProposal(int64_t txfee, int64_t duration, uint256 assetHash )
        // uint8_t destEvalCode = EVAL_AGREEMENTS; // not used
         mtx.vout.push_back(MakeCC1vout(cp->evalcode, txfee, mypk));
 
-        return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeValidateProposalopret(Mypubkey(), duration, assetHash, nonfungibleData)));
+        return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeValidateProposalopret(Mypubkey(), duration, assetHash)));
     }
 	
     CCerror = "cant find normal inputs";
