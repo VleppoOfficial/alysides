@@ -37,6 +37,7 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey);
 bool IsTokenMarkerVout(CTxOut vout);
 bool IsTokenBatonVout(CTxOut vout);
 bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid);
+double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid);
 
 int64_t GetTokenBalance(CPubKey pk, uint256 tokenid);
 UniValue TokenInfo(uint256 tokenid);
