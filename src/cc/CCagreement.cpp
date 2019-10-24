@@ -1,4 +1,5 @@
 #include "CCagreement.h"
+#include "importcoin.h"
 
 #ifndef IS_CHARINSTR
 #define IS_CHARINSTR(c, str) (std::string(str).find((char)(c)) != std::string::npos)
