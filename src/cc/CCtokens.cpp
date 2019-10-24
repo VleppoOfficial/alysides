@@ -140,7 +140,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 		return eval->Invalid("attempting to spend update batonvout in non-update tx");
 	
 	// Iterate over all elements in Vector
-	for (CPubKey& itpubkey : vinTokenPubkeys)
+	for (auto & itpubkey : vinTokenPubkeys)
 	{
 		if (itpubkey.isValid())
 		{
