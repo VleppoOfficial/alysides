@@ -971,6 +971,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid, Eval* eval)
 	}
 	else
 	{
+		std::cerr << "didn't find anything past tokenid" << std::endl;
 		latesttxid = sourcetxid;
 		return 1;
 	}
