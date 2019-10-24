@@ -112,7 +112,7 @@ std::string InitialProposal(int64_t txfee, int64_t duration, uint256 assetHash)
 
         return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeValidateProposalopret(Mypubkey(), duration, assetHash)));
     }
-
+	
     CCerror = "cant find normal inputs";
     LOGSTREAM((char*)"ccagreements", CCLOG_INFO, stream << "InitialProposal() " << CCerror << std::endl);
     return std::string("");

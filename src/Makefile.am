@@ -294,6 +294,7 @@ libbitcoin_server_a_SOURCES = \
   cc/CCtx.cpp \
   cc/CCutils.cpp \
   cc/CCtokens.cpp \
+  cc/CCagreement.cpp \
   cc/assets.cpp \
   cc/faucet.cpp \
   cc/rewards.cpp \
