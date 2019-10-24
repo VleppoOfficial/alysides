@@ -127,29 +127,32 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	}
 	
 	// Tokencreate baton vout cannot be spent by non-update transactions
-	if(funcid != 'u' && GetLatestTokenUpdate(tokenid, latesttxid, eval))
+	if (funcid != 'u')
 	{
-		if(latesttxid == tokenid)
+		if(GetLatestTokenUpdate(tokenid, latesttxid, eval))
 		{
-			for (int32_t i = 0; i < numvins; i++)
+			if(latesttxid == tokenid)
 			{
-				if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 2) //in tokencreate tx, baton vout is vout2
-					return eval->Invalid("attempting to spend update batonvout in non-update tx");
-				//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
+				for (int32_t i = 0; i < numvins; i++)
+				{
+					if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 2) //in tokencreate tx, baton vout is vout2
+						return eval->Invalid("attempting to spend update batonvout in non-update tx");
+					//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
+				}
+			}
+			else
+			{
+				for (int32_t i = 0; i < numvins; i++)
+				{
+					if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 0) //in update tx, baton vout is vout0
+						return eval->Invalid("attempting to spend update batonvout in non-update tx");
+					//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
+				}
 			}
 		}
 		else
-		{
-			for (int32_t i = 0; i < numvins; i++)
-			{
-				if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 0) //in update tx, baton vout is vout0
-					return eval->Invalid("attempting to spend update batonvout in non-update tx");
-				//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
-			}
-		}
+			return eval->Invalid("error in update batonvout validation");
 	}
-	else
-		return eval->Invalid("error in update batonvout validation");
 	
     switch (funcid)
 	{
