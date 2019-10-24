@@ -1129,7 +1129,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         return std::string("");
     }*/
 	//getting the latest update txid (can be the same as tokenid)
-	if (!GetLatestTokenUpdate(tokenid, latesttxid, NULL))
+	if (!GetLatestTokenUpdate(tokenid, latesttxid))
 	{
         CCerror = "cannot find latest token update";
         return std::string("");
@@ -1290,7 +1290,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 	}
 	else //from latest to earliest
 	{
-		if (!GetLatestTokenUpdate(tokenid, latesttxid, NULL))
+		if (!GetLatestTokenUpdate(tokenid, latesttxid))
 		{
 			result.push_back(Pair("result", "error"));
 			result.push_back(Pair("error", "tokenid isnt token creation txid"));
