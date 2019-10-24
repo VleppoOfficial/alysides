@@ -16,7 +16,7 @@ CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t dur
     return EncodeValidateProposalopret(origpubkey, duration, assetHash);
 }
 //
-CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash, vscript_t>> oprets)
+CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash, std::vector<std::pair<uint8_t, vscript_t>> oprets)
 {
     CScript opret;
     uint8_t evalcode = EVAL_AGREEMENTS;
