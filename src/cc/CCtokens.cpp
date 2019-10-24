@@ -142,7 +142,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	// Iterate over all elements in Vector
 	for (auto & itpubkey : vinTokenPubkeys)
 	{
-		if (itpubkey.isValid())
+		if (itpubkey)
 		{
 			std::cerr << "Found pubkey: " << HexStr(itpubkey) << " with token " << tokenid.GetHex() << " ownership percent=" << GetTokenOwnershipPercent(itpubkey, tokenid) << std::endl;
 		}
