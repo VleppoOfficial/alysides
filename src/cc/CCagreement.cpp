@@ -126,12 +126,13 @@ UniValue InitialProposalInfo(uint256 proposalid)
     uint256 hashBlock;
     CTransaction proposalbaseTx; 
     int64_t duration;
+    std::vector<uint8_t> origpubkey;
     uint256 assetHash;
     struct CCcontract_info *cpProposal, proposalCCinfo;
 
     cpProposal = CCinit(&proposalCCinfo, EVAL_AGREEMENTS);
 
-    if (!GetTransaction(tokenid, proposalbaseTx, hashBlock, false)) {
+    if (!GetTransaction(proposalid, proposalbaseTx, hashBlock, false)) {
         fprintf(stderr, "InitialProposalInfo() cant find proposalid\n");
         result.push_back(Pair("result", "error"));
         result.push_back(Pair("error", "cant find proposalid"));
