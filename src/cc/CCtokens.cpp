@@ -131,7 +131,11 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	{
 		for (int32_t i = 0; i < numvins; i++)
 		{
-			if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || (tx.vin[i].prevout.hash != tokenid && tx.vin[i].prevout.n == 0))
+			if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || 
+				(eval->GetTxUnconfirmed(tx.vin[i].prevout.hash, prevCreateTx, hashBlock) != 0 && 
+				myGetTransaction(tx.vin[i].prevout.hash, prevCreateTx, hashBlock) &&
+				DecodeTokenUpdateOpRet(prevCreateTx.vout[prevCreateTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyRefTokenId) != 'u' &&
+				tx.vin[i].prevout.n == 0))
 				return eval->Invalid("attempting to spend update batonvout in non-update tx");
 			//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
 		}
@@ -226,7 +230,11 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//Checking if update tx is spending the baton (in tokenid tx, baton vout is vout2; in update tx, baton vout is vout0)
 			for (int32_t i = 0; i < numvins; i++)
 			{
-				if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || (tx.vin[i].prevout.hash != tokenid && tx.vin[i].prevout.n == 0))
+				if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || 
+					(eval->GetTxUnconfirmed(tx.vin[i].prevout.hash, prevCreateTx, hashBlock) != 0 && 
+					myGetTransaction(tx.vin[i].prevout.hash, prevCreateTx, hashBlock) &&
+					DecodeTokenUpdateOpRet(prevCreateTx.vout[prevCreateTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyRefTokenId) != 'u' &&
+					tx.vin[i].prevout.n == 0))
 					isSpendingBaton = true;
 				//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
 			}
