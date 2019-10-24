@@ -27,12 +27,12 @@ CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t dur
     opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << duration << assetHash);
 
     //kig på dette
-    /*for (auto o : oprets) {
+    for (auto o : oprets) {
            if (o.first != 0) {
                ss << (uint8_t)o.first;
                ss << o.second;
            }
-       };*/
+       };
 
     return (opret);
 }

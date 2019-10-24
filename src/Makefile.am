@@ -494,7 +494,6 @@ libbitcoin_common_a_SOURCES = \
   script/standard.cpp \
   transaction_builder.cpp \
   cc/CCtokenutils.cpp \
-  cc/CCagreement.cpp \ 
   cc/CCutilbits.cpp \
   $(BITCOIN_CORE_H) \
   $(LIBZCASH_H)
