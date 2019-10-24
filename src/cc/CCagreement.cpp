@@ -7,7 +7,7 @@
 //Encoder and Decoder for ÍnitialProposal
 
 //Encoder for Proposals
-CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash, vscript_t vopretNonfungible)
+CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t duration, uint256 assetHash)
 {
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
 
@@ -32,7 +32,7 @@ CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t dur
                ss << (uint8_t)o.first;
                ss << o.second;
            }
-       });
+       };
 
     return (opret);
 }
@@ -124,7 +124,7 @@ UniValue InitialProposalInfo(uint256 proposalid)
     UniValue result(UniValue::VOBJ);
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
     uint256 hashBlock;
-    CTransaction proposalbaseTx; x	
+    CTransaction proposalbaseTx; 	
     int64_t duration;
     uint256 assetHash;
     struct CCcontract_info *cpProposal, proposalCCinfo;
