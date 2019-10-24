@@ -83,7 +83,7 @@ uint8_t DecodeInitialProposalOpret(const CScript& scriptPubKey, std::vector<uint
 //}
 
 // Create the InitialProposal
-std::string InitialProposal(int64_t txfee, int64_t duration, uint256 assetHash ,vscript_t nonfungibleData)
+std::string CreateProposal(int64_t txfee, int64_t duration, uint256 assetHash )
 {
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
     struct CCcontract_info *cp, C;

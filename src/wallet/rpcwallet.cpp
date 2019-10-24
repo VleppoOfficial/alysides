@@ -7999,7 +7999,7 @@ UniValue initialproposal(const UniValue& params, bool fHelp)
             return (result);
         }
 
-    hextx = InitialProposal(0, duration, assetHash);
+    hextx = CreateProposal(0, duration, assetHash);
         if (hextx.size() > 0) 
 		{
             result.push_back(Pair("result", "success"));
