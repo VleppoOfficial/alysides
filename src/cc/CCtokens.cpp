@@ -892,9 +892,13 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey)
 // moved to separate function for accessibility
 double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid)
 {
+	struct CCcontract_info *cp, C;
+    cp = CCinit(&C, EVAL_TOKENS);
 	char coinaddr[64];
 	Getscriptaddress(coinaddr,CScript() << ParseHex(HexStr(pk)) << OP_CHECKSIG);
 	std::cerr << "coinaddr=" << coinaddr << std::endl;
+	GetCCaddress(cp,coinaddr,pk);
+	td::cerr << "CCaddr=" << coinaddr << std::endl;
 	double balance = static_cast<double>(CCtoken_balance(coinaddr, tokenid));
 	double supply = static_cast<double>(CCfullsupply(tokenid));
 	std::cerr << "balance=" << (balance) << std::endl;
