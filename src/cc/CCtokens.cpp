@@ -139,8 +139,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	if (funcid != 'u' && isSpendingBaton)
 		return eval->Invalid("attempting to spend update batonvout in non-update tx");
 	
-	std::cerr << "Passed check for baton spend!" << std::endl;
-
     switch (funcid)
 	{
 		case 'c':
@@ -166,31 +164,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
-			
-			// Tokencreate baton vout cannot be spent by transfer
-			/*if(GetLatestTokenUpdate(tokenid, latesttxid, eval))
-			{
-				if(latesttxid == tokenid)
-				{
-					for (int32_t i = 0; i < numvins; i++)
-					{
-						if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 2) //in tokencreate tx, baton vout is vout2
-							return eval->Invalid("attempting to spend update batonvout in non-update tx");
-						//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
-					}
-				}
-				else
-				{
-					for (int32_t i = 0; i < numvins; i++)
-					{
-						if(tx.vin[i].prevout.hash == latesttxid && tx.vin[i].prevout.n == 0) //in update tx, baton vout is vout0
-							return eval->Invalid("attempting to spend update batonvout in non-update tx");
-						//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
-					}
-				}
-			}
-			else
-				return eval->Invalid("error in update batonvout validation");*/
 			
 			// retrieving destpubkey(s)
 			if (DecodeTokenTransferOneOpRet(tx.vout[numvouts - 1].scriptPubKey, tokenid, voutTokenPubkeys, oprets) != 't')
@@ -226,17 +199,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (inputs != 0)
 				return eval->Invalid("update tx cannot have token inputs");
 			
-			//Checking if update tx is spending the baton (in tokenid tx, baton vout is vout2; in update tx, baton vout is vout0)
-			/*for (int32_t i = 0; i < numvins; i++)
-			{
-				if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || 
-					(eval->GetTxUnconfirmed(tx.vin[i].prevout.hash, referenceTx, hashBlock) != 0 && 
-					myGetTransaction(tx.vin[i].prevout.hash, referenceTx, hashBlock) &&
-					DecodeTokenUpdateOpRet(referenceTx.vout[referenceTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyRefTokenId) != 'u' &&
-					tx.vin[i].prevout.n == 0))
-					isSpendingBaton = true;
-				//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
-			}*/
+			//Checking if update tx is actually spending the baton
 			if (!isSpendingBaton)
 				return eval->Invalid("update tx is not spending update baton");
 			
@@ -929,7 +892,7 @@ double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid)
 
 // gets the latest baton txid of a token
 // used in validation, TokenUpdate and TokenViewUpdate's recursive mode
-bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid, Eval* eval)
+bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 {
     int32_t vini, height, retcode;
 	std::vector<std::pair<uint8_t, vscript_t>> oprets;
@@ -938,8 +901,8 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid, Eval* eval)
     uint8_t funcId, evalcode;
 
 	// special handling for token creation tx - in this tx, baton vout is vout2
-	if (((eval && eval->GetTxUnconfirmed(tokenid, txBaton, hashBlock) == 0) || (!eval && !GetTransaction(tokenid, txBaton, hashBlock, true))) &&
-	//if (!(myGetTransaction(tokenid, txBaton, hashBlock, true) &&
+	//if (((eval && eval->GetTxUnconfirmed(tokenid, txBaton, hashBlock) == 0) || (!eval && !GetTransaction(tokenid, txBaton, hashBlock, true))) &&
+	if (!(GetTransaction(tokenid, txBaton, hashBlock, true) &&
 		!hashBlock.IsNull() &&
 		txBaton.vout.size() > 2 &&
 		(funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
@@ -948,10 +911,9 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid, Eval* eval)
 		return 0;
 	}
 	// find an update tx which spent the token create baton vout, if it exists
-	if (
-		(retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
-		((eval && eval->GetTxUnconfirmed(batontxid, txBaton, hashBlock) != 0) || (!eval && GetTransaction(batontxid, txBaton, hashBlock, true))) &&
-		//myGetTransaction(batontxid, txBaton, hashBlock, true) &&
+	if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
+		//((eval && eval->GetTxUnconfirmed(batontxid, txBaton, hashBlock) != 0) || (!eval && GetTransaction(batontxid, txBaton, hashBlock, true))) &&
+		GetTransaction(batontxid, txBaton, hashBlock, true) &&
 		!hashBlock.IsNull() &&
 		txBaton.vout.size() > 0 &&
 		txBaton.vout[0].nValue == 10000 && 
@@ -970,8 +932,8 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid, Eval* eval)
 	// baton vout should be vout0 from now on
 	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
 	{
-		if(((eval && eval->GetTxUnconfirmed(batontxid, txBaton, hashBlock) != 0) || (!eval && GetTransaction(batontxid, txBaton, hashBlock, true))) && // load the transaction which spent the baton
-		//if (myGetTransaction(batontxid, txBaton, hashBlock, true) &&  
+		//if(((eval && eval->GetTxUnconfirmed(batontxid, txBaton, hashBlock) != 0) || (!eval && GetTransaction(batontxid, txBaton, hashBlock, true))) && 
+		if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
 			!hashBlock.IsNull() &&                           // tx not in mempool
 			txBaton.vout.size() > 0 &&             
 			txBaton.vout[0].nValue == 10000 &&     // check baton fee 
