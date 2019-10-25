@@ -262,7 +262,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			
 			sig = komodo_kvsig(message, msglength, uint256 privkey);
 			
-			if ( komodo_kvsigverify(message, msglength, updaterPubkey, sig) < 0 )
+			if ( komodo_kvsigverify(message, msglength, sigPubkey, sig) < 0 )
 			{
 				std::cerr << "Signature invalid." << std::endl;
 			}
