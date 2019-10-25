@@ -198,8 +198,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			// if asset or master license: check if tokenid ownership percent > ownerperc
 			if (tokenType == "a" || tokenType == "m")
 			{
-				std::cerr << "ownership=" << GetTokenOwnershipPercent(updaterPubkey, tokenid) << " ownerperc=" << ownerPerc << std::endl;
-				if (GetTokenOwnershipPercent(updaterPubkey, tokenid) < ownerPerc)
+				std::cerr << "ownership=" << GetTokenOwnershipPercent(pubkey2pk(updaterPubkey), tokenid) << " ownerperc=" << ownerPerc << std::endl;
+				if (GetTokenOwnershipPercent(pubkey2pk(updaterPubkey), tokenid) < ownerPerc)
 					return eval->Invalid("updater pubkey does not own enough tokens to update");
 			}
 			
