@@ -201,7 +201,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			// if asset or master license: check if tokenid ownership percent > ownerperc
 			if (tokenType == "a" || tokenType == "m")
 			{
-				std::cerr << "ownership=" << GetTokenOwnershipPercent(pubkey2pk(updaterPubkey), tokenid) << " ownerperc=" << ownerPerc << std::endl;
 				if (GetTokenOwnershipPercent(pubkey2pk(updaterPubkey), tokenid) < ownerPerc)
 					return eval->Invalid("updater pubkey does not own enough tokens to update");
 			}
@@ -901,7 +900,7 @@ double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid)
 	GetCCaddress(cp,CCaddr,pk);
 	double balance = static_cast<double>(CCtoken_balance(CCaddr, tokenid));
 	double supply = static_cast<double>(CCfullsupply(tokenid));
-	std::cerr << "updaterpk= " << HexStr(pk) << " CCaddr=" << CCaddr << " balance=" << balance << " ownership=" << (balance / supply * 100) << std::endl;
+	//std::cerr << "updaterpk= " << HexStr(pk) << " CCaddr=" << CCaddr << " balance=" << balance << " ownership=" << (balance / supply * 100) << std::endl;
 	return (balance / supply * 100);
 }
 
@@ -1038,13 +1037,13 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
             return std::string("");
         }
         //master licenses must reference digital assets owned by mypk
-        if (tokenType == "m" && (refTokenType != "a" || ownedRefTokenPerc <= refOwnerPerc)) {
+        if (tokenType == "m" && (refTokenType != "a" || ownedRefTokenPerc < refOwnerPerc)) {
             CCerror = "for master license tokens reference tokenid must be of type 'a' and owned by this pubkey";
             LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
             return std::string("");
         }
         //sub-licenses must reference unexpired master licenses owned by mypk
-        if (tokenType == "s" && (refTokenType != "m" || ownedRefTokenPerc <= refOwnerPerc)) {
+        if (tokenType == "s" && (refTokenType != "m" || ownedRefTokenPerc < refOwnerPerc)) {
             CCerror = "for sub-license tokens reference tokenid must be of type 'm' and owned by this pubkey";
             LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
             return std::string("");
@@ -1135,7 +1134,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         return std::string("");
     }
 	//checking if token is owned by mypk
-	/*if (ownedRefTokenPerc <= refOwnerPerc)
+	/*if (ownedRefTokenPerc < refOwnerPerc)
 	{
         CCerror = "tokenid must be owned by this pubkey";
         return std::string("");
