@@ -49,7 +49,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         return true;
 
 	CTransaction createTx, referenceTx; //the token creation tx
-	uint256 hashBlock, tokenid = zeroid, referenceTokenId, dummyRefTokenId;
+	uint256 hashBlock, tokenid = zeroid, referenceTokenId, dummyRefTokenId, updatetokenid;
 	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(), numblocks, vini, height;
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
 	std::vector<CPubKey> vinTokenPubkeys, voutTokenPubkeys; // sender pubkey(s) and destpubkey(s)
@@ -193,7 +193,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (!isSpendingBaton)
 				return eval->Invalid("update tx is not spending update baton");
 			
-			if (DecodeTokenUpdateOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, updaterPubkey, referencetokenid) != 'u' || referencetokenid != tokenid)
+			if (DecodeTokenUpdateOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, updaterPubkey, updatetokenid) != 'u' || updatetokenid != tokenid)
 				return eval->Invalid("invalid update tx opret data");
 			
 			// needs signature verification here, to make sure updaterPubkey is the pubkey that submitted this tx - dan
