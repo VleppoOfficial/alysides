@@ -1153,6 +1153,10 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         CCerror = "ccode size should be 3, message size should be <= 128";
         return std::string("");
     }
+	
+	// needs to generate a signature here from privkey and a message, which could be hashed update data
+	// this signature would be used in TokensValidate to prove that the pubkey in the opret is the pubkey that submitted the update transaction
+	
 	if (AddNormalinputs(mtx, mypk, 2 * txfee, 64) > 0)
 	{
 		if (latesttxid == tokenid)
