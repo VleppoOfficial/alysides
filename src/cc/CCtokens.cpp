@@ -898,7 +898,7 @@ double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid)
 	GetCCaddress(cp,CCaddr,pk);
 	double balance = static_cast<double>(CCtoken_balance(CCaddr, tokenid));
 	double supply = static_cast<double>(CCfullsupply(tokenid));
-	std::cerr << "balance=" << balance << " ownership=" << (balance / supply * 100) << std::endl;
+	std::cerr << "CCaddr=" << CCaddr << " balance=" << balance << " ownership=" << (balance / supply * 100) << std::endl;
 	return (balance / supply * 100);
 }
 
