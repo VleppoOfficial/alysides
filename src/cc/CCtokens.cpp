@@ -129,7 +129,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	{
 		if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || //in tokenid tx, baton vout is vout2
 			(eval->GetTxUnconfirmed(tx.vin[i].prevout.hash, referenceTx, hashBlock) != 0 && myGetTransaction(tx.vin[i].prevout.hash, referenceTx, hashBlock) &&
-			DecodeTokenUpdateOpRet(referenceTx.vout[referenceTx.vout.size() - 1].scriptPubKey, updaterPubkey, tokenid) == 'u' &&
+			DecodeTokenUpdateOpRet(referenceTx.vout[referenceTx.vout.size() - 1].scriptPubKey, dummyPubkey, tokenid) == 'u' &&
 			tx.vin[i].prevout.n == 0)) //in update tx, baton vout is vout0
 			isSpendingBaton = true;
 		//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
@@ -192,6 +192,9 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//Checking if update tx is actually spending the baton
 			if (!isSpendingBaton)
 				return eval->Invalid("update tx is not spending update baton");
+			
+			if (DecodeTokenUpdateOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, updaterPubkey, referencetokenid) != 'u' || referencetokenid != tokenid)
+				return eval->Invalid("invalid update tx opret data");
 			
 			// needs signature verification here, to make sure updaterPubkey is the pubkey that submitted this tx - dan
 			
