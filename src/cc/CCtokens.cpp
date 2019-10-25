@@ -339,8 +339,6 @@ void FilterOutTokensUnspendablePk(const std::vector<CPubKey>& sourcePubkeys, std
     for (auto pk : sourcePubkeys)
         if (pk != tokensUnspendablePk)
             destPubkeys.push_back(pk);
-		//else
-		//	std::cerr << "Removed unspendable pk from destpubkey array" << std::endl;
 }
 
 void FilterOutNonCCOprets(const std::vector<std::pair<uint8_t, vscript_t>>& oprets, vscript_t& vopret)
@@ -661,8 +659,6 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
         tokenValIndentSize++;
         tokenoshis = IsTokensvout(false /*<--do not recursion here*/, true /*<--exclude non-tokens vouts*/, cpTokens, eval, tx, i, reftokenid);
         tokenValIndentSize--;
-
-		//std::cerr << "received tokenoshis value=" << tokenoshis << std::endl; //dan
 		
         if (tokenoshis != 0) {
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG1, stream << indentStr << "TokensExactAmounts() adding tx.vout[" << i << "] tokenoshis=" << tokenoshis << std::endl);
@@ -705,7 +701,6 @@ void GetNonfungibleData(uint256 tokenid, vscript_t& vopretNonfungible)
         }
     }
 }
-
 
 // overload, adds inputs from token cc addr
 int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, CPubKey pk, uint256 tokenid, int64_t total, int32_t maxinputs)
@@ -900,7 +895,6 @@ double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid)
 	GetCCaddress(cp,CCaddr,pk);
 	double balance = static_cast<double>(CCtoken_balance(CCaddr, tokenid));
 	double supply = static_cast<double>(CCfullsupply(tokenid));
-	//std::cerr << "updaterpk= " << HexStr(pk) << " CCaddr=" << CCaddr << " balance=" << balance << " ownership=" << (balance / supply * 100) << std::endl;
 	return (balance / supply * 100);
 }
 
