@@ -25,14 +25,6 @@
 
 //===========================================================================
 //
-// Token Generic Encoder
-//
-//===========================================================================
-
-/* New EncodeTokenOpRet coming soon, maybe */
-
-//===========================================================================
-//
 // Token Create Encoder
 //
 //===========================================================================
@@ -165,7 +157,28 @@ CScript EncodeTokenTransferOneOpRet(uint256 tokenid, std::vector<CPubKey> voutPu
 //
 //===========================================================================
 
-/* EncodeTokenUpdateOpRet coming soon */
+// encoder for normal opreturn of 'u' tx
+// contains information necessary for validation
+CScript EncodeTokenUpdateOpRet(std::vector<uint8_t> pk, uint256 tokenid)
+{    
+    CScript opret; uint8_t evalcode = EVAL_TOKENS, funcid = 'u';
+    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << pk << tokenid);
+    return(opret);
+}
+
+// encoder for cc opret of baton vouts
+// contains arbitrary amendable data
+// NOTE: the estimated value is measured in satoshis. If specified currency code is not a cryptocurrency, treat the value as if it was convertible to satoshis.
+// 1 coin is 100000000 satoshis, therefore the maximum value in coins (or fiat) is 9223372036.854775807 (approx. 9 billion)
+CScript EncodeTokenUpdateCCOpRet(uint256 assetHash, int64_t value, std::string ccode, std::string message)
+{
+	CScript opret;
+	uint8_t evalcode = EVAL_TOKENS;
+	uint8_t funcid = 'u'; // override the param
+	
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << assetHash << value << ccode << message);
+    return(opret);
+}
 
 //===========================================================================
 //
@@ -184,7 +197,7 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
 
 	//dummies for tokencreate
 	std::string dummyName, dummyDescription;
-	vscript_t dummyPubkey;
+	std::vector<uint8_t> dummyPubkey;
 	
 	//dummies for tokentransferone
 	std::vector<CPubKey> voutPubkeysDummy;
@@ -209,6 +222,9 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
 		case 't':
 			return DecodeTokenTransferOneOpRet(scriptPubKey, tokenid, voutPubkeysDummy, oprets);
 		
+		case 'u':
+			return DecodeTokenUpdateOpRet(scriptPubKey, dummyPubkey, tokenid);
+			
 		//case 'whatever':
 			//insert new cases here
 		
@@ -296,10 +312,6 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
 // Vleppo token transfer decoder, replaces old DecodeTokenOpRet
 uint8_t DecodeTokenTransferOneOpRet(const CScript scriptPubKey, uint256 &tokenid, std::vector<CPubKey> &voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> &oprets)
 {
-	//These are unused AFAIK
-	/*vscript_t vnonfungibleDummy;
-	uint256 dummySrcTokenId;*/
-	
 	vscript_t vopret, vblob;
 	GetOpReturnData(scriptPubKey, vopret);
 	
@@ -414,7 +426,47 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
 //
 //===========================================================================
 
-/* DecodeTokenUpdateOpRet coming soon */
+// decoder for normal opreturn of 'u' tx
+// contains information necessary for validation
+uint8_t DecodeTokenUpdateOpRet(const CScript scriptPubKey, std::vector<uint8_t> &pk, uint256 &tokenid)
+{
+    std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
+    GetOpReturnData(scriptPubKey,vopret);
+    if ( vopret.size() > 2 && vopret.begin()[0] == EVAL_TOKENS && vopret.begin()[1] == 'u')
+	{
+		if (E_UNMARSHAL(vopret,ss >> evalcode; ss >> funcid; ss >> pk; ss >> tokenid) != 0 && evalcode == EVAL_TOKENS)
+		{
+			return(funcid);
+		}
+	}
+    return(0);
+}
+
+// decoder for cc opret of baton vouts
+// contains arbitrary amendable data
+uint8_t DecodeTokenUpdateCCOpRet(const CScript scriptPubKey, uint256 &assetHash, int64_t &value, std::string &ccode, std::string &message)
+{
+    vscript_t vopret;
+	uint8_t evalcode, funcid;
+	GetOpReturnData(scriptPubKey, vopret);
+	if (vopret.size() == 0)
+	{
+		GetOpReturnData(CScript(scriptPubKey.begin()+1, scriptPubKey.end()), vopret); //fix for extra hex num
+		if (vopret.size() == 0)
+		{
+			std::cerr << "cc opret data fetch unsuccessful" << std::endl;
+			return(uint8_t)0;
+		}
+	}
+	//std::cerr << "vopret size" << vopret.size() << std::endl;
+	if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> assetHash; ss >> value; ss >> ccode; ss >> message) != 0 && evalcode == EVAL_TOKENS)
+	{
+		//std::cerr << "cc opret decode successful, found value: " << value << std::endl;
+		return(funcid);
+	}
+	//std::cerr << "cc opret decode unsuccessful" << std::endl;
+    return(uint8_t)0;
+}
 
 //===========================================================================
 //
