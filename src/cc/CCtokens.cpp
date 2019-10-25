@@ -169,7 +169,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			
 			// if token is sub-license and isn't being burned and transaction vin isn't from creator vout, invalidate
 			if (tokenType == "s" && 
-				std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end() &&
+				//std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end() &&
 				// check if destaddr == burn tokenaddr here
 				std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == vinTokenPubkeys.end())
 				return eval->Invalid("cannot transfer sub-license from pubkey other than creator pubkey");
