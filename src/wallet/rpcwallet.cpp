@@ -7974,7 +7974,7 @@ UniValue initialproposal(const UniValue& params, bool fHelp)
 {
     UniValue result(UniValue::VOBJ);
     std::string hextx;
-    int64_t duration; // set default
+    int64_t duration = 0; // set default
     uint256 assetHash;
 
 	CCerror.clear();
@@ -7987,10 +7987,14 @@ UniValue initialproposal(const UniValue& params, bool fHelp)
 	 const CKeyStore& keystore = *pwalletMain;
         LOCK2(cs_main, pwalletMain->cs_wallet);
 
-		if (params.size() >= 3) {
-            assetHash = Parseuint256((char*)params[2].get_str().c_str()); //returns zeroid if empty or wrong length
+		 duration = atof(params[0].get_str().c_str());
+
+		if (params.size() == 2) {
+            assetHash = Parseuint256((char*)params[1].get_str().c_str()); //returns zeroid if empty or wrong length
         } else
             assetHash = zeroid;
+
+
 
 		if (duration < 0) 
 		{
