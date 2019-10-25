@@ -248,7 +248,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			in update transaction:
 			
 			*/
-			uint256 sigPubkey = updaterPubkey, privkey;
+			//uint256 sigPubkey = updaterPubkey, privkey;
+			uint256 sigPubkey = Parseuint256((char *)updaterPubkey), privkey;
 			
 			memset(&sigPubkey,0,sizeof(sigPubkey));
 			memset(&sig,0,sizeof(sig));
