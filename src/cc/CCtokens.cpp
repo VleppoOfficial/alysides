@@ -49,9 +49,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         return true;
 
 	CTransaction createTx, referenceTx; //the token creation tx
-	uint256 hashBlock, tokenid = zeroid, referenceTokenId, dummyRefTokenId, latesttxid, spentbatontxid;
-	CBlockIndex confHashBlock;
-	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(), numblocks, vini, height; //the amount of vins and vouts in tx
+	uint256 hashBlock, tokenid = zeroid, referenceTokenId, dummyRefTokenId;
+	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(), numblocks, vini, height;
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
 	std::vector<CPubKey> vinTokenPubkeys, voutTokenPubkeys; // sender pubkey(s) and destpubkey(s)
 	std::vector<uint8_t> creatorPubkey, dummyPubkey, updaterPubkey; // token creator pubkey
@@ -68,7 +67,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     if (numvouts < 1)
         return eval->Invalid("no vouts");
 
-	// Check the tx funcid. At the same time, get embedded eval code, tokenid & extra opret data
 	if ((funcid = DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, evalCodeInOpret, tokenid, oprets)) == 0)
         return eval->Invalid("TokenValidate: invalid opreturn payload");
 
@@ -139,12 +137,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	if (funcid != 'u' && isSpendingBaton)
 		return eval->Invalid("attempting to spend update batonvout in non-update tx");
 	
-	// Iterate over all elements in Vector
-	/*for (auto & itpubkey : vinTokenPubkeys)
-	{
-		std::cerr << "Found pubkey: " << HexStr(itpubkey) << " with token " << tokenid.GetHex() << " ownership percent=" << GetTokenOwnershipPercent(itpubkey, tokenid) << std::endl;
-	}*/
-	
     switch (funcid)
 	{
 		case 'c':
@@ -177,7 +169,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			
 			// if token is sub-license and isn't being burned and transaction vin isn't from creator vout, invalidate
 			if (tokenType == "s" && 
-				std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end() && //NOTE: this is not secure as it relies on opreturn data, which could be anything - dan
+				std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end() &&
+				// check if destaddr == burn tokenaddr here
 				std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == vinTokenPubkeys.end())
 				return eval->Invalid("cannot transfer sub-license from pubkey other than creator pubkey");
 			
@@ -192,8 +185,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//vout.0: next token update baton with cc opret
 			//vout.1 to n-2: normal output for change (if any)
 			//vout.n-1: opreturn EVAL_TOKENS 'u' pk tokenid
-			
-			std::cerr << "Entered token update validation!" << std::endl;
 
 			if (inputs != 0)
 				return eval->Invalid("update tx cannot have token inputs");
@@ -202,72 +193,21 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (!isSpendingBaton)
 				return eval->Invalid("update tx is not spending update baton");
 			
-			/*
-			update validation:
-			if asset or master license
-			check if tokenid ownership percent > ownerperc
-			if master or sub license:
-				must be creator
+			// needs signature verification here, to make sure updaterPubkey is the pubkey that submitted this tx - dan
 			
-			uint256 privkey,pubkey,refpubkey,sig;
-			uint8_t keyvalue[IGUANA_MAXSCRIPTSIZE*8];
-			memset(&sig,0,sizeof(sig));
-			memset(&privkey,0,sizeof(privkey));
-			memset(&refpubkey,0,sizeof(refpubkey));
-			memset(&pubkey,0,sizeof(pubkey));
-			privkey = komodo_kvprivkey(&pubkey,(char *)"password"); //some message
-			memcpy(keyvalue,key,keylen);
-			if ( keylen+refvaluesize <= sizeof(keyvalue) )
-            {
-                sig = komodo_kvsig(keyvalue,keylen+refvaluesize,privkey);
-                if ( komodo_kvsigverify(keyvalue,keylen+refvaluesize,refpubkey,sig) < 0 )
-                {
-                    ret.push_back(Pair("error",(char *)"error verifying sig, passphrase is probably wrong"));
-                    printf("VERIFY ERROR\n");
-                    return ret;
-                } // else printf("verified immediately\n");
-            }
-			
-			uint256 updaterPubkey, sigPubkey = updaterPubkey, privkey;
-			
-			memset(&sigPubkey,0,sizeof(sigPubkey));
-			memset(&sig,0,sizeof(sig));
-			memset(&privkey,0,sizeof(privkey));
-			
-			privkey = komodo_kvprivkey(&pubkey, 0) //pass can be 0
-			
-			uint8_t message[IGUANA_MAXSCRIPTSIZE*8] = 
-			
-			signature = komodo_kvsig(uint8_t message[IGUANA_MAXSCRIPTSIZE*8], int32_t messagelength, uint256 privkey)
-			
-			if ( komodo_kvsigverify(message,messagelength,updaterPubkey,signature) < 0 )
+			// if asset or master license: check if tokenid ownership percent > ownerperc
+			if (tokenType == "a" || tokenType == "m")
 			{
-				sig don't match with pubkey
+				if (GetTokenOwnershipPercent(updaterPubkey, tokenid) < ownerPerc)
+					return eval->Invalid("updater pubkey does not own enough tokens to update");
 			}
 			
-			in update transaction:
-			
-			*/
-			uint256 sigPubkey, privkey, sig;
-			
-			memset(&sigPubkey,0,sizeof(sigPubkey));
-			memset(&sig,0,sizeof(sig));
-			memset(&privkey,0,sizeof(privkey));
-			
-			privkey = komodo_kvprivkey(&sigPubkey, 0);
-			
-			uint8_t message[IGUANA_MAXSCRIPTSIZE*8] = "test message";
-			
-			msglength = (int32_t)strlen(message);
-			
-			sig = komodo_kvsig(message, msglength, uint256 privkey);
-			
-			if ( komodo_kvsigverify(message, msglength, sigPubkey, sig) < 0 )
+			//if master or sub license: must be creator
+			if (tokenType == "m" || tokenType == "s")
 			{
-				std::cerr << "Signature invalid." << std::endl;
+				if (updaterPubkey != creatorPubkey)
+					return eval->Invalid("licenses must be updated by creator pubkey");
 			}
-			else
-				std::cerr << "Signature valid!" << std::endl;
 			
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token update preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
 			break;
