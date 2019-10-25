@@ -7979,8 +7979,8 @@ UniValue initialproposal(const UniValue& params, bool fHelp)
 
 	CCerror.clear();
 
-	if (fHelp || params.size() > 1 || params.size() < 3)
-            throw runtime_error("create duration assethash\n");
+	if (fHelp || params.size() > 3 || params.size() < 1)
+            throw runtime_error("initialproposal duration assethash\n");
         if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
             throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
 
