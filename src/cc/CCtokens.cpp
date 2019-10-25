@@ -54,7 +54,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(), numblocks, vini, height; //the amount of vins and vouts in tx
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
 	std::vector<CPubKey> vinTokenPubkeys, voutTokenPubkeys; // sender pubkey(s) and destpubkey(s)
-	std::vector<uint8_t> creatorPubkey, dummyPubkey; // token creator pubkey
+	std::vector<uint8_t> creatorPubkey, dummyPubkey, updaterPubkey; // token creator pubkey
 	
 	int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
 	
@@ -131,7 +131,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	{
 		if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || //in tokenid tx, baton vout is vout2
 			(eval->GetTxUnconfirmed(tx.vin[i].prevout.hash, referenceTx, hashBlock) != 0 && myGetTransaction(tx.vin[i].prevout.hash, referenceTx, hashBlock) &&
-			DecodeTokenUpdateOpRet(referenceTx.vout[referenceTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyRefTokenId) == 'u' &&
+			DecodeTokenUpdateOpRet(referenceTx.vout[referenceTx.vout.size() - 1].scriptPubKey, updaterPubkey, dummyRefTokenId) == 'u' &&
 			tx.vin[i].prevout.n == 0)) //in update tx, baton vout is vout0
 			isSpendingBaton = true;
 		//std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
@@ -140,10 +140,10 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 		return eval->Invalid("attempting to spend update batonvout in non-update tx");
 	
 	// Iterate over all elements in Vector
-	for (auto & itpubkey : vinTokenPubkeys)
+	/*for (auto & itpubkey : vinTokenPubkeys)
 	{
 		std::cerr << "Found pubkey: " << HexStr(itpubkey) << " with token " << tokenid.GetHex() << " ownership percent=" << GetTokenOwnershipPercent(itpubkey, tokenid) << std::endl;
-	}
+	}*/
 	
     switch (funcid)
 	{
@@ -166,8 +166,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//vout.0 to n-2: tokenoshis output to CC
 			//vout.n-2: normal output for change (if any)
 			//vout.n-1: opreturn EVAL_TOKENS 't' tokenid <other contract payload>
-			//Check if token amount is the same in vins and vouts of tx
 			
+			//Check if token amount is the same in vins and vouts of tx
 			if (inputs == 0)
 				return eval->Invalid("no token inputs for transfer");
 			
@@ -194,6 +194,13 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//vout.n-1: opreturn EVAL_TOKENS 'u' pk tokenid
 			
 			std::cerr << "Entered token update validation!" << std::endl;
+
+			if (inputs != 0)
+				return eval->Invalid("update tx cannot have token inputs");
+			
+			//Checking if update tx is actually spending the baton
+			if (!isSpendingBaton)
+				return eval->Invalid("update tx is not spending update baton");
 			
 			/*
 			update validation:
@@ -201,14 +208,66 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			check if tokenid ownership percent > ownerperc
 			if master or sub license:
 				must be creator
+			
+			uint256 privkey,pubkey,refpubkey,sig;
+			uint8_t keyvalue[IGUANA_MAXSCRIPTSIZE*8];
+			memset(&sig,0,sizeof(sig));
+			memset(&privkey,0,sizeof(privkey));
+			memset(&refpubkey,0,sizeof(refpubkey));
+			memset(&pubkey,0,sizeof(pubkey));
+			privkey = komodo_kvprivkey(&pubkey,(char *)"password"); //some message
+			memcpy(keyvalue,key,keylen);
+			if ( keylen+refvaluesize <= sizeof(keyvalue) )
+            {
+                sig = komodo_kvsig(keyvalue,keylen+refvaluesize,privkey);
+                if ( komodo_kvsigverify(keyvalue,keylen+refvaluesize,refpubkey,sig) < 0 )
+                {
+                    ret.push_back(Pair("error",(char *)"error verifying sig, passphrase is probably wrong"));
+                    printf("VERIFY ERROR\n");
+                    return ret;
+                } // else printf("verified immediately\n");
+            }
+			
+			uint256 updaterPubkey, sigPubkey = updaterPubkey, privkey;
+			
+			memset(&sigPubkey,0,sizeof(sigPubkey));
+			memset(&sig,0,sizeof(sig));
+			memset(&privkey,0,sizeof(privkey));
+			
+			privkey = komodo_kvprivkey(&pubkey, 0) //pass can be 0
+			
+			uint8_t message[IGUANA_MAXSCRIPTSIZE*8] = 
+			
+			signature = komodo_kvsig(uint8_t message[IGUANA_MAXSCRIPTSIZE*8], int32_t messagelength, uint256 privkey)
+			
+			if ( komodo_kvsigverify(message,messagelength,updaterPubkey,signature) < 0 )
+			{
+				sig don't match with pubkey
+			}
+			
+			in update transaction:
+			
 			*/
+			uint256 sigPubkey = updaterPubkey, privkey;
 			
-			if (inputs != 0)
-				return eval->Invalid("update tx cannot have token inputs");
+			memset(&sigPubkey,0,sizeof(sigPubkey));
+			memset(&sig,0,sizeof(sig));
+			memset(&privkey,0,sizeof(privkey));
 			
-			//Checking if update tx is actually spending the baton
-			if (!isSpendingBaton)
-				return eval->Invalid("update tx is not spending update baton");
+			privkey = komodo_kvprivkey(&sigPubkey, 0);
+			
+			uint8_t message[IGUANA_MAXSCRIPTSIZE*8] = "test message";
+			
+			msglength = (int32_t)strlen(message);
+			
+			sig = komodo_kvsig(message, msglength, uint256 privkey);
+			
+			if ( komodo_kvsigverify(message, msglength, updaterPubkey, sig) < 0 )
+			{
+				std::cerr << "Signature invalid." << std::endl;
+			}
+			else
+				std::cerr << "Signature valid!" << std::endl;
 			
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token update preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
 			break;
