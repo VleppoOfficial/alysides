@@ -1218,18 +1218,21 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 
 	std::cerr << "Making signature..." << std::endl;
 	uint8_t privkey[32], newpubkey[32]; std::vector<uint8_t> updaterpubkey = Mypubkey();
-	bits256 bprivkey, bpubkey, btokenid, bmessage, sig, checksig, bSigPubkey;
+	bits256 tmp256, bprivkey, bpubkey, btokenid, bmessage, sig, checksig, bSigPubkey;
 	uint256 usig;
 	
 	Myprivkey(privkey);
-	//privkey[0] &= 248, privkey[31] &= 127, privkey[31] |= 64;
-	std::cerr << "Myprivkey output=" << privkey << std::endl;
+	Myprivkey(tmp256.bytes);
+	vcalc_sha256(0,bprivkey.bytes,tmp256.bytes,32);
+	bprivkey.bytes[0] &= 0xf8, bprivkey.bytes[31] &= 0x7f, bprivkey.bytes[31] |= 0x40;
 	
-	memcpy(bprivkey.bytes,&privkey,sizeof(bprivkey));
+	//memcpy(bprivkey.bytes,&privkey,sizeof(bprivkey));
+	//bpubkey = curve25519(bprivkey,curve25519_basepoint9());
+	//memcpy(&newpubkey,&bpubkey,sizeof(newpubkey));
+	
 	bpubkey = curve25519(bprivkey,curve25519_basepoint9());
-	memcpy(&newpubkey,&bpubkey,sizeof(newpubkey));
 	
-	std::cerr << "newpubkey=" << newpubkey << std::endl;
+	std::cerr << "bpubkey=" << bpubkey.bytes << std::endl;
 	std::cerr << "Mypubkey=" << HexStr(updaterpubkey) << std::endl;
 	
 	memcpy(&btokenid,&tokenid,sizeof(btokenid));
@@ -1257,7 +1260,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	if ( memcmp(&bSigPubkey,&zeroes,sizeof(bSigPubkey)) != 0 )
 	{
 		checksig = curve25519_shared(btokenid,bSigPubkey);
-		if ( memcmp(&checksig,&sig,sizeof(sig)) != 0 )
+		if ( memcmp(&checksig,&usig,sizeof(usig)) != 0 )
 			std::cerr << "Signature invalid." << std::endl;
 		else std::cerr << "Signature valid!" << std::endl;
 	}
