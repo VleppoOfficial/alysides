@@ -1174,7 +1174,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	memcpy(&mypubkeybits,&pubkeybits,sizeof(mypubkeybits));
 	
 	std::cerr << "mypubkeybits=" << mypubkeybits.GetHex() << std::endl;
-	std::cerr << "My Pubkey=" << GetHex(Mypubkey()) << std::endl;
+	std::cerr << "My Pubkey=" << HexStr(Mypubkey()) << std::endl;
 	
     sig = curve25519_shared(privkeybits,otherpub);
 	
