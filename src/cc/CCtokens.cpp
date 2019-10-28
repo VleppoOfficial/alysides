@@ -1174,7 +1174,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	
 	std::cerr << "sig=" << sig << std::endl;
 	
-    checksig = curve25519_shared(tokenid,pubkey);
+    checksig = curve25519_shared(tokenid.GetHex(),pubkey);
 	
 	std::cerr << "checksig=" << checksig.GetHex() << std::endl;
 	
@@ -1188,7 +1188,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
     memcpy(&pubkey,&mypk,sizeof(pubkey));
     if ( memcmp(&pubkey,&zeroes,sizeof(pubkey)) != 0 )
     {
-        checksig = curve25519_shared(tokenid,pubkey);
+        checksig = curve25519_shared(tokenid.GetHex(),pubkey);
 		std::cerr << "checksig=" << checksig.GetHex() << std::endl;
         if ( memcmp(&checksig,&sig,sizeof(sig)) != 0 )
             std::cerr << "signature invalid" << std::endl;
