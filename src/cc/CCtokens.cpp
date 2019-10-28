@@ -1175,7 +1175,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	
 	std::cerr << "sig generated" << std::endl;
 	
-    checksig = curve25519_shared(tokenidbits,pubkey);
+    checksig = curve25519_shared(tokenidbits,pubkeybits);
 	
 	std::cerr << "checksig generated" << std::endl;
 	
@@ -1193,7 +1193,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	
     if ( memcmp(&pubkeybits,&zeroes,sizeof(pubkeybits)) != 0 )
     {
-        checksig = curve25519_shared(tokenidbits,pubkey);
+        checksig = curve25519_shared(tokenidbits,pubkeybits);
 		std::cerr << "checksig generated" << std::endl;
         if ( memcmp(&checksig,&sig,sizeof(sig)) != 0 )
             std::cerr << "signature invalid" << std::endl;
