@@ -1154,9 +1154,9 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	
 	// needs to generate a signature here from privkey and a message, which could be hashed update data
 	// this signature would be used in TokensValidate to prove that the pubkey in the opret is the pubkey that submitted the update transaction
-	std::cerr << "Making signature...=" << std::endl;
+	std::cerr << "Making signature..." << std::endl;
 	
-	bits256 sig,otherpub,checksig,pubkeybits,privkeybits,tokenidbits; uint256 usig;
+	bits256 sig,otherpub,checksig,mypubkeybits,pubkeybits,privkeybits,tokenidbits; uint256 usig;
 	uint8_t myprivkey[32];
 	Myprivkey(myprivkey);
 	
@@ -1171,6 +1171,13 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
     pubkeybits = curve25519(privkeybits,curve25519_basepoint9());
 	std::cerr << "pubkey generated" << std::endl;
 	
+	memcpy(&mypubkeybits,&mypk,sizeof(mypubkeybits));
+	
+	if(mypubkeybits == pubkeybits)
+		std::cerr << "mypubkeybits == pubkeybits" << std::endl;
+	else
+		std::cerr << "mypubkeybits != pubkeybits" << std::endl;
+	
     sig = curve25519_shared(privkeybits,otherpub);
 	
 	std::cerr << "sig generated" << std::endl;
@@ -1183,11 +1190,11 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	
 	std::cerr << "usig generated" << std::endl;
 	
-	std::cerr << "Verifying signature...=" << std::endl;
+	std::cerr << "Verifying signature..." << std::endl;
 	
 	static uint256 zeroes;
 	
-    memcpy(&pubkeybits,&mypk,sizeof(pubkeybits));
+    
 	
 	memcpy(&tokenidbits,&tokenid,sizeof(tokenidbits));
 	
