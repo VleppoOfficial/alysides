@@ -1249,6 +1249,10 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	static uint256 zeroes;
 	
 	memcpy(&bSigPubkey,&updaterpubkey,sizeof(bSigPubkey));
+	memcpy(&newpubkey,&bSigPubkey,sizeof(newpubkey));
+	
+	std::cerr << "bSigPubkey=" << newpubkey << std::endl;
+	std::cerr << "Mypubkey=" << HexStr(updaterpubkey) << std::endl;
 	
 	if ( memcmp(&bSigPubkey,&zeroes,sizeof(bSigPubkey)) != 0 )
 	{
