@@ -23,8 +23,6 @@ CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t dur
     uint8_t evalcode = EVAL_AGREEMENTS;
     uint8_t funcid = 'p'; // override the param
 
-
-
     opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << duration << assetHash;
 
     //kig på dette
@@ -96,14 +94,14 @@ std::string CreateProposal(int64_t txfee, int64_t duration, uint256 assetHash )
         txfee = 10000;
 
     CPubKey mypk = pubkey2pk(Mypubkey());
-
+	
     //We use a function in the CC SDK, AddNormalinputs, to add the normal inputs to the mutable transaction.
 
     if (AddNormalinputs(mtx, mypk, 2 * txfee, 64) > 0)
 	{
 
-       // uint8_t destEvalCode = EVAL_AGREEMENTS; // not used
-        mtx.vout.push_back(MakeCC1vout(cp->evalcode, txfee, mypk));
+       uint8_t destEvalCode = EVAL_AGREEMENTS; // not used
+        mtx.vout.push_back(MakeCC1vout(destEvalCode, txfee, mypk));
 
         return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeValidateProposalopret(Mypubkey(), duration, assetHash)));
     }
