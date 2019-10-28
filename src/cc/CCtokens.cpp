@@ -1217,7 +1217,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	//double* a = &v[0];
 
 	std::cerr << "Making signature..." << std::endl;
-	uint8_t privkey[32], newpubkey[32]; std::vector<uint8_t> updaterpubkey = Mypubkey();
+	uint8_t privkey[32]; std::vector<uint8_t> updaterpubkey = Mypubkey();
 	bits256 tmp256, bprivkey, bpubkey, btokenid, bmessage, sig, checksig, bSigPubkey;
 	uint256 usig;
 	
@@ -1254,10 +1254,9 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	std::cerr << "Verifying signature..." << std::endl;
 	static uint256 zeroes;
 	
-	memcpy(&bSigPubkey,&updaterpubkey,sizeof(bSigPubkey));
-	memcpy(&newpubkey,&bSigPubkey,sizeof(newpubkey));
+	memcpy(bSigPubkey.bytes,&updaterpubkey,sizeof(bSigPubkey));;
 	
-	std::cerr << "bSigPubkey=" << newpubkey << std::endl;
+	std::cerr << "bSigPubkey=" << bSigPubkey.bytes << std::endl;
 	std::cerr << "Mypubkey=" << HexStr(updaterpubkey) << std::endl;
 	
 	if ( memcmp(&bSigPubkey,&zeroes,sizeof(bSigPubkey)) != 0 )
