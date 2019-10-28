@@ -1193,7 +1193,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	
 	static uint256 zeroes;
 	
-    convupdpub = Parseuint256(HexStr(updaterpubkey));
+    convupdpub = Parseuint256(updaterpubkey);
 	std::cerr << "Converted updater pubkey=" << convupdpub.GetHex() << std::endl;
 	
 	memcpy(&convupdpubbits,&convupdpub,sizeof(convupdpubbits));
