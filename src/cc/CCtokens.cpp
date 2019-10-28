@@ -1165,7 +1165,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	memcpy(&privkeybits,&myprivkey,sizeof(privkeybits));
 	memcpy(&tokenidbits,&tokenid,sizeof(tokenidbits));
 	
-	otherpub = curve25519(tokenid,curve25519_basepoint9());
+	otherpub = curve25519(tokenidbits,curve25519_basepoint9());
 	std::cerr << "otherpub generated" << std::endl;
 	
     pubkeybits = curve25519(privkeybits,curve25519_basepoint9());
