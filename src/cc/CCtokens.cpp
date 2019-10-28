@@ -1244,6 +1244,9 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	
     checksig = curve25519_shared(btokenid,bpubkey);
 	std::cerr << "checksig generated" << std::endl;
+	if ( memcmp(&checksig,&sig,sizeof(sig)) != 0 )
+		std::cerr << "Signature invalid." << std::endl;
+	else std::cerr << "Signature valid!" << std::endl;
 	
 	memcpy(&usig,&sig,sizeof(usig));
 	std::cerr << "usig generated" << std::endl;
