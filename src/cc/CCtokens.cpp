@@ -1166,22 +1166,22 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	memcpy(&tokenidbits,&tokenid,sizeof(tokenidbits));
 	
 	otherpub = curve25519(tokenid,curve25519_basepoint9());
-	std::cerr << "otherpub=" << otherpub << std::endl;
+	std::cerr << "otherpub generated" << std::endl;
 	
     pubkeybits = curve25519(privkeybits,curve25519_basepoint9());
-	std::cerr << "pubkey=" << pubkeybits << std::endl;
+	std::cerr << "pubkey generated" << std::endl;
 	
     sig = curve25519_shared(privkeybits,otherpub);
 	
-	std::cerr << "sig=" << sig << std::endl;
+	std::cerr << "sig generated" << std::endl;
 	
     checksig = curve25519_shared(tokenidbits,pubkey);
 	
-	std::cerr << "checksig=" << checksig << std::endl;
+	std::cerr << "checksig generated" << std::endl;
 	
 	memcpy(&usig,&sig,sizeof(usig));
 	
-	std::cerr << "usig=" << usig << std::endl;
+	std::cerr << "usig generated" << std::endl;
 	
 	std::cerr << "Verifying signature...=" << std::endl;
 	
@@ -1194,7 +1194,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
     if ( memcmp(&pubkeybits,&zeroes,sizeof(pubkeybits)) != 0 )
     {
         checksig = curve25519_shared(tokenidbits,pubkey);
-		std::cerr << "checksig=" << checksig << std::endl;
+		std::cerr << "checksig generated" << std::endl;
         if ( memcmp(&checksig,&sig,sizeof(sig)) != 0 )
             std::cerr << "signature invalid" << std::endl;
         else std::cerr << "signature valid!" << std::endl;
