@@ -1227,7 +1227,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	
 	memcpy(bprivkey.bytes,&privkey,sizeof(bprivkey));
 	bpubkey = curve25519(bprivkey,curve25519_basepoint9());
-	memcpy(newpubkey,bpubkey.bytes,sizeof(bpubkey));
+	memcpy(&newpubkey,bpubkey.bytes,sizeof(bpubkey));
 	
 	std::cerr << "newpubkey=" << newpubkey << "Mypubkey=" << HexStr(updaterpubkey) << std::endl;
 	
