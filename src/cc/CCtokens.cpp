@@ -1217,7 +1217,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	//double* a = &v[0];
 
 	std::cerr << "Making signature..." << std::endl;
-	uint8_t privkey[32], newpubkey; std::vector<uint8_t> updaterpubkey = Mypubkey();
+	uint8_t privkey[32], newpubkey[32]; std::vector<uint8_t> updaterpubkey = Mypubkey();
 	bits256 bprivkey, bpubkey, btokenid, bmessage, sig, checksig, bSigPubkey;
 	uint256 usig;
 	
@@ -1229,7 +1229,8 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	bpubkey = curve25519(bprivkey,curve25519_basepoint9());
 	memcpy(&newpubkey,&bpubkey,sizeof(newpubkey));
 	
-	std::cerr << "newpubkey=" << newpubkey << "Mypubkey=" << HexStr(updaterpubkey) << std::endl;
+	std::cerr << "newpubkey=" << newpubkey << std::endl;
+	std::cerr << "Mypubkey=" << HexStr(updaterpubkey) << std::endl;
 	
 	memcpy(&btokenid,&tokenid,sizeof(btokenid));
 	bmessage = curve25519(btokenid,curve25519_basepoint9());
