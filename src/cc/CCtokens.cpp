@@ -1154,6 +1154,50 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	
 	// needs to generate a signature here from privkey and a message, which could be hashed update data
 	// this signature would be used in TokensValidate to prove that the pubkey in the opret is the pubkey that submitted the update transaction
+	std::cerr << "Making signature...=" << std::endl;
+	
+	bits256 sig,otherpub,checksig,pubkey,privkey; uint256 usig;
+	uint8_t myprivkey[32];
+	Myprivkey(myprivkey);
+	
+	std::cerr << "Myprivkey output=" << myprivkey << std::endl;
+	
+	memcpy(&privkey,&myprivkey,sizeof(privkey));
+	
+	otherpub = curve25519(tokenid,curve25519_basepoint9());
+	std::cerr << "otherpub=" << otherpub << std::endl;
+	
+    pubkey = curve25519(privkey,curve25519_basepoint9());
+	std::cerr << "pubkey=" << pubkey << std::endl;
+	
+    sig = curve25519_shared(privkey,otherpub);
+	
+	std::cerr << "sig=" << sig << std::endl;
+	
+    checksig = curve25519_shared(tokenid,pubkey);
+	
+	std::cerr << "checksig=" << checksig << std::endl;
+	
+	memcpy(&usig,&sig,sizeof(usig));
+	
+	std::cerr << "usig=" << usig << std::endl;
+	
+	std::cerr << "Verifying signature...=" << std::endl;
+	
+	bits256 hash,checksig,pubkey; static uint256 zeroes;
+    memcpy(&pubkey,&mypk,sizeof(pubkey));
+    if ( memcmp(&pubkey,&zeroes,sizeof(pubkey)) != 0 )
+    {
+        checksig = curve25519_shared(tokenid,pubkey);
+		std::cerr << "checksig=" << checksig << std::endl;
+        if ( memcmp(&checksig,&sig,sizeof(sig)) != 0 )
+            std::cerr << "signature invalid" << std::endl;
+        else std::cerr << "signature valid!" << std::endl;
+    }
+	else
+		std::cerr << "memcmp check failed" << std::endl;
+	
+	//sig end
 	
 	if (AddNormalinputs(mtx, mypk, 2 * txfee, 64) > 0)
 	{
@@ -1285,7 +1329,6 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 					data.push_back(Pair("message", message));
 				result.push_back(Pair(batontxid.GetHex(), data));
 				sourcetxid = batontxid;
-				//continue;
 			}
 			else
 			{
