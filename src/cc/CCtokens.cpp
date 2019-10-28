@@ -1156,7 +1156,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	// this signature would be used in TokensValidate to prove that the pubkey in the opret is the pubkey that submitted the update transaction
 	std::cerr << "Making signature..." << std::endl;
 	
-	bits256 sig,otherpub,checksig,pubkeybits,privkeybits,tokenidbits; uint256 usig, mypubkeybits;
+	bits256 sig,otherpub,checksig,pubkeybits,privkeybits,tokenidbits, convupdpubbits; uint256 usig, mypubkeybits;
 	uint8_t myprivkey[32];
 	std::vector<uint8_t> updaterpubkey = Mypubkey(); uint256 convupdpub;
 	Myprivkey(myprivkey);
@@ -1196,12 +1196,12 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
     convupdpub = Parseuint256(HexStr(updaterpubkey));
 	std::cerr << "Converted updater pubkey=" << convupdpub.GetHex() << std::endl;
 	
-	memcpy(&mypubkeybits,&convupdpub,sizeof(mypubkeybits));
+	memcpy(&convupdpubbits,&convupdpub,sizeof(convupdpubbits));
 	memcpy(&tokenidbits,&tokenid,sizeof(tokenidbits));
 	
-    if ( memcmp(&mypubkeybits,&zeroes,sizeof(mypubkeybits)) != 0 )
+    if ( memcmp(&convupdpubbits,&zeroes,sizeof(convupdpubbits)) != 0 )
     {
-        checksig = curve25519_shared(tokenidbits,mypubkeybits);
+        checksig = curve25519_shared(tokenidbits,convupdpubbits);
 		std::cerr << "checksig generated" << std::endl;
         if ( memcmp(&checksig,&sig,sizeof(sig)) != 0 )
             std::cerr << "signature invalid" << std::endl;
