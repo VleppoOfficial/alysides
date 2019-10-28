@@ -1173,10 +1173,8 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	
 	memcpy(&mypubkeybits,&pubkeybits,sizeof(mypubkeybits));
 	
-	if(mypubkeybits == mypk)
-		std::cerr << "mypubkeybits == mypk" << std::endl;
-	else
-		std::cerr << "mypubkeybits != mypk" << std::endl;
+	std::cerr << "mypubkeybits=" << mypubkeybits.GetHex() << std::endl;
+	std::cerr << "My Pubkey=" << Mypubkey() << std::endl;
 	
     sig = curve25519_shared(privkeybits,otherpub);
 	
