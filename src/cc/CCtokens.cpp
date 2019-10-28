@@ -1156,7 +1156,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	// this signature would be used in TokensValidate to prove that the pubkey in the opret is the pubkey that submitted the update transaction
 	std::cerr << "Making signature..." << std::endl;
 	
-	bits256 sig,otherpub,checksig,mypubkeybits,pubkeybits,privkeybits,tokenidbits; uint256 usig;
+	bits256 sig,otherpub,checksig,pubkeybits,privkeybits,tokenidbits; uint256 usig, mypubkeybits;
 	uint8_t myprivkey[32];
 	Myprivkey(myprivkey);
 	
@@ -1171,12 +1171,12 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
     pubkeybits = curve25519(privkeybits,curve25519_basepoint9());
 	std::cerr << "pubkey generated" << std::endl;
 	
-	memcpy(&mypubkeybits,&mypk,sizeof(mypubkeybits));
+	memcpy(&mypubkeybits,&pubkeybits,sizeof(mypubkeybits));
 	
-	if(mypubkeybits == pubkeybits)
-		std::cerr << "mypubkeybits == pubkeybits" << std::endl;
+	if(mypubkeybits == mypk)
+		std::cerr << "mypubkeybits == mypk" << std::endl;
 	else
-		std::cerr << "mypubkeybits != pubkeybits" << std::endl;
+		std::cerr << "mypubkeybits != mypk" << std::endl;
 	
     sig = curve25519_shared(privkeybits,otherpub);
 	
