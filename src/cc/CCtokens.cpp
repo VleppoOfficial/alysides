@@ -199,12 +199,12 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			
 			if (!Getscriptaddress(destaddr, tx.vout[1].scriptPubKey))
 				return eval->Invalid("couldn't locate vout1 destaddr");
-			if (eval->GetTxUnconfirmed(tx.vin[0].prevout.hash, referenceTx, hashBlock) != 0 && myGetTransaction(tx.vin[0].prevout.hash, referenceTx, hashBlock) &&
-				Getscriptaddress(srcaddr, referenceTx.vout[tx.vin[0].prevout.n].scriptPubKey))
+			if (!(eval->GetTxUnconfirmed(tx.vin[0].prevout.hash, referenceTx, hashBlock) != 0 && myGetTransaction(tx.vin[0].prevout.hash, referenceTx, hashBlock) &&
+				Getscriptaddress(srcaddr, referenceTx.vout[tx.vin[0].prevout.n].scriptPubKey)))
 				return eval->Invalid("couldn't locate vin0 srcaddr");
 			if (srcaddr != destaddr)
 				return eval->Invalid("normal input srcaddr != destaddr");
-			if (Getscriptaddress(updaterPubkeyaddr,CScript() << updaterPubkey << OP_CHECKSIG))
+			if (!Getscriptaddress(updaterPubkeyaddr,CScript() << updaterPubkey << OP_CHECKSIG))
 				return eval->Invalid("couldn't get updaterPubkey script address");
 			if (updaterPubkeyaddr != srcaddr || updaterPubkeyaddr != destaddr)
 				return eval->Invalid("updaterPubkey address doesn't match srcaddr or destaddr");
