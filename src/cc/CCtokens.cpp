@@ -54,7 +54,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
 	std::vector<CPubKey> vinTokenPubkeys, voutTokenPubkeys; // sender pubkey(s) and destpubkey(s)
 	std::vector<uint8_t> creatorPubkey, dummyPubkey, updaterPubkey; // token creator pubkey
-	char updaterPubkeyaddr[64];
+	char updaterPubkeyaddr[64], srcaddr[64], destaddr[64];
 	
 	int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
 	
@@ -204,6 +204,10 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			
 			if (Getscriptaddress(updaterPubkeyaddr,CScript() << updaterPubkey << OP_CHECKSIG))
 				std::cerr << "updaterPubkeyaddr=" << (updaterPubkeyaddr) << std::endl;
+			if (Getscriptaddress(destaddr, tx.vout[1].scriptPubKey);
+				std::cerr << "destaddr=" << (destaddr) << std::endl;
+			if (Getscriptaddress(srcaddr, tx.vin[0].prevout.n.scriptPubKey);
+				std::cerr << "srcaddr=" << (srcaddr) << std::endl;
 			
 			return eval->Invalid("Imma stop you here");
 			
