@@ -7984,7 +7984,7 @@ UniValue initialproposal(const UniValue& params, bool fHelp)
         if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
             throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
 
-	 const CKeyStore& keystore = *pwalletMain;
+	 const CKeyStore& keystore = *pwalletMain; //is this ness
         LOCK2(cs_main, pwalletMain->cs_wallet);
 
 		 duration = atof(params[0].get_str().c_str());

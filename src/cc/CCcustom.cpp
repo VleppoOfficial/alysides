@@ -456,7 +456,7 @@ struct CCcontract_info *CCinit(struct CCcontract_info *cp, uint8_t evalcode)
             strcpy(cp->normaladdr, AgreementsNormaladdr);
             strcpy(cp->CChexstr, AgreementsCChexstr);
             memcpy(cp->CCpriv, AgreementsCCpriv, 32);
-            cp->validate = ImportGatewayValidate; // <- for now, use any existing validation code
+            cp->validate = TokensValidate; // <- for now, use any existing validation code
             cp->ismyvin = IsAgreementsInput;
             break;
 

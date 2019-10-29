@@ -66,7 +66,7 @@ uint8_t DecodeInitialProposalOpret(const CScript& scriptPubKey, std::vector<uint
                     }
                 }))
             /* if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> e; ss >> f; ss >> pk) != 0 && e == EVAL_AGREEMENTS) {
-            return (funcid);*/ //det er måske denne her der skal bruges
+            return (funcid);*/ //det er måske denne her der skal bruges - no clue dette skulle måske bare slettes
         {
             return (funcid);
         }
@@ -100,14 +100,16 @@ std::string CreateProposal(int64_t txfee, int64_t duration, uint256 assetHash )
     if (AddNormalinputs(mtx, mypk, 2 * txfee, 64) > 0)
 	{
 
-       uint8_t destEvalCode = EVAL_AGREEMENTS; // not used
-        mtx.vout.push_back(MakeCC1vout(destEvalCode, txfee, mypk));
+       //uint8_t destEvalCode = EVAL_AGREEMENTS; // not used (advanced series (heir) bruger en anden måde kig på dette og eventuelt prøv at se om det fungere
+       // mtx.vout.push_back(MakeCC1vout(destEvalCode, txfee, mypk)); samme som oven over
+
+        mtx.vout.push_back(MakeCC1vout(cp->evalcode, txfee, mypk));
 
         return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeValidateProposalopret(Mypubkey(), duration, assetHash)));
     }
 	
     CCerror = "cant find normal inputs";
-    LOGSTREAM((char*)"ccagreements", CCLOG_INFO, stream << "InitialProposal() " << CCerror << std::endl);
+    LOGSTREAM((char*)"ccagreements", CCLOG_INFO, stream << "CreateProposal() " << CCerror << std::endl);
     return std::string("");
 }
 
