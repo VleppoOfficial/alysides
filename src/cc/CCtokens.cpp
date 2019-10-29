@@ -54,7 +54,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
 	std::vector<CPubKey> vinTokenPubkeys, voutTokenPubkeys; // sender pubkey(s) and destpubkey(s)
 	std::vector<uint8_t> creatorPubkey, dummyPubkey, updaterPubkey; // token creator pubkey
-	CPubKey sigPubkey;
+	char *updaterPubkeyaddr;
 	
 	int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
 	
@@ -204,6 +204,10 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			
 			//if (std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(updaterPubkey)) == vinTokenPubkeys.end())
 			//	return eval->Invalid("signing pubkey is not updater pubkey");
+			if (pubkey2addr(updaterPubkeyaddr,updaterPubkey.data()))
+				std::cerr << "updaterPubkeyaddr=" << updaterPubkeyaddr << std::endl;
+			
+			return eval->Invalid("Imma stop you here");
 			
 			// if asset or master license: check if tokenid ownership percent > ownerperc
 			if (tokenType == "a" || tokenType == "m")
@@ -255,7 +259,7 @@ bool ExtractTokensCCVinPubkeys(const CTransaction& tx, std::vector<CPubKey>& vin
 
                 if (cc_typeId(cond) == CC_Secp256k1) {
                     *(CPubKey*)_.context = buf2pk(cond->publicKey);
-                    std::cerr << "findEval found pubkey=" << HexStr(*(CPubKey*)_.context) << std::endl;
+                    //std::cerr << "findEval found pubkey=" << HexStr(*(CPubKey*)_.context) << std::endl;
                     r = true;
                 }
                 // false for a match, true for continue

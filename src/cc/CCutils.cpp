@@ -659,7 +659,6 @@ CPubKey check_signing_pubkey(CScript scriptSig)
 
         if (cc_typeId(cond) == CC_Secp256k1) {
             *(CPubKey*)_.context=buf2pk(cond->publicKey);
-			std::cerr << "findEval found pubkey=" << HexStr(*(CPubKey*)_.context) << std::endl;
             r = true;
         }
         // false for a match, true for continue
