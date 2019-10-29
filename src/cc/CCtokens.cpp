@@ -197,21 +197,19 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (DecodeTokenUpdateOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, updaterPubkey, updatetokenid) != 'u' || updatetokenid != tokenid)
 				return eval->Invalid("invalid update tx opret data");
 			
+			// Verifying updaterPubkey by checking tx.vin[0] and tx.vout[1] addresses
+			// These addresses should be equal to each other, and updaterPubkey address should be equal to both
 			if (!Getscriptaddress(destaddr, tx.vout[1].scriptPubKey))
 				return eval->Invalid("couldn't locate vout1 destaddr");
 			if (!(eval->GetTxUnconfirmed(tx.vin[0].prevout.hash, referenceTx, hashBlock) != 0 && myGetTransaction(tx.vin[0].prevout.hash, referenceTx, hashBlock) &&
 				Getscriptaddress(srcaddr, referenceTx.vout[tx.vin[0].prevout.n].scriptPubKey)))
 				return eval->Invalid("couldn't locate vin0 srcaddr");
-			std::cerr << "srcaddr=" << (srcaddr) << std::endl;
-			std::cerr << "destaddr=" << (destaddr) << std::endl;
 			if (strcmp(srcaddr, destaddr) != 0)
 				return eval->Invalid("normal input srcaddr != destaddr");
 			if (!Getscriptaddress(updaterPubkeyaddr,CScript() << updaterPubkey << OP_CHECKSIG))
 				return eval->Invalid("couldn't get updaterPubkey script address");
 			if (strcmp(updaterPubkeyaddr, srcaddr) != 0 || strcmp(updaterPubkeyaddr, destaddr) != 0)
 				return eval->Invalid("updaterPubkey address doesn't match srcaddr or destaddr");
-			
-			return eval->Invalid("Imma stop you here");
 			
 			// if asset or master license: check if tokenid ownership percent > ownerperc
 			if (tokenType == "a" || tokenType == "m")
