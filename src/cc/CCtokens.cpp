@@ -197,18 +197,17 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (DecodeTokenUpdateOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, updaterPubkey, updatetokenid) != 'u' || updatetokenid != tokenid)
 				return eval->Invalid("invalid update tx opret data");
 			
-			// needs signature verification here, to make sure updaterPubkey is the pubkey that submitted this tx - dan
-			//sigPubkey = check_signing_pubkey(tx.vin[0].scriptSig);
-			//if (sigPubkey != pubkey2pk(updaterPubkey))
-			//	return eval->Invalid("signing pubkey is not updater pubkey");
-			
-			if (Getscriptaddress(updaterPubkeyaddr,CScript() << updaterPubkey << OP_CHECKSIG))
-				std::cerr << "updaterPubkeyaddr=" << (updaterPubkeyaddr) << std::endl;
-			if (Getscriptaddress(destaddr, tx.vout[1].scriptPubKey))
-				std::cerr << "destaddr=" << (destaddr) << std::endl;
+			if (!Getscriptaddress(destaddr, tx.vout[1].scriptPubKey))
+				return eval->Invalid("couldn't locate vout1 destaddr");
 			if (eval->GetTxUnconfirmed(tx.vin[0].prevout.hash, referenceTx, hashBlock) != 0 && myGetTransaction(tx.vin[0].prevout.hash, referenceTx, hashBlock) &&
 				Getscriptaddress(srcaddr, referenceTx.vout[tx.vin[0].prevout.n].scriptPubKey))
-				std::cerr << "srcaddr=" << (srcaddr) << std::endl;
+				return eval->Invalid("couldn't locate vin0 srcaddr");
+			if (srcaddr != destaddr)
+				return eval->Invalid("normal input srcaddr != destaddr");
+			if (Getscriptaddress(updaterPubkeyaddr,CScript() << updaterPubkey << OP_CHECKSIG))
+				return eval->Invalid("couldn't get updaterPubkey script address");
+			if (updaterPubkeyaddr != (srcaddr || destaddr))
+				return eval->Invalid("updaterPubkey address doesn't match srcaddr or destaddr");
 			
 			return eval->Invalid("Imma stop you here");
 			
