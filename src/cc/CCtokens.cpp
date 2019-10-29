@@ -1141,11 +1141,11 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         return std::string("");
     }
 	//checking if token is owned by mypk
-	/*if (ownedRefTokenPerc < refOwnerPerc)
+	if (ownedRefTokenPerc < refOwnerPerc)
 	{
         CCerror = "tokenid must be owned by this pubkey";
         return std::string("");
-    }*/
+    }
 	//getting the latest update txid (can be the same as tokenid)
 	if (!GetLatestTokenUpdate(tokenid, latesttxid))
 	{
