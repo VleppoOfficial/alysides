@@ -202,6 +202,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (!(eval->GetTxUnconfirmed(tx.vin[0].prevout.hash, referenceTx, hashBlock) != 0 && myGetTransaction(tx.vin[0].prevout.hash, referenceTx, hashBlock) &&
 				Getscriptaddress(srcaddr, referenceTx.vout[tx.vin[0].prevout.n].scriptPubKey)))
 				return eval->Invalid("couldn't locate vin0 srcaddr");
+			std::cerr << "srcaddr=" << (srcaddr) << std::endl;
+			std::cerr << "destaddr=" << (destaddr) << std::endl;
 			if (srcaddr != destaddr)
 				return eval->Invalid("normal input srcaddr != destaddr");
 			if (!Getscriptaddress(updaterPubkeyaddr,CScript() << updaterPubkey << OP_CHECKSIG))
