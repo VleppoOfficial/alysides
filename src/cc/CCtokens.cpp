@@ -204,7 +204,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 				return eval->Invalid("couldn't locate vin0 srcaddr");
 			std::cerr << "srcaddr=" << (srcaddr) << std::endl;
 			std::cerr << "destaddr=" << (destaddr) << std::endl;
-			if (srcaddr != destaddr)
+			if ((srcaddr) != (destaddr))
 				return eval->Invalid("normal input srcaddr != destaddr");
 			if (!Getscriptaddress(updaterPubkeyaddr,CScript() << updaterPubkey << OP_CHECKSIG))
 				return eval->Invalid("couldn't get updaterPubkey script address");
