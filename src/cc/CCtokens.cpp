@@ -202,8 +202,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//if (sigPubkey != pubkey2pk(updaterPubkey))
 			//	return eval->Invalid("signing pubkey is not updater pubkey");
 			
-			if (std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(updaterPubkey)) == vinTokenPubkeys.end())
-				return eval->Invalid("signing pubkey is not updater pubkey");
+			//if (std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(updaterPubkey)) == vinTokenPubkeys.end())
+			//	return eval->Invalid("signing pubkey is not updater pubkey");
 			
 			// if asset or master license: check if tokenid ownership percent > ownerperc
 			if (tokenType == "a" || tokenType == "m")
@@ -1159,7 +1159,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         return std::string("");
     }
 	
-	if (AddNormalinputs(mtx, mypk, txfee + 10000, 64) > 0)
+	if (AddNormalinputs(mtx, mypk, txfee + 20000, 64) > 0)
 	{
 		int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
         if (mypkInputs < 10000) {
@@ -1189,7 +1189,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 			//vout0 is next batonvout with cc opret payload
 			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, GetUnspendable(cp, NULL), &vData));
 			//vout1 sends some funds back to mypk, later used for validation
-			//mtx.vout.push_back(CTxOut(10000,CScript() << ParseHex(HexStr(mypk)) << OP_CHECKSIG));
+			mtx.vout.push_back(CTxOut(10000,CScript() << ParseHex(HexStr(mypk)) << OP_CHECKSIG));
 			//fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
 			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenUpdateOpRet(Mypubkey(), tokenid)));
 		}
