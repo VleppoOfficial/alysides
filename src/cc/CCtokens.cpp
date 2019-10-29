@@ -54,6 +54,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
 	std::vector<CPubKey> vinTokenPubkeys, voutTokenPubkeys; // sender pubkey(s) and destpubkey(s)
 	std::vector<uint8_t> creatorPubkey, dummyPubkey, updaterPubkey; // token creator pubkey
+	CPubKey sigPubkey;
 	
 	int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
 	
@@ -197,6 +198,9 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 				return eval->Invalid("invalid update tx opret data");
 			
 			// needs signature verification here, to make sure updaterPubkey is the pubkey that submitted this tx - dan
+			sigPubkey = check_signing_pubkey(tx.vin[1].scriptSig);
+			if (sigPubkey != pubkey2pk(updaterPubkey))
+				return eval->Invalid("signing pubkey is not updater pubkey");
 			
 			// if asset or master license: check if tokenid ownership percent > ownerperc
 			if (tokenType == "a" || tokenType == "m")
@@ -1151,125 +1155,6 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         CCerror = "ccode size should be 3, message size should be <= 128";
         return std::string("");
     }
-	
-	// needs to generate a signature here from privkey and a message, which could be hashed update data
-	// this signature would be used in TokensValidate to prove that the pubkey in the opret is the pubkey that submitted the update transaction
-	/*std::cerr << "Making signature..." << std::endl;
-	
-	bits256 sig,otherpub,checksig,pubkeybits,privkeybits,tokenidbits, convupdpubbits; uint256 usig, mypubkeybits, convupdpub;
-	uint8_t myprivkey[32];
-	std::vector<uint8_t> updaterpubkey = Mypubkey(); 
-	Myprivkey(myprivkey);
-	
-	std::cerr << "Myprivkey output=" << myprivkey << std::endl;
-	
-	memcpy(&privkeybits,&myprivkey,sizeof(privkeybits));
-	memcpy(&tokenidbits,&tokenid,sizeof(tokenidbits));
-	
-	otherpub = curve25519(tokenidbits,curve25519_basepoint9());
-	std::cerr << "otherpub generated" << std::endl;
-	
-    pubkeybits = curve25519(privkeybits,curve25519_basepoint9());
-	std::cerr << "pubkeybits generated" << std::endl;
-	
-	memcpy(&mypubkeybits,&pubkeybits,sizeof(mypubkeybits));
-	
-	std::cerr << "mypubkeybits=" << mypubkeybits.GetHex() << std::endl;
-	std::cerr << "My Pubkey=" << HexStr(Mypubkey()) << std::endl;
-	
-    sig = curve25519_shared(privkeybits,otherpub);
-	
-	std::cerr << "sig generated" << std::endl;
-	
-    checksig = curve25519_shared(tokenidbits,pubkeybits);
-	
-	std::cerr << "checksig generated" << std::endl;
-	
-	memcpy(&usig,&sig,sizeof(usig));
-	
-	std::cerr << "usig generated" << std::endl;
-	
-	std::cerr << "Verifying signature..." << std::endl;
-	
-	static uint256 zeroes;
-	
-    convupdpub = Parseuint256(updaterpubkey);
-	std::cerr << "Converted updater pubkey=" << convupdpub.GetHex() << std::endl;
-	
-	memcpy(&convupdpubbits,&convupdpub,sizeof(convupdpubbits));
-	memcpy(&tokenidbits,&tokenid,sizeof(tokenidbits));
-	
-    if ( memcmp(&convupdpubbits,&zeroes,sizeof(convupdpubbits)) != 0 )
-    {
-        checksig = curve25519_shared(tokenidbits,convupdpubbits);
-		std::cerr << "checksig generated" << std::endl;
-        if ( memcmp(&checksig,&sig,sizeof(sig)) != 0 )
-            std::cerr << "signature invalid" << std::endl;
-        else std::cerr << "signature valid!" << std::endl;
-    }
-	else
-		std::cerr << "memcmp check failed" << std::endl;
-	*/
-	//sig end
-	//newsig start
-	
-	//std::vector<double> v;
-	//double* a = &v[0];
-
-	std::cerr << "Making signature..." << std::endl;
-	uint8_t privkey[32]; std::vector<uint8_t> updaterpubkey = Mypubkey();
-	bits256 tmp256, bprivkey, bpubkey, btokenid, bmessage, sig, checksig, bSigPubkey;
-	uint256 usig;
-	
-	Myprivkey(privkey);
-	Myprivkey(tmp256.bytes);
-	vcalc_sha256(0,bprivkey.bytes,tmp256.bytes,32);
-	bprivkey.bytes[0] &= 0xf8, bprivkey.bytes[31] &= 0x7f, bprivkey.bytes[31] |= 0x40;
-	
-	//memcpy(bprivkey.bytes,&privkey,sizeof(bprivkey));
-	//bpubkey = curve25519(bprivkey,curve25519_basepoint9());
-	//memcpy(&newpubkey,&bpubkey,sizeof(newpubkey));
-	
-	bpubkey = curve25519(bprivkey,curve25519_basepoint9());
-	
-	std::cerr << "bpubkey=" << bpubkey.bytes << std::endl;
-	std::cerr << "Mypubkey=" << HexStr(updaterpubkey) << std::endl;
-	
-	memcpy(&btokenid,&tokenid,sizeof(btokenid));
-	bmessage = curve25519(btokenid,curve25519_basepoint9());
-	std::cerr << "message generated" << std::endl;
-	
-	sig = curve25519_shared(bprivkey,bmessage);
-	std::cerr << "sig generated" << std::endl;
-	
-    checksig = curve25519_shared(btokenid,bpubkey);
-	std::cerr << "checksig generated" << std::endl;
-	if ( memcmp(&checksig,&sig,sizeof(sig)) != 0 )
-		std::cerr << "Signature invalid." << std::endl;
-	else std::cerr << "Signature valid!" << std::endl;
-	
-	memcpy(&usig,&sig,sizeof(usig));
-	std::cerr << "usig generated" << std::endl;
-	
-	std::cerr << "Verifying signature..." << std::endl;
-	static uint256 zeroes;
-	
-	memcpy(bSigPubkey.bytes,&updaterpubkey,sizeof(bSigPubkey));;
-	
-	std::cerr << "bSigPubkey=" << bSigPubkey.bytes << std::endl;
-	std::cerr << "Mypubkey=" << HexStr(updaterpubkey) << std::endl;
-	
-	if ( memcmp(&bSigPubkey,&zeroes,sizeof(bSigPubkey)) != 0 )
-	{
-		checksig = curve25519_shared(btokenid,bSigPubkey);
-		if ( memcmp(&checksig,&usig,sizeof(usig)) != 0 )
-			std::cerr << "Signature invalid." << std::endl;
-		else std::cerr << "Signature valid!" << std::endl;
-	}
-	else
-		std::cerr << "memcmp check failed" << std::endl;
-
-	//newsig end
 	
 	if (AddNormalinputs(mtx, mypk, 2 * txfee, 64) > 0)
 	{
