@@ -198,8 +198,11 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 				return eval->Invalid("invalid update tx opret data");
 			
 			// needs signature verification here, to make sure updaterPubkey is the pubkey that submitted this tx - dan
-			sigPubkey = check_signing_pubkey(tx.vin[0].scriptSig);
-			if (sigPubkey != pubkey2pk(updaterPubkey))
+			//sigPubkey = check_signing_pubkey(tx.vin[0].scriptSig);
+			//if (sigPubkey != pubkey2pk(updaterPubkey))
+			//	return eval->Invalid("signing pubkey is not updater pubkey");
+			
+			if (std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(updaterPubkey)) == vinTokenPubkeys.end())
 				return eval->Invalid("signing pubkey is not updater pubkey");
 			
 			// if asset or master license: check if tokenid ownership percent > ownerperc
@@ -1156,8 +1159,13 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         return std::string("");
     }
 	
-	if (AddNormalinputs(mtx, mypk, 2 * txfee, 64) > 0)
+	if (AddNormalinputs(mtx, mypk, txfee + 10000, 64) > 0)
 	{
+		int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
+        if (mypkInputs < 10000) {
+            CCerror = "some inputs signed not with -pubkey=pk";
+            return std::string("");
+        }
 		if (latesttxid == tokenid)
 		{
 			mtx.vin.push_back(CTxIn(tokenid,2,CScript()));
@@ -1178,7 +1186,10 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
 		if (makeCCopret(batonopret, vData))
 		{
+			//vout0 is next batonvout with cc opret payload
 			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, GetUnspendable(cp, NULL), &vData));
+			//vout1 sends some funds back to mypk, later used for validation
+			//mtx.vout.push_back(CTxOut(10000,CScript() << ParseHex(HexStr(mypk)) << OP_CHECKSIG));
 			//fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
 			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenUpdateOpRet(Mypubkey(), tokenid)));
 		}
