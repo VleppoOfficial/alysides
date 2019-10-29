@@ -255,7 +255,7 @@ bool ExtractTokensCCVinPubkeys(const CTransaction& tx, std::vector<CPubKey>& vin
 
                 if (cc_typeId(cond) == CC_Secp256k1) {
                     *(CPubKey*)_.context = buf2pk(cond->publicKey);
-                    //std::cerr << "findEval found pubkey=" << HexStr(*(CPubKey*)_.context) << std::endl;
+                    std::cerr << "findEval found pubkey=" << HexStr(*(CPubKey*)_.context) << std::endl;
                     r = true;
                 }
                 // false for a match, true for continue
