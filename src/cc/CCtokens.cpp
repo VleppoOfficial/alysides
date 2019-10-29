@@ -54,6 +54,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
 	std::vector<CPubKey> vinTokenPubkeys, voutTokenPubkeys; // sender pubkey(s) and destpubkey(s)
 	std::vector<uint8_t> creatorPubkey, dummyPubkey, updaterPubkey; // token creator pubkey
+	char updaterPubkeyaddr[64], srcaddr[64], destaddr[64];
 	
 	int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
 	
@@ -180,8 +181,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 		case 'u':
 			// token update
 			// token tx structure for 'u':
-			//vin.0: previous token CC update baton
-			//vin.1: normal input
+			//vin.0: normal input
+			//vin.1: previous token CC update baton
 			//vout.0: next token update baton with cc opret
 			//vout.1 to n-2: normal output for change (if any)
 			//vout.n-1: opreturn EVAL_TOKENS 'u' pk tokenid
@@ -196,7 +197,19 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (DecodeTokenUpdateOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, updaterPubkey, updatetokenid) != 'u' || updatetokenid != tokenid)
 				return eval->Invalid("invalid update tx opret data");
 			
-			// needs signature verification here, to make sure updaterPubkey is the pubkey that submitted this tx - dan
+			// Verifying updaterPubkey by checking tx.vin[0] and tx.vout[1] addresses
+			// These addresses should be equal to each other, and updaterPubkey address should be equal to both
+			if (!Getscriptaddress(destaddr, tx.vout[1].scriptPubKey))
+				return eval->Invalid("couldn't locate vout1 destaddr");
+			if (!(eval->GetTxUnconfirmed(tx.vin[0].prevout.hash, referenceTx, hashBlock) != 0 && myGetTransaction(tx.vin[0].prevout.hash, referenceTx, hashBlock) &&
+				Getscriptaddress(srcaddr, referenceTx.vout[tx.vin[0].prevout.n].scriptPubKey)))
+				return eval->Invalid("couldn't locate vin0 srcaddr");
+			if (strcmp(srcaddr, destaddr) != 0)
+				return eval->Invalid("normal input srcaddr != destaddr");
+			if (!Getscriptaddress(updaterPubkeyaddr,CScript() << updaterPubkey << OP_CHECKSIG))
+				return eval->Invalid("couldn't get updaterPubkey script address");
+			if (strcmp(updaterPubkeyaddr, srcaddr) != 0 || strcmp(updaterPubkeyaddr, destaddr) != 0)
+				return eval->Invalid("updaterPubkey address doesn't match srcaddr or destaddr");
 			
 			// if asset or master license: check if tokenid ownership percent > ownerperc
 			if (tokenType == "a" || tokenType == "m")
@@ -1128,11 +1141,11 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         return std::string("");
     }
 	//checking if token is owned by mypk
-	/*if (ownedRefTokenPerc < refOwnerPerc)
+	if (ownedRefTokenPerc < refOwnerPerc)
 	{
         CCerror = "tokenid must be owned by this pubkey";
         return std::string("");
-    }*/
+    }
 	//getting the latest update txid (can be the same as tokenid)
 	if (!GetLatestTokenUpdate(tokenid, latesttxid))
 	{
@@ -1152,11 +1165,13 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         return std::string("");
     }
 	
-	// needs to generate a signature here from privkey and a message, which could be hashed update data
-	// this signature would be used in TokensValidate to prove that the pubkey in the opret is the pubkey that submitted the update transaction
-	
-	if (AddNormalinputs(mtx, mypk, 2 * txfee, 64) > 0)
+	if (AddNormalinputs(mtx, mypk, txfee + 20000, 64) > 0)
 	{
+		int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
+        if (mypkInputs < 10000) {
+            CCerror = "some inputs signed not with -pubkey=pk";
+            return std::string("");
+        }
 		if (latesttxid == tokenid)
 		{
 			mtx.vin.push_back(CTxIn(tokenid,2,CScript()));
@@ -1177,7 +1192,10 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
 		if (makeCCopret(batonopret, vData))
 		{
+			//vout0 is next batonvout with cc opret payload
 			mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, GetUnspendable(cp, NULL), &vData));
+			//vout1 sends some funds back to mypk, later used for validation
+			mtx.vout.push_back(CTxOut(10000,CScript() << ParseHex(HexStr(mypk)) << OP_CHECKSIG));
 			//fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
 			return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenUpdateOpRet(Mypubkey(), tokenid)));
 		}
@@ -1190,6 +1208,79 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
     CCerror = "cant find normal inputs";
     return std::string("");
 }
+
+// transfer tokens to another pubkey
+// param additionalEvalCode allows transfer of dual-eval non-fungible tokens
+std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, int64_t total)
+{
+    CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+    uint64_t mask;
+    int64_t CCchange = 0, inputs = 0;
+    struct CCcontract_info *cp, C;
+    vscript_t vopretNonfungible, vopretEmpty;
+
+    if (total < 0)
+	{
+        CCerror = strprintf("negative total");
+        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << CCerror << "=" << total << std::endl);
+        return ("");
+    }
+
+    cp = CCinit(&C, EVAL_TOKENS);
+
+    if (txfee == 0)
+        txfee = 10000;
+	
+    CPubKey mypk = pubkey2pk(Mypubkey());
+	
+    if (AddNormalinputs(mtx, mypk, txfee, 3) > 0)
+	{
+        mask = ~((1LL << mtx.vin.size()) - 1); // seems, mask is not used anymore
+
+        if ((inputs = AddTokenCCInputs(cp, mtx, mypk, tokenid, total, 60, vopretNonfungible)) > 0) // NOTE: AddTokenCCInputs might set cp->additionalEvalCode which is used in FinalizeCCtx!
+        {
+            if (inputs < total)
+			{ //added dimxy
+                CCerror = strprintf("insufficient token inputs");
+                LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenTransfer() " << CCerror << std::endl);
+                return std::string("");
+            }
+
+            uint8_t destEvalCode = EVAL_TOKENS;
+            if (vopretNonfungible.size() > 0)
+                destEvalCode = vopretNonfungible.begin()[0];
+
+            if (inputs > total)
+                CCchange = (inputs - total);
+            mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, total, pubkey2pk(destpubkey))); // if destEvalCode == EVAL_TOKENS then it is actually MakeCC1vout(EVAL_TOKENS,...)
+            if (CCchange != 0)
+                mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, CCchange, mypk));
+
+            std::vector<CPubKey> voutTokenPubkeys;
+            voutTokenPubkeys.push_back(pubkey2pk(destpubkey)); // dest pubkey for validating vout
+			
+            return FinalizeCCTx(mask, cp, mtx, mypk, txfee, EncodeTokenTransferOneOpRet(tokenid, voutTokenPubkeys, std::make_pair((uint8_t)0, vopretEmpty)));
+        }
+		else
+		{
+            CCerror = strprintf("no token inputs");
+            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenTransfer() " << CCerror << " for amount=" << total << std::endl);
+        }
+    //} else fprintf(stderr,"numoutputs.%d != numamounts.%d\n",n,(int32_t)amounts.size());
+    }
+	else
+	{
+        CCerror = strprintf("insufficient normal inputs for tx fee");
+        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenTransfer() " << CCerror << std::endl);
+    }
+    return ("");
+}
+
+/*
+std::string TokenTransferMany(int64_t txfee, vscript_t destpubkey, uint256 tokenidarray[])
+{
+}
+*/
 
 UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 {
@@ -1285,7 +1376,6 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 					data.push_back(Pair("message", message));
 				result.push_back(Pair(batontxid.GetHex(), data));
 				sourcetxid = batontxid;
-				//continue;
 			}
 			else
 			{
@@ -1372,79 +1462,6 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		return (result);
 	}
 }
-
-// transfer tokens to another pubkey
-// param additionalEvalCode allows transfer of dual-eval non-fungible tokens
-std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, int64_t total)
-{
-    CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-    uint64_t mask;
-    int64_t CCchange = 0, inputs = 0;
-    struct CCcontract_info *cp, C;
-    vscript_t vopretNonfungible, vopretEmpty;
-
-    if (total < 0)
-	{
-        CCerror = strprintf("negative total");
-        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << CCerror << "=" << total << std::endl);
-        return ("");
-    }
-
-    cp = CCinit(&C, EVAL_TOKENS);
-
-    if (txfee == 0)
-        txfee = 10000;
-	
-    CPubKey mypk = pubkey2pk(Mypubkey());
-	
-    if (AddNormalinputs(mtx, mypk, txfee, 3) > 0)
-	{
-        mask = ~((1LL << mtx.vin.size()) - 1); // seems, mask is not used anymore
-
-        if ((inputs = AddTokenCCInputs(cp, mtx, mypk, tokenid, total, 60, vopretNonfungible)) > 0) // NOTE: AddTokenCCInputs might set cp->additionalEvalCode which is used in FinalizeCCtx!
-        {
-            if (inputs < total)
-			{ //added dimxy
-                CCerror = strprintf("insufficient token inputs");
-                LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenTransfer() " << CCerror << std::endl);
-                return std::string("");
-            }
-
-            uint8_t destEvalCode = EVAL_TOKENS;
-            if (vopretNonfungible.size() > 0)
-                destEvalCode = vopretNonfungible.begin()[0];
-
-            if (inputs > total)
-                CCchange = (inputs - total);
-            mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, total, pubkey2pk(destpubkey))); // if destEvalCode == EVAL_TOKENS then it is actually MakeCC1vout(EVAL_TOKENS,...)
-            if (CCchange != 0)
-                mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, CCchange, mypk));
-
-            std::vector<CPubKey> voutTokenPubkeys;
-            voutTokenPubkeys.push_back(pubkey2pk(destpubkey)); // dest pubkey for validating vout
-			
-            return FinalizeCCTx(mask, cp, mtx, mypk, txfee, EncodeTokenTransferOneOpRet(tokenid, voutTokenPubkeys, std::make_pair((uint8_t)0, vopretEmpty)));
-        }
-		else
-		{
-            CCerror = strprintf("no token inputs");
-            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenTransfer() " << CCerror << " for amount=" << total << std::endl);
-        }
-    //} else fprintf(stderr,"numoutputs.%d != numamounts.%d\n",n,(int32_t)amounts.size());
-    }
-	else
-	{
-        CCerror = strprintf("insufficient normal inputs for tx fee");
-        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenTransfer() " << CCerror << std::endl);
-    }
-    return ("");
-}
-
-/*
-std::string TokenTransferMany(int64_t txfee, vscript_t destpubkey, uint256 tokenidarray[])
-{
-}
-*/
 
 int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 {
