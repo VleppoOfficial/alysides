@@ -204,9 +204,9 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			
 			if (Getscriptaddress(updaterPubkeyaddr,CScript() << updaterPubkey << OP_CHECKSIG))
 				std::cerr << "updaterPubkeyaddr=" << (updaterPubkeyaddr) << std::endl;
-			if (Getscriptaddress(destaddr, tx.vout[1].scriptPubKey);
+			if (Getscriptaddress(destaddr, tx.vout[1].scriptPubKey)
 				std::cerr << "destaddr=" << (destaddr) << std::endl;
-			if (Getscriptaddress(srcaddr, tx.vin[0].prevout.n.scriptPubKey);
+			if (Getscriptaddress(srcaddr, tx.vin[0].prevout.n.scriptPubKey)
 				std::cerr << "srcaddr=" << (srcaddr) << std::endl;
 			
 			return eval->Invalid("Imma stop you here");
