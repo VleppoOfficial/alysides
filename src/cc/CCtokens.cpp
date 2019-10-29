@@ -206,7 +206,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 				return eval->Invalid("normal input srcaddr != destaddr");
 			if (Getscriptaddress(updaterPubkeyaddr,CScript() << updaterPubkey << OP_CHECKSIG))
 				return eval->Invalid("couldn't get updaterPubkey script address");
-			if (updaterPubkeyaddr != (srcaddr || destaddr))
+			if (updaterPubkeyaddr != srcaddr || updaterPubkeyaddr != destaddr)
 				return eval->Invalid("updaterPubkey address doesn't match srcaddr or destaddr");
 			
 			return eval->Invalid("Imma stop you here");
