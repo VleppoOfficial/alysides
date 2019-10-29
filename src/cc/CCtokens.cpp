@@ -205,7 +205,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//if (std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(updaterPubkey)) == vinTokenPubkeys.end())
 			//	return eval->Invalid("signing pubkey is not updater pubkey");
 			if (Getscriptaddress(updaterPubkeyaddr,CScript() << updaterPubkey << OP_CHECKSIG))
-				std::cerr << "updaterPubkeyaddr=" << (updaterPubkeyaddr) << std::endl;
+				std::cerr << "updaterPubkeyaddr="/* << (updaterPubkeyaddr) */<< std::endl;
 			
 			return eval->Invalid("Imma stop you here");
 			
