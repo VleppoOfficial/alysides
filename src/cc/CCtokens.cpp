@@ -175,14 +175,14 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (tokenType == "s" && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == vinTokenPubkeys.end())
 			{
 				//check if burn pubkey is specified in voutPubkeys
-				if((std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end())
+				if(std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end())
 					return eval->Invalid("burn pubkey not specified in non-creator sub license transfer");
 				else
 				{
 					for (auto vout : tx.vout)
 						if(!(Getscriptaddress(testburnaddr, vout.scriptPubKey)))
 							return eval->Invalid("couldn't get destination script address from a license transfer vout");
-                        if (vout.scriptPubKey.IsPayToCryptoCondition() && (!IsTokenMarkerVout(vout))) && (strcmp(testburnaddr, burnaddr) != 0))
+                        if (vout.scriptPubKey.IsPayToCryptoCondition() && (!IsTokenMarkerVout(vout)) && (strcmp(testburnaddr, burnaddr) != 0))
                             return eval->Invalid("cannot transfer sub-license to non-burn address from pubkey other than creator pubkey");
 				}
 			}
