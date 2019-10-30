@@ -182,8 +182,9 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 					{
 						if(!(Getscriptaddress(testburnaddr, vout.scriptPubKey)))
 							return eval->Invalid("couldn't get destination script address from a license transfer vout");
+						std::cerr << "testburnaddr=" << testburnaddr << " burnaddr=" << burnaddr << std::endl;
                         if (vout.scriptPubKey.IsPayToCryptoCondition() && (!IsTokenMarkerVout(vout)) && (strcmp(testburnaddr, burnaddr) != 0))
-                            return eval->Invalid("cannot transfer sub-license to non-burn address from pubkey other than creator pubkey");\
+                            return eval->Invalid("cannot transfer sub-license to non-burn address from pubkey other than creator pubkey");
 					}
 			}
 			
