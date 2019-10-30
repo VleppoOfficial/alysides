@@ -54,7 +54,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 	int64_t outputs = 0, inputs = 0, expiryTimeSec;
 	std::vector<CPubKey> vinTokenPubkeys, voutTokenPubkeys; // sender pubkey(s) and destpubkey(s)
 	std::vector<uint8_t> creatorPubkey, dummyPubkey, updaterPubkey; // token creator pubkey
-	char updaterPubkeyaddr[64], srcaddr[64], destaddr[64];
+	char updaterPubkeyaddr[64], srcaddr[64], destaddr[64], burnaddr[64], testburnaddr[64];
 	
 	int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
 	
@@ -168,12 +168,24 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			if (DecodeTokenTransferOneOpRet(tx.vout[numvouts - 1].scriptPubKey, tokenid, voutTokenPubkeys, oprets) != 't')
 				return eval->Invalid("unable to verify token transfer tx funcid");
 			
+			//get burn pubkey token CC address
+			GetTokensCCaddress(cp, burnaddr, pubkey2pk(ParseHex(CC_BURNPUBKEY)));
+			
 			// if token is sub-license and isn't being burned and transaction vin isn't from creator vout, invalidate
-			if (tokenType == "s" && 
-				//std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end() &&
-				// check if destaddr == burn tokenaddr here
-				std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == vinTokenPubkeys.end())
-				return eval->Invalid("cannot transfer sub-license from pubkey other than creator pubkey");
+			if (tokenType == "s" && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == vinTokenPubkeys.end())
+			{
+				//check if burn pubkey is specified in voutPubkeys
+				if((std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end())
+					return eval->Invalid("burn pubkey not specified in non-creator sub license transfer");
+				else
+				{
+					for (auto vout : tx.vout)
+						if(!(Getscriptaddress(testburnaddr, vout.scriptPubKey)))
+							return eval->Invalid("couldn't get destination script address from a license transfer vout");
+                        if (vout.scriptPubKey.IsPayToCryptoCondition() && (!IsTokenMarkerVout(vout))) && (strcmp(testburnaddr, burnaddr) != 0))
+                            return eval->Invalid("cannot transfer sub-license to non-burn address from pubkey other than creator pubkey");
+				}
+			}
 			
 			LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token transfer preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
 			break; // breaking to other contract validation...
@@ -1089,7 +1101,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL))); // new marker to token cc addr, burnable and validated, vout pos now changed to 0 (from 1)
 		// vout1 issues the tokens to mypk
         mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, tokensupply, mypk));
-		// vout2 is a baton vout containing arbitrary updatable data
+		// vout2 is a baton vout containing arbitrary updatable data (should be prevented from spending in IsTokensVout)
 		CScript batonopret = EncodeTokenUpdateCCOpRet(assetHash,value,ccode,"");
 		std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
 		if (makeCCopret(batonopret, vData))
@@ -1168,7 +1180,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 	if (AddNormalinputs(mtx, mypk, txfee + 20000, 64) > 0)
 	{
 		int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
-        if (mypkInputs < 10000) {
+        if (mypkInputs < 20000) {
             CCerror = "some inputs signed not with -pubkey=pk";
             return std::string("");
         }
