@@ -1322,7 +1322,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				total++;
 				UniValue data(UniValue::VOBJ);
 				data.push_back(Pair("creatorPubkey", HexStr(updaterPubkey))); 
-				data.push_back(Pair("assetHash", assetHash.GetHex())); 
+				data.push_back(Pair("hash", assetHash.GetHex())); 
 				data.push_back(Pair("value", (double)value/COIN));
 				data.push_back(Pair("ccode", ccode));
 				if (!origdescription.empty())
@@ -1352,7 +1352,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			total++;
 			UniValue data(UniValue::VOBJ);
 			data.push_back(Pair("updaterPubkey", HexStr(updaterPubkey))); 
-			data.push_back(Pair("assetHash", assetHash.GetHex()));
+			data.push_back(Pair("hash", assetHash.GetHex()));
 			data.push_back(Pair("value", (double)value/COIN));
 			data.push_back(Pair("ccode", ccode));
 			if (!message.empty())
@@ -1382,7 +1382,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				total++;
 				UniValue data(UniValue::VOBJ);
 				data.push_back(Pair("updaterPubkey", HexStr(updaterPubkey))); 
-				data.push_back(Pair("assetHash", assetHash.GetHex()));
+				data.push_back(Pair("hash", assetHash.GetHex()));
 				data.push_back(Pair("value", (double)value/COIN));
 				data.push_back(Pair("ccode", ccode));
 				if (!message.empty())
@@ -1422,7 +1422,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				total++;
 				UniValue data(UniValue::VOBJ);
 				data.push_back(Pair("updaterPubkey", HexStr(updaterPubkey))); 
-				data.push_back(Pair("assetHash", assetHash.GetHex()));
+				data.push_back(Pair("hash", assetHash.GetHex()));
 				data.push_back(Pair("value", (double)value/COIN));
 				data.push_back(Pair("ccode", ccode));
 				if (!message.empty())
@@ -1457,7 +1457,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 				total++;
 				UniValue data(UniValue::VOBJ);
 				data.push_back(Pair("creatorPubkey", HexStr(updaterPubkey))); 
-				data.push_back(Pair("assetHash", assetHash.GetHex()));
+				data.push_back(Pair("hash", assetHash.GetHex()));
 				data.push_back(Pair("value", (double)value/COIN));
 				data.push_back(Pair("ccode", ccode));
 				if (!origdescription.empty())
