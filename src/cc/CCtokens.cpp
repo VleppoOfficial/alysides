@@ -180,7 +180,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 				else
 					for (auto vout : tx.vout)
 					{
-						if(!(Getscriptaddress(testburnaddr, vout.scriptPubKey)))
+						if(!(vout.scriptPubKey.size() > 3 && vout.scriptPubKey[0] == OP_RETURN && vout.scriptPubKey[2] == evalcode) && !(Getscriptaddress(testburnaddr, vout.scriptPubKey)))
 							return eval->Invalid("couldn't get destination script address from a license transfer vout");
 						std::cerr << "testburnaddr=" << testburnaddr << " burnaddr=" << burnaddr << std::endl;
                         if (vout.scriptPubKey.IsPayToCryptoCondition() && (!IsTokenMarkerVout(vout)) && (strcmp(testburnaddr, burnaddr) != 0))
