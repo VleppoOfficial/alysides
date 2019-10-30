@@ -171,7 +171,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			//get burn pubkey token CC address
 			GetTokensCCaddress(cp, burnaddr, pubkey2pk(ParseHex(CC_BURNPUBKEY)));
 			
-			// if token is sub-license and isn't being burned and transaction vin isn't from creator vout, invalidate
+			// if token is sub-license and transaction vin isn't from creator vout
 			if (tokenType == "s" && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == vinTokenPubkeys.end())
 			{
 				//check if burn pubkey is specified in voutPubkeys
@@ -182,7 +182,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 					{
 						if(!(vout.scriptPubKey.size() > 3 && vout.scriptPubKey[0] == OP_RETURN && vout.scriptPubKey[2] == EVAL_TOKENS) && !(Getscriptaddress(testburnaddr, vout.scriptPubKey)))
 							return eval->Invalid("couldn't get proper destination script address from a license transfer vout");
-						std::cerr << "testburnaddr=" << testburnaddr << " burnaddr=" << burnaddr << std::endl;
+						//only allow transfers to burn address (don't allow receiving change either - if we're burning "s" tokens, we have to burn all our stock)
                         if (vout.scriptPubKey.IsPayToCryptoCondition() && (!IsTokenMarkerVout(vout)) && (strcmp(testburnaddr, burnaddr) != 0))
                             return eval->Invalid("cannot transfer sub-license to non-burn address from pubkey other than creator pubkey");
 					}
@@ -1332,7 +1332,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		else
 		{
 			result.push_back(Pair("result", "error"));
-			result.push_back(Pair("error", "couldn't decode token creation txid"));
+			result.push_back(Pair("error", "couldn't decode token creation txid, possibly still in mempool"));
 			return (result);
 		}
 		
@@ -1405,7 +1405,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 		if (!GetLatestTokenUpdate(tokenid, latesttxid))
 		{
 			result.push_back(Pair("result", "error"));
-			result.push_back(Pair("error", "tokenid isnt token creation txid"));
+			result.push_back(Pair("error", "latest update is still in mempool or tokenid isnt token creation txid"));
 			return (result);
 		}
 		sourcetxid = latesttxid;
