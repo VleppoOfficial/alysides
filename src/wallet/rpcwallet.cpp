@@ -7227,6 +7227,29 @@ UniValue tokeninfo(const UniValue& params, bool fHelp)
     return (TokenInfo(tokenid));
 }
 
+UniValue tokenviewupdates(const UniValue& params, bool fHelp)
+{
+    uint256 tokenid; int32_t samplenum; int recursive = 0;
+    if ( fHelp || params.size() < 1 || params.size() > 3)
+        throw runtime_error("tokenviewupdates tokenid [samplenum][recursive]\n");
+    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
+        throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
+    const CKeyStore& keystore = *pwalletMain;
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+    tokenid = Parseuint256((char *)params[0].get_str().c_str());
+    if (params.size() >= 2)
+        samplenum = atoi((char *)params[1].get_str().c_str());
+    else
+        samplenum = 0;
+    if (params.size() == 3)
+    {
+        recursive = atoi((char *)params[2].get_str().c_str());
+        if (recursive < 0)
+            recursive = 0;
+    }
+    return(TokenViewUpdates(tokenid, samplenum, recursive));
+}
+
 UniValue tokenorders(const UniValue& params, bool fHelp)
 {
     uint256 tokenid;
@@ -7344,43 +7367,73 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
         ERR_RESULT("Token type must be 'a', 'm' or 's'");
         return (result);
     }
-
-    if (params.size() >= 4) {
+    
+    if (params.size() >= 4)     {
         description = params[3].get_str();
-        if (description.size() > 4096) {
-            ERR_RESULT("Token description must be <= 4096 characters");
-            return (result);
+        if (description.size() > 1024)   {
+            ERR_RESULT("Token description must be <= 1024 characters");
+            return(result);
         }
     }
-
-    if (params.size() >= 5) {
-        referencetokenid = Parseuint256((char*)params[4].get_str().c_str()); //returns zeroid if empty or wrong length
+    
+    if (params.size() >= 5)     {
+        assetHash = Parseuint256((char *)params[4].get_str().c_str()); //returns zeroid if empty or wrong length
+    }
+    else
+        assetHash = zeroid;
+    
+    if (params.size() >= 6)
+    {
+        value = atof(params[5].get_str().c_str()) * COIN;
+        if (value < 1 && value != 0 )
+        {
+            ERR_RESULT("Value cannot be less than 1 satoshi if it is not zero");
+            return(result);
+        }
+    }
+    else
+        value = 0;
+    
+    if (params.size() >= 7)
+    {
+        ccode = params[6].get_str();
+        if (ccode.size() == 0 || ccode.size() != 3)
+        {
+            ERR_RESULT("Currency code must be 3 characters");
+            return(result);
+        }
+    }
+    else
+        ccode = "USD";
+    
+    if (params.size() >= 8)     {
+        referencetokenid = Parseuint256((char *)params[7].get_str().c_str()); //returns zeroid if empty or wrong length
         if (tokentype == "m" || tokentype == "s") {
-            if (referencetokenid == zeroid) {
+            if (referencetokenid == zeroid)    {
                 ERR_RESULT("invalid reference tokenid");
-                return (result);
+                return(result);
             }
         }
     }
-
-    if (params.size() >= 6) {
-        expiryTimeSec = atof(params[5].get_str().c_str());
-        if ((tokentype == "m" || tokentype == "s") && expiryTimeSec < 0) {
+    
+    if (params.size() >= 9)     {
+        expiryTimeSec = atof(params[8].get_str().c_str());
+        if((tokentype == "m" || tokentype == "s") && expiryTimeSec < 0)    {
             ERR_RESULT("Expire time must be positive");
-            return (result);
+            return(result);
+        }
+    }
+    
+    if (params.size() >= 10)     {
+        ownerperc = atof(params[9].get_str().c_str());
+        if (ownerperc <= 0)    {
+        ERR_RESULT("owner percentage must be positive");
+        return(result);
         }
     }
 
-    if (params.size() >= 7) {
-        ownerperc = atof(params[6].get_str().c_str());
-        if (ownerperc <= 0) {
-            ERR_RESULT("owner percentage must be positive");
-            return (result);
-        }
-    }
-
-    if (params.size() == 8) {
-        nonfungibleData = ParseHex(params[7].get_str());
+    if (params.size() == 11)    {
+        nonfungibleData = ParseHex(params[10].get_str());
         if (nonfungibleData.size() > IGUANA_MAXSCRIPTSIZE) // opret limit
         {
             ERR_RESULT("Non-fungible data size must be <= " + std::to_string(IGUANA_MAXSCRIPTSIZE));
@@ -7391,9 +7444,8 @@ UniValue tokencreate(const UniValue& params, bool fHelp)
             return (result);
         }
     }
-
-    hextx = CreateToken(0, supply, name, description, ownerperc, tokentype, referencetokenid, expiryTimeSec, nonfungibleData);
-    if (hextx.size() > 0) {
+    hextx = CreateToken(0, supply, name, description, ownerperc, tokentype, assetHash, value, ccode, referencetokenid, expiryTimeSec, nonfungibleData);
+    if( hextx.size() > 0 )     {
         result.push_back(Pair("result", "success"));
         result.push_back(Pair("hex", hextx));
     } else
@@ -7440,6 +7492,60 @@ UniValue tokentransfer(const UniValue& params, bool fHelp)
         result.push_back(Pair("hex", hex));
     }
     return (result);
+}
+
+
+UniValue tokenupdate(const UniValue& params, bool fHelp)
+{
+    UniValue result(UniValue::VOBJ);
+    std::string ccode, message, hextx; 
+    int64_t value;
+    uint256 tokenid = zeroid, assethash = zeroid;
+    CCerror.clear();
+    if ( fHelp || params.size() > 5 || params.size() < 4 )
+        throw runtime_error("tokenupdate tokenid assethash value ccode [message]\n");
+    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
+        throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
+    const CKeyStore& keystore = *pwalletMain;
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+    
+    tokenid = Parseuint256((char *)params[0].get_str().c_str()); //returns zeroid if empty or wrong length
+    if (tokenid == zeroid)
+    {
+        ERR_RESULT("invalid tokenid");
+        return(result);
+    }
+    assethash = Parseuint256((char *)params[1].get_str().c_str()); //returns zeroid if empty or wrong length
+    value = atof(params[2].get_str().c_str()) * COIN;
+    if (value < 1 && value != 0 )
+    {
+        ERR_RESULT("Value cannot be less than 1 satoshi if it is not zero");
+        return(result);
+    }
+    ccode = params[3].get_str();
+    if (ccode.size() == 0 || ccode.size() != 3)
+    {
+        ERR_RESULT("Currency code must be 3 characters");
+        return(result);
+    }
+    if (params.size() == 5)
+    {
+        message = params[4].get_str();
+        if (message.size() > 128)
+        {
+            ERR_RESULT("Update message must be <= 128 characters");
+            return(result);
+        }
+    }
+    hextx = UpdateToken(0, tokenid, assethash, value, ccode, message);
+    if( hextx.size() > 0 )
+    {
+        result.push_back(Pair("result", "success"));
+        result.push_back(Pair("hex", hextx));
+    } 
+    else 
+        ERR_RESULT(CCerror);
+    return(result);
 }
 
 UniValue tokenconvert(const UniValue& params, bool fHelp)

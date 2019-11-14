@@ -113,30 +113,30 @@ struct CC_meta
 
 struct CCcontract_info
 {
-	// this is for spending from 'unspendable' CC address
-	uint8_t evalcode;
+    // this is for spending from 'unspendable' CC address
+    uint8_t evalcode;
     uint8_t additionalTokensEvalcode2;  // this is for making three-eval-token vouts (EVAL_TOKENS + evalcode + additionalEvalcode2)
-	char unspendableCCaddr[64], CChexstr[72], normaladdr[64];
-	uint8_t CCpriv[32];
+    char unspendableCCaddr[64], CChexstr[72], normaladdr[64];
+    uint8_t CCpriv[32];
 
-	// this for 1of2 keys coins cryptocondition (for this evalcode)
-	// NOTE: only one evalcode is allowed at this time
-	char coins1of2addr[64];
+    // this for 1of2 keys coins cryptocondition (for this evalcode)
+    // NOTE: only one evalcode is allowed at this time
+    char coins1of2addr[64];
     CPubKey coins1of2pk[2]; uint8_t coins1of2priv[32];
 
-	// the same for tokens 1of2 keys cc 
-	char tokens1of2addr[64];
-	CPubKey tokens1of2pk[2];
+    // the same for tokens 1of2 keys cc 
+    char tokens1of2addr[64];
+    CPubKey tokens1of2pk[2];
 
-	// this is for spending from two additional 'unspendable' CC addresses of other eval codes 
-	// (that is, for spending from several cc contract 'unspendable' addresses):
-	uint8_t unspendableEvalcode2, unspendableEvalcode3;  // changed evalcodeN to unspendableEvalcodeN for not mixing up with additionalEvalcodeN
-	char    unspendableaddr2[64], unspendableaddr3[64];
-	uint8_t unspendablepriv2[32], unspendablepriv3[32];
+    // this is for spending from two additional 'unspendable' CC addresses of other eval codes 
+    // (that is, for spending from several cc contract 'unspendable' addresses):
+    uint8_t unspendableEvalcode2, unspendableEvalcode3;  // changed evalcodeN to unspendableEvalcodeN for not mixing up with additionalEvalcodeN
+    char    unspendableaddr2[64], unspendableaddr3[64];
+    uint8_t unspendablepriv2[32], unspendablepriv3[32];
     CPubKey unspendablepk2,       unspendablepk3;
 
     bool (*validate)(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);  // cc contract tx validation callback
-    bool (*ismyvin)(CScript const& scriptSig);	// checks if evalcode is present in the scriptSig param
+    bool (*ismyvin)(CScript const& scriptSig);    // checks if evalcode is present in the scriptSig param
 
     uint8_t didinit;
 };
@@ -222,12 +222,11 @@ CScript EncodeValidateProposalopret(std::vector<uint8_t> origpubkey, int64_t dur
 
 CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::pair<uint8_t, vscript_t> opretWithId);
 CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> oprets);
-
-CScript EncodeTokenTransferOneOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::pair<uint8_t, vscript_t> opretWithId);
-CScript EncodeTokenTransferOneOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> oprets);
-
+CScript EncodeTokenTransferOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::pair<uint8_t, vscript_t> opretWithId);
+CScript EncodeTokenTransferOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> oprets);
+CScript EncodeTokenUpdateOpRet(std::vector<uint8_t> pk, uint256 tokenid);
+CScript EncodeTokenUpdateCCOpRet(uint256 assetHash, int64_t value, std::string ccode, std::string message);
 uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, uint256 &tokenid, std::vector<std::pair<uint8_t, vscript_t>> &oprets);
-
 uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description);
 uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, std::vector<std::pair<uint8_t, vscript_t>> &oprets);
 uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc, std::string &tokentype, uint256 &referencetokenid, int64_t &expiryTimeSec);
@@ -237,8 +236,10 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
 uint8_t DecodeInitialProposalOpret(const CScript& scriptPubKey, std::vector<uint8_t>& origpubkey, int64_t& duration, uint256& assetHash);
 uint8_t DecodeInitialProposalOpret(const CScript& scriptPubKey, std::vector<uint8_t>& origpubkey, int64_t& duration, uint256& assetHash, std::vector<std::pair<uint8_t, vscript_t>>& oprets);
 
-uint8_t DecodeTokenTransferOneOpRet(const CScript scriptPubKey, uint256 &tokenid, std::vector<CPubKey> &voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> &oprets);
+uint8_t DecodeTokenTransferOpRet(const CScript scriptPubKey, uint256 &tokenid, std::vector<CPubKey> &voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> &oprets);
 uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, uint256 &tokenid, std::vector<CPubKey> &voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> &oprets);
+uint8_t DecodeTokenUpdateOpRet(const CScript scriptPubKey, std::vector<uint8_t> &pk, uint256 &tokenid);
+uint8_t DecodeTokenUpdateCCOpRet(const CScript scriptPubKey, uint256 &assetHash, int64_t &value, std::string &ccode, std::string &message);
 
 void GetNonfungibleData(uint256 tokenid, vscript_t &vopretNonfungible);
 bool ExtractTokensCCVinPubkeys(const CTransaction &tx, std::vector<CPubKey> &vinPubkeys);
