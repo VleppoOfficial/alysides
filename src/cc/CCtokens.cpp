@@ -165,7 +165,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 return eval->Invalid("no token inputs for transfer");
             
             // retrieving destpubkey(s)
-            if (DecodeTokenTransferOneOpRet(tx.vout[numvouts - 1].scriptPubKey, tokenid, voutTokenPubkeys, oprets) != 't')
+            if (DecodeTokenTransferOpRet(tx.vout[numvouts - 1].scriptPubKey, tokenid, voutTokenPubkeys, oprets) != 't')
                 return eval->Invalid("unable to verify token transfer tx funcid");
             
             //get burn pubkey token CC address
@@ -447,8 +447,8 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
             // test vouts for possible token use-cases:
             std::vector<std::pair<CTxOut, std::string>> testVouts;
 
-            //DecodeTokenTransferOneOpRet used here since destpubkey array is expected to be returned
-            DecodeTokenTransferOneOpRet(tx.vout.back().scriptPubKey, tokenIdOpret, voutPubkeysInOpret, oprets);
+            //DecodeTokenTransferOpRet used here since destpubkey array is expected to be returned
+            DecodeTokenTransferOpRet(tx.vout.back().scriptPubKey, tokenIdOpret, voutPubkeysInOpret, oprets);
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << "IsTokensvout() oprets.size()=" << oprets.size() << std::endl);
 
             // get assets/channels/gateways token data:
@@ -1272,7 +1272,7 @@ std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, 
             std::vector<CPubKey> voutTokenPubkeys;
             voutTokenPubkeys.push_back(pubkey2pk(destpubkey)); // dest pubkey for validating vout
             
-            return FinalizeCCTx(mask, cp, mtx, mypk, txfee, EncodeTokenTransferOneOpRet(tokenid, voutTokenPubkeys, std::make_pair((uint8_t)0, vopretEmpty)));
+            return FinalizeCCTx(mask, cp, mtx, mypk, txfee, EncodeTokenTransferOpRet(tokenid, voutTokenPubkeys, std::make_pair((uint8_t)0, vopretEmpty)));
         }
         else
         {

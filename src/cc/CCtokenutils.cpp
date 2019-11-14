@@ -89,28 +89,28 @@ CScript EncodeTokenCreateOpRet(std::vector<uint8_t> origpubkey, std::string name
 //
 //===========================================================================
 
-// Original versions of EncodeTokenOpRet, kept around for compatibility with other Antara Modules. Redirects to EncodeTokenTransferOneOpRet.
+// Original versions of EncodeTokenOpRet, kept around for compatibility with other Antara Modules. Redirects to EncodeTokenTransferOpRet.
 CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::pair<uint8_t, vscript_t> opretWithId)
 {
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
     oprets.push_back(opretWithId);
-    return EncodeTokenTransferOneOpRet(tokenid, voutPubkeys, oprets);
+    return EncodeTokenTransferOpRet(tokenid, voutPubkeys, oprets);
 }
 CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> oprets)
 {
-    return EncodeTokenTransferOneOpRet(tokenid, voutPubkeys, oprets);
+    return EncodeTokenTransferOpRet(tokenid, voutPubkeys, oprets);
 }
 
 //overload for Vleppo encoder
-CScript EncodeTokenTransferOneOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::pair<uint8_t, vscript_t> opretWithId)
+CScript EncodeTokenTransferOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::pair<uint8_t, vscript_t> opretWithId)
 {
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
     oprets.push_back(opretWithId);
-    return EncodeTokenTransferOneOpRet(tokenid, voutPubkeys, oprets);
+    return EncodeTokenTransferOpRet(tokenid, voutPubkeys, oprets);
 }
 
 //Vleppo encoder for single tokenid transfers, the old EncodeTokenOpRet functionality was moved here
-CScript EncodeTokenTransferOneOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> oprets)
+CScript EncodeTokenTransferOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> oprets)
 {
     CScript opret;
     uint8_t funcid = 't'; //override the param
@@ -142,14 +142,6 @@ CScript EncodeTokenTransferOneOpRet(uint256 tokenid, std::vector<CPubKey> voutPu
 
     return opret;
 }
-
-//===========================================================================
-//
-// Multiple Token Transfer Encoder
-//
-//===========================================================================
-
-/* EncodeTokenTransferManyOpRet coming soon */
 
 //===========================================================================
 //
@@ -220,7 +212,7 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
             return DecodeTokenCreateOpRet(scriptPubKey, dummyPubkey, dummyName, dummyDescription, oprets);
             
         case 't':
-            return DecodeTokenTransferOneOpRet(scriptPubKey, tokenid, voutPubkeysDummy, oprets);
+            return DecodeTokenTransferOpRet(scriptPubKey, tokenid, voutPubkeysDummy, oprets);
         
         case 'u':
             return DecodeTokenUpdateOpRet(scriptPubKey, dummyPubkey, tokenid);
@@ -310,7 +302,7 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
 //===========================================================================
 
 // Vleppo token transfer decoder, replaces old DecodeTokenOpRet
-uint8_t DecodeTokenTransferOneOpRet(const CScript scriptPubKey, uint256 &tokenid, std::vector<CPubKey> &voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> &oprets)
+uint8_t DecodeTokenTransferOpRet(const CScript scriptPubKey, uint256 &tokenid, std::vector<CPubKey> &voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> &oprets)
 {
     vscript_t vopret, vblob;
     GetOpReturnData(scriptPubKey, vopret);
@@ -394,11 +386,11 @@ uint8_t DecodeTokenTransferOneOpRet(const CScript scriptPubKey, uint256 &tokenid
             return(opretFuncId);
         }
     }
-    LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "DecodeTokenTransferOneOpRet() incorrect token single transfer opret" << std::endl);
+    LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "DecodeTokenTransferOpRet() incorrect token single transfer opret" << std::endl);
     return (uint8_t)0;
 }
 
-// Original DecodeTokenOpRet decoder, now redirects to DecodeTokenTransferOneOpRet if funcid == 't'
+// Original DecodeTokenOpRet decoder, now redirects to DecodeTokenTransferOpRet if funcid == 't'
 // for 't' returns all data from opret, vopretExtra contains other contract's data (currently only assets'). 
 // for 'c' returns only funcid. NOTE: nonfungible data is not returned
 uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, uint256 &tokenid, std::vector<CPubKey> &voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> &oprets)
@@ -407,18 +399,10 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
     GetOpReturnData(scriptPubKey, vopret);
     
     if (vopret.size() > 2 && vopret.begin()[0] == EVAL_TOKENS && vopret.begin()[1] == 't')
-        return DecodeTokenTransferOneOpRet(scriptPubKey, tokenid, voutPubkeys, oprets);
+        return DecodeTokenTransferOpRet(scriptPubKey, tokenid, voutPubkeys, oprets);
     else
         return 'c';
 }
-
-//===========================================================================
-//
-// Multiple Token Transfer Decoder
-//
-//===========================================================================
-
-/* DecodeTokenTransferManyOpRet coming soon */
 
 //===========================================================================
 //
