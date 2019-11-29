@@ -191,7 +191,7 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
     std::string dummyName, dummyDescription;
     std::vector<uint8_t> dummyPubkey;
     
-    //dummies for tokentransferone
+    //dummies for tokentransfer
     std::vector<CPubKey> voutPubkeysDummy;
     
     if (script != NULL && vopret.size() > 2) //checking if opret is empty
