@@ -482,9 +482,13 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
             // test vouts for possible token use-cases:
             std::vector<std::pair<CTxOut, std::string>> testVouts;
 
+			fprintf(stderr,"entering DecodeTokenTransferOpRet in IsTokensvout\n");
+			
             //DecodeTokenTransferOpRet used here since destpubkey array is expected to be returned
             DecodeTokenTransferOpRet(tx.vout.back().scriptPubKey, tokenIdOpret, voutPubkeysInOpret, oprets);
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << "IsTokensvout() oprets.size()=" << oprets.size() << std::endl);
+			
+			fprintf(stderr,"exiting DecodeTokenTransferOpRet in IsTokensvout\n");
 
             // get assets/channels/gateways token data:
             FilterOutNonCCOprets(oprets, vopretExtra); // NOTE: only 1 additional evalcode in token opret is currently supported
