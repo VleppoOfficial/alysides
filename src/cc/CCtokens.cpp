@@ -44,8 +44,6 @@
 // tx validation
 bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& tx, uint32_t nIn)
 {
-	fprintf(stderr,"beginning validation\n");
-	
     //Make exception for early Rogue chain
     if (strcmp(ASSETCHAINS_SYMBOL, "ROGUE") == 0 && chainActive.Height() <= 12500)
         return true;
@@ -66,18 +64,12 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     double ownerPerc;
     bool isSpendingBaton = false;
 
-	fprintf(stderr,"vars initialized\n");
-
     // check boundaries:
     if (numvouts < 1)
         return eval->Invalid("no vouts\n");
-
-	fprintf(stderr,"boundaries checked\n");
 	
     if ((funcid = DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, evalCodeInOpret, tokenid, oprets)) == 0)
         return eval->Invalid("TokenValidate: invalid opreturn payload");
-
-	fprintf(stderr,"DecodeTokenOpRet successful\n");
 	
     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokensValidate funcId=" << (char)(funcid ? funcid : ' ') << " evalcode=" << std::hex << (int)cp->evalcode << std::endl);
     
@@ -85,8 +77,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         return eval->Invalid("cant find token create txid");
     else if (funcid != 'c')
     {
-		fprintf(stderr,"GetTxUnconfirmed for tokencreate successful\n");
-		
         if (tokenid == zeroid)
             return eval->Invalid("illegal tokenid");
         else if (!TokensExactAmounts(true, cp, inputs, outputs, eval, tx, tokenid))
@@ -97,15 +87,11 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 return eval->Invalid("tokens cc inputs != cc outputs");
         }
 		
-		fprintf(stderr,"TokensExactAmounts successful\n");
-		
         //get token create tx info
         if (createTx.vout.size() > 0 && DecodeTokenCreateOpRet(createTx.vout[createTx.vout.size() - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
         {
             return eval->Invalid("incorrect token create txid funcid\n");
         }
-		
-		fprintf(stderr,"DecodeTokenCreateOpRet successful\n");
     }
 
     // validate spending from token cc addr: allowed only for burned non-fungible tokens:
@@ -121,8 +107,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 return eval->Invalid("spending cc marker not supported for fungible tokens");
         }
     }
-	
-	fprintf(stderr,"ExtractTokensCCVinPubkeys successful\n");
 
     //asset and licensing validation
     /*if (tokenType != "a" && tokenType != "m" && tokenType != "s") //might break other chain validation, don't use
@@ -140,8 +124,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         if (!((tokenType == "m" && refTokenType == "a") || (tokenType == "s" && refTokenType == "m")))
             return eval->Invalid("incorrect relation between tokentype and reftokentype for license");
     }
-    
-	fprintf(stderr,"Licensing stuff sorted\n");
 	
     //Non-update transactions cannot spend update baton
     for (int32_t i = 0; i < numvins; i++)
@@ -154,12 +136,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         //std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
     }
 	
-	fprintf(stderr,"Update Baton checked\n");
-	
     if (funcid != 'u' && isSpendingBaton)
         return eval->Invalid("attempting to spend update batonvout in non-update tx");
-    
-	fprintf(stderr,"isSpendingBaton checked\n");
 	
     switch (funcid)
     {
@@ -223,24 +201,16 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             //vout.1 to n-2: normal output for change (if any)
             //vout.n-1: opreturn EVAL_TOKENS 'u' pk tokenid
 
-            fprintf(stderr,"case 'u' entered\n");
-			
 			if (inputs != 0)
                 return eval->Invalid("update tx cannot have token inputs");
-            
-			fprintf(stderr,"inputs checked\n");
 			
             //Checking if update tx is actually spending the baton
             if (!isSpendingBaton)
                 return eval->Invalid("update tx is not spending update baton");
-            
-			fprintf(stderr,"!isSpendingBaton checked\n");
 			
             if (DecodeTokenUpdateOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, updaterPubkey, updatetokenid) != 'u' || updatetokenid != tokenid)
                 return eval->Invalid("invalid update tx opret data");
             
-			fprintf(stderr,"DecodeTokenUpdateOpRet checked\n");
-			
             // Verifying updaterPubkey by checking tx.vin[0] and tx.vout[1] addresses
             // These addresses should be equal to each other, and updaterPubkey address should be equal to both
             if (!Getscriptaddress(destaddr, tx.vout[1].scriptPubKey))
@@ -255,8 +225,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             if (strcmp(updaterPubkeyaddr, srcaddr) != 0 || strcmp(updaterPubkeyaddr, destaddr) != 0)
                 return eval->Invalid("updaterPubkey address doesn't match srcaddr or destaddr");
             
-			fprintf(stderr,"pubkey checked\n");
-			
             // if asset or master license: check if tokenid ownership percent > ownerperc
             if (tokenType == "a" || tokenType == "m")
             {
@@ -270,8 +238,6 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 if (updaterPubkey != creatorPubkey)
                     return eval->Invalid("licenses must be updated by creator pubkey");
             }
-            
-			fprintf(stderr,"license update stuff checked\n");
 			
             LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token update preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
             break;
@@ -552,21 +518,24 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                             testVouts.push_back(std::make_pair(MakeTokensCC1vout(evalCode2, tx.vout[v].nValue, voutPubkeys[1]), std::string("dual-eval2-token cc1 pk[1]")));
                     }
                 }
-
-                //special check for tx when spending from 1of2 CC address and one of pubkeys is global CC pubkey
-                /*struct CCcontract_info *cpEvalCode1,CEvalCode1;
-                cpEvalCode1 = CCinit(&CEvalCode1,evalCode1);
-                CPubKey pk=GetUnspendable(cpEvalCode1,0);
-                testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode1, tx.vout[v].nValue, voutPubkeys[0], pk), std::string("dual-eval1 pegscc cc1of2 pk[0] globalccpk")) ); 
-				if (voutPubkeys.size() == 2) testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode1, tx.vout[v].nValue, voutPubkeys[1], pk), std::string("dual-eval1 pegscc cc1of2 pk[1] globalccpk")) );
-				if (evalCode2!=0)
-                {
-                    struct CCcontract_info *cpEvalCode2,CEvalCode2;
-                    cpEvalCode2 = CCinit(&CEvalCode2,evalCode2);
-                    CPubKey pk=GetUnspendable(cpEvalCode2,0);
-                    testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode2, tx.vout[v].nValue, voutPubkeys[0], pk), std::string("dual-eval2 pegscc cc1of2 pk[0] globalccpk")) ); 
-					if (voutPubkeys.size() == 2) testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode2, tx.vout[v].nValue, voutPubkeys[1], pk), std::string("dual-eval2 pegscc cc1of2 pk[1] globalccpk")) );
-				}*/
+				
+				if (funcId != 'u') //this seems to break update tx validation, can be skipped safely since update txes have some additional constraints regarding token transfers - dan
+				{
+					//special check for tx when spending from 1of2 CC address and one of pubkeys is global CC pubkey
+					struct CCcontract_info *cpEvalCode1,CEvalCode1;
+					cpEvalCode1 = CCinit(&CEvalCode1,evalCode1);
+					CPubKey pk=GetUnspendable(cpEvalCode1,0);
+					testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode1, tx.vout[v].nValue, voutPubkeys[0], pk), std::string("dual-eval1 pegscc cc1of2 pk[0] globalccpk")) ); 
+					if (voutPubkeys.size() == 2) testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode1, tx.vout[v].nValue, voutPubkeys[1], pk), std::string("dual-eval1 pegscc cc1of2 pk[1] globalccpk")) );
+					if (evalCode2!=0)
+					{
+						struct CCcontract_info *cpEvalCode2,CEvalCode2;
+						cpEvalCode2 = CCinit(&CEvalCode2,evalCode2);
+						CPubKey pk=GetUnspendable(cpEvalCode2,0);
+						testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode2, tx.vout[v].nValue, voutPubkeys[0], pk), std::string("dual-eval2 pegscc cc1of2 pk[0] globalccpk")) ); 
+						if (voutPubkeys.size() == 2) testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode2, tx.vout[v].nValue, voutPubkeys[1], pk), std::string("dual-eval2 pegscc cc1of2 pk[1] globalccpk")) );
+					}
+				}
 
 				// maybe it is single-eval or dual/three-eval token change?
 				std::vector<CPubKey> vinPubkeys, vinPubkeysUnfiltered;
