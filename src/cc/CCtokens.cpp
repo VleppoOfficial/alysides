@@ -1085,7 +1085,9 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         }
     }
 
-    if (AddNormalinputs(mtx, mypk, tokensupply + 2 * txfee, 64) > 0) {
+    //if (AddNormalinputs(mtx, mypk, tokensupply + 2 * txfee, 64) > 0) {
+	if (AddNormalinputs2(mtx, tokensupply + 2 * txfee, 64) > 0) // add normal inputs only from mypk
+	{
         int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
         if (mypkInputs < tokensupply) {
             // check that tokens amount are really issued with mypk (because in the wallet there maybe other privkeys)
@@ -1178,18 +1180,13 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         return std::string("");
     }
     
-    //if (AddNormalinputs(mtx, mypk, txfee + 20000, 64) > 0)
-	if (AddNormalinputs2(mtx, tokensupply + 2 * txfee, 64) > 0) // add normal inputs only from mypk
+    if (AddNormalinputs(mtx, mypk, txfee + 20000, 64) > 0)
     {
         int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
-        /*if (mypkInputs < 20000) {
+        if (mypkInputs < 20000) {
             CCerror = "some inputs signed not with -pubkey=pk";
             return std::string("");
-        }*/
-		if (mypkInputs < tokensupply + 2 * txfee) {     // check that tokens amount are really issued with mypk (because in the wallet there maybe other privkeys)
-            CCerror = "some inputs signed not with -pubkey=pk";
-            return std::string("");
-		}
+        }
         if (latesttxid == tokenid)
         {
             mtx.vin.push_back(CTxIn(tokenid,2,CScript()));
