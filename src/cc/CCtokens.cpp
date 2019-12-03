@@ -562,6 +562,8 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                             testVouts.push_back(std::make_pair(MakeTokensCC1vout(evalCode2, tx.vout[v].nValue, voutPubkeys[1]), std::string("dual-eval2-token cc1 pk[1]")));
                     }
                 }
+				
+				fprintf(stderr,"entering 'special check'\n");
 
                 //special check for tx when spending from 1of2 CC address and one of pubkeys is global CC pubkey
                 struct CCcontract_info *cpEvalCode1,CEvalCode1;
@@ -577,6 +579,8 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode2, tx.vout[v].nValue, voutPubkeys[0], pk), std::string("dual-eval2 pegscc cc1of2 pk[0] globalccpk")) ); 
                     if (voutPubkeys.size() == 2) testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode2, tx.vout[v].nValue, voutPubkeys[1], pk), std::string("dual-eval2 pegscc cc1of2 pk[1] globalccpk")) );
                 }
+				
+				fprintf(stderr,"exiting 'special check'\n");
 
 				// maybe it is single-eval or dual/three-eval token change?
 				std::vector<CPubKey> vinPubkeys, vinPubkeysUnfiltered;
