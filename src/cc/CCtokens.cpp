@@ -83,11 +83,10 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     
     if (eval->GetTxUnconfirmed(tokenid, createTx, hashBlock) == 0 || !myGetTransaction(tokenid, createTx, hashBlock))
         return eval->Invalid("cant find token create txid");
-    
-	fprintf(stderr,"GetTxUnconfirmed for tokencreate successful");
-	
     else if (funcid != 'c')
     {
+		fprintf(stderr,"GetTxUnconfirmed for tokencreate successful");
+		
         if (tokenid == zeroid)
             return eval->Invalid("illegal tokenid");
         else if (!TokensExactAmounts(true, cp, inputs, outputs, eval, tx, tokenid))
