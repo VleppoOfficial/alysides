@@ -514,6 +514,8 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                 evalCode1 = evalCode2; // for using MakeTokensCC1vout(evalcode,...) instead of MakeCC1vout(EVAL_TOKENS, evalcode...)
                 evalCode2 = 0;
             }
+			
+			fprintf(stderr,"entering test vout shenanigans in IsTokensvout\n");
 
             if (/*checkPubkeys &&*/ funcId != 'c') { // for 'c' there is no pubkeys
                                                      // verify that the vout is token by constructing vouts with the pubkeys in the opret:
@@ -598,6 +600,8 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                         return tx.vout[v].nValue;
                     }
                 }
+				
+			fprintf(stderr,"exiting test vout shenanigans in IsTokensvout\n");
 
             } else { // funcid == 'c'
 
