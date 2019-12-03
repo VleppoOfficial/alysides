@@ -481,26 +481,18 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
 
             // test vouts for possible token use-cases:
             std::vector<std::pair<CTxOut, std::string>> testVouts;
-
-			fprintf(stderr,"entering DecodeTokenTransferOpRet in IsTokensvout\n");
 			
             //DecodeTokenTransferOpRet used here since destpubkey array is expected to be returned
             DecodeTokenTransferOpRet(tx.vout.back().scriptPubKey, tokenIdOpret, voutPubkeysInOpret, oprets);
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << "IsTokensvout() oprets.size()=" << oprets.size() << std::endl);
-			
-			fprintf(stderr,"exiting DecodeTokenTransferOpRet in IsTokensvout\n");
 
             // get assets/channels/gateways token data:
             FilterOutNonCCOprets(oprets, vopretExtra); // NOTE: only 1 additional evalcode in token opret is currently supported
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << "IsTokensvout() vopretExtra=" << HexStr(vopretExtra) << std::endl);
-			
-			fprintf(stderr,"FilterOutNonCCOprets in IsTokensvout successful\n");
 
             // get non-fungible data
             GetNonfungibleData(reftokenid, vopretNonfungible);
             FilterOutTokensUnspendablePk(voutPubkeysInOpret, voutPubkeys); // cannot send tokens to token unspendable cc addr (only marker is allowed there)
-			
-			fprintf(stderr,"FilterOutTokensUnspendablePk in IsTokensvout successful\n");
 
             // NOTE: evalcode order in vouts is important:
             // non-fungible-eval -> EVAL_TOKENS -> assets-eval
@@ -514,8 +506,6 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                 evalCode1 = evalCode2; // for using MakeTokensCC1vout(evalcode,...) instead of MakeCC1vout(EVAL_TOKENS, evalcode...)
                 evalCode2 = 0;
             }
-			
-			fprintf(stderr,"entering test vout shenanigans in IsTokensvout\n");
 
             if (/*checkPubkeys &&*/ funcId != 'c') { // for 'c' there is no pubkeys
                                                      // verify that the vout is token by constructing vouts with the pubkeys in the opret:
@@ -568,17 +558,42 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                 //special check for tx when spending from 1of2 CC address and one of pubkeys is global CC pubkey
                 struct CCcontract_info *cpEvalCode1,CEvalCode1;
                 cpEvalCode1 = CCinit(&CEvalCode1,evalCode1);
+				
+				fprintf(stderr,"'special check' CCinit done\n");
+				
                 CPubKey pk=GetUnspendable(cpEvalCode1,0);
+				
+				fprintf(stderr,"'special check' GetUnspendable done\n");
+				
                 testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode1, tx.vout[v].nValue, voutPubkeys[0], pk), std::string("dual-eval1 pegscc cc1of2 pk[0] globalccpk")) ); 
-                if (voutPubkeys.size() == 2) testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode1, tx.vout[v].nValue, voutPubkeys[1], pk), std::string("dual-eval1 pegscc cc1of2 pk[1] globalccpk")) );
-                if (evalCode2!=0)
+                
+				fprintf(stderr,"'special check' testVouts.push_back( std::make_pair(MakeTokensCC1of2vout done\n");
+				
+				if (voutPubkeys.size() == 2) testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode1, tx.vout[v].nValue, voutPubkeys[1], pk), std::string("dual-eval1 pegscc cc1of2 pk[1] globalccpk")) );
+                
+				fprintf(stderr,"'special check' (voutPubkeys.size() == 2) done\n");
+				
+				if (evalCode2!=0)
                 {
+					fprintf(stderr,"'special check' (evalCode2!=0) enter\n");
+					
                     struct CCcontract_info *cpEvalCode2,CEvalCode2;
                     cpEvalCode2 = CCinit(&CEvalCode2,evalCode2);
+					
+					fprintf(stderr,"'special check' CCinit done\n");
+					
                     CPubKey pk=GetUnspendable(cpEvalCode2,0);
+					
+					fprintf(stderr,"'special check' GetUnspendable done\n");
+					
                     testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode2, tx.vout[v].nValue, voutPubkeys[0], pk), std::string("dual-eval2 pegscc cc1of2 pk[0] globalccpk")) ); 
-                    if (voutPubkeys.size() == 2) testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode2, tx.vout[v].nValue, voutPubkeys[1], pk), std::string("dual-eval2 pegscc cc1of2 pk[1] globalccpk")) );
-                }
+                    
+					fprintf(stderr,"'special check' testVouts.push_back( std::make_pair(MakeTokensCC1of2vout done\n");
+					
+					if (voutPubkeys.size() == 2) testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode2, tx.vout[v].nValue, voutPubkeys[1], pk), std::string("dual-eval2 pegscc cc1of2 pk[1] globalccpk")) );
+					
+					fprintf(stderr,"'special check' (voutPubkeys.size() == 2) done\n");
+				}
 				
 				fprintf(stderr,"exiting 'special check'\n");
 
@@ -604,9 +619,6 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                         return tx.vout[v].nValue;
                     }
                 }
-				
-			fprintf(stderr,"exiting test vout shenanigans in IsTokensvout\n");
-
             } else { // funcid == 'c'
 
                 if (!tx.IsCoinImport()) {
