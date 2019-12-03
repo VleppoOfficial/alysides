@@ -621,9 +621,9 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
             }
             LOGSTREAM("cctokens", CCLOG_DEBUG1, stream << indentStr << "IsTokensvout() no valid vouts evalCode=" << (int)evalCode1 << " evalCode2=" << (int)evalCode2 << " for txid=" << tx.GetHash().GetHex() << " for tokenid=" << reftokenid.GetHex() << std::endl);
         }
-        std::cerr << indentStr; fprintf(stderr,"IsTokensvout() CC vout v.%d of n=%d amount=%.8f txid=%s\n",v,n,(double)0/COIN, tx.GetHash().GetHex().c_str());
+        //std::cerr << indentStr; fprintf(stderr,"IsTokensvout() CC vout v.%d of n=%d amount=%.8f txid=%s\n",v,n,(double)0/COIN, tx.GetHash().GetHex().c_str());
     }
-    std::cerr << indentStr; fprintf(stderr,"IsTokensvout() normal output v.%d %.8f\n",v,(double)tx.vout[v].nValue/COIN);
+    //std::cerr << indentStr; fprintf(stderr,"IsTokensvout() normal output v.%d %.8f\n",v,(double)tx.vout[v].nValue/COIN);
     return (0);
 }
 
@@ -645,7 +645,7 @@ bool IsTokenBatonVout(CTxOut vout)
         getCCopret(vout.scriptPubKey, opret) &&
         (DecodeTokenUpdateCCOpRet(opret, assetHash, value, ccode, message) == 'u'))
     {
-        std::cerr << "Located a baton vout" << std::endl;
+        //std::cerr << "Located a baton vout" << std::endl;
         return true;
     }
     return false;
@@ -654,8 +654,6 @@ bool IsTokenBatonVout(CTxOut vout)
 // compares cc inputs vs cc outputs (to prevent feeding vouts from normal inputs)
 bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inputs, int64_t& outputs, Eval* eval, const CTransaction& tx, uint256 reftokenid)
 {
-	fprintf(stderr,"TokensExactAmounts entered\n");
-	
     CTransaction vinTx;
     uint256 hashBlock;
     int64_t tokenoshis;
@@ -693,14 +691,12 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
             }
         }
     }
-	
-	fprintf(stderr,"TokensExactAmounts checkpoint 1\n");
 
     for (int32_t i = 0; i < numvouts - 1; i++) // 'numvouts-1' <-- do not check opret
     {
         LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << indentStr << "TokenExactAmounts() recursively checking tx.vout[" << i << "] nValue=" << tx.vout[i].nValue << std::endl);
 
-        std::cerr << "TokenExactAmounts() recursively checking txid[" << tx.GetHash().GetHex() << "].vout[" << i << "] nValue=" << tx.vout[i].nValue << std::endl; //dan
+        //std::cerr << "TokenExactAmounts() recursively checking txid[" << tx.GetHash().GetHex() << "].vout[" << i << "] nValue=" << tx.vout[i].nValue << std::endl; //dan
         
         // Note: we pass in here IsTokenvout(false,...) because we don't need to call TokenExactAmounts() recursively from IsTokensvout here
         // indeed, if we pass 'true' we'll be checking this tx vout again
@@ -714,7 +710,7 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
         }
     }
 	
-    std::cerr << indentStr << "TokensExactAmounts() inputs=" << inputs << " outputs=" << outputs << " for txid=" << tx.GetHash().GetHex() << std::endl;
+    //std::cerr << indentStr << "TokensExactAmounts() inputs=" << inputs << " outputs=" << outputs << " for txid=" << tx.GetHash().GetHex() << std::endl;
 
     if (inputs != outputs) {
         if (tx.GetHash() != reftokenid)
