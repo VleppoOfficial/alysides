@@ -44,7 +44,7 @@
 // tx validation
 bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& tx, uint32_t nIn)
 {
-	fprintf(stderr,"beginning validation");
+	fprintf(stderr,"beginning validation\n");
 	
     //Make exception for early Rogue chain
     if (strcmp(ASSETCHAINS_SYMBOL, "ROGUE") == 0 && chainActive.Height() <= 12500)
@@ -66,18 +66,18 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     double ownerPerc;
     bool isSpendingBaton = false;
 
-	fprintf(stderr,"vars initialized");
+	fprintf(stderr,"vars initialized\n");
 
     // check boundaries:
     if (numvouts < 1)
-        return eval->Invalid("no vouts");
+        return eval->Invalid("no vouts\n");
 
-	fprintf(stderr,"boundaries checked");
+	fprintf(stderr,"boundaries checked\n");
 	
     if ((funcid = DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, evalCodeInOpret, tokenid, oprets)) == 0)
         return eval->Invalid("TokenValidate: invalid opreturn payload");
 
-	fprintf(stderr,"DecodeTokenOpRet successful");
+	fprintf(stderr,"DecodeTokenOpRet successful\n");
 	
     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokensValidate funcId=" << (char)(funcid ? funcid : ' ') << " evalcode=" << std::hex << (int)cp->evalcode << std::endl);
     
@@ -85,7 +85,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         return eval->Invalid("cant find token create txid");
     else if (funcid != 'c')
     {
-		fprintf(stderr,"GetTxUnconfirmed for tokencreate successful");
+		fprintf(stderr,"GetTxUnconfirmed for tokencreate successful\n");
 		
         if (tokenid == zeroid)
             return eval->Invalid("illegal tokenid");
@@ -97,15 +97,15 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 return eval->Invalid("tokens cc inputs != cc outputs");
         }
 		
-		fprintf(stderr,"TokensExactAmounts successful");
+		fprintf(stderr,"TokensExactAmounts successful\n");
 		
         //get token create tx info
         if (createTx.vout.size() > 0 && DecodeTokenCreateOpRet(createTx.vout[createTx.vout.size() - 1].scriptPubKey, creatorPubkey, dummyName, dummyDescription, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, oprets) != 'c')
         {
-            return eval->Invalid("incorrect token create txid funcid");
+            return eval->Invalid("incorrect token create txid funcid\n");
         }
 		
-		fprintf(stderr,"DecodeTokenCreateOpRet successful");
+		fprintf(stderr,"DecodeTokenCreateOpRet successful\n");
     }
 
     // validate spending from token cc addr: allowed only for burned non-fungible tokens:
@@ -122,7 +122,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         }
     }
 	
-	fprintf(stderr,"ExtractTokensCCVinPubkeys successful");
+	fprintf(stderr,"ExtractTokensCCVinPubkeys successful\n");
 
     //asset and licensing validation
     /*if (tokenType != "a" && tokenType != "m" && tokenType != "s") //might break other chain validation, don't use
@@ -141,7 +141,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             return eval->Invalid("incorrect relation between tokentype and reftokentype for license");
     }
     
-	fprintf(stderr,"Licensing stuff sorted");
+	fprintf(stderr,"Licensing stuff sorted\n");
 	
     //Non-update transactions cannot spend update baton
     for (int32_t i = 0; i < numvins; i++)
@@ -154,12 +154,12 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         //std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
     }
 	
-	fprintf(stderr,"Update Baton checked");
+	fprintf(stderr,"Update Baton checked\n");
 	
     if (funcid != 'u' && isSpendingBaton)
         return eval->Invalid("attempting to spend update batonvout in non-update tx");
     
-	fprintf(stderr,"isSpendingBaton checked");
+	fprintf(stderr,"isSpendingBaton checked\n");
 	
     switch (funcid)
     {
@@ -223,23 +223,23 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             //vout.1 to n-2: normal output for change (if any)
             //vout.n-1: opreturn EVAL_TOKENS 'u' pk tokenid
 
-            fprintf(stderr,"case 'u' entered");
+            fprintf(stderr,"case 'u' entered\n");
 			
 			if (inputs != 0)
                 return eval->Invalid("update tx cannot have token inputs");
             
-			fprintf(stderr,"inputs checked");
+			fprintf(stderr,"inputs checked\n");
 			
             //Checking if update tx is actually spending the baton
             if (!isSpendingBaton)
                 return eval->Invalid("update tx is not spending update baton");
             
-			fprintf(stderr,"!isSpendingBaton checked");
+			fprintf(stderr,"!isSpendingBaton checked\n");
 			
             if (DecodeTokenUpdateOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, updaterPubkey, updatetokenid) != 'u' || updatetokenid != tokenid)
                 return eval->Invalid("invalid update tx opret data");
             
-			fprintf(stderr,"DecodeTokenUpdateOpRet checked");
+			fprintf(stderr,"DecodeTokenUpdateOpRet checked\n");
 			
             // Verifying updaterPubkey by checking tx.vin[0] and tx.vout[1] addresses
             // These addresses should be equal to each other, and updaterPubkey address should be equal to both
@@ -255,7 +255,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             if (strcmp(updaterPubkeyaddr, srcaddr) != 0 || strcmp(updaterPubkeyaddr, destaddr) != 0)
                 return eval->Invalid("updaterPubkey address doesn't match srcaddr or destaddr");
             
-			fprintf(stderr,"pubkey checked");
+			fprintf(stderr,"pubkey checked\n");
 			
             // if asset or master license: check if tokenid ownership percent > ownerperc
             if (tokenType == "a" || tokenType == "m")
@@ -271,7 +271,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                     return eval->Invalid("licenses must be updated by creator pubkey");
             }
             
-			fprintf(stderr,"license update stuff checked");
+			fprintf(stderr,"license update stuff checked\n");
 			
             LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token update preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
             break;
@@ -686,6 +686,8 @@ bool IsTokenBatonVout(CTxOut vout)
 // compares cc inputs vs cc outputs (to prevent feeding vouts from normal inputs)
 bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inputs, int64_t& outputs, Eval* eval, const CTransaction& tx, uint256 reftokenid)
 {
+	fprintf(stderr,"TokensExactAmounts entered\n");
+	
     CTransaction vinTx;
     uint256 hashBlock;
     int64_t tokenoshis;
@@ -723,6 +725,8 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
             }
         }
     }
+	
+	fprintf(stderr,"TokensExactAmounts checkpoint 1\n");
 
     for (int32_t i = 0; i < numvouts - 1; i++) // 'numvouts-1' <-- do not check opret
     {
@@ -741,6 +745,8 @@ bool TokensExactAmounts(bool goDeeper, struct CCcontract_info* cp, int64_t& inpu
             outputs += tokenoshis;
         }
     }
+	
+	fprintf(stderr,"TokensExactAmounts checkpoint 2\n");
 
     //std::cerr << indentStr << "TokensExactAmounts() inputs=" << inputs << " outputs=" << outputs << " for txid=" << tx.GetHash().GetHex() << std::endl;
 
