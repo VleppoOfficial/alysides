@@ -126,7 +126,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     }
     
     //Non-update transactions cannot spend update baton
-    for (int32_t i = 0; i < numvins; i++)
+    /*for (int32_t i = 0; i < numvins; i++)
     {
         if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || //in tokenid tx, baton vout is vout2
             (eval->GetTxUnconfirmed(tx.vin[i].prevout.hash, referenceTx, hashBlock) != 0 && myGetTransaction(tx.vin[i].prevout.hash, referenceTx, hashBlock) &&
@@ -136,7 +136,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
         //std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
     }
     if (funcid != 'u' && isSpendingBaton)
-        return eval->Invalid("attempting to spend update batonvout in non-update tx");
+        return eval->Invalid("attempting to spend update batonvout in non-update tx");*/
     
     switch (funcid)
     {
@@ -236,8 +236,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             {
                 if (updaterPubkey != creatorPubkey)
                     return eval->Invalid("licenses must be updated by creator pubkey");
-            }*/
-            
+            }
+            */
             LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token update preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
             break;
             
