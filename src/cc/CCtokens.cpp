@@ -200,7 +200,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             //vout.1 to n-2: normal output for change (if any)
             //vout.n-1: opreturn EVAL_TOKENS 'u' pk tokenid
 
-            if (inputs != 0)
+            /*if (inputs != 0)
                 return eval->Invalid("update tx cannot have token inputs");
             
             //Checking if update tx is actually spending the baton
@@ -236,7 +236,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             {
                 if (updaterPubkey != creatorPubkey)
                     return eval->Invalid("licenses must be updated by creator pubkey");
-            }
+            }*/
             
             LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "token update preliminarily validated inputs=" << inputs << "->outputs=" << outputs << " preventCCvins=" << preventCCvins << " preventCCvouts=" << preventCCvouts << std::endl);
             break;
