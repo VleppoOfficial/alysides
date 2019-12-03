@@ -1231,7 +1231,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         return std::string("");
     }
     
-    if (AddNormalinputs2(mtx, mypk, txfee + 20000, 64) > 0)
+    if (AddNormalinputs(mtx, mypk, txfee + 20000, 64) > 0)
     {
         int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
         if (mypkInputs < 20000) {
