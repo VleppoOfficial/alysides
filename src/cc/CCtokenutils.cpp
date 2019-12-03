@@ -154,6 +154,9 @@ CScript EncodeTokenTransferOpRet(uint256 tokenid, std::vector<CPubKey> voutPubke
 CScript EncodeTokenUpdateOpRet(std::vector<uint8_t> pk, uint256 tokenid)
 {    
     CScript opret; uint8_t evalcode = EVAL_TOKENS, funcid = 'u';
+	
+	tokenid = revuint256(tokenid);
+	
     opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << pk << tokenid);
     return(opret);
 }
