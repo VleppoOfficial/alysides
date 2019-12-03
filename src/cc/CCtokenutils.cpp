@@ -468,11 +468,11 @@ CC *MakeTokensCCcond1of2(uint8_t evalcode, uint8_t evalcode2, CPubKey pk1, CPubK
 
     std::vector<CC*> thresholds;
     thresholds.push_back(CCNewEval(E_MARSHAL(ss << evalcode)));
-    if (evalcode != EVAL_TOKENS)                                                    // if evalCode == EVAL_TOKENS, it is actually MakeCCcond1of2()!
-        thresholds.push_back(CCNewEval(E_MARSHAL(ss << (uint8_t)EVAL_TOKENS)));        // this is eval token cc
+    if (evalcode != EVAL_TOKENS)	                                                // if evalCode == EVAL_TOKENS, it is actually MakeCCcond1of2()!
+        thresholds.push_back(CCNewEval(E_MARSHAL(ss << (uint8_t)EVAL_TOKENS)));	    // this is eval token cc
     if (evalcode2 != 0)
         thresholds.push_back(CCNewEval(E_MARSHAL(ss << evalcode2)));                // add optional additional evalcode
-    thresholds.push_back(CCNewThreshold(1, pks));                                    // this is 1 of 2 sigs cc
+    thresholds.push_back(CCNewThreshold(1, pks));		                            // this is 1 of 2 sigs cc
 
     return CCNewThreshold(thresholds.size(), thresholds);
 }
@@ -490,10 +490,10 @@ CC *MakeTokensCCcond1(uint8_t evalcode, uint8_t evalcode2, CPubKey pk)
     std::vector<CC*> thresholds;
     thresholds.push_back(CCNewEval(E_MARSHAL(ss << evalcode)));
     if (evalcode != EVAL_TOKENS)                                                    // if evalCode == EVAL_TOKENS, it is actually MakeCCcond1()!
-        thresholds.push_back(CCNewEval(E_MARSHAL(ss << (uint8_t)EVAL_TOKENS)));        // this is eval token cc
+        thresholds.push_back(CCNewEval(E_MARSHAL(ss << (uint8_t)EVAL_TOKENS)));	    // this is eval token cc
     if (evalcode2 != 0)
         thresholds.push_back(CCNewEval(E_MARSHAL(ss << evalcode2)));                // add optional additional evalcode
-    thresholds.push_back(CCNewThreshold(1, pks));                                    // signature
+    thresholds.push_back(CCNewThreshold(1, pks));			                        // signature
 
     return CCNewThreshold(thresholds.size(), thresholds);
 }
@@ -529,4 +529,3 @@ CTxOut MakeTokensCC1vout(uint8_t evalcode, uint8_t evalcode2, CAmount nValue, CP
 CTxOut MakeTokensCC1vout(uint8_t evalcode, CAmount nValue, CPubKey pk) {
     return MakeTokensCC1vout(evalcode, 0, nValue, pk);
 }
-
