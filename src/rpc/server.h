@@ -257,8 +257,6 @@ extern UniValue tokenask(const UniValue& params, bool fHelp, const CPubKey& mypk
 extern UniValue tokencancelask(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue tokenfillask(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue tokenconvert(const UniValue& params, bool fHelp, const CPubKey& mypk);
-extern UniValue tokenupdate(const UniValue& params, bool fHelp, const CPubKey& mypk);
-extern UniValue tokenviewupdates(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue heiraddress(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue heirfund(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue heiradd(const UniValue& params, bool fHelp, const CPubKey& mypk);
@@ -327,6 +325,8 @@ extern UniValue channelsclose(const UniValue& params, bool fHelp, const CPubKey&
 extern UniValue channelsrefund(const UniValue& params, bool fHelp, const CPubKey& mypk);
 //extern UniValue tokenswapask(const UniValue& params, bool fHelp, const CPubKey& mypk);
 //extern UniValue tokenfillswap(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue tokenupdate(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue tokenviewupdates(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue faucetfund(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue faucetget(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue faucetaddress(const UniValue& params, bool fHelp, const CPubKey& mypk);
@@ -542,7 +542,6 @@ extern UniValue pricesaddfunding(const UniValue& params, bool fHelp, const CPubK
 extern UniValue pricesgetorderbook(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue pricesrefillfund(const UniValue& params, bool fHelp, const CPubKey& mypk);
 
-extern UniValue agreementaddress(const UniValue& params, bool fHelp); //new agreement
 
 
 #endif // BITCOIN_RPCSERVER_H
