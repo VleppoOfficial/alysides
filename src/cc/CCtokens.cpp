@@ -493,10 +493,14 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
             // get assets/channels/gateways token data:
             FilterOutNonCCOprets(oprets, vopretExtra); // NOTE: only 1 additional evalcode in token opret is currently supported
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << "IsTokensvout() vopretExtra=" << HexStr(vopretExtra) << std::endl);
+			
+			fprintf(stderr,"FilterOutNonCCOprets in IsTokensvout successful\n");
 
             // get non-fungible data
             GetNonfungibleData(reftokenid, vopretNonfungible);
             FilterOutTokensUnspendablePk(voutPubkeysInOpret, voutPubkeys); // cannot send tokens to token unspendable cc addr (only marker is allowed there)
+			
+			fprintf(stderr,"FilterOutTokensUnspendablePk in IsTokensvout successful\n");
 
             // NOTE: evalcode order in vouts is important:
             // non-fungible-eval -> EVAL_TOKENS -> assets-eval
