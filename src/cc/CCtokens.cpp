@@ -1685,6 +1685,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
         return(result);
     }
 	owners.push_back(origpubkey);
+	result.push_back(HexStr(origpubkey));
 	if ((retcode = CCgetspenttxid(spenttxid, vini, height, tokenid, 1)) == 0)
 		GetOwnerPubkeys(spenttxid);
 	else {
