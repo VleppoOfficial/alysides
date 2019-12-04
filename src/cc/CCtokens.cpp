@@ -792,6 +792,8 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
 
         if (it->second.satoshis < threshold) // this should work also for non-fungible tokens (there should be only 1 satoshi for non-fungible token issue)
             continue;
+		
+		std::cerr << "checkpoint 1" << std::endl;
 
         int32_t ivin;
 		for (ivin = 0; ivin < mtx.vin.size(); ivin ++)
@@ -799,6 +801,8 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
 				break;
 		if (ivin != mtx.vin.size()) // that is, the tx.vout is already added to mtx.vin (in some previous calls)
 			continue;
+		
+		std::cerr << "checkpoint 2" << std::endl;
 
 		if (myGetTransaction(vintxid, vintx, hashBlock) != 0)
 		{
@@ -808,11 +812,15 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
                 strcmp(destaddr, cp->unspendableaddr2) != 0)      // or the logic is to allow to spend all available tokens (what about unspendableaddr3)?
 				continue;
 			
+			std::cerr << "checkpoint 3" << std::endl;
+			
             LOGSTREAM((char *)"cctokens", CCLOG_DEBUG1, stream << "AddTokenCCInputs() check vintx vout destaddress=" << destaddr << " amount=" << vintx.vout[vout].nValue << std::endl);
 
 			if ((nValue = IsTokensvout(true, true/*<--add only valid token uxtos */, cp, NULL, vintx, vout, tokenid)) > 0 && myIsutxo_spentinmempool(ignoretxid,ignorevin,vintxid, vout) == 0)
 			{
 				//for non-fungible tokens check payload:
+				std::cerr << "checkpoint 4" << std::endl;
+				
                 if (!vopretNonfungible.empty()) {
                     vscript_t vopret;
 
@@ -824,6 +832,8 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
                     }
                     // non-fungible evalCode2 cc contract should also check if there exists only one non-fungible vout with amount = 1
                 }
+				
+				std::cerr << "checkpoint 5" << std::endl;
 
                 if (total != 0 && maxinputs != 0) // if it is not just to calc amount...
                     mtx.vin.push_back(CTxIn(vintxid, vout, CScript()));
@@ -832,6 +842,8 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
                 totalinputs += nValue;
                 LOGSTREAM((char*)"cctokens", CCLOG_DEBUG1, stream << "AddTokenCCInputs() adding input nValue=" << nValue << std::endl);
                 n++;
+				
+				std::cerr << "checkpoint 6" << std::endl;
 
                 if ((total > 0 && totalinputs >= total) || (maxinputs > 0 && n >= maxinputs))
                     break;
