@@ -7864,7 +7864,7 @@ UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& mypk)
     tokenid = Parseuint256((char *)params[0].get_str().c_str());
     if (params.size() == 2)
     {
-        currentonly = atoi((char *)params[2].get_str().c_str());
+        currentonly = atoi((char *)params[1].get_str().c_str());
         if (currentonly < 0)
             currentonly = 0;
     }
