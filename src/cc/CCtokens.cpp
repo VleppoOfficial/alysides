@@ -1676,6 +1676,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 	std::vector<uint256> foundtxids;
 	std::vector<uint8_t> origpubkey;
 	std::vector<std::vector<uint8_t>> owners;
+	bool getowners;
 
 	if (!myGetTransaction(tokenid, tokenbaseTx, hashBlock)) {
 		fprintf(stderr, "TokenOwners() cant find tokenid\n");
@@ -1691,11 +1692,14 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
     }
 	owners.push_back(origpubkey);
 	if ((retcode = CCgetspenttxid(spenttxid, vini, height, tokenid, 1)) == 0)
-		if(!GetOwnerPubkeys(spenttxid, tokenid, cpTokens, foundtxids, owners))
+	{
+		getowners = GetOwnerPubkeys(spenttxid, tokenid, cpTokens, foundtxids, owners)
+		if (!getowners)
 		{
 			fprintf(stderr, "GetOwnerPubkeys failed\n");
 			return(result);
 		}
+	}
 	else {
         fprintf(stderr, "can't find spenttxid for token create tx\n"); // don't forget to comment this out after
 		result.push_back(HexStr(origpubkey));
