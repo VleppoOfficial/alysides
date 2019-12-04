@@ -396,6 +396,8 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
 {
     // this is just for log messages indentation fur debugging recursive calls:
     std::string indentStr = std::string().append(tokenValIndentSize, '.');
+	
+	std::cerr << "entering IsTokensVout" << std::endl;
 
     LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << indentStr << "IsTokensvout() entered for txid=" << tx.GetHash().GetHex() << " v=" << v << " for tokenid=" << reftokenid.GetHex() << std::endl);
 
@@ -406,10 +408,13 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                                                         << " v=" << v << " n=" << n << " returning 0" << std::endl);
         return (0);
     }
+	
+	std::cerr << "IsTokensVout checkpoint 1" << std::endl;
 
     if (tx.vout[v].scriptPubKey.IsPayToCryptoCondition()) {
         if (goDeeper) {
             //validate all tx
+			std::cerr << "IsTokensVout goin deeper" << std::endl;
             int64_t myCCVinsAmount = 0, myCCVoutsAmount = 0;
 
             tokenValIndentSize++;
@@ -430,6 +435,8 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                 }
             }
         }
+		
+		std::cerr << "IsTokensVout checkpoint 2" << std::endl;
 
         // token opret most important checks (tokenid == reftokenid, tokenid is non-zero, tx is 'tokenbase'):
         const uint8_t funcId = ValidateTokenOpret(tx, reftokenid);
@@ -450,17 +457,25 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
             // test vouts for possible token use-cases:
             std::vector<std::pair<CTxOut, std::string>> testVouts;
 			
+			std::cerr << "IsTokensVout checkpoint 3" << std::endl;
+			
             //DecodeTokenTransferOpRet used here since destpubkey array is expected to be returned
             DecodeTokenTransferOpRet(tx.vout.back().scriptPubKey, tokenIdOpret, voutPubkeysInOpret, oprets);
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << "IsTokensvout() oprets.size()=" << oprets.size() << std::endl);
+			
+			std::cerr << "IsTokensVout checkpoint 4" << std::endl;
 
             // get assets/channels/gateways token data:
             FilterOutNonCCOprets(oprets, vopretExtra); // NOTE: only 1 additional evalcode in token opret is currently supported
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << "IsTokensvout() vopretExtra=" << HexStr(vopretExtra) << std::endl);
+			
+			std::cerr << "IsTokensVout checkpoint 5" << std::endl;
 
             // get non-fungible data
             GetNonfungibleData(reftokenid, vopretNonfungible);
             FilterOutTokensUnspendablePk(voutPubkeysInOpret, voutPubkeys); // cannot send tokens to token unspendable cc addr (only marker is allowed there)
+			
+			std::cerr << "IsTokensVout checkpoint 6" << std::endl;
 
             // NOTE: evalcode order in vouts is important:
             // non-fungible-eval -> EVAL_TOKENS -> assets-eval
@@ -521,6 +536,8 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     }
                 }
 				
+				std::cerr << "IsTokensVout checkpoint 7" << std::endl;
+				
 				if (funcId != 'u') //this seems to break update tx validation, can be skipped safely since update txes have some additional constraints regarding token transfers - dan
 				{
 					//special check for tx when spending from 1of2 CC address and one of pubkeys is global CC pubkey
@@ -538,6 +555,8 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
 						if (voutPubkeys.size() == 2) testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode2, tx.vout[v].nValue, voutPubkeys[1], pk), std::string("dual-eval2 pegscc cc1of2 pk[1] globalccpk")) );
 					}
 				}
+				
+				std::cerr << "IsTokensVout checkpoint 8" << std::endl;
 
 				// maybe it is single-eval or dual/three-eval token change?
 				std::vector<CPubKey> vinPubkeys, vinPubkeysUnfiltered;
@@ -563,7 +582,8 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                 }
             } else { // funcid == 'c'
 
-                if (!tx.IsCoinImport()) {
+                std::cerr << "IsTokensVout says what" << std::endl;
+				if (!tx.IsCoinImport()) {
                     vscript_t vorigPubkey;
                     std::string dummyName, dummyDescription, dummyTokenType;
                     uint256 dummyRefTokenId;
@@ -819,8 +839,6 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
 			if ((nValue = IsTokensvout(true, true/*<--add only valid token uxtos */, cp, NULL, vintx, vout, tokenid)) > 0 && myIsutxo_spentinmempool(ignoretxid,ignorevin,vintxid, vout) == 0)
 			{
 				//for non-fungible tokens check payload:
-				std::cerr << "checkpoint 4" << std::endl;
-				
                 if (!vopretNonfungible.empty()) {
                     vscript_t vopret;
 
@@ -832,8 +850,6 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
                     }
                     // non-fungible evalCode2 cc contract should also check if there exists only one non-fungible vout with amount = 1
                 }
-				
-				std::cerr << "checkpoint 5" << std::endl;
 
                 if (total != 0 && maxinputs != 0) // if it is not just to calc amount...
                     mtx.vin.push_back(CTxIn(vintxid, vout, CScript()));
@@ -842,8 +858,6 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
                 totalinputs += nValue;
                 LOGSTREAM((char*)"cctokens", CCLOG_DEBUG1, stream << "AddTokenCCInputs() adding input nValue=" << nValue << std::endl);
                 n++;
-				
-				std::cerr << "checkpoint 6" << std::endl;
 
                 if ((total > 0 && totalinputs >= total) || (maxinputs > 0 && n >= maxinputs))
                     break;
