@@ -1676,7 +1676,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
         return(result);
     }
 	
-	owners.push_back(origpubkey);
+	owners.push_back(HexStr(origpubkey));
 	
 	//VoutShenanigansloop (txid)
 	
