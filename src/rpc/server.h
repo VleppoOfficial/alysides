@@ -327,6 +327,7 @@ extern UniValue channelsrefund(const UniValue& params, bool fHelp, const CPubKey
 //extern UniValue tokenfillswap(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue tokenupdate(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue tokenviewupdates(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue faucetfund(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue faucetget(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue faucetaddress(const UniValue& params, bool fHelp, const CPubKey& mypk);

@@ -1623,11 +1623,37 @@ UniValue TokenInfo(uint256 tokenid)
     return result;
 }
 
-/*UniValue TokenOwners(uint256 tokenid)
+/*UniValue TokenOwners(uint256 tokenid, int currentonly)
 {
 	UniValue result(UniValue::VARR);
 	
+	check if tokenid is tokencreate id
+	txid = token create id;
+	do VoutShenanigansloop on txid
+	
+	VoutShenanigansloop (txid):
+		get tx info from txid, get its funcid
+		check if it is valid (funcid = 't' or 'c', token transfer or create etc.) if not, break or return
+		collect destpubkey(s), if not seen yet slap it into the Owners array
+		for each vout in current tx:
+			if it is a token vout (not regular or marker or baton!), and it has been spent
+				if spending tx not seen yet (not in FoundTxId array)
+				{
+					slap it into the FoundTxId array
+					do VoutShenanigansloop on the txid that spent it
+				}
+			if not spent, leave it alone and move on.
 }*/
+UniValue TokenOwners(uint256 tokenid, int currentonly)
+{
+	UniValue result(UniValue::VARR);
+	struct CCcontract_info *cpTokens, C;
+    cpTokens = CCinit(&C, EVAL_TOKENS);
+
+    result.push_back(tokenid.GetHex());
+    result.push_back(currentonly);
+    return(result);
+}
 
 UniValue TokenList()
 {

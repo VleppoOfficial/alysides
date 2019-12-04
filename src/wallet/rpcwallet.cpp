@@ -7852,6 +7852,25 @@ UniValue tokenconvert(const UniValue& params, bool fHelp, const CPubKey& mypk)
     return(result); */
 }
 
+UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    uint256 tokenid; int currentonly = 0;
+    if ( fHelp || params.size() < 1 || params.size() > 2)
+        throw runtime_error("tokenowners tokenid [currentonly]\n");
+    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
+        throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
+    const CKeyStore& keystore = *pwalletMain;
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+    tokenid = Parseuint256((char *)params[0].get_str().c_str());
+    if (params.size() == 2)
+    {
+        currentonly = atoi((char *)params[2].get_str().c_str());
+        if (currentonly < 0)
+            currentonly = 0;
+    }
+    return(TokenOwners(tokenid, currentonly));
+}
+
 UniValue tokenviewupdates(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     uint256 tokenid; int32_t samplenum; int recursive = 0;

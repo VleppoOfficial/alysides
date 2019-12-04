@@ -571,6 +571,7 @@ static const CRPCCommand vRPCCommands[] =
 	// new
 	{ "tokens",       "tokenupdate",      &tokenupdate,       true },
 	{ "tokens",       "tokenviewupdates", &tokenviewupdates,  true },
+	{ "tokens",       "tokenowners", 	  &tokenowners,  true },
 
     // pegs
     { "pegs",       "pegscreate",     &pegscreate,      true },
