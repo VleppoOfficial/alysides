@@ -1633,7 +1633,7 @@ UniValue TokenInfo(uint256 tokenid)
 	
 	VoutShenanigansloop (txid):
 		get tx info from txid, get its funcid
-		check if it is valid (funcid = 't' or 'c', token transfer or create etc.) if not, break or return
+		check if it is valid (funcid = 't', token transfer etc.) if not, break or return
 		collect destpubkey(s), if not seen yet slap it into the Owners array
 		for each vout in current tx:
 			if it is a token vout (not regular or marker or baton!), and it has been spent
@@ -1644,14 +1644,45 @@ UniValue TokenInfo(uint256 tokenid)
 				}
 			if not spent, leave it alone and move on.
 }*/
+
 UniValue TokenOwners(uint256 tokenid, int currentonly)
 {
 	UniValue result(UniValue::VARR);
 	struct CCcontract_info *cpTokens, C;
     cpTokens = CCinit(&C, EVAL_TOKENS);
-
+	
+	std::vector<uint256> foundtxids;
+	uint256 hashBlock;
+    CTransaction tokenbaseTx;
+	std::vector<uint8_t> origpubkey;
+    std::string name, description;
+	
+	//std::vector<CPubKey> &voutPubkeys;
+	std::vector<uint8_t> owners;
+	
+	if (!myGetTransaction(tokenid, tokenbaseTx, hashBlock))
+	{
+		fprintf(stderr, "TokenOwners() cant find tokenid\n");
+		return(result);
+	}
+	if ( KOMODO_NSPV_FULLNODE && hashBlock.IsNull())
+	{
+		fprintf(stderr, "the transaction is still in mempool\n");
+        return (result);
+    }
+	if (tokenbaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenbaseTx.vout[tokenbaseTx.vout.size() - 1].scriptPubKey, origpubkey, name, description) != 'c')
+	{
+        fprintf(stderr, "tokenid isnt token creation txid\n");
+        return(result);
+    }
+	
+	owners.push_back(origpubkey);
+	
+	//VoutShenanigansloop (txid)
+	
     result.push_back(tokenid.GetHex());
     result.push_back(currentonly);
+	result.push_back(owners);
     return(result);
 }
 
