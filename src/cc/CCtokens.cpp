@@ -1640,7 +1640,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 		if (!myGetTransaction(txid, currentTx, hashBlock) || KOMODO_NSPV_FULLNODE && hashBlock.IsNull() || currentTx.vout.size() == 0) {
 			fprintf(stderr, "GetOwnerPubkeys cant find txid\n");
 			return;
-		};
+		}
 		// check the opret and funcid
 		// if funcid = 'c', proceed (or maybe not?)
 		// if funcid = 't', retrieve voutpubkeys, place them in owners array, proceed
@@ -1654,7 +1654,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 		// for each vout in the vout array, call GetOwnerPubkeys on the txid that spent the vout
 		
 		// this should iterate through the entire token transfer transaction tree for a specific token, and collect all found pubkeys
-	}
+	};
 	
 	if (!myGetTransaction(tokenid, tokenbaseTx, hashBlock)) {
 		fprintf(stderr, "TokenOwners() cant find tokenid\n");
