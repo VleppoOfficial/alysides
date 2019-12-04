@@ -633,7 +633,10 @@ bool IsTokenMarkerVout(CTxOut vout)
 {
     struct CCcontract_info *cpTokens, CCtokens_info;
     cpTokens = CCinit(&CCtokens_info, EVAL_TOKENS);
-    return vout == MakeCC1vout(EVAL_TOKENS, vout.nValue, GetUnspendable(cpTokens, NULL));
+	if (!IsTokenBatonVout(vout))
+		return vout == MakeCC1vout(EVAL_TOKENS, vout.nValue, GetUnspendable(cpTokens, NULL));
+	else
+		return false;
 }
 
 bool IsTokenBatonVout(CTxOut vout)
@@ -1620,42 +1623,10 @@ UniValue TokenInfo(uint256 tokenid)
     return result;
 }
 
-/*UniValue TokenList()
+/*UniValue TokenOwners(uint256 tokenid)
 {
-    UniValue result(UniValue::VARR);
-    std::vector<std::pair<CAddressIndexKey, CAmount>> addressIndex;
-    std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue>> addressIndexCCMarker;
-
-    struct CCcontract_info *cp, C;
-    uint256 txid, hashBlock;
-    CTransaction vintx;
-    std::vector<uint8_t> origpubkey;
-    std::string name, description, tokenType;
-    double ownerPerc;
-    int64_t expiryTimeSec;
-    uint256 referenceTokenId;
-
-    cp = CCinit(&C, EVAL_TOKENS);
-
-    auto addTokenId = [&](uint256 txid) {
-        if (GetTransaction(txid, vintx, hashBlock, false) != 0) {
-            if (vintx.vout.size() > 0 && DecodeTokenCreateOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey, origpubkey, name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec) != 0) {
-                result.push_back(txid.GetHex());
-            }
-        }
-    };
-
-    SetCCtxids(addressIndex, cp->normaladdr, false); // find by old normal addr marker
-    for (std::vector<std::pair<CAddressIndexKey, CAmount>>::const_iterator it = addressIndex.begin(); it != addressIndex.end(); it++) {
-        addTokenId(it->first.txhash);
-    }
-
-    SetCCunspents(addressIndexCCMarker, cp->unspendableCCaddr, true); // find by burnable validated cc addr marker
-    for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue>>::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++) {
-        addTokenId(it->first.txhash);
-    }
-
-    return (result);
+	UniValue result(UniValue::VARR);
+	
 }*/
 
 UniValue TokenList()
