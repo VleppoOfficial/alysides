@@ -130,7 +130,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     {
         if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || //in tokenid tx, baton vout is vout2
             (eval->GetTxUnconfirmed(tx.vin[i].prevout.hash, referenceTx, hashBlock) != 0 && myGetTransaction(tx.vin[i].prevout.hash, referenceTx, hashBlock) &&
-            DecodeTokenUpdateOpRet(referenceTx.vout[referenceTx.vout.size() - 1].scriptPubKey, dummyPubkey, tokenid) == 'u' &&
+            DecodeTokenUpdateOpRet(referenceTx.vout[referenceTx.vout.size() - 1].scriptPubKey, dummyPubkey, updatetokenid) == 'u' &&
             tx.vin[i].prevout.n == 0)) //in update tx, baton vout is vout0
             isSpendingBaton = true;
         //std::cerr << "tx.vin[" << i << "].prevout.hash hex=" << tx.vin[i].prevout.hash.GetHex() << std::endl;
