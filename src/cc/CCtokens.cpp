@@ -1644,7 +1644,7 @@ UniValue TokenList()
     auto addTokenId = [&](uint256 txid) {
         if (myGetTransaction(txid, vintx, hashBlock) != 0) {
             if (vintx.vout.size() > 0 && DecodeTokenCreateOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey, origpubkey, name, description) != 0) {
-				dupes.push_back(txid.GetHex());
+				allTokens.push_back(txid.GetHex());
             }
         }
     };
