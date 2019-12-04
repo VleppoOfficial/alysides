@@ -1673,6 +1673,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 	std::vector<uint8_t> origpubkey;
 	std::vector<std::vector<uint8_t>> owners;
 	bool getowners;
+	char CCaddr[64];
 
 	if (!myGetTransaction(tokenid, tokenbaseTx, hashBlock)) {
 		fprintf(stderr, "TokenOwners() cant find tokenid\n");
@@ -1702,16 +1703,16 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
         return(result);
     }
 
-	// by this point we should have the owners array filled with pubkeys
-	// the array needs to be checked thru, and based on currentonly flag and dupe status, pushed to result
+	// sorting owner array & removing duplicates
 	std::set<std::vector<uint8_t>> sortOwners(owners.begin(), owners.end());
 	for (std::set<std::vector<uint8_t>>::const_iterator it = sortOwners.begin(); it != sortOwners.end(); it++)
 	{
+		GetCCaddress(cp,CCaddr,pubkey2pk(*it));
+		// pushing to result depending on currentonly param and current token balance by owner pk
+		if (currentonly == 0 || (currentonly > 0 && CCtoken_balance(CCaddr, tokenid) > 0))
 		result.push_back(HexStr(*it));
 	}
-	
-    //result.push_back(tokenid.GetHex());
-    //result.push_back(currentonly);
+
     return(result);
 }
 
