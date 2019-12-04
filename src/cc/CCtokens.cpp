@@ -1705,7 +1705,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 	
 	for (std::vector<CPubkey>::const_iterator it = owners.begin(); it != owners.end(); it++)
 	{
-		ownerpk = std::vector<uint8_t>(*it.begin(), *it.end())
+		ownerpk = std::vector<uint8_t>(*it.begin(), *it.end());
 		result.push_back(HexStr(ownerpk));
 	}
 	
