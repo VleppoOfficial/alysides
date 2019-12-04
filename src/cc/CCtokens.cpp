@@ -1644,18 +1644,19 @@ UniValue TokenList()
     auto addTokenId = [&](uint256 txid) {
         if (myGetTransaction(txid, vintx, hashBlock) != 0) {
             if (vintx.vout.size() > 0 && DecodeTokenCreateOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey, origpubkey, name, description) != 0) {
-				if (std::find(result.begin(), result.end(), txid.GetHex()) == result.end())
-					result.push_back(txid.GetHex());
+				result.push_back(txid.GetHex());
             }
         }
     };
 
 	SetCCtxids(txids, cp->normaladdr,false,cp->evalcode,zeroid,'c');                      // find by old normal addr marker
+	std::unique(txids.begin(), txids.end()); // added to remove duplicate txids since update batons are treated here as markers - dan
    	for (std::vector<uint256>::const_iterator it = txids.begin(); it != txids.end(); it++) 	{
         addTokenId(*it);
 	}
 
     SetCCunspents(addressIndexCCMarker, cp->unspendableCCaddr,true);    // find by burnable validated cc addr marker
+	std::unique(addressIndexCCMarker.begin(), addressIndexCCMarker.end()); // added to remove duplicate txids since update batons are treated here as markers - dan
     for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++) {
         addTokenId(it->first.txhash);
     }
