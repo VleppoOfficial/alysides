@@ -1658,7 +1658,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
     std::string name, description;
 	
 	//std::vector<CPubKey> &voutPubkeys;
-	std::vector<uint8_t> owners;
+	std::vector<std::vector<uint8_t>> owners;
 	
 	if (!myGetTransaction(tokenid, tokenbaseTx, hashBlock))
 	{
@@ -1676,7 +1676,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
         return(result);
     }
 	
-	owners.push_back(HexStr(origpubkey));
+	owners.push_back(origpubkey);
 	
 	//VoutShenanigansloop (txid)
 	
