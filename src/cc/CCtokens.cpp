@@ -1629,18 +1629,34 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 	struct CCcontract_info *cpTokens, C;
     cpTokens = CCinit(&C, EVAL_TOKENS);
 	int32_t vini, height, retcode;
-	std::vector<uint256> foundtxids;
-	uint256 hashBlock, spenttxid;
+	uint256 hashBlock, spenttxid, tokenidInOpret;
     CTransaction tokenbaseTx, currentTx;
-	std::vector<uint8_t> origpubkey, ownerpk;
     std::string name, description;
+	uint8_t evalcode;
+	std::vector<uint256> foundtxids;
+	std::vector<uint8_t> origpubkey, ownerpk;
 	std::vector<std::vector<uint8_t>> owners;
+	std::vector<CPubKey> voutPubkeys;
+	std::vector<std::pair<uint8_t, vscript_t>> oprets;
 	
 	auto GetOwnerPubkeys = [&](uint256 txid) {
 		if (!myGetTransaction(txid, currentTx, hashBlock) || KOMODO_NSPV_FULLNODE && hashBlock.IsNull() || currentTx.vout.size() == 0) {
 			fprintf(stderr, "GetOwnerPubkeys cant find txid\n");
 			return;
 		}
+		if (DecodeTokenOpRet(currentTx.vout[currentTx.vout.size() - 1].scriptPubKey, evalcode, tokenidInOpret, voutPubkeys, oprets) != 't' || tokenidInOpret != tokenid || voutPubkeys.size() == 0) {
+			fprintf(stderr,"GetOwnerPubkeys() found txid %s : incorrect token transfer opret",(txid.GetHex()));
+			return;
+		}
+		if (voutPubkeys.size() >= 1 && voutPubkeys.size() <= 2)
+			owners.push_back(std::vector<uint8_t>(voutPubkeys[0].begin(), voutPubkeys[0].end()));
+		else {
+			fprintf(stderr,"GetOwnerPubkeys() couldn't findfound txid %s : incorrect token transfer opret",(txid.GetHex()));
+			return;
+		}
+		if (voutPubkeys.size() == 2)
+			owners.push_back(std::vector<uint8_t>(voutPubkeys[1].begin(), voutPubkeys[1].end()));
+		
 		// check the opret and funcid
 		// if funcid = 'c', proceed (or maybe not?)
 		// if funcid = 't', retrieve voutpubkeys, place them in owners array, proceed
