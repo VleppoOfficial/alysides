@@ -1660,7 +1660,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 		// iterate through all vouts in tx
 		for (int i = 0; i < currentTx.vout.size() - 1; i++) //do not check opret
 		{
-			if (IsTokensvout(false, true, cpTokens, cp->evalcode, currentTx, i, tokenid) > 0 && (retcode = CCgetspenttxid(spenttxid, vini, height, txid, i)) == 0)
+			if (IsTokensvout(false, true, cpTokens, cpTokens->evalcode, currentTx, i, tokenid) > 0 && (retcode = CCgetspenttxid(spenttxid, vini, height, txid, i)) == 0)
 				GetOwnerPubkeys(spenttxid);
 		}
 
