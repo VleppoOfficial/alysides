@@ -1645,13 +1645,13 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 			return;
 		}
 		if (DecodeTokenOpRet(currentTx.vout[currentTx.vout.size() - 1].scriptPubKey, evalcode, tokenidInOpret, voutPubkeys, oprets) != 't' || tokenidInOpret != tokenid || voutPubkeys.size() == 0) {
-			fprintf(stderr,"GetOwnerPubkeys() found txid %s : incorrect token transfer opret",((char *)txid.GetHex()));
+			fprintf(stderr,"GetOwnerPubkeys() found txid with incorrect token transfer opret");
 			return;
 		}
 		if (voutPubkeys.size() >= 1 && voutPubkeys.size() <= 2)
 			owners.push_back(std::vector<uint8_t>(voutPubkeys[0].begin(), voutPubkeys[0].end()));
 		else {
-			fprintf(stderr,"GetOwnerPubkeys() couldn't findfound txid %s : incorrect token transfer opret",(txid.GetHex()));
+			fprintf(stderr,"GetOwnerPubkeys() found non-standard voutPubkeys size in tx");
 			return;
 		}
 		if (voutPubkeys.size() == 2)
