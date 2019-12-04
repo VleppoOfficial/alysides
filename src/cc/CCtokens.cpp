@@ -1623,52 +1623,60 @@ UniValue TokenInfo(uint256 tokenid)
     return result;
 }
 
+bool GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info* cp, std::vector<uint256> &foundtxids, std::vector<std::vector<uint8_t>> &owners)
+{
+	int32_t vini, height, retcode;
+	CTransaction currentTx;
+	uint256 hashBlock, spenttxid, tokenidInOpret;
+	uint8_t evalcode;
+	std::vector<CPubKey> voutPubkeys;
+	std::vector<std::pair<uint8_t, vscript_t>> oprets;
+	
+	if (!myGetTransaction(txid, currentTx, hashBlock) || KOMODO_NSPV_FULLNODE && hashBlock.IsNull() || currentTx.vout.size() == 0) {
+		fprintf(stderr, "GetOwnerPubkeys cant find txid\n");
+		return false;
+	}
+	if (DecodeTokenOpRet(currentTx.vout[currentTx.vout.size() - 1].scriptPubKey, evalcode, tokenidInOpret, voutPubkeys, oprets) != 't' || tokenidInOpret != reftokenid || voutPubkeys.size() == 0) {
+		fprintf(stderr,"GetOwnerPubkeys() found txid with incorrect token transfer opret");
+		return false;
+	}
+	// collect voutPubkeys
+	if (voutPubkeys.size() >= 1 && voutPubkeys.size() <= 2)
+		owners.push_back(std::vector<uint8_t>(voutPubkeys[0].begin(), voutPubkeys[0].end()));
+	else {
+		fprintf(stderr,"GetOwnerPubkeys() found non-standard voutPubkeys size in tx");
+		return false;
+	}
+	if (voutPubkeys.size() == 2)
+		owners.push_back(std::vector<uint8_t>(voutPubkeys[1].begin(), voutPubkeys[1].end()));
+	// iterate through all vouts in tx
+	for (int i = 0; i < currentTx.vout.size() - 1; i++) //do not check opret
+	{
+		if (IsTokensvout(false, true, cpTokens, cpTokens->evalcode, currentTx, i, reftokenid) > 0 && 
+		(retcode = CCgetspenttxid(spenttxid, vini, height, txid, i)) == 0 &&
+		spenttxid != reftokenid && 
+		std::find(foundtxids.begin(), foundtxids.end(), spenttxid) == foundtxids.end())
+		{
+			foundtxids.push_back(spenttxid);
+			GetOwnerPubkeys(spenttxid, reftokenid, cpTokens, foundtxids, owners);
+		}
+	}
+	return true;
+}
+
 UniValue TokenOwners(uint256 tokenid, int currentonly)
 {
 	UniValue result(UniValue::VARR);
 	struct CCcontract_info *cpTokens, C;
     cpTokens = CCinit(&C, EVAL_TOKENS);
 	int32_t vini, height, retcode;
-	uint256 hashBlock, spenttxid, tokenidInOpret;
-    CTransaction tokenbaseTx, currentTx;
+	uint256 hashBlock, spenttxid;
+    CTransaction tokenbaseTx;
     std::string name, description;
-	uint8_t evalcode;
 	std::vector<uint256> foundtxids;
-	std::vector<uint8_t> origpubkey, ownerpk;
+	std::vector<uint8_t> origpubkey;
 	std::vector<std::vector<uint8_t>> owners;
-	std::vector<CPubKey> voutPubkeys;
-	std::vector<std::pair<uint8_t, vscript_t>> oprets;
-	
-	auto GetOwnerPubkeys = [&](uint256 txid) {
-		if (!myGetTransaction(txid, currentTx, hashBlock) || KOMODO_NSPV_FULLNODE && hashBlock.IsNull() || currentTx.vout.size() == 0) {
-			fprintf(stderr, "GetOwnerPubkeys cant find txid\n");
-			return;
-		}
-		if (DecodeTokenOpRet(currentTx.vout[currentTx.vout.size() - 1].scriptPubKey, evalcode, tokenidInOpret, voutPubkeys, oprets) != 't' || tokenidInOpret != tokenid || voutPubkeys.size() == 0) {
-			fprintf(stderr,"GetOwnerPubkeys() found txid with incorrect token transfer opret");
-			return;
-		}
-		// collect voutPubkeys
-		if (voutPubkeys.size() >= 1 && voutPubkeys.size() <= 2)
-			owners.push_back(std::vector<uint8_t>(voutPubkeys[0].begin(), voutPubkeys[0].end()));
-		else {
-			fprintf(stderr,"GetOwnerPubkeys() found non-standard voutPubkeys size in tx");
-			return;
-		}
-		if (voutPubkeys.size() == 2)
-			owners.push_back(std::vector<uint8_t>(voutPubkeys[1].begin(), voutPubkeys[1].end()));
-		// iterate through all vouts in tx
-		for (int i = 0; i < currentTx.vout.size() - 1; i++) //do not check opret
-		{
-			if (IsTokensvout(false, true, cpTokens, cpTokens->evalcode, currentTx, i, tokenid) > 0 && (retcode = CCgetspenttxid(spenttxid, vini, height, txid, i)) == 0)
-				GetOwnerPubkeys(spenttxid);
-		}
 
-		// if vout is a token vout (not regular or marker or baton!), and it has been spent, call GetOwnerPubkeys recursively on the txid that spent the vout
-		
-		// this should iterate through the entire token transfer transaction tree for a specific token, and collect all found pubkeys
-	};
-	
 	if (!myGetTransaction(tokenid, tokenbaseTx, hashBlock)) {
 		fprintf(stderr, "TokenOwners() cant find tokenid\n");
 		return(result);
@@ -1683,7 +1691,11 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
     }
 	owners.push_back(origpubkey);
 	if ((retcode = CCgetspenttxid(spenttxid, vini, height, tokenid, 1)) == 0)
-		GetOwnerPubkeys(spenttxid);
+		if(!GetOwnerPubkeys(spenttxid, tokenid, cpTokens, foundtxids, owners))
+		{
+			fprintf(stderr, "GetOwnerPubkeys failed\n");
+			return(result);
+		}
 	else {
         fprintf(stderr, "can't find spenttxid for token create tx\n"); // don't forget to comment this out after
 		result.push_back(HexStr(origpubkey));
@@ -1694,7 +1706,6 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 	// the array needs to be checked thru, and based on currentonly flag and dupe status, pushed to result
 	for (std::vector<std::vector<uint8_t>>::const_iterator it = owners.begin(); it != owners.end(); it++)
 	{
-		//ownerpk = std::vector<uint8_t>(*it.begin(), *it.end());
 		result.push_back(HexStr(*it));
 	}
 	
