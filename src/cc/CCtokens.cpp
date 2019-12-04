@@ -396,8 +396,6 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
 {
     // this is just for log messages indentation fur debugging recursive calls:
     std::string indentStr = std::string().append(tokenValIndentSize, '.');
-	
-	std::cerr << "entering IsTokensVout" << std::endl;
 
     LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << indentStr << "IsTokensvout() entered for txid=" << tx.GetHash().GetHex() << " v=" << v << " for tokenid=" << reftokenid.GetHex() << std::endl);
 
@@ -408,8 +406,6 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                                                         << " v=" << v << " n=" << n << " returning 0" << std::endl);
         return (0);
     }
-	
-	std::cerr << "IsTokensVout checkpoint 1" << std::endl;
 
     if (tx.vout[v].scriptPubKey.IsPayToCryptoCondition()) {
         if (goDeeper) {
@@ -435,8 +431,6 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                 }
             }
         }
-		
-		std::cerr << "IsTokensVout checkpoint 2" << std::endl;
 
         // token opret most important checks (tokenid == reftokenid, tokenid is non-zero, tx is 'tokenbase'):
         const uint8_t funcId = ValidateTokenOpret(tx, reftokenid);
@@ -457,25 +451,17 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
             // test vouts for possible token use-cases:
             std::vector<std::pair<CTxOut, std::string>> testVouts;
 			
-			std::cerr << "IsTokensVout checkpoint 3" << std::endl;
-			
             //DecodeTokenTransferOpRet used here since destpubkey array is expected to be returned
             DecodeTokenTransferOpRet(tx.vout.back().scriptPubKey, tokenIdOpret, voutPubkeysInOpret, oprets);
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << "IsTokensvout() oprets.size()=" << oprets.size() << std::endl);
-			
-			std::cerr << "IsTokensVout checkpoint 4" << std::endl;
 
             // get assets/channels/gateways token data:
             FilterOutNonCCOprets(oprets, vopretExtra); // NOTE: only 1 additional evalcode in token opret is currently supported
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << "IsTokensvout() vopretExtra=" << HexStr(vopretExtra) << std::endl);
-			
-			std::cerr << "IsTokensVout checkpoint 5" << std::endl;
 
             // get non-fungible data
             GetNonfungibleData(reftokenid, vopretNonfungible);
             FilterOutTokensUnspendablePk(voutPubkeysInOpret, voutPubkeys); // cannot send tokens to token unspendable cc addr (only marker is allowed there)
-			
-			std::cerr << "IsTokensVout checkpoint 6" << std::endl;
 
             // NOTE: evalcode order in vouts is important:
             // non-fungible-eval -> EVAL_TOKENS -> assets-eval
@@ -536,8 +522,6 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     }
                 }
 				
-				std::cerr << "IsTokensVout checkpoint 7" << std::endl;
-				
 				if (funcId != 'u') //this seems to break update tx validation, can be skipped safely since update txes have some additional constraints regarding token transfers - dan
 				{
 					//special check for tx when spending from 1of2 CC address and one of pubkeys is global CC pubkey
@@ -555,8 +539,6 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
 						if (voutPubkeys.size() == 2) testVouts.push_back( std::make_pair(MakeTokensCC1of2vout(evalCode2, tx.vout[v].nValue, voutPubkeys[1], pk), std::string("dual-eval2 pegscc cc1of2 pk[1] globalccpk")) );
 					}
 				}
-				
-				std::cerr << "IsTokensVout checkpoint 8" << std::endl;
 
 				// maybe it is single-eval or dual/three-eval token change?
 				std::vector<CPubKey> vinPubkeys, vinPubkeysUnfiltered;
@@ -581,8 +563,6 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     }
                 }
             } else { // funcid == 'c'
-
-                std::cerr << "IsTokensVout says what" << std::endl;
 				if (!tx.IsCoinImport()) {
                     vscript_t vorigPubkey;
                     std::string dummyName, dummyDescription, dummyTokenType;
@@ -596,10 +576,8 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                                                                         << " for txid=" << tx.GetHash().GetHex() << " for tokenid=" << reftokenid.GetHex() << std::endl);
                         return 0;
                     }
-					std::cerr << "IsTokensVout is still alive?" << std::endl;
-
+					
                     CPubKey origPubkey = pubkey2pk(vorigPubkey);
-
 
                     // TODO: add voutPubkeys for 'c' tx
 
@@ -614,17 +592,20 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
 
                     // note: this would not work if there are several pubkeys in the tokencreator's wallet (AddNormalinputs does not use pubkey param):
                     // for tokenbase tx check that normal inputs sent from origpubkey > cc outputs
+					
+					std::cerr << "IsTokensVout danger start" << std::endl;
+					
                     int64_t ccOutputs = 0;
                     for (auto vout : tx.vout)
                         if (vout.scriptPubKey.IsPayToCryptoCondition() //TODO: add voutPubkey validation
                             && (!IsTokenMarkerVout(vout) && !IsTokenBatonVout(vout)))               // should not be marker or baton here
                             ccOutputs += vout.nValue;
 
-                    std::cerr << "IsTokensVout hardmode checkpoint 1" << std::endl;
+                    std::cerr << "IsTokensVout danger pass" << std::endl;
+					
 					int64_t normalInputs = TotalPubkeyNormalInputs(tx, origPubkey); // check if normal inputs are really signed by originator pubkey (someone not cheating with originator pubkey)
                     LOGSTREAM("cctokens", CCLOG_DEBUG2, stream << indentStr << "IsTokensvout() normalInputs=" << normalInputs << " ccOutputs=" << ccOutputs << " for tokenbase=" << reftokenid.GetHex() << std::endl);
 
-                    std::cerr << "IsTokensVout hardmode checkpoint 2" << std::endl;
 					if (normalInputs >= ccOutputs) {
                         LOGSTREAM("cctokens", CCLOG_DEBUG2, stream << indentStr << "IsTokensvout() assured normalInputs >= ccOutputs"
                                                                    << " for tokenbase=" << reftokenid.GetHex() << std::endl);
@@ -785,8 +766,6 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
 // also sets evalcode in cp, if needed
 int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, CPubKey pk, uint256 tokenid, int64_t total, int32_t maxinputs, vscript_t& vopretNonfungible)
 {
-	std::cerr << "entering AddTokenCCInputs()" << std::endl;
-	
     char tokenaddr[64], destaddr[64];
     int64_t threshold, nValue, price, totalinputs = 0;
     int32_t n = 0;
@@ -805,8 +784,6 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
 
     threshold = total / (maxinputs != 0 ? maxinputs : CC_MAXVINS);
 	
-	std::cerr << "entering AddTokenCCInputs() for loop" << std::endl;
-	
     for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue>>::const_iterator it = unspentOutputs.begin(); it != unspentOutputs.end(); it++) {
         CTransaction vintx;
         uint256 hashBlock;
@@ -815,8 +792,6 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
 
         if (it->second.satoshis < threshold) // this should work also for non-fungible tokens (there should be only 1 satoshi for non-fungible token issue)
             continue;
-		
-		std::cerr << "checkpoint 1" << std::endl;
 
         int32_t ivin;
 		for (ivin = 0; ivin < mtx.vin.size(); ivin ++)
@@ -824,8 +799,6 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
 				break;
 		if (ivin != mtx.vin.size()) // that is, the tx.vout is already added to mtx.vin (in some previous calls)
 			continue;
-		
-		std::cerr << "checkpoint 2" << std::endl;
 
 		if (myGetTransaction(vintxid, vintx, hashBlock) != 0)
 		{
@@ -834,8 +807,6 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
                 strcmp(destaddr, cp->unspendableCCaddr) != 0 &&   // TODO: check why this. Should not we add token inputs from unspendable cc addr if mypubkey is used?
                 strcmp(destaddr, cp->unspendableaddr2) != 0)      // or the logic is to allow to spend all available tokens (what about unspendableaddr3)?
 				continue;
-			
-			std::cerr << "checkpoint 3" << std::endl;
 			
             LOGSTREAM((char *)"cctokens", CCLOG_DEBUG1, stream << "AddTokenCCInputs() check vintx vout destaddress=" << destaddr << " amount=" << vintx.vout[vout].nValue << std::endl);
 
