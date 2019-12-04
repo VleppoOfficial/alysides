@@ -592,15 +592,11 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     // note: this would not work if there are several pubkeys in the tokencreator's wallet (AddNormalinputs does not use pubkey param):
                     // for tokenbase tx check that normal inputs sent from origpubkey > cc outputs
 					
-					std::cerr << "IsTokensVout danger start" << std::endl;
-					
                     int64_t ccOutputs = 0;
                     for (auto vout : tx.vout)
                         if (vout.scriptPubKey.IsPayToCryptoCondition() //TODO: add voutPubkey validation
                             && (!IsTokenMarkerVout(vout) && !IsTokenBatonVout(vout)))               // should not be marker or baton here
                             ccOutputs += vout.nValue;
-
-                    std::cerr << "IsTokensVout danger pass" << std::endl;
 					
 					int64_t normalInputs = TotalPubkeyNormalInputs(tx, origPubkey); // check if normal inputs are really signed by originator pubkey (someone not cheating with originator pubkey)
                     LOGSTREAM("cctokens", CCLOG_DEBUG2, stream << indentStr << "IsTokensvout() normalInputs=" << normalInputs << " ccOutputs=" << ccOutputs << " for tokenbase=" << reftokenid.GetHex() << std::endl);
@@ -637,10 +633,6 @@ bool IsTokenMarkerVout(CTxOut vout)
     struct CCcontract_info *cpTokens, CCtokens_info;
     cpTokens = CCinit(&CCtokens_info, EVAL_TOKENS);
 	return vout == MakeCC1vout(EVAL_TOKENS, vout.nValue, GetUnspendable(cpTokens, NULL));
-	/*if (!IsTokenBatonVout(vout))
-		return vout == MakeCC1vout(EVAL_TOKENS, vout.nValue, GetUnspendable(cpTokens, NULL));
-	else
-		return false;*/
 }
 
 bool IsTokenBatonVout(CTxOut vout)
@@ -1520,25 +1512,6 @@ int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 	return(AddTokenCCInputs(cp, mtx, pk, tokenid, 0, 0));
 }
 
-/*int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
-{
-    struct CCcontract_info *cp, C;
-    cp = CCinit(&C, EVAL_TOKENS);
-    char CCaddr[64];
-	CTransaction tokentx;
-	uint256 hashBlock;
-	
-	if (myGetTransaction(tokenid, tokentx, hashBlock) == 0)
-	{
-        LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "cant find tokenid" << std::endl);
-		CCerror = strprintf("cant find tokenid");
-		return 0;
-	}
-	
-    GetCCaddress(cp,CCaddr,pk);
-    return (CCtoken_balance(CCaddr, tokenid));
-}*/
-
 UniValue TokenInfo(uint256 tokenid)
 {
     UniValue result(UniValue::VOBJ);
@@ -1595,7 +1568,7 @@ UniValue TokenInfo(uint256 tokenid)
         bool isExpired = (durationSec > expiryTimeSec) ? true : false;
         if (expiryTimeSec == 0)
             isExpired = false;
-        timeleft = expiryTimeSec - durationSec; // added to calculate time left
+        timeleft = expiryTimeSec - durationSec; // added to calculate time left - jakob
         result.push_back(Pair("expirytime", expiryTimeSec));
         result.push_back(Pair("timeleft", timeleft));
         result.push_back(Pair("isExpired", isExpired));
@@ -1731,7 +1704,8 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 
 	// by this point we should have the owners array filled with pubkeys
 	// the array needs to be checked thru, and based on currentonly flag and dupe status, pushed to result
-	for (std::vector<std::vector<uint8_t>>::const_iterator it = owners.begin(); it != owners.end(); it++)
+	std::set<std::vector<std::vector<uint8_t>>> sortOwners(owners.begin(), owners.end());
+	for (std::vector<std::vector<uint8_t>>::const_iterator it = sortOwners.begin(); it != sortOwners.end(); it++)
 	{
 		result.push_back(HexStr(*it));
 	}
