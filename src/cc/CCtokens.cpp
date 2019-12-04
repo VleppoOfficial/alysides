@@ -208,9 +208,11 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             if (!isSpendingBaton)
                 return eval->Invalid("update tx is not spending update baton");
 			
-            if (DecodeTokenUpdateOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, updaterPubkey, updatetokenid) != 'u' || updatetokenid != tokenid)
+            if (DecodeTokenUpdateOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, updaterPubkey, updatetokenid) != 'u')
                 return eval->Invalid("invalid update tx opret data");
-            
+            if (updatetokenid != tokenid)
+                return eval->Invalid("incorrect tokenid in update tx opret");
+			
             // Verifying updaterPubkey by checking tx.vin[0] and tx.vout[1] addresses
             // These addresses should be equal to each other, and updaterPubkey address should be equal to both
             if (!Getscriptaddress(destaddr, tx.vout[1].scriptPubKey))
