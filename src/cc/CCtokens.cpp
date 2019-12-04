@@ -1705,8 +1705,8 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 	
 	for (std::vector<std::vector<uint8_t>>::const_iterator it = owners.begin(); it != owners.end(); it++)
 	{
-		ownerpk = std::vector<uint8_t>(*it.begin(), *it.end());
-		result.push_back(HexStr(ownerpk));
+		//ownerpk = std::vector<uint8_t>(*it.begin(), *it.end());
+		result.push_back(HexStr(*it));
 	}
 	
     //result.push_back(tokenid.GetHex());
