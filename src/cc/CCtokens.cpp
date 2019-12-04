@@ -1650,13 +1650,13 @@ UniValue TokenList()
     };
 
 	SetCCtxids(txids, cp->normaladdr,false,cp->evalcode,zeroid,'c');                      // find by old normal addr marker
-	std::unique(txids.begin(), txids.end()); // added to remove duplicate txids since update batons are treated here as markers - dan
+	//std::unique(txids.begin(), txids.end()); // added to remove duplicate txids since update batons are treated here as markers - dan
    	for (std::vector<uint256>::const_iterator it = txids.begin(); it != txids.end(); it++) 	{
         addTokenId(*it);
 	}
 
     SetCCunspents(addressIndexCCMarker, cp->unspendableCCaddr,true);    // find by burnable validated cc addr marker
-	std::unique(addressIndexCCMarker.begin(), addressIndexCCMarker.end()); // added to remove duplicate txids since update batons are treated here as markers - dan
+	//std::unique(addressIndexCCMarker.begin(), addressIndexCCMarker.end()); // added to remove duplicate txids since update batons are treated here as markers - dan
     for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++) {
         addTokenId(it->first.txhash);
     }
