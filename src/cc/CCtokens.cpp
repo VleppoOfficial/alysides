@@ -1632,7 +1632,7 @@ UniValue TokenInfo(uint256 tokenid)
 UniValue TokenList()
 {
 	UniValue result(UniValue::VARR);
-	std::vector<uint256> txids;
+	std::vector<uint256> txids, allTokens;
     std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > addressIndexCCMarker;
 
 	struct CCcontract_info *cp, C; uint256 txid, hashBlock;
@@ -1644,26 +1644,27 @@ UniValue TokenList()
     auto addTokenId = [&](uint256 txid) {
         if (myGetTransaction(txid, vintx, hashBlock) != 0) {
             if (vintx.vout.size() > 0 && DecodeTokenCreateOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey, origpubkey, name, description) != 0) {
-				result.push_back(txid.GetHex());
+				dupes.push_back(txid.GetHex());
             }
         }
     };
 
 	SetCCtxids(txids, cp->normaladdr,false,cp->evalcode,zeroid,'c');                      // find by old normal addr marker
-	// added to remove duplicate txids since update batons are treated here as markers - dan
-	auto dupes = unique(txids.begin(), txids.end());
-    txids.erase(dupes, txids.end());
    	for (std::vector<uint256>::const_iterator it = txids.begin(); it != txids.end(); it++) 	{
         addTokenId(*it);
 	}
 
     SetCCunspents(addressIndexCCMarker, cp->unspendableCCaddr,true);    // find by burnable validated cc addr marker
-	// added to remove duplicate txids since update batons are treated here as markers - dan
-	/*dupes = unique(addressIndexCCMarker.begin(), addressIndexCCMarker.end());
-    addressIndexCCMarker.erase(dupes, addressIndexCCMarker.end());*/
     for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++) {
         addTokenId(it->first.txhash);
     }
+
+	// added to remove duplicate txids since update batons are treated here as markers - dan
+	auto dupes = unique(allTokens.begin(), allTokens.end());
+    allTokens.erase(dupes, allTokens.end());
+	for (auto & token : allTokens) {
+		result.push_back(token);
+	}
 
 	return(result);
 }
