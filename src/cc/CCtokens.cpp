@@ -1693,7 +1693,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 	owners.push_back(origpubkey);
 	if ((retcode = CCgetspenttxid(spenttxid, vini, height, tokenid, 1)) == 0)
 	{
-		getowners = GetOwnerPubkeys(spenttxid, tokenid, cpTokens, foundtxids, owners)
+		getowners = GetOwnerPubkeys(spenttxid, tokenid, cpTokens, foundtxids, owners);
 		if (!getowners)
 		{
 			fprintf(stderr, "GetOwnerPubkeys failed\n");
