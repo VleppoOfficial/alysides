@@ -1623,86 +1623,62 @@ UniValue TokenInfo(uint256 tokenid)
     return result;
 }
 
-/*UniValue TokenOwners(uint256 tokenid, int currentonly)
-{
-	UniValue result(UniValue::VARR);
-	
-	check if tokenid is tokencreate id
-	txid = token create id;
-	do VoutShenanigansloop on txid
-	
-	VoutShenanigansloop (txid):
-		get tx info from txid, get its funcid
-		check if it is valid (funcid = 't', token transfer etc.) if not, break or return
-		collect destpubkey(s), if not seen yet slap it into the Owners array
-		for each vout in current tx:
-			if it is a token vout (not regular or marker or baton!), and it has been spent
-				if spending tx not seen yet (not in FoundTxId array)
-				{
-					slap it into the FoundTxId array
-					do VoutShenanigansloop on the txid that spent it
-				}
-			if not spent, leave it alone and move on.
-}*/
-
 UniValue TokenOwners(uint256 tokenid, int currentonly)
 {
 	UniValue result(UniValue::VARR);
 	struct CCcontract_info *cpTokens, C;
     cpTokens = CCinit(&C, EVAL_TOKENS);
-	
+	int32_t vini, height, retcode;
 	std::vector<uint256> foundtxids;
 	uint256 hashBlock;
-    CTransaction tokenbaseTx;
+    CTransaction tokenbaseTx, currentTx;
 	std::vector<uint8_t> origpubkey, ownerpk;
     std::string name, description;
-	
-	//std::vector<CPubKey> &voutPubkeys;
 	std::vector<std::vector<uint8_t>> owners;
 	
-	if (!myGetTransaction(tokenid, tokenbaseTx, hashBlock))
-	{
+	auto GetOwnerPubkeys = [&](uint256 txid) {
+		if (!myGetTransaction(txid, currentTx, hashBlock) || KOMODO_NSPV_FULLNODE && hashBlock.IsNull() || currentTx.vout.size() == 0) {
+			fprintf(stderr, "GetOwnerPubkeys cant find txid\n");
+			return;
+		}
+		// check the opret and funcid
+		// if funcid = 'c', proceed (or maybe not?)
+		// if funcid = 't', retrieve voutpubkeys, place them in owners array, proceed
+		//std::vector<CPubKey> &voutPubkeys;
+		// Converting CPubkey to vscript_t (or std::vector<uint8_t>): vscript_t(mypk.begin(), mypk.end())
+		// else error & return
+		
+		// check all vouts of this transaction
+		// if vout is a token vout (not regular or marker or baton!), and it has been spent, add it to local vout array
+		
+		// for each vout in the vout array, call GetOwnerPubkeys on the txid that spent the vout
+		
+		// this should iterate through the entire token transfer transaction tree for a specific token, and collect all found pubkeys
+	}
+	
+	if (!myGetTransaction(tokenid, tokenbaseTx, hashBlock)) {
 		fprintf(stderr, "TokenOwners() cant find tokenid\n");
 		return(result);
 	}
-	if ( KOMODO_NSPV_FULLNODE && hashBlock.IsNull())
-	{
+	if ( KOMODO_NSPV_FULLNODE && hashBlock.IsNull()) {
 		fprintf(stderr, "the transaction is still in mempool\n");
         return (result);
     }
-	if (tokenbaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenbaseTx.vout[tokenbaseTx.vout.size() - 1].scriptPubKey, origpubkey, name, description) != 'c')
-	{
+	if (tokenbaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenbaseTx.vout[tokenbaseTx.vout.size() - 1].scriptPubKey, origpubkey, name, description) != 'c') {
         fprintf(stderr, "tokenid isnt token creation txid\n");
         return(result);
     }
-	
 	owners.push_back(origpubkey);
-	
-	//VoutShenanigansloop (txid)
-	
-	/*
-	VoutShenanigansloop (txid):
-		get tx info from txid, get its funcid
-		check if it is valid (funcid = 't', token transfer etc.) if not, break or return
-		collect destpubkey(s), if not seen yet slap it into the Owners array
-		for each vout in current tx:
-			if it is a token vout (not regular or marker or baton!), and it has been spent
-				if spending tx not seen yet (not in FoundTxId array)
-				{
-					slap it into the FoundTxId array
-					do VoutShenanigansloop on the txid that spent it
-				}
-			if not spent, leave it alone and move on.
-	*/
-	
+	if ((retcode = CCgetspenttxid(spenttxid, vini, height, tokenid, 1)) == 0)
+		GetOwnerPubkeys(spenttxid);
+	else {
+        fprintf(stderr, "can't find spenttxid for token create tx\n");
+        return(result);
+    }
+
 	// by this point we should have the owners array filled with pubkeys
 	// the array needs to be checked thru, and based on currentonly flag and dupe status, pushed to result
-	
-	/*
-	Converting CPubkey to vscript_t (or std::vector<uint8_t>):
-		vscript_t(mypk.begin(), mypk.end())
-	*/
-	
+
 	for (std::vector<std::vector<uint8_t>>::const_iterator it = owners.begin(); it != owners.end(); it++)
 	{
 		//ownerpk = std::vector<uint8_t>(*it.begin(), *it.end());
@@ -1710,7 +1686,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 	}
 	
     //result.push_back(tokenid.GetHex());
-    result.push_back(currentonly);
+    //result.push_back(currentonly);
     return(result);
 }
 
