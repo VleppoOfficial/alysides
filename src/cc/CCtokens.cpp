@@ -1630,7 +1630,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
     cpTokens = CCinit(&C, EVAL_TOKENS);
 	int32_t vini, height, retcode;
 	std::vector<uint256> foundtxids;
-	uint256 hashBlock;
+	uint256 hashBlock, spenttxid;
     CTransaction tokenbaseTx, currentTx;
 	std::vector<uint8_t> origpubkey, ownerpk;
     std::string name, description;
@@ -1672,7 +1672,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 	if ((retcode = CCgetspenttxid(spenttxid, vini, height, tokenid, 1)) == 0)
 		GetOwnerPubkeys(spenttxid);
 	else {
-        fprintf(stderr, "can't find spenttxid for token create tx\n");
+        fprintf(stderr, "can't find spenttxid for token create tx\n"); // don't forget to comment this out after
         return(result);
     }
 
