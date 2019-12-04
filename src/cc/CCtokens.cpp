@@ -1658,7 +1658,7 @@ bool GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info* c
 		std::find(foundtxids.begin(), foundtxids.end(), spenttxid) == foundtxids.end())
 		{
 			foundtxids.push_back(spenttxid);
-			GetOwnerPubkeys(spenttxid, reftokenid, cpTokens, foundtxids, owners);
+			GetOwnerPubkeys(spenttxid, reftokenid, cp, foundtxids, owners);
 		}
 	}
 	return true;
