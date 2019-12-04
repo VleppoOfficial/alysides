@@ -1654,11 +1654,11 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 	std::vector<uint256> foundtxids;
 	uint256 hashBlock;
     CTransaction tokenbaseTx;
-	std::vector<uint8_t> origpubkey;
+	std::vector<uint8_t> origpubkey, ownerpk;
     std::string name, description;
 	
 	//std::vector<CPubKey> &voutPubkeys;
-	std::vector<std::vector<uint8_t>> owners;
+	std::vector<CPubkey> owners;
 	
 	if (!myGetTransaction(tokenid, tokenbaseTx, hashBlock))
 	{
@@ -1676,13 +1676,41 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
         return(result);
     }
 	
-	owners.push_back(origpubkey);
+	owners.push_back(pubkey2pk(origpubkey));
 	
 	//VoutShenanigansloop (txid)
 	
-    result.push_back(tokenid.GetHex());
+	/*
+	VoutShenanigansloop (txid):
+		get tx info from txid, get its funcid
+		check if it is valid (funcid = 't', token transfer etc.) if not, break or return
+		collect destpubkey(s), if not seen yet slap it into the Owners array
+		for each vout in current tx:
+			if it is a token vout (not regular or marker or baton!), and it has been spent
+				if spending tx not seen yet (not in FoundTxId array)
+				{
+					slap it into the FoundTxId array
+					do VoutShenanigansloop on the txid that spent it
+				}
+			if not spent, leave it alone and move on.
+	*/
+	
+	// by this point we should have the owners array filled with pubkeys
+	// the array needs to be checked thru, and based on currentonly flag and dupe status, pushed to result
+	
+	/*
+	Converting CPubkey to vscript_t (or std::vector<uint8_t>):
+		vscript_t(mypk.begin(), mypk.end())
+	*/
+	
+	for (std::vector<CPubkey>::const_iterator it = owners.begin(); it != owners.end(); it++)
+	{
+		ownerpk = std::vector<uint8_t>(*it.begin(), *it.end())
+		result.push_back(HexStr(ownerpk));
+	}
+	
+    //result.push_back(tokenid.GetHex());
     result.push_back(currentonly);
-	//result.push_back(owners);
     return(result);
 }
 
