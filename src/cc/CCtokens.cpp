@@ -1497,12 +1497,12 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 
 int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 {
-    uint256 hashBlock;
-    CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-    CTransaction tokentx;
+	uint256 hashBlock;
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+	CTransaction tokentx;
 
-    // CCerror = strprintf("obsolete, cannot return correct value without eval");
-    // return 0;
+	// CCerror = strprintf("obsolete, cannot return correct value without eval");
+	// return 0;
 
 	if (myGetTransaction(tokenid, tokentx, hashBlock) == 0)
 	{
@@ -1511,9 +1511,9 @@ int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 		return 0;
 	}
 
-    struct CCcontract_info *cp, C;
-    cp = CCinit(&C, EVAL_TOKENS);
-    return (AddTokenCCInputs(cp, mtx, pk, tokenid, 0, 0));
+	struct CCcontract_info *cp, C;
+	cp = CCinit(&C, EVAL_TOKENS);
+	return(AddTokenCCInputs(cp, mtx, pk, tokenid, 0, 0));
 }
 
 UniValue TokenInfo(uint256 tokenid)
