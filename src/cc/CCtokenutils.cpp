@@ -386,7 +386,7 @@ uint8_t DecodeTokenTransferOpRet(const CScript scriptPubKey, uint256 &tokenid, s
             return(opretFuncId);
         }
     }
-    LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "DecodeTokenTransferOpRet() incorrect token single transfer opret" << std::endl);
+    LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "DecodeTokenTransferOpRet() incorrect token transfer opret" << std::endl);
     return (uint8_t)0;
 }
 
