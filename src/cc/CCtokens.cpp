@@ -410,7 +410,6 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
     if (tx.vout[v].scriptPubKey.IsPayToCryptoCondition()) {
         if (goDeeper) {
             //validate all tx
-			std::cerr << "IsTokensVout goin deeper" << std::endl;
             int64_t myCCVinsAmount = 0, myCCVoutsAmount = 0;
 
             tokenValIndentSize++;
@@ -637,10 +636,11 @@ bool IsTokenMarkerVout(CTxOut vout)
 {
     struct CCcontract_info *cpTokens, CCtokens_info;
     cpTokens = CCinit(&CCtokens_info, EVAL_TOKENS);
-	if (!IsTokenBatonVout(vout))
+	return vout == MakeCC1vout(EVAL_TOKENS, vout.nValue, GetUnspendable(cpTokens, NULL));
+	/*if (!IsTokenBatonVout(vout))
 		return vout == MakeCC1vout(EVAL_TOKENS, vout.nValue, GetUnspendable(cpTokens, NULL));
 	else
-		return false;
+		return false;*/
 }
 
 bool IsTokenBatonVout(CTxOut vout)
@@ -1519,11 +1519,22 @@ int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 	cp = CCinit(&C, EVAL_TOKENS);
 	return(AddTokenCCInputs(cp, mtx, pk, tokenid, 0, 0));
 }
+
 /*int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 {
     struct CCcontract_info *cp, C;
     cp = CCinit(&C, EVAL_TOKENS);
     char CCaddr[64];
+	CTransaction tokentx;
+	uint256 hashBlock;
+	
+	if (myGetTransaction(tokenid, tokentx, hashBlock) == 0)
+	{
+        LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "cant find tokenid" << std::endl);
+		CCerror = strprintf("cant find tokenid");
+		return 0;
+	}
+	
     GetCCaddress(cp,CCaddr,pk);
     return (CCtoken_balance(CCaddr, tokenid));
 }*/
