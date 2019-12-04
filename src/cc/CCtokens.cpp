@@ -596,6 +596,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                                                                         << " for txid=" << tx.GetHash().GetHex() << " for tokenid=" << reftokenid.GetHex() << std::endl);
                         return 0;
                     }
+					std::cerr << "IsTokensVout is still alive?" << std::endl;
 
                     CPubKey origPubkey = pubkey2pk(vorigPubkey);
 
@@ -619,10 +620,12 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                             && (!IsTokenMarkerVout(vout) && !IsTokenBatonVout(vout)))               // should not be marker or baton here
                             ccOutputs += vout.nValue;
 
-                    int64_t normalInputs = TotalPubkeyNormalInputs(tx, origPubkey); // check if normal inputs are really signed by originator pubkey (someone not cheating with originator pubkey)
+                    std::cerr << "IsTokensVout hardmode checkpoint 1" << std::endl;
+					int64_t normalInputs = TotalPubkeyNormalInputs(tx, origPubkey); // check if normal inputs are really signed by originator pubkey (someone not cheating with originator pubkey)
                     LOGSTREAM("cctokens", CCLOG_DEBUG2, stream << indentStr << "IsTokensvout() normalInputs=" << normalInputs << " ccOutputs=" << ccOutputs << " for tokenbase=" << reftokenid.GetHex() << std::endl);
 
-                    if (normalInputs >= ccOutputs) {
+                    std::cerr << "IsTokensVout hardmode checkpoint 2" << std::endl;
+					if (normalInputs >= ccOutputs) {
                         LOGSTREAM("cctokens", CCLOG_DEBUG2, stream << indentStr << "IsTokensvout() assured normalInputs >= ccOutputs"
                                                                    << " for tokenbase=" << reftokenid.GetHex() << std::endl);
                         if (!IsTokenMarkerVout(tx.vout[v]) && !IsTokenBatonVout(tx.vout[v])) // exclude marker and baton
