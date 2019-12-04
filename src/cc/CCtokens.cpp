@@ -1682,7 +1682,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 	
     result.push_back(tokenid.GetHex());
     result.push_back(currentonly);
-	result.push_back(owners);
+	//result.push_back(owners);
     return(result);
 }
 
