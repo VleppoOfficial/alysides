@@ -762,6 +762,8 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
 // also sets evalcode in cp, if needed
 int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, CPubKey pk, uint256 tokenid, int64_t total, int32_t maxinputs, vscript_t& vopretNonfungible)
 {
+	std::cerr << "entering AddTokenCCInputs()" << std::endl;
+	
     char tokenaddr[64], destaddr[64];
     int64_t threshold, nValue, price, totalinputs = 0;
     int32_t n = 0;
@@ -779,7 +781,9 @@ int64_t AddTokenCCInputs(struct CCcontract_info* cp, CMutableTransaction& mtx, C
     }
 
     threshold = total / (maxinputs != 0 ? maxinputs : CC_MAXVINS);
-
+	
+	std::cerr << "entering AddTokenCCInputs() for loop" << std::endl;
+	
     for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue>>::const_iterator it = unspentOutputs.begin(); it != unspentOutputs.end(); it++) {
         CTransaction vintx;
         uint256 hashBlock;
@@ -1495,7 +1499,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
     }
 }
 
-/*int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
+int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 {
 	uint256 hashBlock;
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
@@ -1514,15 +1518,15 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 	struct CCcontract_info *cp, C;
 	cp = CCinit(&C, EVAL_TOKENS);
 	return(AddTokenCCInputs(cp, mtx, pk, tokenid, 0, 0));
-}*/
-int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
+}
+/*int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 {
     struct CCcontract_info *cp, C;
     cp = CCinit(&C, EVAL_TOKENS);
     char CCaddr[64];
     GetCCaddress(cp,CCaddr,pk);
     return (CCtoken_balance(CCaddr, tokenid));
-}
+}*/
 
 UniValue TokenInfo(uint256 tokenid)
 {
