@@ -1704,7 +1704,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 
 	// by this point we should have the owners array filled with pubkeys
 	// the array needs to be checked thru, and based on currentonly flag and dupe status, pushed to result
-	std::set<std::vector<std::vector<uint8_t>>> sortOwners(owners.begin(), owners.end());
+	std::set<std::vector<uint8_t>> sortOwners(owners.begin(), owners.end());
 	for (std::vector<std::vector<uint8_t>>::const_iterator it = sortOwners.begin(); it != sortOwners.end(); it++)
 	{
 		result.push_back(HexStr(*it));
