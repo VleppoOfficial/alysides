@@ -1645,7 +1645,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 			return;
 		}
 		if (DecodeTokenOpRet(currentTx.vout[currentTx.vout.size() - 1].scriptPubKey, evalcode, tokenidInOpret, voutPubkeys, oprets) != 't' || tokenidInOpret != tokenid || voutPubkeys.size() == 0) {
-			fprintf(stderr,"GetOwnerPubkeys() found txid %s : incorrect token transfer opret",(txid.GetHex()));
+			fprintf(stderr,"GetOwnerPubkeys() found txid %s : incorrect token transfer opret",((char *)txid.GetHex()));
 			return;
 		}
 		if (voutPubkeys.size() >= 1 && voutPubkeys.size() <= 2)
