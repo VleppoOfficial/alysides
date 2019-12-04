@@ -1495,7 +1495,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
     }
 }
 
-int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
+/*int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 {
 	uint256 hashBlock;
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
@@ -1514,6 +1514,14 @@ int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 	struct CCcontract_info *cp, C;
 	cp = CCinit(&C, EVAL_TOKENS);
 	return(AddTokenCCInputs(cp, mtx, pk, tokenid, 0, 0));
+}*/
+int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
+{
+    struct CCcontract_info *cp, C;
+    cp = CCinit(&C, EVAL_TOKENS);
+    char CCaddr[64];
+    GetCCaddress(cp,CCaddr,pk);
+    return (CCtoken_balance(CCaddr, tokenid));
 }
 
 UniValue TokenInfo(uint256 tokenid)
