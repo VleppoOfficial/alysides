@@ -1658,7 +1658,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 		if (voutPubkeys.size() == 2)
 			owners.push_back(std::vector<uint8_t>(voutPubkeys[1].begin(), voutPubkeys[1].end()));
 		// iterate through all vouts in tx
-		for (int i = 0, i < currentTx.vout.size() - 1, i++) //do not check opret
+		for (int i = 0; i < currentTx.vout.size() - 1; i++) //do not check opret
 		{
 			if (IsTokensvout(false, true, cpTokens, cp->evalcode, currentTx, i, tokenid) > 0 && (retcode = CCgetspenttxid(spenttxid, vini, height, txid, i)) == 0)
 				GetOwnerPubkeys(spenttxid);
