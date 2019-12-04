@@ -1648,6 +1648,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 			fprintf(stderr,"GetOwnerPubkeys() found txid with incorrect token transfer opret");
 			return;
 		}
+		// collect voutPubkeys
 		if (voutPubkeys.size() >= 1 && voutPubkeys.size() <= 2)
 			owners.push_back(std::vector<uint8_t>(voutPubkeys[0].begin(), voutPubkeys[0].end()));
 		else {
@@ -1656,18 +1657,14 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 		}
 		if (voutPubkeys.size() == 2)
 			owners.push_back(std::vector<uint8_t>(voutPubkeys[1].begin(), voutPubkeys[1].end()));
-		
-		// check the opret and funcid
-		// if funcid = 'c', proceed (or maybe not?)
-		// if funcid = 't', retrieve voutpubkeys, place them in owners array, proceed
-		//std::vector<CPubKey> &voutPubkeys;
-		// Converting CPubkey to vscript_t (or std::vector<uint8_t>): vscript_t(mypk.begin(), mypk.end())
-		// else error & return
-		
-		// check all vouts of this transaction
-		// if vout is a token vout (not regular or marker or baton!), and it has been spent, add it to local vout array
-		
-		// for each vout in the vout array, call GetOwnerPubkeys on the txid that spent the vout
+		// iterate through all vouts in tx
+		for (int i = 0, i < currentTx.vout.size() - 1, i++) //do not check opret
+		{
+			if (IsTokensvout(false, true, cpTokens, cp->evalcode, currentTx, i, tokenid) > 0 && (retcode = CCgetspenttxid(spenttxid, vini, height, txid, i)) == 0)
+				GetOwnerPubkeys(spenttxid);
+		}
+
+		// if vout is a token vout (not regular or marker or baton!), and it has been spent, call GetOwnerPubkeys recursively on the txid that spent the vout
 		
 		// this should iterate through the entire token transfer transaction tree for a specific token, and collect all found pubkeys
 	};
@@ -1685,17 +1682,16 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
         return(result);
     }
 	owners.push_back(origpubkey);
-	result.push_back(HexStr(origpubkey));
 	if ((retcode = CCgetspenttxid(spenttxid, vini, height, tokenid, 1)) == 0)
 		GetOwnerPubkeys(spenttxid);
 	else {
         fprintf(stderr, "can't find spenttxid for token create tx\n"); // don't forget to comment this out after
+		result.push_back(HexStr(origpubkey));
         return(result);
     }
 
 	// by this point we should have the owners array filled with pubkeys
 	// the array needs to be checked thru, and based on currentonly flag and dupe status, pushed to result
-
 	for (std::vector<std::vector<uint8_t>>::const_iterator it = owners.begin(); it != owners.end(); it++)
 	{
 		//ownerpk = std::vector<uint8_t>(*it.begin(), *it.end());
