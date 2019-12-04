@@ -1652,7 +1652,7 @@ bool GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info* c
 	// iterate through all vouts in tx
 	for (int i = 0; i < currentTx.vout.size() - 1; i++) //do not check opret
 	{
-		if (IsTokensvout(false, true, cp, cp->evalcode, currentTx, i, reftokenid) > 0 && 
+		if (IsTokensvout(false, true, cp, NULL, currentTx, i, reftokenid) > 0 && 
 		(retcode = CCgetspenttxid(spenttxid, vini, height, txid, i)) == 0 &&
 		spenttxid != reftokenid && 
 		std::find(foundtxids.begin(), foundtxids.end(), spenttxid) == foundtxids.end())
