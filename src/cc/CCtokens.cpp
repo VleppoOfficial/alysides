@@ -1782,8 +1782,9 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 				else if (getowners == 1) {
 					// check owners array for pubkey to confirm (could reduce search to second last & last element?)
 					//if (std::find(owners.begin(), owners.end(), std::vector<uint8_t>(pk.begin(), pk.end())) != owners.end()) {
-						result.push_back((*it).GetHex());
-						continue;
+					std::cerr << "getowners = 1" << std::endl;
+					result.push_back((*it).GetHex());
+					continue;
 				}
 				// else getowners == 0 - successful but found no search pubkey, keep looping
 			}
