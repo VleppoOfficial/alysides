@@ -1727,7 +1727,7 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 	std::vector<uint8_t> origpubkey;
 	std::string name, description;
 	char CCaddr[64];
-	int32_t getowners;
+	int32_t getowners, vini, height, retcode;
 	
 	GetCCaddress(cp,CCaddr,pk);
     auto addTokenId = [&](uint256 txid) {
