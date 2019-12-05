@@ -7930,9 +7930,9 @@ UniValue tokenupdate(const UniValue& params, bool fHelp, const CPubKey& mypk)
     if (params.size() == 5)
     {
         message = params[4].get_str();
-        if (message.size() > 128)
+        if (message.size() > 24)
         {
-            ERR_RESULT("Update message must be <= 128 characters");
+            ERR_RESULT("Update message must be <= 24 characters");
             return(result);
         }
     }
