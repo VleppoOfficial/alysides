@@ -1784,11 +1784,6 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 					//if (std::find(owners.begin(), owners.end(), std::vector<uint8_t>(pk.begin(), pk.end())) != owners.end()) {
 						result.push_back((*it).GetHex());
 						continue;
-					}
-					else {
-						std::cerr << "GetOwnerPubkeys says it found pubkey match, but no pubkey found by TokenIventory for tokenid " << (*it).GetHex() << std::endl;
-						break;
-					}
 				}
 				// else getowners == 0 - successful but found no search pubkey, keep looping
 			}
