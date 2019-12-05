@@ -1791,8 +1791,9 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 					}
 				}
 				// else getowners == 0 - successful but found no search pubkey, keep looping
-			// else the token has never been spent - keep looping
 			}
+			// else the token has never been spent - keep looping
+			continue;
 		}
 	}
 	return(result);
