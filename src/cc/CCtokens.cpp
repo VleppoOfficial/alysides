@@ -1719,16 +1719,17 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 	UniValue result(UniValue::VARR);
 	struct CCcontract_info *cp, C;
     cp = CCinit(&C, EVAL_TOKENS);
-	std::vector<uint256> txids, tokenids, foundtxids, invtokens;
+	std::vector<uint256> txids, tokenids, foundtxids;
     std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > addressIndexCCMarker;
-
+	std::vector<std::vector<uint8_t>> owners;
 	uint256 txid, hashBlock;
-	CTransaction vintx; std::vector<uint8_t> origpubkey;
+	CTransaction vintx, tokenbaseTx;
+	std::vector<uint8_t> origpubkey;
 	std::string name, description;
 	char CCaddr[64];
+	int32_t getowners;
 	
 	GetCCaddress(cp,CCaddr,pk);
-
     auto addTokenId = [&](uint256 txid) {
         if (myGetTransaction(txid, vintx, hashBlock) != 0) {
             if (vintx.vout.size() > 0 && DecodeTokenCreateOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey, origpubkey, name, description) != 0) {
@@ -1739,49 +1740,59 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
             }
         }
     };
-
 	SetCCtxids(txids, cp->normaladdr,false,cp->evalcode,zeroid,'c');                      // find by old normal addr marker
    	for (std::vector<uint256>::const_iterator it = txids.begin(); it != txids.end(); it++) 	{
         addTokenId(*it);
 	}
-
     SetCCunspents(addressIndexCCMarker, cp->unspendableCCaddr,true);    // find by burnable validated cc addr marker
     for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++) {
         addTokenId(it->first.txhash);
     }
-
-	// tokenid list should be ready
-	if (currentonly > 0) {
-		for (std::vector<uint256>::const_iterator it = tokenids.begin(); it != tokenids.end(); it++) {
+	for (std::vector<uint256>::const_iterator it = tokenids.begin(); it != tokenids.end(); it++) {
+		if (currentonly > 0) {
 			result.push_back((*it).GetHex());
 		}
-	}
-	else {
-		return(result);
-	}
-		
-	/*todo:
-	get list of tokenids (same as TokenList), put in tokenid array
-	
-	check currentonly, based on what it is change behavior
-	if (currentonly)
-		Iterate thru tokenid array and check balance of each, for provided pubkey
-		if balance > 0, include in result or middleman array
-		return result
-	else
-		get yer owners and foundtxids arrays ready
-		for each tokenid
-			wipe owners and foundtxids arrays
-			basically run a stripped down TokenOwners, and also provide search pubkey for GetOwnerPubkeys
-			if GetOwnerPubkeys returns 1
-				it found the pubkey. Look in the owner list to confirm
-				add tokenid to result or middleman array
-			else
-				if 0 it means it didn't find the pubkey, if -1 it means it failed
-			loop
-		sort middleman array (?), if not pushed to result push it now
-		return result*/
-	
+		else {
+			owners.clear();
+			foundtxids.clear();
+			// basically a mini TokenOwners, embedded here - dan
+			if (!myGetTransaction((*it), tokenbaseTx, hashBlock)) {
+				std::cerr << "TokenInventory() cant find tx for tokenid " << (*it).GetHex() << std::endl;
+				break;
+			}
+			if ( KOMODO_NSPV_FULLNODE && hashBlock.IsNull()) {
+				std::cerr << "tx in mempool for tokenid " << (*it).GetHex() << std::endl;
+				break;
+			}
+			if (tokenbaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenbaseTx.vout[tokenbaseTx.vout.size() - 1].scriptPubKey, origpubkey, name, description) != 'c') {
+				std::cerr << "tx isn't token creation txid for tokenid " << (*it).GetHex() << std::endl;
+				break;
+			}
+			if (pubkey2pk(origpubkey) == pk) {
+				result.push_back((*it).GetHex());
+				continue;
+			}
+			owners.push_back(origpubkey);
+			if ((retcode = CCgetspenttxid(spenttxid, vini, height, (*it), 1)) == 0) {
+				if ((getowners = GetOwnerPubkeys(spenttxid, (*it), cp, foundtxids, owners, std::vector<uint8_t>(pk.begin(), pk.end()))) < 0) {
+					std::cerr << "GetOwnerPubkeys failed for tokenid " << (*it).GetHex() << std::endl;
+					break;
+				}
+				else if (getowners == 1) {
+					// check owners array for pubkey to confirm (could reduce search to second last & last element?)
+					if (std::find(owners.begin(), owners.end(), std::vector<uint8_t>(pk.begin(), pk.end())) != owners.end()) {
+						result.push_back((*it).GetHex());
+						continue;
+					}
+					else {
+						std::cerr << "GetOwnerPubkeys says it found pubkey match, but no pubkey found by TokenIventory for tokenid " << (*it).GetHex() << std::endl;
+						break;
+					}
+				}
+				// else getowners == 0 - successful but found no search pubkey, keep looping
+			// else the token has never been spent - keep looping
+			}
+		}
 	return(result);
 }
 
