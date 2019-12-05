@@ -568,10 +568,11 @@ static const CRPCCommand vRPCCommands[] =
     { "tokens",       "tokenfillask",     &tokenfillask,      true },
     //{ "tokens",       "tokenfillswap",    &tokenfillswap,     true },
     { "tokens",       "tokenconvert", &tokenconvert, true },
-	// new
+	// Vleppo
 	{ "tokens",       "tokenupdate",      &tokenupdate,       true },
 	{ "tokens",       "tokenviewupdates", &tokenviewupdates,  true },
-	{ "tokens",       "tokenowners", 	  &tokenowners,  true },
+	{ "tokens",       "tokenowners", 	  &tokenowners,       true },
+	{ "tokens",       "tokeninventory",   &tokeninventory,    true },
 
     // pegs
     { "pegs",       "pegscreate",     &pegscreate,      true },

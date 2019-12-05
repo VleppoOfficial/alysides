@@ -1715,18 +1715,67 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
     return(result);
 }
 
-/*UniValue TokenInventory()
+UniValue TokenInventory(CPubKey pk, int currentonly)
 {
 	UniValue result(UniValue::VARR);
+	struct CCcontract_info *cp, C;
+    cp = CCinit(&C, EVAL_TOKENS);
+	std::vector<uint256> tokenids, foundtxids, invtokens;
+    std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > addressIndexCCMarker;
+
+	uint256 txid, hashBlock;
+	CTransaction vintx; std::vector<uint8_t> origpubkey;
+	std::string name, description;
+
+    auto addTokenId = [&](uint256 txid) {
+        if (myGetTransaction(txid, vintx, hashBlock) != 0) {
+            if (vintx.vout.size() > 0 && DecodeTokenCreateOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey, origpubkey, name, description) != 0) {
+				if (std::find(tokenids.begin(), tokenids.end(), txid) == tokenids.end()) {
+					tokenids.push_back(txid); // added to remove duplicate txids since update batons are treated here as markers - dan
+				}
+            }
+        }
+    };
+
+	SetCCtxids(txids, cp->normaladdr,false,cp->evalcode,zeroid,'c');                      // find by old normal addr marker
+   	for (std::vector<uint256>::const_iterator it = txids.begin(); it != txids.end(); it++) 	{
+        addTokenId(*it);
+	}
+
+    SetCCunspents(addressIndexCCMarker, cp->unspendableCCaddr,true);    // find by burnable validated cc addr marker
+    for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++) {
+        addTokenId(it->first.txhash);
+    }
+
+	// tokenid list should be ready
+	for (std::vector<uint256>::const_iterator it = tokenids.begin(); it != tokenids.end(); it++) {
+		result.push_back((*it).GetHex());
+	}
 	
-	need:
-	tokenids array, like new TokenList but without pushing it to result immediately
-	pubkey to check (could be specified by user)
-	currentonly var (self explanatory)
+	/*todo:
+	get list of tokenids (same as TokenList), put in tokenid array
 	
-	advanced:
-	foundtxids array
-}*/
+	check currentonly, based on what it is change behavior
+	if (currentonly)
+		Iterate thru tokenid array and check balance of each, for provided pubkey
+		if balance > 0, include in result or middleman array
+		return result
+	else
+		get yer owners and foundtxids arrays ready
+		for each tokenid
+			wipe owners and foundtxids arrays
+			basically run a stripped down TokenOwners, and also provide search pubkey for GetOwnerPubkeys
+			if GetOwnerPubkeys returns 1
+				it found the pubkey. Look in the owner list to confirm
+				add tokenid to result or middleman array
+			else
+				if 0 it means it didn't find the pubkey, if -1 it means it failed
+			loop
+		sort middleman array (?), if not pushed to result push it now
+		return result*/
+	
+	return(result);
+}
 
 UniValue TokenList()
 {

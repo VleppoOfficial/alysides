@@ -7871,6 +7871,33 @@ UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& mypk)
     return(TokenOwners(tokenid, currentonly));
 }
 
+UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    int currentonly = 0; std::vector<unsigned char> pubkey; struct CCcontract_info *cp,C;
+	CCerror.clear();
+
+    if ( fHelp || params.size() > 2 )
+        throw runtime_error("tokeninventory [currentonly][pubkey]\n");
+    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    
+	const CKeyStore& keystore = *pwalletMain;
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+
+    if (params.size() >= 1)
+    {
+        currentonly = atoi((char *)params[1].get_str().c_str());
+        if (currentonly < 0)
+            currentonly = 0;
+    }
+    if ( params.size() == 2 )
+        pubkey = ParseHex(params[1].get_str().c_str());
+    else 
+		pubkey = Mypubkey();
+
+	return(TokenInventory(pubkey, currentonly));
+}
+
 UniValue tokenviewupdates(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     uint256 tokenid; int32_t samplenum; int recursive = 0;
