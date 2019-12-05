@@ -436,7 +436,7 @@ uint8_t DecodeTokenUpdateCCOpRet(const CScript scriptPubKey, uint256 &assetHash,
     GetOpReturnData(scriptPubKey, vopret);
     if (vopret.size() == 0)
     {
-		fprintf(stderr, "enter GetOpReturnData 2\n")
+		fprintf(stderr, "enter GetOpReturnData 2\n");
         GetOpReturnData(CScript(scriptPubKey.begin()+1, scriptPubKey.end()), vopret); //fix for extra hex num
         if (vopret.size() == 0)
         {
