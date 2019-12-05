@@ -1030,7 +1030,6 @@ int32_t GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info
 		owners.push_back(std::vector<uint8_t>(voutPubkeys[1].begin(), voutPubkeys[1].end()));
 	// if searching for a specific pubkey, return early
 	if (!searchpubkey.empty() && std::find(owners.begin(), owners.end(), searchpubkey) != owners.end()) {
-		fprintf(stderr,"GetOwnerPubkeys() found searchpubkey\n");
 		std::cerr << "GetOwnerPubkeys() found search pubkeys " << HexStr(owners.back() - 1) << HexStr(owners.back()) << std::endl;
 		return 1;
 	}
