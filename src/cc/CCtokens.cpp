@@ -1720,7 +1720,7 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 	UniValue result(UniValue::VARR);
 	struct CCcontract_info *cp, C;
     cp = CCinit(&C, EVAL_TOKENS);
-	std::vector<uint256> tokenids, foundtxids, invtokens;
+	std::vector<uint256> txids, tokenids, foundtxids, invtokens;
     std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > addressIndexCCMarker;
 
 	uint256 txid, hashBlock;
