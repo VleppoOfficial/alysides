@@ -1030,7 +1030,7 @@ int32_t GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info
 		owners.push_back(std::vector<uint8_t>(voutPubkeys[1].begin(), voutPubkeys[1].end()));
 	// if searching for a specific pubkey, return early
 	if (!searchpubkey.empty() && std::find(owners.begin(), owners.end(), searchpubkey) != owners.end()) {
-		std::cerr << "GetOwnerPubkeys() found search pubkeys " << HexStr(owners[owners.size() - 2]) << " and " << HexStr(owners[owners.size() - 1]) << std::endl;
+		std::cerr << "GetOwnerPubkeys() found search pubkeys " << HexStr(owners[owners.size() - 2]) << " and " << HexStr(owners[owners.size() - 1]) << " for tokenid " << reftokenid.GetHex() << std::endl;
 		return(1);
 	}
 	// iterate through all vouts in tx
@@ -1755,7 +1755,6 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 		else {
 			owners.clear();
 			foundtxids.clear();
-			origpubkey.clear();
 			// basically a mini TokenOwners, embedded here - dan
 			if (!myGetTransaction((*it), tokenbaseTx, hashBlock)) {
 				std::cerr << "TokenInventory() cant find tx for tokenid " << (*it).GetHex() << std::endl;
