@@ -1694,7 +1694,7 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
     }
 	owners.push_back(origpubkey);
 	if ((retcode = CCgetspenttxid(spenttxid, vini, height, tokenid, 1)) == 0) {
-		if (!GetOwnerPubkeys(spenttxid, tokenid, cpTokens, foundtxids, owners, NULL)) {
+		if (!GetOwnerPubkeys(spenttxid, tokenid, cpTokens, foundtxids, owners, std::vector<uint8_t>())) {
 			fprintf(stderr, "GetOwnerPubkeys failed\n");
 			return(result);
 		}
