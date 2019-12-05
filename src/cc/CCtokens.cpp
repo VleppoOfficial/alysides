@@ -1004,7 +1004,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 // used in TokenOwners - searches for token owner pubkeys
 int32_t GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info* cp, std::vector<uint256> &foundtxids, std::vector<std::vector<uint8_t>> &owners, std::vector<uint8_t> searchpubkey)
 {
-	int32_t vini, height, retcode;
+	int32_t vini, height, retcode, recursiveret;
 	CTransaction currentTx;
 	uint256 hashBlock, spenttxid, tokenidInOpret;
 	uint8_t evalcode;
@@ -1031,7 +1031,7 @@ int32_t GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info
 	}
 	// if searching for a specific pubkey, return early
 	if (!searchpubkey.empty() && std::find(owners.begin(), owners.end(), searchpubkey) != owners.end()) {
-		std::cerr << "GetOwnerPubkeys() found search pubkeys " << HexStr(owners[owners.size() - 2]) << " and " << HexStr(owners[owners.size() - 1]) << " for tokenid " << reftokenid.GetHex() << std::endl;
+		//std::cerr << "GetOwnerPubkeys() found search pubkeys " << HexStr(owners[owners.size() - 2]) << " and " << HexStr(owners[owners.size() - 1]) << " for tokenid " << reftokenid.GetHex() << std::endl;
 		return(1);
 	}
 	// iterate through all vouts in tx
@@ -1041,8 +1041,8 @@ int32_t GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info
 		spenttxid != reftokenid && 
 		std::find(foundtxids.begin(), foundtxids.end(), spenttxid) == foundtxids.end()) {
 			foundtxids.push_back(spenttxid);
-			if(GetOwnerPubkeys(spenttxid, reftokenid, cp, foundtxids, owners, searchpubkey) == 1)
-				return(1);
+			if ((recursiveret = GetOwnerPubkeys(spenttxid, reftokenid, cp, foundtxids, owners, searchpubkey)) != 0)
+				return(recursiveret);
 		}
 	}
 	return(0);
@@ -1777,21 +1777,17 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 			}
 			if ((retcode = CCgetspenttxid(spenttxid, vini, height, (*it), 1)) == 0) {
 				getowners = GetOwnerPubkeys(spenttxid, (*it), cp, foundtxids, owners, std::vector<uint8_t>(pk.begin(), pk.end()));
-				std::cerr << "getowners = " << getowners << " for tokenid " << (*it).GetHex() << std::endl;
 				if (getowners < 0) {
 					std::cerr << "GetOwnerPubkeys failed for tokenid " << (*it).GetHex() << std::endl;
 					break;
 				}
 				else if (getowners == 1) {
-					// check owners array for pubkey to confirm (could reduce search to second last & last element?)
-					//if (std::find(owners.begin(), owners.end(), std::vector<uint8_t>(pk.begin(), pk.end())) != owners.end()) {
 					result.push_back((*it).GetHex());
 					continue;
 				}
-				else std::cerr << "GetOwnerPubkeys successful but found no search pubkey, keep looping, tokenid " << (*it).GetHex() << std::endl;
+				//else std::cerr << "GetOwnerPubkeys successful but found no search pubkey, keep looping, tokenid " << (*it).GetHex() << std::endl;
 			}
-			// else the token has never been spent - keep looping
-			continue;
+			// the token has never been spent - keep looping
 		}
 	}
 	return(result);
