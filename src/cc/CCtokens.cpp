@@ -1677,7 +1677,6 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 	std::vector<uint256> foundtxids;
 	std::vector<uint8_t> origpubkey;
 	std::vector<std::vector<uint8_t>> owners;
-	bool getowners;
 	char CCaddr[64];
 
 	if (!myGetTransaction(tokenid, tokenbaseTx, hashBlock)) {
@@ -1726,11 +1725,15 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 	uint256 txid, hashBlock;
 	CTransaction vintx; std::vector<uint8_t> origpubkey;
 	std::string name, description;
+	char CCaddr[64];
+	
+	GetCCaddress(cp,CCaddr,pk);
 
     auto addTokenId = [&](uint256 txid) {
         if (myGetTransaction(txid, vintx, hashBlock) != 0) {
             if (vintx.vout.size() > 0 && DecodeTokenCreateOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey, origpubkey, name, description) != 0) {
-				if (std::find(tokenids.begin(), tokenids.end(), txid) == tokenids.end()) {
+				
+				if (std::find(tokenids.begin(), tokenids.end(), txid) == tokenids.end() && (currentonly == 0 || (currentonly > 0 && CCtoken_balance(CCaddr, tokenid) > 0))) {
 					tokenids.push_back(txid); // added to remove duplicate txids since update batons are treated here as markers - dan
 				}
             }
