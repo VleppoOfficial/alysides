@@ -1793,6 +1793,7 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 			// else the token has never been spent - keep looping
 			}
 		}
+	}
 	return(result);
 }
 
