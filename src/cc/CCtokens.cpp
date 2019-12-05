@@ -1786,7 +1786,7 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 					result.push_back((*it).GetHex());
 					continue;
 				}
-				// else getowners == 0 - successful but found no search pubkey, keep looping
+				else std::cerr << "GetOwnerPubkeys successful but found no search pubkey, keep looping, tokenid " << (*it).GetHex() << std::endl;
 			}
 			// else the token has never been spent - keep looping
 			continue;
