@@ -1722,7 +1722,7 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 	std::vector<uint256> txids, tokenids, foundtxids;
     std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > addressIndexCCMarker;
 	std::vector<std::vector<uint8_t>> owners;
-	uint256 txid, hashBlock;
+	uint256 txid, hashBlock, spenttxid;
 	CTransaction vintx, tokenbaseTx;
 	std::vector<uint8_t> origpubkey;
 	std::string name, description;
