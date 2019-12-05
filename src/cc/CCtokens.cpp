@@ -1751,10 +1751,15 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
     }
 
 	// tokenid list should be ready
-	for (std::vector<uint256>::const_iterator it = tokenids.begin(); it != tokenids.end(); it++) {
-		result.push_back((*it).GetHex());
+	if (currentonly > 0) {
+		for (std::vector<uint256>::const_iterator it = tokenids.begin(); it != tokenids.end(); it++) {
+			result.push_back((*it).GetHex());
+		}
 	}
-	
+	else {
+		return(result);
+	}
+		
 	/*todo:
 	get list of tokenids (same as TokenList), put in tokenid array
 	
