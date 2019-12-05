@@ -7873,7 +7873,7 @@ UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& mypk)
 
 UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
-    int currentonly = 0; std::vector<unsigned char> pubkey; struct CCcontract_info *cp,C;
+    int currentonly = 1; std::vector<unsigned char> pubkey; struct CCcontract_info *cp,C;
 	CCerror.clear();
 
     if ( fHelp || params.size() > 2 )
