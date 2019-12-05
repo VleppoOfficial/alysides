@@ -1001,7 +1001,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
     return 1;
 }
 
-// used in TokenOwners - searches for token owner pubkeys
+// used in TokenOwners and TokenInventory - searches for token owner pubkeys
 int32_t GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info* cp, std::vector<uint256> &foundtxids, std::vector<std::vector<uint8_t>> &owners, std::vector<uint8_t> searchpubkey)
 {
 	int32_t vini, height, retcode, recursiveret;
