@@ -1031,7 +1031,7 @@ int32_t GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info
 	// if searching for a specific pubkey, return early
 	if (!searchpubkey.empty() && std::find(owners.begin(), owners.end(), searchpubkey) != owners.end()) {
 		std::cerr << "GetOwnerPubkeys() found search pubkeys " << HexStr(owners[owners.size() - 2]) << " and " << HexStr(owners[owners.size() - 1]) << " for tokenid " << reftokenid.GetHex() << std::endl;
-		return(1);
+		return(-2);
 	}
 	// iterate through all vouts in tx
 	for (int i = 0; i < currentTx.vout.size() - 1; i++) { //do not check opret
@@ -1776,11 +1776,11 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 			if ((retcode = CCgetspenttxid(spenttxid, vini, height, (*it), 1)) == 0) {
 				getowners = GetOwnerPubkeys(spenttxid, (*it), cp, foundtxids, owners, std::vector<uint8_t>(pk.begin(), pk.end()));
 				std::cerr << "getowners = " << getowners << " for tokenid " << (*it).GetHex() << std::endl;
-				if (getowners < 0) {
+				if (getowners == -1) {
 					std::cerr << "GetOwnerPubkeys failed for tokenid " << (*it).GetHex() << std::endl;
 					break;
 				}
-				else if (getowners == 1) {
+				else if (getowners == -2) {
 					// check owners array for pubkey to confirm (could reduce search to second last & last element?)
 					//if (std::find(owners.begin(), owners.end(), std::vector<uint8_t>(pk.begin(), pk.end())) != owners.end()) {
 					result.push_back((*it).GetHex());
