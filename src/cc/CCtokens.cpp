@@ -1775,7 +1775,7 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 			}
 			if ((retcode = CCgetspenttxid(spenttxid, vini, height, (*it), 1)) == 0) {
 				getowners = GetOwnerPubkeys(spenttxid, (*it), cp, foundtxids, owners, std::vector<uint8_t>(pk.begin(), pk.end()));
-				std::cerr << "getowners = " << getowners << std::endl;
+				std::cerr << "getowners = " << getowners << " for tokenid " << (*it).GetHex() << std::endl;
 				if (getowners < 0) {
 					std::cerr << "GetOwnerPubkeys failed for tokenid " << (*it).GetHex() << std::endl;
 					break;
