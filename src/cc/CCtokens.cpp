@@ -1768,21 +1768,21 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 				std::cerr << "tx isn't token creation txid for tokenid " << (*it).GetHex() << std::endl;
 				break;
 			}
+			owners.push_back(origpubkey);
 			if (pubkey2pk(origpubkey) == pk) {
 				result.push_back((*it).GetHex());
 				continue;
 			}
-			owners.push_back(origpubkey);
 			if ((retcode = CCgetspenttxid(spenttxid, vini, height, (*it), 1)) == 0) {
 				getowners = GetOwnerPubkeys(spenttxid, (*it), cp, foundtxids, owners, std::vector<uint8_t>(pk.begin(), pk.end()));
+				std::cerr << "getowners = " << getowners << std::endl;
 				if (getowners < 0) {
 					std::cerr << "GetOwnerPubkeys failed for tokenid " << (*it).GetHex() << std::endl;
 					break;
 				}
-				if (getowners == 1) {
+				else if (getowners == 1) {
 					// check owners array for pubkey to confirm (could reduce search to second last & last element?)
 					//if (std::find(owners.begin(), owners.end(), std::vector<uint8_t>(pk.begin(), pk.end())) != owners.end()) {
-					std::cerr << "getowners = 1" << std::endl;
 					result.push_back((*it).GetHex());
 					continue;
 				}
