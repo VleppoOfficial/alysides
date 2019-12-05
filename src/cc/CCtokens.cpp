@@ -1002,7 +1002,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 }
 
 // used in TokenOwners - searches for token owner pubkeys
-bool GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info* cp, std::vector<uint256> &foundtxids, std::vector<std::vector<uint8_t>> &owners)
+bool GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info* cp, std::vector<uint256> &foundtxids, std::vector<std::vector<uint8_t>> &owners, std::vector<uint8_t> searchpubkey)
 {
 	int32_t vini, height, retcode;
 	CTransaction currentTx;
@@ -1028,16 +1028,19 @@ bool GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info* c
 	}
 	if (voutPubkeys.size() == 2)
 		owners.push_back(std::vector<uint8_t>(voutPubkeys[1].begin(), voutPubkeys[1].end()));
+	// if searching for a specific pubkey, return early
+	if (searchpubkey && std::find(owners.begin(), owners.end(), searchpubkey) != owners.end()) {
+		fprintf(stderr,"GetOwnerPubkeys() found searchpubkey");
+		return true;
+	}
 	// iterate through all vouts in tx
-	for (int i = 0; i < currentTx.vout.size() - 1; i++) //do not check opret
-	{
+	for (int i = 0; i < currentTx.vout.size() - 1; i++) { //do not check opret
 		if (IsTokensvout(false, true, cp, NULL, currentTx, i, reftokenid) > 0 && 
 		(retcode = CCgetspenttxid(spenttxid, vini, height, txid, i)) == 0 &&
 		spenttxid != reftokenid && 
-		std::find(foundtxids.begin(), foundtxids.end(), spenttxid) == foundtxids.end())
-		{
+		std::find(foundtxids.begin(), foundtxids.end(), spenttxid) == foundtxids.end()) {
 			foundtxids.push_back(spenttxid);
-			GetOwnerPubkeys(spenttxid, reftokenid, cp, foundtxids, owners);
+			GetOwnerPubkeys(spenttxid, reftokenid, cp, foundtxids, owners, searchpubkey);
 		}
 	}
 	return true;
@@ -1690,11 +1693,8 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
         return(result);
     }
 	owners.push_back(origpubkey);
-	if ((retcode = CCgetspenttxid(spenttxid, vini, height, tokenid, 1)) == 0)
-	{
-		getowners = GetOwnerPubkeys(spenttxid, tokenid, cpTokens, foundtxids, owners);
-		if (!getowners)
-		{
+	if ((retcode = CCgetspenttxid(spenttxid, vini, height, tokenid, 1)) == 0) {
+		if (!GetOwnerPubkeys(spenttxid, tokenid, cpTokens, foundtxids, owners, NULL)) {
 			fprintf(stderr, "GetOwnerPubkeys failed\n");
 			return(result);
 		}
@@ -1704,19 +1704,29 @@ UniValue TokenOwners(uint256 tokenid, int currentonly)
 		result.push_back(HexStr(origpubkey));
         return(result);
     }
-
 	// sorting owner array & removing duplicates
 	std::set<std::vector<uint8_t>> sortOwners(owners.begin(), owners.end());
-	for (std::set<std::vector<uint8_t>>::const_iterator it = sortOwners.begin(); it != sortOwners.end(); it++)
-	{
+	for (std::set<std::vector<uint8_t>>::const_iterator it = sortOwners.begin(); it != sortOwners.end(); it++) {
 		GetCCaddress(cpTokens,CCaddr,pubkey2pk(*it));
 		// pushing to result depending on currentonly param and current token balance by owner pk
 		if (currentonly == 0 || (currentonly > 0 && CCtoken_balance(CCaddr, tokenid) > 0))
-		result.push_back(HexStr(*it));
+			result.push_back(HexStr(*it));
 	}
-
     return(result);
 }
+
+/*UniValue TokenInventory()
+{
+	UniValue result(UniValue::VARR);
+	
+	need:
+	tokenids array, like new TokenList but without pushing it to result immediately
+	pubkey to check (could be specified by user)
+	currentonly var (self explanatory)
+	
+	advanced:
+	foundtxids array
+}*/
 
 UniValue TokenList()
 {
