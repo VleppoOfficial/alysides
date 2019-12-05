@@ -1733,7 +1733,7 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
         if (myGetTransaction(txid, vintx, hashBlock) != 0) {
             if (vintx.vout.size() > 0 && DecodeTokenCreateOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey, origpubkey, name, description) != 0) {
 				
-				if (std::find(tokenids.begin(), tokenids.end(), txid) == tokenids.end() && (currentonly == 0 || (currentonly > 0 && CCtoken_balance(CCaddr, tokenid) > 0))) {
+				if (std::find(tokenids.begin(), tokenids.end(), txid) == tokenids.end() && (currentonly == 0 || (currentonly > 0 && CCtoken_balance(CCaddr, txid) > 0))) {
 					tokenids.push_back(txid); // added to remove duplicate txids since update batons are treated here as markers - dan
 				}
             }
