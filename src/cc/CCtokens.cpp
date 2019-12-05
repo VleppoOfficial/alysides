@@ -1030,7 +1030,7 @@ int32_t GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info
 		owners.push_back(std::vector<uint8_t>(voutPubkeys[1].begin(), voutPubkeys[1].end()));
 	// if searching for a specific pubkey, return early
 	if (!searchpubkey.empty() && std::find(owners.begin(), owners.end(), searchpubkey) != owners.end()) {
-		fprintf(stderr,"GetOwnerPubkeys() found searchpubkey");
+		fprintf(stderr,"GetOwnerPubkeys() found searchpubkey\n");
 		return 1;
 	}
 	// iterate through all vouts in tx
@@ -1774,7 +1774,8 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 			}
 			owners.push_back(origpubkey);
 			if ((retcode = CCgetspenttxid(spenttxid, vini, height, (*it), 1)) == 0) {
-				if ((getowners = GetOwnerPubkeys(spenttxid, (*it), cp, foundtxids, owners, std::vector<uint8_t>(pk.begin(), pk.end()))) < 0) {
+				getowners = GetOwnerPubkeys(spenttxid, (*it), cp, foundtxids, owners, std::vector<uint8_t>(pk.begin(), pk.end()));
+				if (getowners) < 0) {
 					std::cerr << "GetOwnerPubkeys failed for tokenid " << (*it).GetHex() << std::endl;
 					break;
 				}
