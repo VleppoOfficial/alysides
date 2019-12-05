@@ -75,7 +75,6 @@ int32_t has_opret(const CTransaction &tx, uint8_t evalcode)
 
 bool getCCopret(const CScript &scriptPubKey, CScript &opret)
 {
-	fprintf(stderr, "enter getCCopret\n");
     std::vector<std::vector<unsigned char>> vParams = std::vector<std::vector<unsigned char>>();
     CScript dummy; bool ret = false;
     if ( scriptPubKey.IsPayToCryptoCondition(&dummy, vParams) != 0 )
@@ -87,7 +86,6 @@ bool getCCopret(const CScript &scriptPubKey, CScript &opret)
             //fprintf(stderr, "vparams.%s\n", HexStr(vParams[0].begin(), vParams[0].end()).c_str());
         }
     }
-	fprintf(stderr, "exit getCCopret\n");
     return ret;
 }
 
