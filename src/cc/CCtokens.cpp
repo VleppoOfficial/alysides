@@ -1026,12 +1026,13 @@ int32_t GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info
 		fprintf(stderr,"GetOwnerPubkeys() found non-standard voutPubkeys size in tx");
 		return(-1);
 	}
-	if (voutPubkeys.size() == 2)
+	if (voutPubkeys.size() == 2) {
 		owners.push_back(std::vector<uint8_t>(voutPubkeys[1].begin(), voutPubkeys[1].end()));
+	}
 	// if searching for a specific pubkey, return early
 	if (!searchpubkey.empty() && std::find(owners.begin(), owners.end(), searchpubkey) != owners.end()) {
 		std::cerr << "GetOwnerPubkeys() found search pubkeys " << HexStr(owners[owners.size() - 2]) << " and " << HexStr(owners[owners.size() - 1]) << " for tokenid " << reftokenid.GetHex() << std::endl;
-		return(-2);
+		return(1);
 	}
 	// iterate through all vouts in tx
 	for (int i = 0; i < currentTx.vout.size() - 1; i++) { //do not check opret
@@ -1040,7 +1041,8 @@ int32_t GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info
 		spenttxid != reftokenid && 
 		std::find(foundtxids.begin(), foundtxids.end(), spenttxid) == foundtxids.end()) {
 			foundtxids.push_back(spenttxid);
-			GetOwnerPubkeys(spenttxid, reftokenid, cp, foundtxids, owners, searchpubkey);
+			if(GetOwnerPubkeys(spenttxid, reftokenid, cp, foundtxids, owners, searchpubkey) == 1)
+				return(1);
 		}
 	}
 	return(0);
@@ -1776,11 +1778,11 @@ UniValue TokenInventory(CPubKey pk, int currentonly)
 			if ((retcode = CCgetspenttxid(spenttxid, vini, height, (*it), 1)) == 0) {
 				getowners = GetOwnerPubkeys(spenttxid, (*it), cp, foundtxids, owners, std::vector<uint8_t>(pk.begin(), pk.end()));
 				std::cerr << "getowners = " << getowners << " for tokenid " << (*it).GetHex() << std::endl;
-				if (getowners == -1) {
+				if (getowners < 0) {
 					std::cerr << "GetOwnerPubkeys failed for tokenid " << (*it).GetHex() << std::endl;
 					break;
 				}
-				else if (getowners == -2) {
+				else if (getowners == 1) {
 					// check owners array for pubkey to confirm (could reduce search to second last & last element?)
 					//if (std::find(owners.begin(), owners.end(), std::vector<uint8_t>(pk.begin(), pk.end())) != owners.end()) {
 					result.push_back((*it).GetHex());
