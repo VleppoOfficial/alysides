@@ -592,15 +592,11 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
                     // note: this would not work if there are several pubkeys in the tokencreator's wallet (AddNormalinputs does not use pubkey param):
                     // for tokenbase tx check that normal inputs sent from origpubkey > cc outputs
 					
-					std::cerr << "Danger zone enter" << std::endl;
-					
                     int64_t ccOutputs = 0;
                     for (auto vout : tx.vout)
                         if (vout.scriptPubKey.IsPayToCryptoCondition() //TODO: add voutPubkey validation
                             && (!IsTokenMarkerVout(vout) && !IsTokenBatonVout(vout)))               // should not be marker or baton here
                             ccOutputs += vout.nValue;
-							
-					std::cerr << "Danger zone exit" << std::endl;
 					
 					int64_t normalInputs = TotalPubkeyNormalInputs(tx, origPubkey); // check if normal inputs are really signed by originator pubkey (someone not cheating with originator pubkey)
                     LOGSTREAM("cctokens", CCLOG_DEBUG2, stream << indentStr << "IsTokensvout() normalInputs=" << normalInputs << " ccOutputs=" << ccOutputs << " for tokenbase=" << reftokenid.GetHex() << std::endl);
@@ -641,8 +637,6 @@ bool IsTokenMarkerVout(CTxOut vout)
 
 bool IsTokenBatonVout(CTxOut vout)
 {
-	fprintf(stderr, "enter IsTokenBatonVout\n");
-	
     CScript opret;
     uint256 assetHash;
     int64_t value;
@@ -653,7 +647,7 @@ bool IsTokenBatonVout(CTxOut vout)
         (ret = getCCopret(vout.scriptPubKey, opret)) == true &&
         (DecodeTokenUpdateCCOpRet(opret, assetHash, value, ccode, message) == 'u'))
     {
-        std::cerr << "Located a baton vout" << std::endl;
+        //std::cerr << "Located a baton vout" << std::endl;
         return true;
     }
     return false;
