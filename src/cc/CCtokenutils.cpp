@@ -430,6 +430,7 @@ uint8_t DecodeTokenUpdateOpRet(const CScript scriptPubKey, std::vector<uint8_t> 
 // contains arbitrary amendable data
 uint8_t DecodeTokenUpdateCCOpRet(const CScript scriptPubKey, uint256 &assetHash, int64_t &value, std::string &ccode, std::string &message)
 {
+	fprintf(stderr, "enter DecodeTokenUpdateCCOpRet\n");
     vscript_t vopret;
     uint8_t evalcode, funcid;
     GetOpReturnData(scriptPubKey, vopret);
@@ -445,10 +446,10 @@ uint8_t DecodeTokenUpdateCCOpRet(const CScript scriptPubKey, uint256 &assetHash,
     //std::cerr << "vopret size" << vopret.size() << std::endl;
     if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> assetHash; ss >> value; ss >> ccode; ss >> message) != 0 && evalcode == EVAL_TOKENS)
     {
-        //std::cerr << "cc opret decode successful, found value: " << value << std::endl;
+        std::cerr << "cc opret decode successful, found value: " << value << std::endl;
         return(funcid);
     }
-    //std::cerr << "cc opret decode unsuccessful" << std::endl;
+    std::cerr << "cc opret decode unsuccessful" << std::endl;
     return(uint8_t)0;
 }
 

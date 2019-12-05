@@ -641,16 +641,19 @@ bool IsTokenMarkerVout(CTxOut vout)
 
 bool IsTokenBatonVout(CTxOut vout)
 {
+	fprintf(stderr, "enter IsTokenBatonVout\n");
+	
     CScript opret;
     uint256 assetHash;
     int64_t value;
     std::string ccode, message;
+	bool ret;
     
     if (vout.nValue == 10000 &&
-        getCCopret(vout.scriptPubKey, opret) &&
+        (ret = getCCopret(vout.scriptPubKey, opret)) == true &&
         (DecodeTokenUpdateCCOpRet(opret, assetHash, value, ccode, message) == 'u'))
     {
-        //std::cerr << "Located a baton vout" << std::endl;
+        std::cerr << "Located a baton vout" << std::endl;
         return true;
     }
     return false;
