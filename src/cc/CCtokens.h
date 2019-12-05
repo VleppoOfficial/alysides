@@ -37,7 +37,7 @@ CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey);
 bool IsTokenMarkerVout(CTxOut vout);
 bool IsTokenBatonVout(CTxOut vout);
 bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid);
-bool GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info* cp, std::vector<uint256> &foundtxids, std::vector<std::vector<uint8_t>> &owners, std::vector<uint8_t> searchpubkey);
+int32_t GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info* cp, std::vector<uint256> &foundtxids, std::vector<std::vector<uint8_t>> &owners, std::vector<uint8_t> searchpubkey);
 double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid);
 
 int64_t GetTokenBalance(CPubKey pk, uint256 tokenid);
