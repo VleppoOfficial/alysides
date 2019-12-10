@@ -1081,10 +1081,10 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         return std::string("");
     }
     //Checking the token name and description size
-    if (name.size() > 32 || description.size() > 1024) // this is also checked on rpc level
+    if (name.size() > 32 || description.size() > 4096) // this is also checked on rpc level
     {
         LOGSTREAM((char*)"cctokens", CCLOG_DEBUG1, stream << "name len=" << name.size() << " or description len=" << description.size() << " is too big" << std::endl);
-        CCerror = "name should be <= 32, description should be <= 1024";
+        CCerror = "name should be <= 32, description should be <= 4096";
         return ("");
     }
     //Checking the estimated value
@@ -1192,7 +1192,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 
 std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64_t value, std::string ccode, std::string message)
 {
-    CTransaction tokenBaseTx;
+    CTransaction tokenBaseTx, prevUpdateTx;
     uint256 hashBlock, dummyRefTokenId, latesttxid;
     std::vector<uint8_t> dummyPubkey;
     int64_t refExpiryTimeSec;
@@ -1208,70 +1208,68 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 
     CPubKey mypk = pubkey2pk(Mypubkey());
     
-    if (GetTransaction(tokenid, tokenBaseTx, hashBlock, false) == 0)
-    {
+    if (GetTransaction(tokenid, tokenBaseTx, hashBlock, false) == 0) {
         CCerror = "cant find tokenid";
         return std::string("");
     }
     double ownedRefTokenPerc = GetTokenOwnershipPercent(mypk, tokenid);
     //checking tokenid create opret
-    if (tokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenBaseTx.vout[tokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c')
-    {
+    if (tokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenBaseTx.vout[tokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c') {
         CCerror = "tokenid isn't token creation txid";
         return std::string("");
     }
     //checking if token is owned by mypk
-    if (ownedRefTokenPerc < refOwnerPerc)
-    {
+    if (ownedRefTokenPerc < refOwnerPerc) {
         CCerror = "tokenid must be owned by this pubkey";
         return std::string("");
     }
     //getting the latest update txid (can be the same as tokenid)
-    if (!GetLatestTokenUpdate(tokenid, latesttxid))
-    {
-        CCerror = "cannot find latest token update";
+    if (latesttxid != zeroid && !GetLatestTokenUpdate(tokenid, latesttxid)) {
+        CCerror = "cannot find latest update tokenid";
+        return std::string("");
+    }
+	//getting the latest update transaction
+	if( !myGetTransaction(latesttxid, prevUpdateTx, hashBlock) ) {
+		CCerror = "UpdateToken() cant find latest token update";
+        return std::string("");
+	}
+    if ( KOMODO_NSPV_FULLNODE && hashBlock.IsNull()) {
+		CCerror = "latest update is still in mempool";
         return std::string("");
     }
     //Checking the estimated value
-    if (value < 1 && value != 0 )
-    {
+    if (value < 1 && value != 0 ) {
         CCerror = "Estimated value must be positive and cannot be less than 1 satoshi if not 0";
         return std::string("");
     }
     //Checking the ccode and message size
-    if (ccode.size() != 3 || message.size() > 24) // this is also checked on rpc level
-    {
+    if (ccode.size() != 3 || message.size() > 24) { // this is also checked on rpc level
         CCerror = "ccode size should be 3, message size should be <= 24";
         return std::string("");
     }
     
-    if (AddNormalinputs(mtx, mypk, txfee + 20000, 64) > 0)
-    {
+    if (AddNormalinputs(mtx, mypk, txfee + 20000, 64) > 0) {
         int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
         if (mypkInputs < 20000) {
             CCerror = "some inputs signed not with -pubkey=pk";
             return std::string("");
         }
-        if (latesttxid == tokenid)
-        {
+        if (latesttxid == tokenid) {
             mtx.vin.push_back(CTxIn(tokenid,2,CScript()));
             //fprintf(stderr, "vin size.%li\n", mtx.vin.size());
         }
-        else if (latesttxid != zeroid)
-        {
+        else if (latesttxid != zeroid) {
             mtx.vin.push_back(CTxIn(latesttxid,0,CScript()));
             //fprintf(stderr, "vin size.%li\n", mtx.vin.size());
         }
-        else
-        {
+        else {
             CCerror = "latest update txid invalid";
             return std::string("");
         }
         uint8_t destEvalCode = EVAL_TOKENS;
         CScript batonopret = EncodeTokenUpdateCCOpRet(assetHash, value, ccode, message);
         std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
-        if (makeCCopret(batonopret, vData))
-        {
+        if (makeCCopret(batonopret, vData)) {
             //vout0 is next batonvout with cc opret payload
             mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, GetUnspendable(cp, NULL), &vData));
             //vout1 sends some funds back to mypk, later used for validation
@@ -1279,8 +1277,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
             //fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
             return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenUpdateOpRet(Mypubkey(), tokenid)));
         }
-        else
-        {
+        else {
             CCerror = "couldnt embed updatable data to baton vout";
             return std::string("");
         }
