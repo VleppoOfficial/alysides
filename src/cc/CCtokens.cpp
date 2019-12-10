@@ -166,7 +166,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 return eval->Invalid("no token inputs for transfer");
             
             // retrieving destpubkey(s)
-            if (tokenType == "s" && DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, tokenid, voutTokenPubkeys, oprets) != 't')
+            if (tokenType == "s" && DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, evalCodeInOpret, tokenid, voutTokenPubkeys, oprets) != 't')
                 return eval->Invalid("unable to verify token transfer tx funcid");
             
             //get burn pubkey token CC address
