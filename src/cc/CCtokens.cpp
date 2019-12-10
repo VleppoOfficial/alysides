@@ -1176,7 +1176,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         {
             mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, 10000, GetUnspendable(cp, NULL), &vData));  // BATON_VOUT
             //fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
-            return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet(Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
+            return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
         }
         else
         {
