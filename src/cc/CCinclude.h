@@ -409,7 +409,33 @@ CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, 
 /// @see opretid
 CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, std::vector<std::pair<uint8_t, vscript_t>> oprets);
 
+/// Makes opreturn scriptPubKey for token creation transaction. Normally this function is called internally by the tokencreate rpc. You might need to call this function to create a customized token.
+/// The total opreturn length should not exceed 10001 byte
+/// @param funcid should be set to 'c' character
+/// @param origpubkey token creator pubkey as byte array
+/// @param name token name (no more than 32 char)
+/// @param description token description (no more than 4096 char)
+/// @param ownerperc minimum required ownership percentage of this token's balance to enable majority owner privileges. Default is 100
+/// @param tokentype token type. Available types are digital asset, master license and sub license
+/// @param referencetokenid a reference to another existing token id. Mandatory for license type tokens to designate which token is being licensed or referenced
+/// @param expiryTimeSec duration of a license type token until it expires. Can be set to 0 for infinite duration (perpetual license)
+/// @param vopretNonfungible NFT data, could be empty. If not empty, NFT will be created, the first byte if the NFT data should be set to the eval code of the contract validating this NFT data
+/// @returns scriptPubKey with OP_RETURN script
 CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 referencetokenid, int64_t expiryTimeSec, vscript_t vopretNonfungible);
+
+/// Makes opreturn scriptPubKey for token creation transaction. Normally this function is called internally by the tokencreate rpc. You might need to call this function to create a customized token.
+/// The total opreturn length should not exceed 10001 byte
+/// @param funcid should be set to 'c' character
+/// @param origpubkey token creator pubkey as byte array
+/// @param name token name (no more than 32 char)
+/// @param description token description (no more than 4096 char)
+/// @param ownerperc minimum required ownership percentage of this token's balance to enable majority owner privileges. Default is 100
+/// @param tokentype token type. Available types are digital asset, master license and sub license
+/// @param referencetokenid a reference to another existing token id. Mandatory for license type tokens to designate which token is being licensed or referenced
+/// @param expiryTimeSec duration of a license type token until it expires. Can be set to 0 for infinite duration (perpetual license)
+/// @param oprets vector of pairs of additional data added to the token opret. The first element in the pair is opretid enum, the second is the data as byte array
+/// @returns scriptPubKey with OP_RETURN script
+/// @see opretid
 CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 referencetokenid, int64_t expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> oprets);
 
 /// Makes opreturn scriptPubKey for token transaction. Normally this function is called internally by the token rpcs. You might call this function if your module should create a customized token.
@@ -446,7 +472,31 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
 /// @returns funcid ('c') or NULL if errors
 uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, std::vector<std::pair<uint8_t, vscript_t>>  &oprets);
 
+/// Overload that decodes opreturn scriptPubKey of token creation transaction, containing additional information about the token and also returns additional data blobs. 
+/// Normally this function is called internally by the token rpcs. You might want to call this function if your module should create a customized token.
+/// @param scriptPubKey OP_RETURN script to decode
+/// @param[out] origpubkey creator public key as a byte array
+/// @param[out] name token name 
+/// @param[out] description token description 
+/// @param[out] ownerperc minimum required ownership percentage of this token's balance to enable majority owner privileges
+/// @param[out] tokentype token type
+/// @param[out] referencetokenid a reference to another existing token id
+/// @param[out] expiryTimeSec duration of a license type token until it expires
+/// @returns funcid ('c') or NULL if errors
 uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc, std::string &tokentype, uint256 &referencetokenid, int64_t &expiryTimeSec);
+
+/// Overload that decodes opreturn scriptPubKey of token creation transaction, containing additional information about the token and also returns additional data blobs. 
+/// Normally this function is called internally by the token rpcs. You might want to call this function if your module should create a customized token.
+/// @param scriptPubKey OP_RETURN script to decode
+/// @param[out] origpubkey creator public key as a byte array
+/// @param[out] name token name 
+/// @param[out] description token description 
+/// @param[out] ownerperc minimum required ownership percentage of this token's balance to enable majority owner privileges
+/// @param[out] tokentype token type
+/// @param[out] referencetokenid a reference to another existing token id
+/// @param[out] expiryTimeSec duration of a license type token until it expires
+/// @param[out] oprets vector of pairs of additional opreturn data added to the token opret. Could be empty if not set. The first element in the pair is opretid enum, the second is the data as byte array
+/// @returns funcid ('c') or NULL if errors
 uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc, std::string &tokentype, uint256 &referencetokenid, int64_t &expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> &oprets);
 
 /// Decodes opreturn scriptPubKey of token transaction, also returns additional data blobs. 
@@ -459,10 +509,36 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
 /// @returns funcid ('c' if creation tx or 't' if token transfer tx) or NULL if errors
 uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, uint256 &tokenid, std::vector<CPubKey> &voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>>  &oprets);
 
+/// Makes opreturn scriptPubKey for token update transaction. The information in this opret is used primarily in transaction validation. Normally this function is called internally by the tokenupdate rpc.
+/// The total opreturn length should not exceed 10001 byte
+/// @param pk token updater pubkey as byte array
+/// @param tokenid id of the token
+/// @returns scriptPubKey with OP_RETURN script
 CScript EncodeTokenUpdateOpRet(std::vector<uint8_t> pk, uint256 tokenid);
+
+/// Makes CC opret scriptPubKey for token update transaction. The information in this opret is arbitrary and amendable with further updates. Normally this function is called internally by the tokenupdate rpc.
+/// The total opreturn length should not exceed 10001 byte
+/// @param assetHash SHA-256 hash that can be used for digital asset / license checksums or other purposes
+/// @param value estimated value of the token. Cannot be less than 1 satoshi, but can be set to 0
+/// @param ccode currency code attached to the estimated value. Must be exactly 3 characters long. Default is USD
+/// @param message optional message attached to the update (no more than 24 char)
+/// @returns scriptPubKey with OP_RETURN script
 CScript EncodeTokenUpdateCCOpRet(uint256 assetHash, int64_t value, std::string ccode, std::string message);
 
+/// Decodes opreturn scriptPubKey of token update transaction.
+/// @param scriptPubKey OP_RETURN script to decode
+/// @param[out] pk token updater pubkey as byte array
+/// @param[out] tokenid id of the token
+/// @returns funcid ('u') or NULL if errors
 uint8_t DecodeTokenUpdateOpRet(const CScript scriptPubKey, std::vector<uint8_t> &pk, uint256 &tokenid);
+
+/// Decodes CC opret scriptPubKey of token update transaction.
+/// @param scriptPubKey OP_RETURN script to decode
+/// @param[out] assetHash SHA-256 hash that can be used for digital asset / license checksums or other purposes
+/// @param[out] estimated value of the token
+/// @param[out] ccode currency code attached to the estimated value
+/// @param[out] message optional message attached to the update
+/// @returns funcid ('u') or NULL if errors
 uint8_t DecodeTokenUpdateCCOpRet(const CScript scriptPubKey, uint256 &assetHash, int64_t &value, std::string &ccode, std::string &message);
 
 /// @private

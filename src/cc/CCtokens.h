@@ -42,9 +42,10 @@ double GetTokenOwnershipPercent(CPubKey pk, uint256 tokenid);
 
 int64_t GetTokenBalance(CPubKey pk, uint256 tokenid);
 UniValue TokenInfo(uint256 tokenid);
+UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive);
 UniValue TokenOwners(uint256 tokenid, int currentonly);
 UniValue TokenInventory(CPubKey pk, int currentonly);
 UniValue TokenList();
-UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive);
+
 
 #endif

@@ -7684,8 +7684,8 @@ UniValue tokencreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
     
     if (params.size() >= 4)     {
         description = params[3].get_str();
-        if (description.size() > 1024)   {
-            ERR_RESULT("Token description must be <= 1024 characters");
+        if (description.size() > 4096)   {
+            ERR_RESULT("Token description must be <= 4096 characters");
             return(result);
         }
     }
