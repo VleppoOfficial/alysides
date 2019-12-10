@@ -68,7 +68,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     if (numvouts < 1)
         return eval->Invalid("no vouts\n");
 	
-    if ((funcid = DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, evalCodeInOpret, tokenid, oprets)) == 0)
+    if ((funcid = DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, evalCodeInOpret, tokenid, voutTokenPubkeys, oprets)) == 0)
         return eval->Invalid("TokenValidate: invalid opreturn payload");
 	
     LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokensValidate funcId=" << (char)(funcid ? funcid : ' ') << " evalcode=" << std::hex << (int)cp->evalcode << std::endl);
@@ -166,7 +166,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 return eval->Invalid("no token inputs for transfer");
             
             // retrieving destpubkey(s)
-            if (tokenType == "s" && DecodeTokenTransferOpRet(tx.vout[numvouts - 1].scriptPubKey, tokenid, voutTokenPubkeys, oprets) != 't')
+            if (tokenType == "s" && DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, tokenid, voutTokenPubkeys, oprets) != 't')
                 return eval->Invalid("unable to verify token transfer tx funcid");
             
             //get burn pubkey token CC address
@@ -310,7 +310,7 @@ uint8_t ValidateTokenOpret(CTransaction tx, uint256 tokenid)
     uint256 tokenidOpret = zeroid;
     uint8_t funcid;
     uint8_t dummyEvalCode;
-    //std::vector<CPubKey> voutPubkeysDummy;
+    std::vector<CPubKey> voutPubkeysDummy;
     std::vector<std::pair<uint8_t, vscript_t>> opretsDummy;
 
     // this is just for log messages indentation fur debugging recursive calls:
@@ -319,7 +319,7 @@ uint8_t ValidateTokenOpret(CTransaction tx, uint256 tokenid)
     if (tx.vout.size() == 0)
         return (uint8_t)0;
 
-    if ((funcid = DecodeTokenOpRet(tx.vout.back().scriptPubKey, dummyEvalCode, tokenidOpret, /*voutPubkeysDummy, */opretsDummy)) == 0) {
+    if ((funcid = DecodeTokenOpRet(tx.vout.back().scriptPubKey, dummyEvalCode, tokenidOpret, voutPubkeysDummy, opretsDummy)) == 0) {
         LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << indentStr << "ValidateTokenOpret() DecodeTokenOpret could not parse opret for txid=" << tx.GetHash().GetHex() << std::endl);
         return (uint8_t)0;
     } else if (funcid == 'c') {
@@ -450,8 +450,7 @@ int64_t IsTokensvout(bool goDeeper, bool checkPubkeys /*<--not used, always true
             // test vouts for possible token use-cases:
             std::vector<std::pair<CTxOut, std::string>> testVouts;
 			
-            //DecodeTokenTransferOpRet used here since destpubkey array is expected to be returned
-            DecodeTokenTransferOpRet(tx.vout.back().scriptPubKey, tokenIdOpret, voutPubkeysInOpret, oprets);
+            DecodeTokenOpRet(tx.vout.back().scriptPubKey, dummyEvalCode, tokenIdOpret, voutPubkeysInOpret, oprets);
             LOGSTREAM((char*)"cctokens", CCLOG_DEBUG2, stream << "IsTokensvout() oprets.size()=" << oprets.size() << std::endl);
 
             // get assets/channels/gateways token data:
@@ -858,7 +857,7 @@ int64_t HasBurnedTokensvouts(struct CCcontract_info* cp, Eval* eval, const CTran
         return (0);
     }
 
-    if (DecodeTokenOpRet(tx.vout.back().scriptPubKey, dummyEvalCode, tokenIdOpret, oprets) == 0) {
+    if (DecodeTokenOpRet(tx.vout.back().scriptPubKey, dummyEvalCode, tokenIdOpret, voutPubkeysDummy, oprets) == 0) {
         LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "HasBurnedTokensvouts() cannot parse opret DecodeTokenOpRet returned 0, txid=" << tx.GetHash().GetHex() << std::endl);
         return 0;
     }
@@ -950,6 +949,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
 {
     int32_t vini, height, retcode;
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
+	std::vector<CPubKey> voutPubkeysDummy;
     uint256 batontxid, sourcetxid = tokenid, hashBlock;
     CTransaction txBaton;
     uint8_t funcId, evalcode;
@@ -958,7 +958,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
     if (!(GetTransaction(tokenid, txBaton, hashBlock, true) &&
         !hashBlock.IsNull() &&
         txBaton.vout.size() > 2 &&
-        (funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'c' &&
+        (funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, voutPubkeysDummy, oprets)) == 'c' &&
         txBaton.vout[2].nValue == 10000))
     {
         return 0;
@@ -969,7 +969,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
         !hashBlock.IsNull() &&
         txBaton.vout.size() > 0 &&
         txBaton.vout[0].nValue == 10000 && 
-        (funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u')
+        (funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, voutPubkeysDummy, oprets)) == 'u')
     {
         sourcetxid = batontxid;
     }
@@ -988,7 +988,7 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
             !hashBlock.IsNull() &&                           // tx not in mempool
             txBaton.vout.size() > 0 &&             
             txBaton.vout[0].nValue == 10000 &&     // check baton fee 
-            (funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, oprets)) == 'u') // decode opreturn
+            (funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, voutPubkeysDummy, oprets)) == 'u') // decode opreturn
         {
             sourcetxid = batontxid;
         }
@@ -1341,7 +1341,7 @@ std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, 
             std::vector<CPubKey> voutTokenPubkeys;
             voutTokenPubkeys.push_back(pubkey2pk(destpubkey)); // dest pubkey for validating vout
             
-            return FinalizeCCTx(mask, cp, mtx, mypk, txfee, EncodeTokenTransferOpRet(tokenid, voutTokenPubkeys, std::make_pair((uint8_t)0, vopretEmpty)));
+            return FinalizeCCTx(mask, cp, mtx, mypk, txfee, EncodeTokenOpRet(tokenid, voutTokenPubkeys, std::make_pair((uint8_t)0, vopretEmpty)));
         }
         else
         {
