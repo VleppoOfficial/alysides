@@ -178,60 +178,6 @@ CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std:
 //	return EncodeTokenOpRet(tokenid, voutPubkeys, payload);
 //}
 
-// Original versions of EncodeTokenOpRet, kept around for compatibility with other Antara Modules. Redirects to EncodeTokenTransferOpRet.
-/*CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::pair<uint8_t, vscript_t> opretWithId)
-{
-    std::vector<std::pair<uint8_t, vscript_t>> oprets;
-    oprets.push_back(opretWithId);
-    return EncodeTokenTransferOpRet(tokenid, voutPubkeys, oprets);
-}
-CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> oprets)
-{
-    return EncodeTokenTransferOpRet(tokenid, voutPubkeys, oprets);
-}
-
-//overload for Vleppo encoder
-CScript EncodeTokenTransferOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::pair<uint8_t, vscript_t> opretWithId)
-{
-    std::vector<std::pair<uint8_t, vscript_t>> oprets;
-    oprets.push_back(opretWithId);
-    return EncodeTokenTransferOpRet(tokenid, voutPubkeys, oprets);
-}
-
-//Vleppo encoder for single tokenid transfers, the old EncodeTokenOpRet functionality was moved here
-CScript EncodeTokenTransferOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> oprets)
-{
-    CScript opret;
-    uint8_t funcid = 't'; //override the param
-    uint8_t evalCodeInOpret = EVAL_TOKENS;
-
-    tokenid = revuint256(tokenid);
-
-    uint8_t ccType = 0;
-    if (voutPubkeys.size() >= 0 && voutPubkeys.size() <= 2)
-        ccType = voutPubkeys.size();
-    else
-    {
-        LOGSTREAM((char *)"cctokens", CCLOG_DEBUG2, stream << "EncodeTokenOpRet voutPubkeys.size()=" << voutPubkeys.size() << " not supported" << std::endl);
-    }
-
-    opret << OP_RETURN << E_MARSHAL(ss << evalCodeInOpret << funcid << tokenid << ccType;
-    if (ccType >= 1)
-        ss << voutPubkeys[0];
-    if (ccType == 2)
-        ss << voutPubkeys[1];
-    for (auto o : oprets)
-    {
-        if (o.first != 0)
-        {
-            ss << (uint8_t)o.first;
-            ss << o.second;
-        }
-    });
-
-    return opret;
-}*/
-
 //===========================================================================
 //
 // Token Update Encoders (EncodeTokenUpdateOpRet and EncodeTokenUpdateCCOpRet)
@@ -438,75 +384,6 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
     }
     return (uint8_t)0;
 }
-
-/*
-// Vleppo version of DecodeTokenOpRet, primarily used to return funcids of token tx oprets
-uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, uint256 &tokenid, std::vector<std::pair<uint8_t, vscript_t>> &oprets)
-{
-    vscript_t vopret;
-    GetOpReturnData(scriptPubKey, vopret);
-    
-    uint8_t *script, funcId = 0;
-    script = (uint8_t *)vopret.data();
-
-    //dummies for tokencreate
-    std::string dummyName, dummyDescription;
-    std::vector<uint8_t> dummyPubkey;
-    
-    //dummies for tokentransfer
-    std::vector<CPubKey> voutPubkeysDummy;
-    
-    if (script != NULL && vopret.size() > 2) //checking if opret is empty
-    {
-        evalCodeTokens = script[0]; //retrieving embedded eval code, should be EVAL_TOKENS
-        if (evalCodeTokens != EVAL_TOKENS)
-        {
-            LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "DecodeTokenOpRet() incorrect evalcode in tokens opret" << std::endl);
-            return (uint8_t)0;
-        }
-
-        funcId = script[1]; //retrieving opret funcid
-        LOGSTREAM((char *)"cctokens", CCLOG_DEBUG2, stream << "DecodeTokenOpRet() decoded funcId=" << (char)(funcId ? funcId : ' ') << std::endl);
-
-        switch (funcId)
-        {
-        case 'c':
-            return DecodeTokenCreateOpRet(scriptPubKey, dummyPubkey, dummyName, dummyDescription, oprets);
-            
-        case 't':
-            return DecodeTokenTransferOpRet(scriptPubKey, tokenid, voutPubkeysDummy, oprets);
-        
-        case 'u':
-            return DecodeTokenUpdateOpRet(scriptPubKey, dummyPubkey, tokenid);
-            
-        //case 'whatever':
-            //insert new cases here
-        
-        default:
-            LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "DecodeTokenOpRet() illegal funcid=" << (int)funcId << std::endl);
-            return (uint8_t)0;
-        }
-    }
-    else
-    {
-        LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "DecodeTokenOpRet() empty opret, could not parse" << std::endl);
-    }
-    return (uint8_t)0;
-}
-
-// Original DecodeTokenOpRet decoder, now redirects to DecodeTokenTransferOpRet if funcid == 't'
-// for 't' returns all data from opret, vopretExtra contains other contract's data (currently only assets'). 
-// for 'c' returns only funcid. NOTE: nonfungible data is not returned
-uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, uint256 &tokenid, std::vector<CPubKey> &voutPubkeys, std::vector<std::pair<uint8_t, vscript_t>> &oprets)
-{
-    vscript_t vopret;
-    GetOpReturnData(scriptPubKey, vopret);
-    
-    if (vopret.size() > 2 && vopret.begin()[0] == EVAL_TOKENS && vopret.begin()[1] == 't')
-        return DecodeTokenTransferOpRet(scriptPubKey, tokenid, voutPubkeys, oprets);
-    else
-        return 'c';
-}*/
 
 //===========================================================================
 //
