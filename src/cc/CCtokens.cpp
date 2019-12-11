@@ -1368,8 +1368,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
     CScript batonopret;
     std::string ccode, message, dummyName, origdescription;
 
-    if (recursive == 0) //from earliest to latest
-    {
+    if (recursive == 0) { //from earliest to latest
         // special handling for token creation tx - in this tx, baton vout is vout2
         if (myGetTransaction(tokenid, txBaton, hashBlock) &&
         ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
@@ -1377,8 +1376,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
         (funcId = DecodeTokenCreateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription)) == 'c' &&
         txBaton.vout[2].nValue == 10000 &&
         getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
-        (funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
-        {
+        (funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u')) {
                 total++;
                 UniValue data(UniValue::VOBJ);
                 data.push_back(Pair("creatorPubkey", HexStr(updaterPubkey))); 
@@ -1389,8 +1387,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                     data.push_back(Pair("description", origdescription));
                 result.push_back(Pair(tokenid.GetHex(), data));
         }
-        else
-        {
+        else {
             result.push_back(Pair("result", "error"));
 			if( !myGetTransaction(tokenid, txBaton, hashBlock) )
 				result.push_back(Pair("error", "tokenid isnt token creation txid"));
@@ -1423,8 +1420,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             result.push_back(Pair(batontxid.GetHex(), data));
             sourcetxid = batontxid;
         }
-        else
-        {
+        else {
             return (result);
         }
     
@@ -1432,8 +1428,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             return (result);
         
         // baton vout should be vout0 from now on
-        while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
-        {
+        while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0) { // find a tx which spent the baton vout
             if (myGetTransaction(batontxid, txBaton, hashBlock) &&  // load the transaction which spent the baton
                 ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&                           // tx not in mempool
                 txBaton.vout.size() > 0 &&             
@@ -1453,8 +1448,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                 result.push_back(Pair(batontxid.GetHex(), data));
                 sourcetxid = batontxid;
             }
-            else
-            {
+            else {
                 //result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
                 return (result);
             }
@@ -1463,10 +1457,8 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
         }
         return (result);
     }
-    else //from latest to earliest
-    {
-        if (!GetLatestTokenUpdate(tokenid, latesttxid))
-        {
+    else { //from latest to earliest
+        if (!GetLatestTokenUpdate(tokenid, latesttxid)) {
             result.push_back(Pair("result", "error"));
 			if( !myGetTransaction(tokenid, txBaton, hashBlock) )
 				result.push_back(Pair("error", "tokenid isnt token creation txid"));
@@ -1475,8 +1467,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             return (result);
         }
         sourcetxid = latesttxid;
-        while (sourcetxid != tokenid)
-        {
+        while (sourcetxid != tokenid) {
             if (myGetTransaction(sourcetxid, txBaton, hashBlock) &&  // load the transaction which spent the baton
                 ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&                           // tx not in mempool
                 txBaton.vout.size() > 0 &&             
@@ -1495,23 +1486,20 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                     data.push_back(Pair("message", message));
                 result.push_back(Pair(sourcetxid.GetHex(), data));
             }
-            else
-            {
+            else {
                 //result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
                 return (result);
             }
             if (!(total < samplenum || samplenum == 0))
                 break;
-            if (GetTransaction((batontxid = txBaton.vin[1].prevout.hash), txBaton, hashBlock) && !hashBlock.IsNull())
-            {
+            if (GetTransaction((batontxid = txBaton.vin[1].prevout.hash), txBaton, hashBlock) && !hashBlock.IsNull()) {
                 sourcetxid = batontxid;
             }
         }
         if (!(total < samplenum || samplenum == 0))
             return (result);
         // special handling for token creation tx - in this tx, baton vout is vout2
-        if (sourcetxid == tokenid) //unlikely to fail, hopefully
-        {
+        if (sourcetxid == tokenid) { //unlikely to fail, hopefully
             if (myGetTransaction(sourcetxid, txBaton, hashBlock) &&
             ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
             txBaton.vout.size() > 2 &&
@@ -1530,8 +1518,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                     data.push_back(Pair("description", origdescription));
                 result.push_back(Pair(tokenid.GetHex(), data));
             }
-            else
-            {
+            else {
                 result.push_back(Pair("error", "couldn't decode token creation txid"));
                 return (result);
             }
@@ -1580,9 +1567,8 @@ UniValue TokenInfo(uint256 tokenid)
 
     cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
 
-	if( !myGetTransaction(tokenid, tokenbaseTx, hashBlock) )
-	{
-		fprintf(stderr, "TokenInfo() cant find tokenid\n");
+	if( !myGetTransaction(tokenid, tokenbaseTx, hashBlock) ) {
+		//fprintf(stderr, "TokenInfo() cant find tokenid\n");
 		result.push_back(Pair("result", "error"));
 		result.push_back(Pair("error", "cant find tokenid"));
 		return(result);
