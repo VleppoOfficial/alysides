@@ -161,7 +161,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             //vout.n-2: normal output for change (if any)
             //vout.n-1: opreturn EVAL_TOKENS 't' tokenid <other contract payload>
             
-            //Check if token amount is the same in vins and vouts of tx
+            // Check if token amount is the same in vins and vouts of tx
             if (inputs == 0)
                 return eval->Invalid("no token inputs for transfer");
             
@@ -169,10 +169,11 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             if (tokenType == "s" && DecodeTokenOpRet(tx.vout[numvouts - 1].scriptPubKey, evalCodeInOpret, tokenid, voutTokenPubkeys, oprets) != 't')
                 return eval->Invalid("unable to verify token transfer tx funcid");
             
-            //get burn pubkey token CC address
+            // get burn pubkey token CC address
             GetTokensCCaddress(cp, burnaddr, pubkey2pk(ParseHex(CC_BURNPUBKEY)));
             
             // if token is sub-license and transaction vin isn't from creator vout
+			// NOTE: do not put "s" tokens in heir/assets/etc. They are not designed for these modules. Use direct token transfer instead.
             if (tokenType == "s" && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == vinTokenPubkeys.end())
             {
                 //check if burn pubkey is specified in voutPubkeys
