@@ -1096,7 +1096,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
 
     //If token type is "a" and referenceTokenId is (properly) defined, check if it is valid. Else, ignore as it is optional for "a" types
     if (tokenType == "a" && referenceTokenId != zeroid) {
-        if (!GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false)) {
+        if (!myGetTransaction(referenceTokenId, refTokenBaseTx, hashBlock)) {
             CCerror = "cant find reference tokenid";
             LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
             return std::string("");
@@ -1111,7 +1111,7 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
             return std::string("");
         }
         //checking if referenceTokenId exists
-        if (!GetTransaction(referenceTokenId, refTokenBaseTx, hashBlock, false)) {
+        if (!myGetTransaction(referenceTokenId, refTokenBaseTx, hashBlock)) {
             CCerror = "cant find reference tokenid";
             LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
             return std::string("");
@@ -1492,7 +1492,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             }
             if (!(total < samplenum || samplenum == 0))
                 break;
-            if (GetTransaction((batontxid = txBaton.vin[1].prevout.hash), txBaton, hashBlock) && !hashBlock.IsNull()) {
+            if (myGetTransaction((batontxid = txBaton.vin[1].prevout.hash), txBaton, hashBlock) && !hashBlock.IsNull()) {
                 sourcetxid = batontxid;
             }
         }
