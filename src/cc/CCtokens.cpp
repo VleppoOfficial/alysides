@@ -1467,7 +1467,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             result.push_back(Pair("result", "error"));
 			if( !myGetTransaction(tokenid, txBaton, hashBlock) )
 				result.push_back(Pair("error", "tokenid isnt token creation txid"));
-			else if ( GetTxUnconfirmed(latesttxid, txBaton, hashBlock) && ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ))
+			else if ( GetTxUnconfirmed(latesttxid, txBaton, hashBlock) == 0 && ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ))
 				result.push_back(Pair("error", "latest update is still in mempool"));
 			else
 				result.push_back(Pair("error", "couldn't get latest token update"));
