@@ -1208,7 +1208,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
 
     CPubKey mypk = pubkey2pk(Mypubkey());
     
-    if (GetTransaction(tokenid, tokenBaseTx, hashBlock, false) == 0) {
+    if (!myGetTransaction(tokenid, tokenBaseTx, hashBlock)) {
         CCerror = "cant find tokenid";
         return std::string("");
     }
@@ -1224,7 +1224,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         return std::string("");
     }
     //getting the latest update txid (can be the same as tokenid)
-    if (latesttxid != zeroid && !GetLatestTokenUpdate(tokenid, latesttxid)) {
+    if (!GetLatestTokenUpdate(tokenid, latesttxid) && latesttxid != zeroid) {
         CCerror = "cannot find latest update tokenid";
         return std::string("");
     }
