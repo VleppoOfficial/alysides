@@ -1392,7 +1392,10 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
         else
         {
             result.push_back(Pair("result", "error"));
-            result.push_back(Pair("error", "couldn't decode token creation txid, possibly still in mempool"));
+			if( !myGetTransaction(tokenid, txBaton, hashBlock) )
+				result.push_back(Pair("error", "tokenid isnt token creation txid"));
+			else
+				result.push_back(Pair("error", "couldn't get latest token update, possibly still in mempool"));
             return (result);
         }
         
@@ -1467,8 +1470,6 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             result.push_back(Pair("result", "error"));
 			if( !myGetTransaction(tokenid, txBaton, hashBlock) )
 				result.push_back(Pair("error", "tokenid isnt token creation txid"));
-			else if ( myGetTransaction(latesttxid, txBaton, hashBlock) && KOMODO_NSPV_FULLNODE && hashBlock.IsNull() )
-				result.push_back(Pair("error", "latest update is still in mempool"));
 			else
 				result.push_back(Pair("error", "couldn't get latest token update"));
             return (result);
