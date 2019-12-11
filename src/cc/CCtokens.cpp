@@ -955,8 +955,8 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
     uint8_t funcId, evalcode;
 
     // special handling for token creation tx - in this tx, baton vout is vout2
-    if (!(GetTransaction(tokenid, txBaton, hashBlock, true) &&
-        !hashBlock.IsNull() &&
+    if (!(myGetTransaction(tokenid, txBaton, hashBlock) &&
+        ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
         txBaton.vout.size() > 2 &&
         (funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, voutPubkeysDummy, oprets)) == 'c' &&
         txBaton.vout[2].nValue == 10000))
@@ -965,8 +965,8 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
     }
     // find an update tx which spent the token create baton vout, if it exists
     if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
-        GetTransaction(batontxid, txBaton, hashBlock, true) &&
-        !hashBlock.IsNull() &&
+        myGetTransaction(batontxid, txBaton, hashBlock) &&
+        ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
         txBaton.vout.size() > 0 &&
         txBaton.vout[0].nValue == 10000 && 
         (funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, voutPubkeysDummy, oprets)) == 'u')
@@ -984,8 +984,8 @@ bool GetLatestTokenUpdate(uint256 tokenid, uint256 &latesttxid)
     // baton vout should be vout0 from now on
     while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
     {
-        if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
-            !hashBlock.IsNull() &&                           // tx not in mempool
+        if (myGetTransaction(batontxid, txBaton, hashBlock) &&  // load the transaction which spent the baton
+            ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&                           // tx not in mempool
             txBaton.vout.size() > 0 &&             
             txBaton.vout[0].nValue == 10000 &&     // check baton fee 
             (funcId = DecodeTokenOpRet(txBaton.vout.back().scriptPubKey, evalcode, tokenid, voutPubkeysDummy, oprets)) == 'u') // decode opreturn
@@ -1244,7 +1244,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
     }
     //Checking the ccode and message size
     if (ccode.size() != 3 || message.size() > 24) { // this is also checked on rpc level
-        CCerror = "ccode size should be 3, message size should be <= 24";
+        CCerror = "ccode size should be 3 chars, message size should be <= 24 chars";
         return std::string("");
     }
     
@@ -1371,8 +1371,8 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
     if (recursive == 0) //from earliest to latest
     {
         // special handling for token creation tx - in this tx, baton vout is vout2
-        if (GetTransaction(tokenid, txBaton, hashBlock, true) &&
-        !hashBlock.IsNull() &&
+        if (myGetTransaction(tokenid, txBaton, hashBlock) &&
+        ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
         txBaton.vout.size() > 2 &&
         (funcId = DecodeTokenCreateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription)) == 'c' &&
         txBaton.vout[2].nValue == 10000 &&
@@ -1401,8 +1401,8 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 
         // find an update tx which spent the token create baton vout, if it exists
         if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
-            GetTransaction(batontxid, txBaton, hashBlock, true) &&
-            !hashBlock.IsNull() &&
+            myGetTransaction(batontxid, txBaton, hashBlock) &&
+            ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
             txBaton.vout.size() > 0 &&
             txBaton.vout[0].nValue == 10000 &&
             (funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' &&
@@ -1431,8 +1431,8 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
         // baton vout should be vout0 from now on
         while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0)  // find a tx which spent the baton vout
         {
-            if (GetTransaction(batontxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
-                !hashBlock.IsNull() &&                           // tx not in mempool
+            if (myGetTransaction(batontxid, txBaton, hashBlock) &&  // load the transaction which spent the baton
+                ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&                           // tx not in mempool
                 txBaton.vout.size() > 0 &&             
                 txBaton.vout[0].nValue == 10000 &&     // check baton fee 
                 (funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' && // decode opreturn
@@ -1452,7 +1452,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             }
             else
             {
-                result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
+                //result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
                 return (result);
             }
         if (!(total < samplenum || samplenum == 0))
@@ -1471,8 +1471,8 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
         sourcetxid = latesttxid;
         while (sourcetxid != tokenid)
         {
-            if (GetTransaction(sourcetxid, txBaton, hashBlock, true) &&  // load the transaction which spent the baton
-                !hashBlock.IsNull() &&                           // tx not in mempool
+            if (myGetTransaction(sourcetxid, txBaton, hashBlock) &&  // load the transaction which spent the baton
+                ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&                           // tx not in mempool
                 txBaton.vout.size() > 0 &&             
                 txBaton.vout[0].nValue == 10000 &&     // check baton fee 
                 (funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' && // decode opreturn
@@ -1491,7 +1491,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             }
             else
             {
-                result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
+                //result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
                 return (result);
             }
             if (!(total < samplenum || samplenum == 0))
@@ -1506,8 +1506,8 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
         // special handling for token creation tx - in this tx, baton vout is vout2
         if (sourcetxid == tokenid) //unlikely to fail, hopefully
         {
-            if (GetTransaction(sourcetxid, txBaton, hashBlock, true) &&
-            !hashBlock.IsNull() &&
+            if (myGetTransaction(sourcetxid, txBaton, hashBlock) &&
+            ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
             txBaton.vout.size() > 2 &&
             (funcId = DecodeTokenCreateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription)) == 'c' &&
             txBaton.vout[2].nValue == 10000 &&
