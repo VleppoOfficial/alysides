@@ -177,7 +177,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             {
                 //check if burn pubkey is specified in voutPubkeys
                 if(std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end())
-                    return eval->Invalid("burn pubkey not specified in non-creator sub license transfer");
+                    return eval->Invalid("cannot transfer sub-license to non-burn address from pubkey other than creator pubkey");
                 else
                     for (auto vout : tx.vout)
                     {
@@ -185,7 +185,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                             return eval->Invalid("couldn't get proper destination script address from a license transfer vout");
                         //only allow transfers to burn address (don't allow receiving change either - if we're burning "s" tokens, we have to burn all our stock)
                         if (vout.scriptPubKey.IsPayToCryptoCondition() && (!IsTokenMarkerVout(vout)) && (strcmp(testburnaddr, burnaddr) != 0))
-                            return eval->Invalid("cannot transfer sub-license to non-burn address from pubkey other than creator pubkey");
+                            return eval->Invalid("burn pubkey specified, but destaddr contains address that is not burn address");
                     }
             }
             
