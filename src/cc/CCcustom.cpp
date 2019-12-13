@@ -452,7 +452,7 @@ struct CCcontract_info *CCinit(struct CCcontract_info *cp, uint8_t evalcode)
 			strcpy(cp->normaladdr, AgreementsNormaladdr);
 			strcpy(cp->CChexstr, AgreementsCChexstr);
 			memcpy(cp->CCpriv, AgreementsCCpriv, 32);
-			cp->validate = ImportGatewayValidate;
+			cp->validate = AgreementsValidate;
 			cp->ismyvin = IsAgreementsInput;
 			break;
         case EVAL_IMPORTGATEWAY:
