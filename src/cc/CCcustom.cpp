@@ -233,6 +233,18 @@ uint8_t TokensCCpriv[32] = { 0x1d, 0x0d, 0x0d, 0xce, 0x2d, 0xd2, 0xe1, 0x9d, 0xf
 #undef FUNCNAME
 #undef EVALCODE
 
+// Agreements
+#define FUNCNAME IsAgreementsInput
+#define EVALCODE EVAL_AGREEMENTS
+const char *AgreementsCCaddr = "";
+const char *AgreementsNormaladdr = "RKMpncH1SyUJojdc4PR7QYWgKFDS5Z4bxP";
+char AgreementsCChexstr[67] = { "0291ca39fe72f5d0f6a65933239ca7fc608dab04eed3428ba7f425256811ddd07e" };
+uint8_t AgreementsCCpriv[32] = { };
+#include "CCcustom.inc"
+#undef FUNCNAME
+#undef EVALCODE
+
+
 #define FUNCNAME IsCClibInput
 #define EVALCODE EVAL_FIRSTUSER
 const char *CClibNormaladdr = "RVVeUg43rNcq3mZFnvZ8yqagyzqFgUnq4u";
@@ -434,6 +446,14 @@ struct CCcontract_info *CCinit(struct CCcontract_info *cp, uint8_t evalcode)
 			memcpy(cp->CCpriv, TokensCCpriv, 32);
 			cp->validate = TokensValidate;
 			cp->ismyvin = IsTokensInput;
+			break;
+		case EVAL_AGREEMENTS:
+			strcpy(cp->unspendableCCaddr, AgreementsCCaddr);
+			strcpy(cp->normaladdr, AgreementsNormaladdr);
+			strcpy(cp->CChexstr, AgreementsCChexstr);
+			memcpy(cp->CCpriv, AgreementsCCpriv, 32);
+			cp->validate = ImportGatewayValidate;
+			cp->ismyvin = IsAgreementsInput;
 			break;
         case EVAL_IMPORTGATEWAY:
 			strcpy(cp->unspendableCCaddr, ImportGatewayCCaddr);
