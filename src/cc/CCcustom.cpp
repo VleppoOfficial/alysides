@@ -30,6 +30,7 @@
 #include "CCMarmara.h"
 #include "CCPayments.h"
 #include "CCGateways.h"
+#include "CCagreements.h"
 #include "CCtokens.h"
 #include "CCImportGateway.h"
 
