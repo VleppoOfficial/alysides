@@ -180,7 +180,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             {
                 //check if burn pubkey is specified in voutPubkeys
                 if(std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end() && std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == voutTokenPubkeys.end())
-                    return eval->Invalid("cannot transfer sub-license to burn or creator pubkey from pubkey other than creator's");
+                    return eval->Invalid("only creator can transfer sub-license to pubkey other than burn or creator pubkey");
                 else
                     for (auto vout : tx.vout)
                     {
