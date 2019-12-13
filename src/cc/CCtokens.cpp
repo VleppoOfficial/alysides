@@ -54,7 +54,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
     int64_t outputs = 0, inputs = 0, expiryTimeSec;
     std::vector<CPubKey> vinTokenPubkeys, voutTokenPubkeys; // sender pubkey(s) and destpubkey(s)
     std::vector<uint8_t> creatorPubkey, dummyPubkey, updaterPubkey; // token creator pubkey
-    char updaterPubkeyaddr[64], srcaddr[64], destaddr[64], burnaddr[64], testburnaddr[64];
+    char updaterPubkeyaddr[64], srcaddr[64], destaddr[64], burnaddr[64], testaddr[64];
     
     int32_t preventCCvins = -1, preventCCvouts = -1; // debugging
     
@@ -171,22 +171,24 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             
             // get burn pubkey token CC address
             GetTokensCCaddress(cp, burnaddr, pubkey2pk(ParseHex(CC_BURNPUBKEY)));
+			// get creator pubkey token CC address
+			GetTokensCCaddress(cp, destaddr, pubkey2pk(creatorPubkey));
             
             // if token is sub-license and transaction vin isn't from creator vout
 			// NOTE: do not put "s" tokens in heir/assets/etc. They are not designed for these modules. Use direct token transfer instead.
             if (tokenType == "s" && std::find(vinTokenPubkeys.begin(), vinTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == vinTokenPubkeys.end())
             {
                 //check if burn pubkey is specified in voutPubkeys
-                if(std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end())
-                    return eval->Invalid("cannot transfer sub-license to non-burn address from pubkey other than creator pubkey");
+                if(std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(ParseHex(CC_BURNPUBKEY))) == voutTokenPubkeys.end() && std::find(voutTokenPubkeys.begin(), voutTokenPubkeys.end(), pubkey2pk(creatorPubkey)) == voutTokenPubkeys.end())
+                    return eval->Invalid("cannot transfer sub-license to burn or creator pubkey from pubkey other than creator's");
                 else
                     for (auto vout : tx.vout)
                     {
-                        if(!(vout.scriptPubKey.size() > 3 && vout.scriptPubKey[0] == OP_RETURN && vout.scriptPubKey[2] == EVAL_TOKENS) && !(Getscriptaddress(testburnaddr, vout.scriptPubKey)))
+                        if(!(vout.scriptPubKey.size() > 3 && vout.scriptPubKey[0] == OP_RETURN && vout.scriptPubKey[2] == EVAL_TOKENS) && !(Getscriptaddress(testaddr, vout.scriptPubKey)))
                             return eval->Invalid("couldn't get proper destination script address from a license transfer vout");
                         //only allow transfers to burn address (don't allow receiving change either - if we're burning "s" tokens, we have to burn all our stock)
-                        if (vout.scriptPubKey.IsPayToCryptoCondition() && (!IsTokenMarkerVout(vout)) && (strcmp(testburnaddr, burnaddr) != 0))
-                            return eval->Invalid("burn pubkey specified, but destaddr contains address that is not burn address");
+                        if (vout.scriptPubKey.IsPayToCryptoCondition() && (!IsTokenMarkerVout(vout))  && (strcmp(testaddr, burnaddr) != 0) && (strcmp(testaddr, destaddr) != 0))
+                            return eval->Invalid("burn/creator pubkey specified, but destaddr contains address that is not burn or creator address");
                     }
             }
             
