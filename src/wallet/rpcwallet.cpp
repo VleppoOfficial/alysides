@@ -8239,6 +8239,19 @@ UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& myp
     return(CCaddress(cp,(char *)"Agreements",pubkey));
 }
 
+UniValue settlementaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    struct CCcontract_info *cp,C; std::vector<unsigned char> pubkey;
+    cp = CCinit(&C,EVAL_SETTLEMENTS);
+    if ( fHelp || params.size() > 1 )
+        throw runtime_error("settlementaddress [pubkey]\n");
+    if ( ensure_CCrequirements(0) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    if ( params.size() == 1 )
+        pubkey = ParseHex(params[0].get_str().c_str());
+    return(CCaddress(cp,(char *)"Settlements",pubkey));
+}
+
 UniValue getbalance64(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     set<CBitcoinAddress> setAddress; vector<COutput> vecOutputs;

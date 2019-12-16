@@ -568,7 +568,8 @@ static const CRPCCommand vRPCCommands[] =
     { "tokens",       "tokenfillask",     &tokenfillask,      true },
     //{ "tokens",       "tokenfillswap",    &tokenfillswap,     true },
     { "tokens",       "tokenconvert", &tokenconvert, true },
-	// Vleppo
+	
+	// Vleppo exclusive token rpcs
 	{ "tokens",       "tokenupdate",      &tokenupdate,       true },
 	{ "tokens",       "tokenviewupdates", &tokenviewupdates,  true },
 	{ "tokens",       "tokenowners", 	  &tokenowners,       true },
@@ -576,6 +577,9 @@ static const CRPCCommand vRPCCommands[] =
 
 	// agreements
 	{ "agreements",   "agreementaddress", &agreementaddress,  true },
+	
+	// settlements
+	{ "settlements",  "settlementaddress",&settlementaddress, true },
 	
     // pegs
     { "pegs",       "pegscreate",     &pegscreate,      true },

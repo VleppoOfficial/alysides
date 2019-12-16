@@ -31,6 +31,7 @@
 #include "CCPayments.h"
 #include "CCGateways.h"
 #include "CCagreements.h"
+#include "CCsettlements.h"
 #include "CCtokens.h"
 #include "CCImportGateway.h"
 
@@ -245,6 +246,16 @@ uint8_t AgreementsCCpriv[32] = { 0x0d, 0x88, 0x03, 0x42, 0x36, 0x25, 0xd5, 0xe3,
 #undef FUNCNAME
 #undef EVALCODE
 
+// Settlements
+#define FUNCNAME IsSettlementsInput
+#define EVALCODE EVAL_SETTLEMENTS
+const char *SettlementsCCaddr = "";
+const char *SettlementsNormaladdr = "RHnZ1ZkHFF44X364yDs85QYEhnzGyMRF8d";
+char SettlementsCChexstr[67] = { "03644763bcfef81ac4532b59b8542abae30d32cfe4233494587547613cb2e55ff9" };
+uint8_t SettlementsCCpriv[32] = {  };
+#include "CCcustom.inc"
+#undef FUNCNAME
+#undef EVALCODE
 
 #define FUNCNAME IsCClibInput
 #define EVALCODE EVAL_FIRSTUSER
@@ -455,6 +466,14 @@ struct CCcontract_info *CCinit(struct CCcontract_info *cp, uint8_t evalcode)
 			memcpy(cp->CCpriv, AgreementsCCpriv, 32);
 			cp->validate = AgreementsValidate;
 			cp->ismyvin = IsAgreementsInput;
+			break;
+		case EVAL_SETTLEMENTS:
+			strcpy(cp->unspendableCCaddr, SettlementsCCaddr);
+			strcpy(cp->normaladdr, SettlementsNormaladdr);
+			strcpy(cp->CChexstr, SettlementsCChexstr);
+			memcpy(cp->CCpriv, SettlementsCCpriv, 32);
+			cp->validate = SettlementsValidate;
+			cp->ismyvin = IsSettlementsInput;
 			break;
         case EVAL_IMPORTGATEWAY:
 			strcpy(cp->unspendableCCaddr, ImportGatewayCCaddr);
