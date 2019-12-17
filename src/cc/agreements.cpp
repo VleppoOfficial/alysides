@@ -67,12 +67,12 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> clientpubkey, int64_t deposit, int64_t timelock)
 {
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	
+	CPubkey mypk;
     struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_AGREEMENTS);
 	
     if ( txfee == 0 )
         txfee = 10000;
-    CPubkey mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
+    mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
 	
 	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "not done yet");
 	
