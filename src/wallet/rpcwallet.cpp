@@ -5599,6 +5599,8 @@ int32_t verus_staked(CBlock *pBlock, CMutableTransaction &txNew, uint32_t &nBits
 #include "../cc/CCMarmara.h"
 #include "../cc/CCPayments.h"
 #include "../cc/CCPegs.h"
+#include "../cc/CCagreements.h"
+#include "../cc/CCsettlements.h"
 
 int32_t ensure_CCrequirements(uint8_t evalcode)
 {

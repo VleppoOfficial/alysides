@@ -30,9 +30,9 @@
 #include "CCMarmara.h"
 #include "CCPayments.h"
 #include "CCGateways.h"
+#include "CCtokens.h"
 #include "CCagreements.h"
 #include "CCsettlements.h"
-#include "CCtokens.h"
 #include "CCImportGateway.h"
 
 /*
