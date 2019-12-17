@@ -70,7 +70,7 @@
 //
 //===========================================================================
 
-CScript EncodeAgreementCreateOpRet(std::string name, uint256 datahash, std::vector<uint8_t> creatorpubkey, clientpubkey, int64_t deposit, timelock)
+CScript EncodeAgreementCreateOpRet(std::string name, uint256 datahash, std::vector<uint8_t> creatorpubkey, clientpubkey, int64_t deposit, int64_t timelock)
 {
     CScript opret; uint8_t evalcode = EVAL_AGREEMENTS, funcid = 'n';
     opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << name << datahash << creatorpubkey << clientpubkey << deposit << timelock);
