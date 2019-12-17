@@ -8269,17 +8269,19 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
 	
 	std::vector<unsigned char> clientpubkey(ParseHex(params[2].get_str().c_str()));
 	
+	deposit = 0;
 	if (params.size() >= 4)     {
         deposit = atof((char *)params[3].get_str().c_str()) * COIN + 0.00000000499999;
-        if (deposit <= 0)    {
+        if (deposit < 0)    {
 			Unlock2NSPV(mypk);
 			throw runtime_error("Deposit must be positive\n");
 		}
     }
 	
+	timelock = 0;
 	if (params.size() == 5)     {
         timelock = atoll(params[3].get_str().c_str());
-		if (timelock <= 0) {
+		if (timelock < 0) {
 			Unlock2NSPV(mypk);
 			throw runtime_error("Incorrect deposit timelock\n");
 		}
