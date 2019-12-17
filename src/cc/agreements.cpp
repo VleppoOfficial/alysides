@@ -77,7 +77,7 @@ CScript EncodeAgreementCreateOpRet(std::string name, uint256 datahash, std::vect
     return(opret);
 }
 
-uint8_t DecodeAgreementCreateOpRet(CScript scriptPubKey, std::string &name, uint256 &datahash, std::vector<uint8_t> &creatorpubkey, &clientpubkey, int64_t &deposit, &timelock)
+uint8_t DecodeAgreementCreateOpRet(CScript scriptPubKey, std::string &name, uint256 &datahash, std::vector<uint8_t> &creatorpubkey, &clientpubkey, int64_t &deposit, int64_t &timelock)
 {
     std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
     GetOpReturnData(scriptPubKey, vopret);
