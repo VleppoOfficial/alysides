@@ -14,7 +14,6 @@
  ******************************************************************************/
 
 #include "CCagreements.h"
-#include "key_io.h"
 
 //===========================================================================
 //
@@ -68,7 +67,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> clientpubkey, int64_t deposit, int64_t timelock)
 {
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	CPubkey mypk;
+	CPubKey mypk;
     struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_AGREEMENTS);
 	
     if ( txfee == 0 )
