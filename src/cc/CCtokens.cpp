@@ -199,7 +199,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             // token update
             // token tx structure for 'u':
             //vin.0: normal input
-            //vin.1: previous token CC update baton
+            //vin.n-1: previous token CC update baton
             //vout.0: next token update baton with cc opret
             //vout.1 to n-2: normal output for change (if any)
             //vout.n-1: opreturn EVAL_TOKENS 'u' pk tokenid
@@ -1495,7 +1495,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             }
             if (!(total < samplenum || samplenum == 0))
                 break;
-            if (myGetTransaction((batontxid = txBaton.vin[1].prevout.hash), txBaton, hashBlock) && !hashBlock.IsNull()) {
+            if (myGetTransaction((batontxid = txBaton.vin[txBaton.vin.size() - 1].prevout.hash), txBaton, hashBlock) && !hashBlock.IsNull()) {
                 sourcetxid = batontxid;
             }
         }
