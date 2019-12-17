@@ -70,14 +70,14 @@
 //
 //===========================================================================
 
-CScript EncodeAgreementCreateOpRet(std::string name, uint256 datahash, std::vector<uint8_t> creatorpubkey, clientpubkey, int64_t deposit, int64_t timelock)
+CScript EncodeAgreementCreateOpRet(std::string name, uint256 datahash, std::vector<uint8_t> creatorpubkey, std::vector<uint8_t> clientpubkey, int64_t deposit, int64_t timelock)
 {
     CScript opret; uint8_t evalcode = EVAL_AGREEMENTS, funcid = 'n';
     opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << name << datahash << creatorpubkey << clientpubkey << deposit << timelock);
     return(opret);
 }
 
-uint8_t DecodeAgreementCreateOpRet(CScript scriptPubKey, std::string &name, uint256 &datahash, std::vector<uint8_t> &creatorpubkey, &clientpubkey, int64_t &deposit, int64_t &timelock)
+uint8_t DecodeAgreementCreateOpRet(CScript scriptPubKey, std::string &name, uint256 &datahash, std::vector<uint8_t> &creatorpubkey, std::vector<uint8_t> &clientpubkey, int64_t &deposit, int64_t &timelock)
 {
     std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
     GetOpReturnData(scriptPubKey, vopret);

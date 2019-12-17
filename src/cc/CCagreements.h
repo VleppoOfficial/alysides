@@ -23,8 +23,8 @@
 
 #include "CCinclude.h"
 
-CScript EncodeAgreementCreateOpRet(std::string name, uint256 datahash, std::vector<uint8_t> creatorpubkey, clientpubkey, int64_t deposit, int64_t timelock);
-uint8_t DecodeAgreementCreateOpRet(CScript scriptPubKey, std::string &name, uint256 &datahash, std::vector<uint8_t> &creatorpubkey, &clientpubkey, int64_t &deposit, int64_t &timelock);
+CScript EncodeAgreementCreateOpRet(std::string name, uint256 datahash, std::vector<uint8_t> creatorpubkey, std::vector<uint8_t> clientpubkey, int64_t deposit, int64_t timelock);
+uint8_t DecodeAgreementCreateOpRet(CScript scriptPubKey, std::string &name, uint256 &datahash, std::vector<uint8_t> &creatorpubkey, std::vector<uint8_t> &clientpubkey, int64_t &deposit, int64_t &timelock);
 
 bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
 
