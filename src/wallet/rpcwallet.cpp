@@ -8239,6 +8239,60 @@ UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& myp
     return(CCaddress(cp,(char *)"Agreements",pubkey));
 }
 
+UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    UniValue result(UniValue::VOBJ);
+	uint256 datahash;
+	std::string name;
+	int64_t deposit, timelock;
+
+    if ( fHelp || params.size() < 3 || params.size() > 5)
+        throw runtime_error("agreementcreate name datahash clientpubkey [deposit][timelock]\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    const CKeyStore& keystore = *pwalletMain;
+    Lock2NSPV(mypk);
+	
+	name = params[0].get_str();
+    if (name.size() == 0 || name.size() > 64)   {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Agreement name must not be empty and up to 64 characters\n");
+    }
+
+    datahash = Parseuint256((char *)params[1].get_str().c_str());
+	if (datahash == zeroid)   {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Data hash empty or invalid\n");
+    }
+	
+	std::vector<unsigned char> clientpubkey(ParseHex(params[2].get_str().c_str()));
+	
+	if (params.size() >= 4)     {
+        deposit = atof((char *)params[3].get_str().c_str()) * COIN + 0.00000000499999;
+        if (deposit <= 0)    {
+			Unlock2NSPV(mypk);
+			throw runtime_error("Deposit must be positive\n");
+		}
+    }
+	
+	if (params.size() == 5)     {
+        timelock = atoll(params[3].get_str().c_str());
+		if (timelock <= 0) {
+			Unlock2NSPV(mypk);
+			throw runtime_error("Incorrect deposit timelock\n");
+		}
+    }
+
+	result = AgreementCreate(mypk, 0, name, datahash, clientpubkey, deposit, timelock);
+    if ( result[JSON_HEXTX].getValStr().size() > 0  )
+    {
+        result.push_back(Pair("result", "success"));
+    }
+	
+    Unlock2NSPV(mypk);
+    return(result);
+}
+
 UniValue settlementaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     struct CCcontract_info *cp,C; std::vector<unsigned char> pubkey;
