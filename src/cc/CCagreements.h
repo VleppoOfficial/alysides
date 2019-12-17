@@ -23,12 +23,12 @@
 
 #include "CCinclude.h"
 
-CScript EncodeAgreementCreateOpRet(uint8_t funcid,CPubKey pk);
-uint8_t DecodeAgreementCreateOpRet(CPubKey &pk,CScript scriptPubKey);
+CScript EncodeAgreementCreateOpRet(std::string name, uint256 datahash, std::vector<uint8_t> creatorpubkey, clientpubkey, int64_t deposit, timelock);
+uint8_t DecodeAgreementCreateOpRet(CScript scriptPubKey, std::string &name, uint256 &datahash, std::vector<uint8_t> &creatorpubkey, &clientpubkey, int64_t &deposit, &timelock);
 
 bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
 
-//helpers
+int64_t IsAgreementsvout(struct CCcontract_info *cp,const CTransaction& tx,int32_t v);
 
 UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> clientpubkey, int64_t deposit, int64_t timelock);
 
