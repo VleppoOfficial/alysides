@@ -16,52 +16,163 @@
 #include "CCagreements.h"
 
 /*
-	AgreementCreate: (no CC inputs - don't validate)
+
+Note: version numbers should be reset after contract acceptance
+
+Agreements transaction types:
+	
+	'p' - agreement proposal (possibly doesn't have CC inputs):
 	vins.* normal input
-	vout.0 marker (for viewing in agreementlist, spend it to cancel agreement)
-	vout.1 proposal accept CC output - spend as client to approve proposal (sent to client's CC addr)
-	vout.2 update baton (sent to 1of2 addr)
-	vout.3 dispute baton (sent to 1of2 addr)
+	vin.n-1 previous proposal baton (optional)
+		CC input - unlocks validation
+	vout.0 marker
+		can't be spent (most likely)
+		sent to global address
+	vout.1 response hook
+		can be spent by 'p', 'c' or 'u' transactions
+		sent to seller/buyer 1of2 address
 	vout.n-2 change
-	vout.n-1 OP_RETURN EVAL_AGREEMENTS 'n' name datahash creatorpubkey clientpubkey [deposit] [timelock]
+	vout.n-1 OP_RETURN
+		EVAL_AGREEMENTS 'p'
+		proposaltype (proposal create, proposal update, contract update, contract cancel)
+		datahash
+		initiatorpubkey
+		receiverpubkey (can't be changed in subsequent updates, enforced by validation)
+		[description]
+		[mediatorpubkey]
+		[deposit] (can't be changed if proposal was accepted)
+		[mediatorfee](can't be changed if proposal was accepted)
+		[agreementtxid]
+		[prevproposaltxid]
+		[depositsplit](only if tx is a contract cancel request)
 	
-	AgreementAccept:
+	'c' - proposal acceptance and contract creation:
 	vins.* normal input
-	vin.n-1 proposal accept CC input (only client can spend)
-	vout.0 invoice CC output (may include deposit, spend to mark agreement as paid & reclaim deposit)
+	vin.n-1 latest proposal by seller
+	vout.0 marker
+		can't be spent (most likely)
+		sent to global address
+	vout.1 update baton
+		can be spent by 'u' transactions, provided they also spend the appropriate 'p' transaction
+		sent to seller/buyer 1of2 address
+	vout.2 seller dispute baton
+		can be spent by 'd' transactions
+		sent to seller CC address
+	vout.3 buyer dispute baton
+		can be spent by 'd' transactions
+		sent to buyer CC address
+	vout.4 invoice hook (can also be deposit)
+		sent to agreements global CC address
+		if no mediator:
+			can be spent by a Settlements Payment transaction
+		if mediator exists:
+			can be spent by a Settlements Payment transaction (if buyer) or a 'r' transaction (if mediator)
 	vout.n-2 change
-	vout.n-1 OP_RETURN EVAL_AGREEMENTS 'a' ...
+	vout.n-1 OP_RETURN
+		EVAL_AGREEMENTS 'c'
+		proposaltxid
+		sellerpubkey
+		buyerpubkey
 	
-	AgreementDispute: <- need validation rules on timeframe
+	'u' - contract update:
 	vins.* normal input
-	vin.n-1 previous dispute baton
-	vout.0 next dispute baton (sent to 1of2 addr)
-	vout.1 dispute resolve CC output (spend to resolve dispute - sent to own address)
+	vin.n-1 latest proposal by other party
+	vout.0 marker
+		can't be spent (most likely)
+		sent to global address
+	vout.1 next update baton
+		can be spent by 'u' transactions, provided they also spend the appropriate 'p' transaction
+		sent to seller/buyer 1of2 address
+	vout.2 deposit split to party 1
+		sent to party 1 normal address
+	vout.3 deposit split to party 2
+		sent to party 2 normal address
 	vout.n-2 change
-	vout.n-1 OP_RETURN EVAL_AGREEMENTS 'd' ...
+	vout.n-1 OP_RETURN
+		EVAL_AGREEMENTS 'u'
+		lastupdatetxid
+		updateproposaltxid
+		type (contract update, contract cancel)
 	
-	AgreementDisputeResolve:
+	'd' - contract dispute:
 	vins.* normal input
-	vin.n-1 dispute resolve CC input
+	vin.n-1 previous dispute by disputer
+	vout.0 marker
+		can't be spent (most likely)
+		sent to global address
+	vout.1 next dispute baton
+		can be spent by 'd' transactions
+		sent to disputer CC address
+	vout.2 response hook (can also be mediator fee)
+		can be spent by 'r' transactions
+		if no mediator:
+			sent to disputer CC address
+		if mediator exists:
+			sent to mediator CC address
 	vout.n-2 change
-	vout.n-1 OP_RETURN EVAL_AGREEMENTS 'r' ...
-	
-	AgreementUpdate: <- need validation rules on permissions
+	vout.n-1 OP_RETURN
+		EVAL_AGREEMENTS 'd'
+		lastdisputetxid(is this needed?)
+		disputetype(light, heavy)
+		initiatorpubkey(is this needed?)
+		receiverpubkey(is this needed?)
+		[description]
+		[disputehash]
+		
+	'r' - dispute resolve:
 	vins.* normal input
-	vin.n-1 previous update baton
-	----
-	vout.0 next update baton (sent to 1of2 addr)
+	vin.n-1 dispute that is being resolved
+	vout.0 marker
+		can't be spent (most likely)
+		sent to global address
+	vout.1 mediator fee OR change
+		if no mediator:
+			sent to disputer CC address
+		if mediator exists:
+			sent to mediator CC address
+	vout.2 deposit redeem
+		sent to either party 1 or 2, dependent on mediator
 	vout.n-2 change
-	vout.n-1 OP_RETURN EVAL_AGREEMENTS 'u' ...
+	vout.n-1 OP_RETURN
+		EVAL_AGREEMENTS 'r'
+		disputetxid
+		verdict(closed by disputer, closed by mediator, deposit redeemed)
+		[rewardedpubkey]
+		[message]
 	
-	AgreementCancel: <- need validation rules on permissions
-	vins.* normal input
-	vin.n-1 agreement marker
-	----
-	vout.n-2 change
-	vout.n-1 OP_RETURN EVAL_AGREEMENTS 'c' ...
+Agreements RPCs:
 	
-	
+	agreementaddress
+		Gets relevant agreement CC, normal, global addresses, etc.
+	agreementlist
+		Gets every marker in the Agreements global address.
+	agreementpropose(datahash receiverpubkey [description][mediatorpubkey][deposit][mediatorfee][prevproposaltxid])
+		Creates a proposal(update) type transaction, which will need to be confirmed by the buyer.
+	agreementupdate(agreementtxid datahash [description][mediatorpubkey][prevproposaltxid])
+		Creates a contract update type transaction, which will need to be confirmed by the other party.
+	agreementcancel(agreementtxid datahash [description][depositsplit][prevproposaltxid])
+		Creates a contract cancel type transaction, which will need to be confirmed by the other party.
+	agreementaccept(proposaltxid)
+		Accepts a proposal type transaction. 
+		This RPC is context aware:
+			if the 'p' tx is a non-contract proposal, it will create a 'c' tx
+			if it is update request, then it will create 'u' tx that is of update type
+			if it is cancel request, then it will create 'u' tx that is of cancel type
+	agreementdispute(agreementtxid disputetype [description][disputehash])
+		Creates a new agreement dispute.
+	agreementresolve(agreementtxid disputetxid verdict [rewardedpubkey][message])
+		Resolves the specified agreement dispute.
+	agreementinfo(txid)
+		Retrieves info about the specified Agreements transaction.
+		TODO: Add what info will be displayed for each tx
+	agreementviewupdates(agreementtxid)
+		Retrieves a list of updates for the specified agreement.
+	agreementviewdisputes(agreementtxid)
+		Retrieves a list of disputes for the specified agreement.
+	agreementinventory([pubkey])
+		Retrieves every agreement wherein the specified pubkey is the buyer, seller or mediator.
+		Can look up both current and past agreements.
+
 */
 
 //===========================================================================
@@ -152,9 +263,24 @@ UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::string name, ui
 }
 
 /*
-UniValue AgreementUpdate(agreementtxid);
-UniValue AgreementCancel(agreementtxid);
-UniValue AgreementDisputeCreate(agreementtxid);
-UniValue AgreementDisputeResolve(agreementtxid);
-UniValue AgreementAcceptProposal(agreementtxid);
+UniValue AgreementCreate();
+	creates new proposals, creator becomes seller
+UniValue AgreementAccept();
+	accepts proposals and turns them into contracts, only done by designated client
+
+//Requests and related
+UniValue AgreementRequestUpdate();
+	creates an update request, only needed in contract phase
+UniValue AgreementUpdate();
+	updates an agreement, if in contract phase you also need request from other party
+UniValue AgreementRequestCancel();
+UniValue AgreementCancel();
+
+
+UniValue AgreementInfo(agreementtxid);
+	lists info about specific agreement (TODO: what info?)
+UniValue AgreementList();
+	lists all agreements/proposals/contracts (canceled ones may be omitted?)
+(?)UniValue AgreementInventory();
+
 */

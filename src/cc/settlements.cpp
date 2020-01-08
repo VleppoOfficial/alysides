@@ -15,6 +15,68 @@
 
 #include "CCsettlements.h"
 
+/*
+TODO:
+permissions on agreement deposit reclaim
+
+Settlements workflow:
+
+0. Party 1 reclaims agreement deposit. (might not be in scope for Settlements?)
+Agreement -> deposit -> P1
+
+1. Party 1 sends invoice/request to party 2 to pay (payment) to escrow. (payment) can be coins or tokens.
+The request can be for an agreement invoice (with agreement id of course), standalone invoice, or loan/deposit.
+The request includes a timelock value in seconds for the requests and escrows expiry time.
+P1 -> request -> P2
+
+2. Party 2 accepts request, pays the (payment) into escrow. If the request is an agreement invoice, party 2 must reclaim deposit.
+For this step the request must not be expired. The escrow has a new timelock set up, with its value inherited from the request timelock.
+P2 -> (payment) -> Escrow (Settlements 1of2 CC address)
+Agreement -> deposit -> P2 (if agreement invoice)
+
+3a. Party 1 sends (asset) to escrow, reclaims the coins/tokens that were put into escrow by party 2 at step 2.
+(asset) can be coins or tokens, but must be opposite of (payment), i.e. if (payment) is in coins, (asset) must be in tokens, or vice versa. (GOOD PATH)
+P1 -> (asset) -> Escrow -> (payment) -> P1
+
+3b. Party 2 withdraws their (payment) from the escrow before party 1 fulfills their end of the deal. The timelock must be expired for this step to be available. (BAD PATH)
+Escrow -> (payment) -> P2
+
+4a. If initial request is an agreement or standalone invoice, party 2 claims (asset) put in the escrow at step 3a. (INVOICE END)
+Escrow -> (asset) -> P2
+
+4b. If initial request is a loan/deposit, party 1 sends (payment) to escrow and reclaim the (asset) from step 3a. (GOOD PATH - LOAN)
+P1 -> (payment) -> Escrow -> (asset) -> P1
+
+4c. If initial request is a loan/deposit, party 2 claims the (asset) from step 3a. The timelock must be expired for this step to be available. (BAD PATH - LOAN)
+Escrow -> (asset) -> P2
+
+5. If initial request is a loan/deposit, party 2 reclaims (payment) put in the escrow at step 4b. (LOAN END)
+Escrow -> (payment) -> P2
+
+RPC list:
+P1 settlementcreate 'c' - used in step 1
+P2 settlementaccept 'x' - used in step 2
+P1 settlementassetsend 'a' - used in step 3a
+P2 settlementpaymentclaim 'p' - used in steps 3b and 5
+P1 settlementpaymentsend 'r' - used in step 4b
+P2 settlementassetclaim 'l' - used in steps 4a and 4c
+
+Agreement/settlement invoice workflow:
+P1 settlementcreate
+P2 settlementaccept
+P1 settlementassetsend or P2 settlementpaymentclaim
+P2 settlementassetclaim
+
+Loan workflow:
+P1 settlementcreate
+P2 settlementaccept
+P1 settlementassetsend or P2 settlementpaymentclaim
+P1 settlementpaymentsend or P2 settlementassetclaim
+P2 settlementpaymentclaim
+
+
+*/
+
 //===========================================================================
 //
 // Opret encoding/decoding functions
