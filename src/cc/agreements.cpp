@@ -26,7 +26,7 @@ Agreements transaction types:
 	vin.n-1 previous proposal baton (optional)
 		CC input - unlocks validation
 	vout.0 marker
-		can't be spent (most likely)
+		can't be spent
 		sent to global address
 	vout.1 response hook
 		can be spent by 'p', 'c' or 'u' transactions
@@ -50,7 +50,7 @@ Agreements transaction types:
 	vins.* normal input
 	vin.n-1 latest proposal by seller
 	vout.0 marker
-		can't be spent (most likely)
+		can't be spent
 		sent to global address
 	vout.1 update baton
 		can be spent by 'u' transactions, provided they also spend the appropriate 'p' transaction
@@ -64,32 +64,32 @@ Agreements transaction types:
 	vout.4 invoice hook (can also be deposit)
 		sent to agreements global CC address
 		if no mediator:
-			can be spent by a Settlements Payment transaction
+			can be spent by a Settlements Payment transaction or 'u' transaction
 		if mediator exists:
-			can be spent by a Settlements Payment transaction (if buyer) or a 'r' transaction (if mediator)
+			can be spent by a Settlements Payment transaction (if buyer), 'u' transaction, or a 'r' transaction (if mediator)
 	vout.n-2 change
 	vout.n-1 OP_RETURN
 		EVAL_AGREEMENTS 'c'
-		proposaltxid
 		sellerpubkey
 		buyerpubkey
+		mediator (true/false)
+		[refagreementtxid]
 	
 	'u' - contract update:
 	vins.* normal input
 	vin.n-1 latest proposal by other party
-	vout.0 marker
-		can't be spent (most likely)
-		sent to global address
-	vout.1 next update baton
+	vout.0 next update baton
 		can be spent by 'u' transactions, provided they also spend the appropriate 'p' transaction
 		sent to seller/buyer 1of2 address
-	vout.2 deposit split to party 1
+	vout.1 deposit split to party 1
 		sent to party 1 normal address
-	vout.3 deposit split to party 2
+	vout.2 deposit split to party 2
 		sent to party 2 normal address
 	vout.n-2 change
 	vout.n-1 OP_RETURN
 		EVAL_AGREEMENTS 'u'
+		initiatorpubkey
+		confirmerpubkey
 		lastupdatetxid
 		updateproposaltxid
 		type (contract update, contract cancel)
@@ -97,13 +97,10 @@ Agreements transaction types:
 	'd' - contract dispute:
 	vins.* normal input
 	vin.n-1 previous dispute by disputer
-	vout.0 marker
-		can't be spent (most likely)
-		sent to global address
-	vout.1 next dispute baton
+	vout.0 next dispute baton
 		can be spent by 'd' transactions
 		sent to disputer CC address
-	vout.2 response hook (can also be mediator fee)
+	vout.1 response hook (can also be mediator fee)
 		can be spent by 'r' transactions
 		if no mediator:
 			sent to disputer CC address
@@ -122,15 +119,12 @@ Agreements transaction types:
 	'r' - dispute resolve:
 	vins.* normal input
 	vin.n-1 dispute that is being resolved
-	vout.0 marker
-		can't be spent (most likely)
-		sent to global address
-	vout.1 mediator fee OR change
+	vout.0 mediator fee OR change
 		if no mediator:
 			sent to disputer CC address
 		if mediator exists:
 			sent to mediator CC address
-	vout.2 deposit redeem
+	vout.1 deposit redeem
 		sent to either party 1 or 2, dependent on mediator
 	vout.n-2 change
 	vout.n-1 OP_RETURN
@@ -146,7 +140,7 @@ Agreements RPCs:
 		Gets relevant agreement CC, normal, global addresses, etc.
 	agreementlist
 		Gets every marker in the Agreements global address.
-	agreementpropose(datahash receiverpubkey [description][mediatorpubkey][deposit][mediatorfee][prevproposaltxid])
+	agreementpropose(name [receiverpubkey][datahash][description][mediatorpubkey][deposit][mediatorfee][prevproposaltxid])
 		Creates a proposal(update) type transaction, which will need to be confirmed by the buyer.
 	agreementupdate(agreementtxid datahash [description][mediatorpubkey][prevproposaltxid])
 		Creates a contract update type transaction, which will need to be confirmed by the other party.
@@ -164,15 +158,145 @@ Agreements RPCs:
 		Resolves the specified agreement dispute.
 	agreementinfo(txid)
 		Retrieves info about the specified Agreements transaction.
-		TODO: Add what info will be displayed for each tx
-	agreementviewupdates(agreementtxid)
+			- Check funcid of transaction.
+			- If 'p':
+				- Check proposaltype and data.
+				result: success;
+				name: name;
+				type: funcid desc;
+				initiator: pubkey1;
+				- If "p":
+					receiver: pubkey2 (or none);
+					mediator: pubkey3 (or none);
+					deposit: number (or none);
+					mediatorfee: number (or none);
+				- If "u":
+					receiver: pubkey2;
+					mediator: pubkey3 (or none);
+				- If "t":
+					receiver: pubkey2;
+					depositsplit: percentage; (how much the receiver will get)
+				iteration: iteration;
+				datahash: datahash;
+				description: description (or none);
+				prevproposaltxid: txid (or none);
+			- If 'c':
+				- Check accepted proposal and verify if its 'p' type.
+				result: success;
+				txid: txid;
+				name: name;
+				type: funcid desc;
+				seller: pubkey1;
+				buyer: pubkey2;
+				- Check for any 'u' transactions
+				- If canceled:
+					status: canceled;
+				- Else if deposit taken by mediator:
+					status: failed;
+				- Else if deposit spent by Settlements Payment:
+					- If payment has been withdrawn by buyer:
+						status: failed;
+					- Else if payment has been withdrawn by seller:
+						status: completed;
+				- Else:
+					status: active;
+				iteration: iteration;
+				datahash: datahash;
+				description: description (or none);
+				- Check for any 'd' transactions in both vouts
+					sellerdisputes: number;
+					buyerdisputes: number;
+				- If mediator = true:
+					mediator: pubkey3 (or none);
+					deposit: number;
+					mediatorfee: number;
+				proposaltxid: proposaltxid; <- which proposal was accepted
+				refagreementtxid: txid (or none);
+			- If 'u':
+				result: success;
+				txid: txid;
+				- Get update type
+				- If "u":
+					type: contract update;
+				- If "c":
+					type: contract cancel;
+				- Check accepted proposal and verify if its 'p' type.
+		TODO: Finish this later
+	agreementviewupdates(agreementtxid [samplenum][recursive])
 		Retrieves a list of updates for the specified agreement.
-	agreementviewdisputes(agreementtxid)
+	agreementviewdisputes(agreementtxid [samplenum][recursive])
 		Retrieves a list of disputes for the specified agreement.
 	agreementinventory([pubkey])
 		Retrieves every agreement wherein the specified pubkey is the buyer, seller or mediator.
 		Can look up both current and past agreements.
 
+Agreements validation code sketch
+	
+	- Fetch transaction
+	- Generic checks (measure boundaries, etc. Check other modules for inspiration)
+	- Get transaction funcid
+	- Switch case:
+		if funcid == 'c':
+			- Fetch the opret and make sure all data is included. If opret is malformed or data is missing, invalidate
+			- Get sellerpubkey, buyerpubkey, mediator and refagreementtxid
+				- Buyerpubkey: confirm that it isn't null and that current tx came from this pubkey
+			- Check if vout0 marker exists and is sent to global addr. If not, invalidate
+			- Check if vout1 update baton exists and is sent to seller/buyer 1of2 address. Confirm that 1of2 address can only be spent by the specified seller/buyer pubkeys.
+			- Check if vout2 seller dispute baton exists and is sent to seller CC address. Confirm that the address can only be spent by the specified seller pubkey.
+			- Check if vout3 buyer dispute baton exists and is sent to buyer CC address. Confirm that the address can only be spent by the specified buyer pubkey.
+			- Check if vout4 exists and its nValue is >= 10000 sats.
+				TODO: what to do with this? Which eval code to use for the deposit?
+			- Check if vin.n-1 exists and is a 'p' type transaction. If it is not correct or non-existant, invalidate, otherwise:
+				- Check if vout0 marker exists and is sent to global addr. If not, invalidate
+				- Check if vin.n-1 prevout is vout1 in 'p' tx
+				- Fetch the opret from 'p' tx and make sure all data is included. If opret is malformed or data is missing, invalidate
+				- Get proposaltype, initiatorpubkey, receiverpubkey, mediatorpubkey, agreementtxid, deposit, mediatorfee, depositsplit, datahash, description
+					- Proposaltype: must be "p" (proposal). If it is "u" (contract update) or "t" (contract terminate), invalidate
+					- Initiatorpubkey: confirm that 'p' tx came from this pubkey. Make sure that initiatorpubkey == sellerpubkey
+					- Receiverpubkey: confirm that the current tx came from this pubkey. Make sure that receiverpubkey == buyerpubkey
+					- Mediatorpubkey: if mediator == false, must be null (or failing that, just ignored). If mediator == true, must be a valid pubkey
+					- Agreementtxid: can be either null or valid agreement txid, however it must be the same as the refagreementtxid in current tx
+					- Deposit: if mediator == false, must be 0. Otherwise, check if the vout4 nValue is the same as this value
+					- Mediatorfee: if mediator == false, must be 0. Otherwise, must be more than 10000 satoshis
+					- Depositsplit: must be 0 (or failing that, just ignored)
+					- Datahash and description doesn't need to be validated, can be w/e
+				- Check if vin.n-1 exists in the 'p' type transaction. If it does, get the prevout txid, then run the Løøp. If it returns false, invalidate
+			- Misc Business rules
+				- Make sure that sellerpubkey != buyerpubkey != mediatorpubkey
+			return true?
+		if funcid == 'p': 
+				- Check if marker exists and is sent to global addr. If not, invalidate
+				- Check if response hook exists and is sent to 1of2 CC addr (we'll confirm if this address is correct later)
+				- Fetch the opret from currenttx and make sure all data is included. If opret is malformed or data is missing, invalidate
+				- Get initiatorpubkey, receiverpubkey, mediatorpubkey, proposaltype, agreementtxid, deposit, mediatorfee, depositsplit, datahash, description
+					- Initiatorpubkey: confirm that this tx came from this pubkey
+					- Receiverpubkey: check if pubkey is valid
+					- Mediatorpubkey: can be either null or valid pubkey
+					- Proposaltype: can be 'a'(proposal amend),'u'(contract update) or 't' (contract terminate). If it is 'c'(proposal create), invalidate as 'c' types shouldn't be able to trigger validation
+					- Agreementtxid: if proposaltype is 'a', agreementtxid must be zeroid.
+						Otherwise, check if agreementtxid is valid (optionally, check if its 'c' type and that initiator and receiver match)
+					- Deposit: only relevant if proposaltype is 'a' and mediatorpubkey is valid. Is otherwise ignored for now
+					- Mediatorfee: only relevant if proposaltype is 'a' and mediatorpubkey is valid, in which case it must be at least 10000 satoshis. Is otherwise ignored for now
+					- Depositsplit: only relevant if proposaltype is 't', and the deposit is non-zero. The deposit must be evenly divisible so that there are no remaining coins left
+					- Datahash and description doesn't need to be validated, can be w/e
+				- Save all this data somewhere
+				- If a 'p' type is being validated, that means it probably spent a previous 'p' type, therefore check vin.n-1 prevout and get the prevouttxid. if it doesn't exist or is incorrect, invalidate
+				Run the Løøp(currenttxid, currentfuncid, prevouttxid):
+					- Get transaction(prevouttxid)
+					- Check if marker exists and is sent to global addr. If not, invalidate
+					- Check if response hook exists and is spent by currenttxid. If not, invalidate
+					- Fetch the opret from prevouttx and make sure all data is included. If opret is malformed or data is missing, invalidate
+					- Get initiatorpubkey, receiverpubkey, mediatorpubkey, proposaltype, agreementtxid, deposit, mediatorfee, depositsplit, datahash, description
+						- Initiatorpubkey: confirm that this tx came from this pubkey
+						- Receiverpubkey: check if pubkey is valid. 
+						- Mediatorpubkey: can be either null or valid pubkey
+		
+		
+	RecursiveProposalLøøp(proposaltxid,)
+	- Get proposal tx
+	- Check if marker exists and is sent to global addr. If not, invalidate
+	- Check if response hook exists and is sent to 1of2 CC addr (we'll confirm if this address is correct later)
+	
 */
 
 //===========================================================================
