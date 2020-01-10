@@ -415,10 +415,9 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	// if prevproposal tx exists
 	// get tx and opret
 	// check if proposaltype is 'p'
-	// 
 	
-	prevproposaltxid = zeroid;
-	refagreementtxid = zeroid;
+	//prevproposaltxid = zeroid;
+	//refagreementtxid = zeroid;
 	
 	// addnormalinputs
 	
