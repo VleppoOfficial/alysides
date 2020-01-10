@@ -577,7 +577,7 @@ static const CRPCCommand vRPCCommands[] =
 
 	// agreements
 	{ "agreements",   "agreementaddress", &agreementaddress,  true },
-	{ "agreements",   "agreementcreate",  &agreementcreate,   true },
+	{ "agreements",   "agreementpropose",  &agreementpropose,   true },
 	
 	// settlements
 	{ "settlements",  "settlementaddress",&settlementaddress, true },
