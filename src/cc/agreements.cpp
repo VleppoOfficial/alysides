@@ -361,7 +361,7 @@ int64_t IsAgreementsvout(struct CCcontract_info *cp,const CTransaction& tx,int32
 UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> buyer, std::vector<uint8_t> mediator, int64_t mediatorfee, int64_t deposit, uint256 prevproposaltxid)
 {
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	bool bBuyer = false; bMediator = false;
+	bool bBuyer = false, bMediator = false;
 	CPubKey mypk;
     struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_AGREEMENTS);
     if ( txfee == 0 )
