@@ -8241,15 +8241,14 @@ UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& myp
     return(CCaddress(cp,(char *)"Agreements",pubkey));
 }
 
-UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-	uint256 datahash;
+	uint256 datahash, prevproposaltxid;
 	std::string name;
-	int64_t deposit, timelock;
-
-    if ( fHelp || params.size() < 3 || params.size() > 5)
-        throw runtime_error("agreementcreate name datahash clientpubkey [deposit][timelock]\n");
+	int64_t mediatorfee, deposit, timelock;
+    if ( fHelp || params.size() < 4 || params.size() > 7)
+        throw runtime_error("agreementpropose name datahash buyer mediator [mediatorfee][deposit][prevproposaltxid]\n");
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     const CKeyStore& keystore = *pwalletMain;
@@ -8260,39 +8259,36 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
 		Unlock2NSPV(mypk);
         throw runtime_error("Agreement name must not be empty and up to 64 characters\n");
     }
-
     datahash = Parseuint256((char *)params[1].get_str().c_str());
 	if (datahash == zeroid)   {
 		Unlock2NSPV(mypk);
         throw runtime_error("Data hash empty or invalid\n");
     }
-	
-	std::vector<unsigned char> clientpubkey(ParseHex(params[2].get_str().c_str()));
-	
+	std::vector<unsigned char> buyer(ParseHex(params[2].get_str().c_str()));
+	std::vector<unsigned char> mediator(ParseHex(params[3].get_str().c_str()));
+	mediatorfee = 0;
+	if (params.size() >= 5)     {
+        mediatorfee = atof((char *)params[4].get_str().c_str()) * COIN + 0.00000000499999;
+        if (mediatorfee < 0)    {
+			Unlock2NSPV(mypk);
+			throw runtime_error("Mediator fee must be positive\n");
+		}
+    }
 	deposit = 0;
-	if (params.size() >= 4)     {
-        deposit = atof((char *)params[3].get_str().c_str()) * COIN + 0.00000000499999;
+	if (params.size() >= 6)     {
+        deposit = atof((char *)params[5].get_str().c_str()) * COIN + 0.00000000499999;
         if (deposit < 0)    {
 			Unlock2NSPV(mypk);
 			throw runtime_error("Deposit must be positive\n");
 		}
     }
-	
-	timelock = 0;
-	if (params.size() == 5)     {
-        timelock = atoll(params[3].get_str().c_str());
-		if (timelock < 0) {
-			Unlock2NSPV(mypk);
-			throw runtime_error("Incorrect deposit timelock\n");
-		}
+	prevproposaltxid = zeroid;
+	if (params.size() == 7)     {
+        prevproposaltxid = Parseuint256((char *)params[6].get_str().c_str());
     }
-
-	result = AgreementCreate(mypk, 0, name, datahash, clientpubkey, deposit, timelock);
-    if ( result[JSON_HEXTX].getValStr().size() > 0  )
-    {
+	result = AgreementPropose(mypk, 0, name, datahash, buyer, mediator, mediatorfee, deposit, prevproposaltxid);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
-    }
-	
     Unlock2NSPV(mypk);
     return(result);
 }
