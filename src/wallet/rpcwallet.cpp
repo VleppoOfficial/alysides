@@ -8244,7 +8244,7 @@ UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& myp
 UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-	uint256 datahash, prevproposaltxid;
+	uint256 datahash, prevproposaltxid, refagreementtxid;
 	std::string name;
 	int64_t mediatorfee, deposit, timelock;
     if ( fHelp || params.size() < 4 || params.size() > 8)
