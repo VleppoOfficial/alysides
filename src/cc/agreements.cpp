@@ -358,7 +358,7 @@ int64_t IsAgreementsvout(struct CCcontract_info *cp,const CTransaction& tx,int32
 //===========================================================================
 
 // agreementpropose - constructs a proposal(update) type transaction, which will need to be confirmed by the buyer
-UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> buyer, std::vector<uint8_t> mediator, int64_t mediatorfee, int64_t deposit, uint256 prevproposaltxid)
+UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> buyer, std::vector<uint8_t> mediator, int64_t mediatorfee, int64_t deposit, uint256 prevproposaltxid, uint256 refagreementtxid)
 {
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	bool bBuyer = false, bMediator = false;
@@ -368,35 +368,68 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
         txfee = 10000;
     mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
 	
+	// check name & datahash
 	if (name.empty() || name.size() > 64)
         CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Agreement name must not be empty and up to 64 characters");
 	if (datahash == zeroid)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Data hash empty or invalid");
+	// check if buyer pubkey exists and is valid
 	if (!buyer.empty())
 		if (pubkey2pk(buyer).IsValid())
 			bBuyer = true;
 		else
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Buyer pubkey invalid");
+	// check if mediator pubkey exists and is valid
 	if (!mediator.empty())
 		if (pubkey2pk(mediator).IsValid())
 			bMediator = true;
 		else
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Mediator pubkey invalid");
-	if(bMediator && mediatorfee < CC_MEDIATORFEE_MIN)
-		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Mediator fee is too low");
+	// checking if mypk != buyerpubkey != mediatorpubkey
+	if (bBuyer && pubkey2pk(buyer) == mypk)
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Seller pubkey cannot be the same as buyer pubkey");
+	if (bMediator && pubkey2pk(mediator) == mypk)
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Seller pubkey cannot be the same as mediator pubkey");
+	if (bBuyer && bMediator && pubkey2pk(mediator) == pubkey2pk(buyer))
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Buyer pubkey cannot be the same as mediator pubkey");
+	// if mediator exists, check if mediator fee is sufficient
+	if (bMediator && mediatorfee < CC_MEDIATORFEE_MIN)
+		if (mediatorfee == 0)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Mediator fee must be specified if valid mediator exists");
+		else
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Mediator fee is too low");
 	else
 		mediatorfee = 0;
-	if(bMediator && deposit < CC_DEPOSIT_MIN)
-		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Deposit is too low");
+	// if mediator exists, check if deposit is sufficient
+	if (bMediator && deposit < CC_DEPOSIT_MIN)
+		if (deposit == 0)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Deposit must be specified if valid mediator exists");
+		else
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Deposit is too low");
 	else
 		deposit = 0;
+	
 
 	// TODO: check prevproposaltxid
+	// things to check:
+	// if prevproposal tx exists
+	// get tx and opret
+	// check if proposaltype is 'p'
+	// 
+	
 	prevproposaltxid = zeroid;
+	refagreementtxid = zeroid;
 	
 	// addnormalinputs
 	
-	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "not done yet");
+	std::cerr << "buyer: " << bBuyer << std::endl;
+	std::cerr << "mediator: " << bMediator << std::endl;
+	std::cerr << "mediatorfee: " << mediatorfee << std::endl;
+	std::cerr << "deposit: " << deposit << std::endl;
+	std::cerr << "refagreementtxid: " << refagreementtxid.GetHex() << std::endl;
+	std::cerr << "prevproposaltxid: " << prevproposaltxid.GetHex() << std::endl;
+	//std::cerr << "buyer" << tokenid.GetHex() << " tokenIdOpret=" << tokenidOpret.GetHex() << " txid=" << tx.GetHash().GetHex() << std::endl;
+	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "ding!");
 	
     /*for(auto txid : bindtxids)
     {

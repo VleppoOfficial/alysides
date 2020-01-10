@@ -8247,8 +8247,8 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
 	uint256 datahash, prevproposaltxid;
 	std::string name;
 	int64_t mediatorfee, deposit, timelock;
-    if ( fHelp || params.size() < 4 || params.size() > 7)
-        throw runtime_error("agreementpropose name datahash buyer mediator [mediatorfee][deposit][prevproposaltxid]\n");
+    if ( fHelp || params.size() < 4 || params.size() > 8)
+        throw runtime_error("agreementpropose name datahash buyer mediator [mediatorfee][deposit][prevproposaltxid][refagreementtxid]\n");
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     const CKeyStore& keystore = *pwalletMain;
@@ -8283,10 +8283,13 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
 		}
     }
 	prevproposaltxid = zeroid;
-	if (params.size() == 7)     {
+	if (params.size() >= 7)     {
         prevproposaltxid = Parseuint256((char *)params[6].get_str().c_str());
     }
-	result = AgreementPropose(mypk, 0, name, datahash, buyer, mediator, mediatorfee, deposit, prevproposaltxid);
+	if (params.size() == 8)     {
+        refagreementtxid = Parseuint256((char *)params[7].get_str().c_str());
+    }
+	result = AgreementPropose(mypk, 0, name, datahash, buyer, mediator, mediatorfee, deposit, prevproposaltxid, refagreementtxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
