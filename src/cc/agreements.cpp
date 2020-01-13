@@ -357,11 +357,10 @@ int64_t IsAgreementsvout(struct CCcontract_info *cp,const CTransaction& tx,int32
 // RPCs - tx creation
 //===========================================================================
 
-// agreementpropose - constructs a proposal(update) type transaction, which will need to be confirmed by the buyer
+// agreementpropose - constructs a 'p' transaction, with the 'p' proposal type
 UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> buyer, std::vector<uint8_t> mediator, int64_t mediatorfee, int64_t deposit, uint256 prevproposaltxid, uint256 refagreementtxid)
 {
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	//bool bBuyer = false, bMediator = false;
 	CPubKey mypk;
     struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_AGREEMENTS);
     if(txfee == 0)
@@ -373,18 +372,15 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
         CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Agreement name must not be empty and up to 64 characters");
 	if(datahash == zeroid)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Data hash empty or invalid");
+	
 	// check if buyer pubkey exists and is valid
 	if(!buyer.empty() && !(pubkey2pk(buyer).IsValid()))
-		/*if(pubkey2pk(buyer).IsValid())
-			bBuyer = true;
-		else*/
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Buyer pubkey invalid");
+	
 	// check if mediator pubkey exists and is valid
 	if(!mediator.empty() && !(pubkey2pk(mediator).IsValid()))
-		/*if(pubkey2pk(buyer).IsValid())
-			bBuyer = true;
-		else*/
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Mediator pubkey invalid");
+	
 	// checking if mypk != buyerpubkey != mediatorpubkey
 	if(pubkey2pk(buyer).IsValid() && pubkey2pk(buyer) == mypk)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Seller pubkey cannot be the same as buyer pubkey");
@@ -392,6 +388,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Seller pubkey cannot be the same as mediator pubkey");
 	if(pubkey2pk(buyer).IsValid() && pubkey2pk(mediator).IsValid() && pubkey2pk(mediator) == pubkey2pk(buyer))
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Buyer pubkey cannot be the same as mediator pubkey");
+	
 	// if mediator exists, check if mediator fee is sufficient
 	if(pubkey2pk(mediator).IsValid()) {
 		if(mediatorfee == 0)
@@ -401,6 +398,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	}
 	else
 		mediatorfee = 0;
+	
 	// if mediator exists, check if deposit is sufficient
 	if(pubkey2pk(mediator).IsValid()) {
 		if(deposit == 0)
@@ -435,6 +433,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	
 	// addnormalinputs
 	
+	std::cerr << "seller: " << std::vector<uint8_t>(mypk.begin(),mypk.end()) << std::endl;
 	std::cerr << "buyer: " << HexStr(buyer) << std::endl;
 	std::cerr << "buyerisValid: " << pubkey2pk(buyer).IsValid() << std::endl;
 	std::cerr << "mediator: " << HexStr(mediator) << std::endl;
@@ -449,7 +448,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	if(AddNormalinputs(mtx,mypk,txfee+CC_MARKER_VALUE*2,64,pk.IsValid()) >= txfee+CC_MARKER_VALUE*2) {
 		/*
 		if(prevproposaltxid != zeroid)
-			mtx.vin.push_back(CTxIn(prevproposaltxid,updatebatonvout,CScript())); // vin.n-1 previous proposal (optional)
+			mtx.vin.push_back(CTxIn(prevproposaltxid,updatebatonvout,CScript())); // vin.n-1 previous proposal (optional, will trigger validation)
 		*/
 		mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, GetUnspendable(cp, NULL))); // vout.0 marker
 		/*
@@ -463,6 +462,10 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "error adding normal inputs");
 }
 
+// agreementaccept - spend a 'p' transaction that was submitted by the other party.
+// this function is context aware and does different things dependent on the proposal type:
+// if txid opret has the 'p' proposal type, will create a 'c' transaction (create contract)
+// if txid opret has the 'u' or 't' proposal type, will create a 'u' transaction (update contract)
 //agreementaccept(txid proposaltype datahash)
 
 
