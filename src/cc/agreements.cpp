@@ -380,11 +380,6 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 		else*/
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Buyer pubkey invalid");
 	// check if mediator pubkey exists and is valid
-	if(!mediator.empty())
-		if(pubkey2pk(mediator).IsValid())
-			bMediator = true;
-		else
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Mediator pubkey invalid");
 	if(!mediator.empty() && !(pubkey2pk(mediator).IsValid()))
 		/*if(pubkey2pk(buyer).IsValid())
 			bBuyer = true;
