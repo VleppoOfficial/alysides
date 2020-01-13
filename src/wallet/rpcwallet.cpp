@@ -8296,6 +8296,15 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
     return(result);
 }
 
+UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    if ( fHelp || params.size() > 0 )
+        throw runtime_error("agreementlist\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    return(AgreementList());
+}
+
 UniValue settlementaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     struct CCcontract_info *cp,C; std::vector<unsigned char> pubkey;

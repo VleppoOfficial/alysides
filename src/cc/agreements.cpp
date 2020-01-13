@@ -1,16 +1,16 @@
 /******************************************************************************
- * Copyright © 2014-2019 The SuperNET Developers.                             *
- *                                                                            *
- * See the AUTHORS, DEVELOPER-AGREEMENT and LICENSE files at                  *
+ * Copyright © 2014-2019 The SuperNET Developers.							 *
+ *																			*
+ * See the AUTHORS, DEVELOPER-AGREEMENT and LICENSE files at				  *
  * the top-level directory of this distribution for the individual copyright  *
  * holder information and the developer policies on copyright and licensing.  *
- *                                                                            *
- * Unless otherwise agreed in a custom licensing agreement, no part of the    *
+ *																			*
+ * Unless otherwise agreed in a custom licensing agreement, no part of the	*
  * SuperNET software, including this file may be copied, modified, propagated *
  * or distributed except according to the terms contained in the LICENSE file *
- *                                                                            *
- * Removal or modification of this copyright notice is prohibited.            *
- *                                                                            *
+ *																			*
+ * Removal or modification of this copyright notice is prohibited.			*
+ *																			*
  ******************************************************************************/
 
 #include "CCagreements.h"
@@ -306,26 +306,58 @@ Agreements validation code sketch
 //===========================================================================
 
 //uint8_t DecodeAgreementOpRet()
-// just returns funcid of whatever is fed into it
+// just returns funcid of whatever agreement tx opret is fed into it
+uint8_t DecodeAgreementOpRet(const CScript scriptPubKey, uint8_t &proposaltype)
+{
+	std::vector<uint8_t> vopret, dummyInitiator, dummyReceiver, dummyMediator;
+	int64_t dummyMediatorFee, dummyDeposit, dummyDepositCut;
+	uint256 dummyHash, dummyAgreementTxid, dummyPrevProposalTxid;
+	std::string dummyName;
+	uint8_t evalcode, funcid, *script;
+	proposaltype = 0;
+	
+	GetOpReturnData(scriptPubKey, vopret);
+	script = (uint8_t *)vopret.data();
 
-		
+	if(script != NULL && vopret.size() > 2) {
+		evalcode = script[0];
+		if (evalcode != EVAL_AGREEMENTS) {
+			LOGSTREAM("agreementscc", CCLOG_DEBUG1, stream << "script[0] " << script[0] << " != EVAL_AGREEMENTS" << std::endl);
+			return (uint8_t)0;
+		}
+		funcid = script[1];
+		LOGSTREAM((char *)"agreementscc", CCLOG_DEBUG2, stream << "DecodeAgreementOpRet() decoded funcId=" << (char)(funcid ? funcid : ' ') << std::endl);
+
+		switch (funcid) {
+		case 'p':
+			return DecodeAgreementProposalOpRet(scriptPubKey, proposaltype, dummyInitiator, dummyReceiver, dummyMediator, dummyMediatorFee, dummyDeposit, dummyDepositCut, dummyHash, dummyAgreementTxid, dummyPrevProposalTxid, dummyName);
+		//case 'whatever':
+			//insert new cases here
+		default:
+			LOGSTREAM((char *)"agreementscc", CCLOG_DEBUG1, stream << "DecodeAgreementOpRet() illegal funcid=" << (int)funcid << std::endl);
+			return (uint8_t)0;
+		}
+	}
+	else
+		LOGSTREAM("agreementscc",CCLOG_DEBUG1, stream << "not enough opret.[" << vopret.size() << "]" << std::endl);
+	return (uint8_t)0;
+}
+
 CScript EncodeAgreementProposalOpRet(uint8_t proposaltype, std::vector<uint8_t> initiator, std::vector<uint8_t> receiver, std::vector<uint8_t> mediator, int64_t mediatorfee, int64_t deposit, int64_t depositcut, uint256 datahash, uint256 agreementtxid, uint256 prevproposaltxid, std::string name)
 {
-    CScript opret; uint8_t evalcode = EVAL_AGREEMENTS, funcid = 'p';
+	CScript opret; uint8_t evalcode = EVAL_AGREEMENTS, funcid = 'p';
 	proposaltype = 'p'; //temporary
-    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << proposaltype << initiator << receiver << mediator << mediatorfee << deposit << depositcut << datahash << agreementtxid << prevproposaltxid << name);
-    return(opret);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << proposaltype << initiator << receiver << mediator << mediatorfee << deposit << depositcut << datahash << agreementtxid << prevproposaltxid << name);
+	return(opret);
 }
 
 uint8_t DecodeAgreementProposalOpRet(CScript scriptPubKey, uint8_t &proposaltype, std::vector<uint8_t> &initiator, std::vector<uint8_t> &receiver, std::vector<uint8_t> &mediator, int64_t &mediatorfee, int64_t &deposit, int64_t &depositcut, uint256 &datahash, uint256 &agreementtxid, uint256 &prevproposaltxid, std::string &name)
 {
-    std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
-    GetOpReturnData(scriptPubKey, vopret);
-    if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> proposaltype; ss >> initiator; ss >> receiver; ss >> mediator; ss >> mediatorfee; ss >> deposit; ss >> depositcut; ss >> datahash; ss >> agreementtxid; ss >> prevproposaltxid; ss >> name) != 0 && evalcode == EVAL_AGREEMENTS)
-    {
-        return(funcid);
-    }
-    return(0);
+	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
+	GetOpReturnData(scriptPubKey, vopret);
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> proposaltype; ss >> initiator; ss >> receiver; ss >> mediator; ss >> mediatorfee; ss >> deposit; ss >> depositcut; ss >> datahash; ss >> agreementtxid; ss >> prevproposaltxid; ss >> name) != 0 && evalcode == EVAL_AGREEMENTS)
+		return(funcid);
+	return(0);
 }
 
 //===========================================================================
@@ -344,13 +376,13 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 
 int64_t IsAgreementsvout(struct CCcontract_info *cp,const CTransaction& tx,int32_t v)
 {
-    char destaddr[64];
-    if( tx.vout[v].scriptPubKey.IsPayToCryptoCondition() != 0 )
-    {
-        if( Getscriptaddress(destaddr,tx.vout[v].scriptPubKey) > 0 && strcmp(destaddr,cp->unspendableCCaddr) == 0 )
-            return(tx.vout[v].nValue);
-    }
-    return(0);
+	char destaddr[64];
+	if( tx.vout[v].scriptPubKey.IsPayToCryptoCondition() != 0 )
+	{
+		if( Getscriptaddress(destaddr,tx.vout[v].scriptPubKey) > 0 && strcmp(destaddr,cp->unspendableCCaddr) == 0 )
+			return(tx.vout[v].nValue);
+	}
+	return(0);
 }
 
 //===========================================================================
@@ -360,19 +392,19 @@ int64_t IsAgreementsvout(struct CCcontract_info *cp,const CTransaction& tx,int32
 // agreementpropose - constructs a 'p' transaction, with the 'p' proposal type
 UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> buyer, std::vector<uint8_t> mediator, int64_t mediatorfee, int64_t deposit, uint256 prevproposaltxid, uint256 refagreementtxid)
 {
-    CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	CPubKey mypk;
 	CTransaction prevproposaltx, refagreementtx;
 	int32_t numvouts;
 	uint256 hashBlock;
-    struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_AGREEMENTS);
-    if(txfee == 0)
-        txfee = 10000;
-    mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
+	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_AGREEMENTS);
+	if(txfee == 0)
+		txfee = 10000;
+	mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
 	
 	// check name & datahash
 	if(name.empty() || name.size() > 64)
-        CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Agreement name must not be empty and up to 64 characters");
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Agreement name must not be empty and up to 64 characters");
 	if(datahash == zeroid)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Data hash empty or invalid");
 	
@@ -415,7 +447,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	// check prevproposaltxid if specified
 	if(prevproposaltxid != zeroid) {
 		if(myGetTransaction(prevproposaltxid,prevproposaltx,hashBlock)==0 || (numvouts=prevproposaltx.vout.size())<=0)
-            CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
+			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
 		// TODO: get tx and opret
 		//if(DecodeGatewaysBindOpRet(depositaddr,tx.vout[numvouts-1].scriptPubKey,tmptokenid,coin,totalsupply,oracletxid,M,N,pubkeys,taddr,prefix,prefix2,wiftype)!='B')
 		//CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "invalid bindtxid " << txid.GetHex());
@@ -425,7 +457,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	// check refagreementtxid if specified
 	if(refagreementtxid != zeroid) {
 		if(myGetTransaction(refagreementtxid,refagreementtx,hashBlock)==0 || (numvouts=refagreementtx.vout.size())<=0)
-            CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "cant find specified reference agreement txid " << refagreementtxid.GetHex());
+			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "cant find specified reference agreement txid " << refagreementtxid.GetHex());
 		// TODO: get tx and opret
 		// confirm that refagreementtxid is agreement txid ('c' type)
 	}
@@ -444,6 +476,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 		/*
 		if(prevproposaltxid != zeroid)
 			mtx.vin.push_back(CTxIn(prevproposaltxid,updatebatonvout,CScript())); // vin.n-1 previous proposal (optional, will trigger validation)
+			// could also spend marker here, maybe?
 		*/
 		mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, GetUnspendable(cp, NULL))); // vout.0 marker
 		/*
@@ -491,3 +524,40 @@ UniValue AgreementList();
 (?)UniValue AgreementInventory();
 
 */
+
+UniValue AgreementList()
+{
+	UniValue result(UniValue::VARR);
+	std::vector<uint256> txids, foundtxids;
+	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > addressIndexCCMarker;
+
+	struct CCcontract_info *cp, C; uint256 txid, hashBlock;
+	CTransaction vintx; std::vector<uint8_t> origpubkey;
+	std::string name, description;
+	uint8_t proposaltype;
+
+	cp = CCinit(&C, EVAL_AGREEMENTS);
+
+	auto addAgreementTxid = [&](uint256 txid) {
+		if (myGetTransaction(txid, vintx, hashBlock) != 0) {
+			if (vintx.vout.size() > 0 && DecodeAgreementOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey, proposaltype) != 0) {
+				if (std::find(foundtxids.begin(), foundtxids.end(), txid) == foundtxids.end()) {
+					result.push_back(txid.GetHex());
+					foundtxids.push_back(txid);
+				}
+			}
+		}
+	};
+
+	//SetCCtxids(txids, cp->normaladdr,false,cp->evalcode,zeroid,'c');					  // find by old normal addr marker
+   	//for (std::vector<uint256>::const_iterator it = txids.begin(); it != txids.end(); it++) 	{
+	//	addTokenId(*it);
+	//}
+
+	SetCCunspents(addressIndexCCMarker,cp->unspendableCCaddr,true);	// find by burnable validated cc addr marker
+	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++) {
+		addAgreementTxid(it->first.txhash);
+	}
+
+	return(result);
+}

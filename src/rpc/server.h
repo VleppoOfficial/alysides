@@ -331,6 +331,7 @@ extern UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& m
 extern UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue settlementaddress(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue faucetfund(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue faucetget(const UniValue& params, bool fHelp, const CPubKey& mypk);
