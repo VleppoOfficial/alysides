@@ -415,6 +415,9 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	// get tx and opret
 	// check if proposaltype is 'p'
 	
+	// check refagreementtxid if it exists
+	// confirm that refagreementtxid is agreement txid
+	
 	/*
 	{
         if(myGetTransaction(txid,tx,hashBlock)==0 || (numvouts=tx.vout.size())<=0)
@@ -451,7 +454,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 		else
 		*/
 			mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, pk.IsValid())); // vout.1 response hook (no buyer)
-		return(FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementProposalOpRet('p',std::vector<uint8_t>(mypk.begin(),mypk.end()),buyer,mediator,mediatorfee,deposit,0,datahash,agreementtxid,prevproposaltxid,name)));
+		return(FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementProposalOpRet('p',std::vector<uint8_t>(mypk.begin(),mypk.end()),buyer,mediator,mediatorfee,deposit,0,datahash,refagreementtxid,prevproposaltxid,name)));
 	}
 	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "error adding normal inputs");
 }
