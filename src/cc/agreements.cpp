@@ -393,19 +393,21 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	if(pubkey2pk(buyer).IsValid() && pubkey2pk(mediator).IsValid() && pubkey2pk(mediator) == pubkey2pk(buyer))
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Buyer pubkey cannot be the same as mediator pubkey");
 	// if mediator exists, check if mediator fee is sufficient
-	if(pubkey2pk(mediator).IsValid())
+	if(pubkey2pk(mediator).IsValid()) {
 		if(mediatorfee == 0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Mediator fee must be specified if valid mediator exists");
 		else if(mediatorfee < CC_MEDIATORFEE_MIN)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Mediator fee is too low");
+	}
 	else
 		mediatorfee = 0;
 	// if mediator exists, check if deposit is sufficient
-	if(pubkey2pk(mediator).IsValid())
+	if(pubkey2pk(mediator).IsValid()) {
 		if(deposit == 0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Deposit must be specified if valid mediator exists");
 		else if(deposit < CC_DEPOSIT_MIN)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Deposit is too low");
+	}
 	else
 		deposit = 0;
 	
