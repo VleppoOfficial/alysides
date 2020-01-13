@@ -434,7 +434,9 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	// addnormalinputs
 	
 	std::cerr << "buyer: " << HexStr(buyer) << std::endl;
+	std::cerr << "buyerisValid: " << pubkey2pk(buyer).IsValid() << std::endl;
 	std::cerr << "mediator: " << HexStr(mediator) << std::endl;
+	std::cerr << "mediatorisValid: " << pubkey2pk(mediator).IsValid() << std::endl;
 	std::cerr << "mediatorfee: " << mediatorfee << std::endl;
 	std::cerr << "deposit: " << deposit << std::endl;
 	std::cerr << "refagreementtxid: " << refagreementtxid.GetHex() << std::endl;
