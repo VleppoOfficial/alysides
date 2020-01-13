@@ -362,6 +362,9 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 {
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	CPubKey mypk;
+	CTransaction prevproposaltx, refagreementtx;
+	int32_t numvouts;
+	uint256 hashBlock;
     struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_AGREEMENTS);
     if(txfee == 0)
         txfee = 10000;
@@ -409,30 +412,24 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	else
 		deposit = 0;
 	
-	// TODO: check prevproposaltxid
-	// things to check:
-	// if prevproposal tx exists
-	// get tx and opret
-	// check if proposaltype is 'p'
+	// check prevproposaltxid if specified
+	if(prevproposaltxid != zeroid) {
+		if(myGetTransaction(prevproposaltxid,prevproposaltx,hashBlock)==0 || (numvouts=prevproposaltx.vout.size())<=0)
+            CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
+		// TODO: get tx and opret
+		//if(DecodeGatewaysBindOpRet(depositaddr,tx.vout[numvouts-1].scriptPubKey,tmptokenid,coin,totalsupply,oracletxid,M,N,pubkeys,taddr,prefix,prefix2,wiftype)!='B')
+		//CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "invalid bindtxid " << txid.GetHex());
+		// check if proposaltype is 'p'
+	}
 	
-	// check refagreementtxid if it exists
-	// confirm that refagreementtxid is agreement txid
-	
-	/*
-	{
-        if(myGetTransaction(txid,tx,hashBlock)==0 || (numvouts=tx.vout.size())<=0)
-            CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "cant find bindtxid " << txid.GetHex());
-        if(DecodeGatewaysBindOpRet(depositaddr,tx.vout[numvouts-1].scriptPubKey,tmptokenid,coin,totalsupply,oracletxid,M,N,pubkeys,taddr,prefix,prefix2,wiftype)!='B')
-            CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "invalid bindtxid " << txid.GetHex());
-    }
-	*/
-	
-	// temporary
-	prevproposaltxid = zeroid;
-	refagreementtxid = zeroid;
-	
-	// addnormalinputs
-	
+	// check refagreementtxid if specified
+	if(refagreementtxid != zeroid) {
+		if(myGetTransaction(refagreementtxid,refagreementtx,hashBlock)==0 || (numvouts=refagreementtx.vout.size())<=0)
+            CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "cant find specified reference agreement txid " << refagreementtxid.GetHex());
+		// TODO: get tx and opret
+		// confirm that refagreementtxid is agreement txid ('c' type)
+	}
+
 	std::cerr << "seller: " << HexStr(std::vector<uint8_t>(mypk.begin(),mypk.end())) << std::endl;
 	std::cerr << "buyer: " << HexStr(buyer) << std::endl;
 	std::cerr << "buyerisValid: " << pubkey2pk(buyer).IsValid() << std::endl;
@@ -442,8 +439,6 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	std::cerr << "deposit: " << deposit << std::endl;
 	std::cerr << "refagreementtxid: " << refagreementtxid.GetHex() << std::endl;
 	std::cerr << "prevproposaltxid: " << prevproposaltxid.GetHex() << std::endl;
-	//std::cerr << "buyer" << tokenid.GetHex() << " tokenIdOpret=" << tokenidOpret.GetHex() << " txid=" << tx.GetHash().GetHex() << std::endl;
-	//CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "ding!");
 
 	if(AddNormalinputs(mtx,mypk,txfee+CC_MARKER_VALUE*2,64,pk.IsValid()) >= txfee+CC_MARKER_VALUE*2) {
 		/*
