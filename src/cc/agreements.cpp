@@ -395,7 +395,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Seller pubkey cannot be the same as buyer pubkey");
 	if(pubkey2pk(mediator).IsValid() && pubkey2pk(mediator) == mypk)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Seller pubkey cannot be the same as mediator pubkey");
-	if(pubkey2pk(buyer).IsValid() && bMediator && pubkey2pk(mediator) == pubkey2pk(buyer))
+	if(pubkey2pk(buyer).IsValid() && pubkey2pk(mediator).IsValid() && pubkey2pk(mediator) == pubkey2pk(buyer))
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Buyer pubkey cannot be the same as mediator pubkey");
 	// if mediator exists, check if mediator fee is sufficient
 	if(pubkey2pk(mediator).IsValid() && mediatorfee < CC_MEDIATORFEE_MIN)
