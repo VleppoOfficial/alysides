@@ -442,7 +442,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	//std::cerr << "buyer" << tokenid.GetHex() << " tokenIdOpret=" << tokenidOpret.GetHex() << " txid=" << tx.GetHash().GetHex() << std::endl;
 	//CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "ding!");
 
-	if(AddNormalinputs(mtx,mypk,amount,64,pk.IsValid()) >= txfee + deposit) {
+	if(AddNormalinputs(mtx,mypk,txfee+CC_MARKER_VALUE*2,64,pk.IsValid()) >= txfee+CC_MARKER_VALUE*2) {
 		/*
 		if(prevproposaltxid != zeroid)
 			mtx.vin.push_back(CTxIn(prevproposaltxid,updatebatonvout,CScript())); // vin.n-1 previous proposal (optional)
