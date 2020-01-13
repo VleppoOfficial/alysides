@@ -361,7 +361,7 @@ int64_t IsAgreementsvout(struct CCcontract_info *cp,const CTransaction& tx,int32
 UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> buyer, std::vector<uint8_t> mediator, int64_t mediatorfee, int64_t deposit, uint256 prevproposaltxid, uint256 refagreementtxid)
 {
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	bool bBuyer = false, bMediator = false;
+	//bool bBuyer = false, bMediator = false;
 	CPubKey mypk;
     struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_AGREEMENTS);
     if(txfee == 0)
@@ -374,26 +374,31 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	if(datahash == zeroid)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Data hash empty or invalid");
 	// check if buyer pubkey exists and is valid
-	if(!buyer.empty())
-		if(pubkey2pk(buyer).IsValid())
+	if(!buyer.empty() && !(pubkey2pk(buyer).IsValid()))
+		/*if(pubkey2pk(buyer).IsValid())
 			bBuyer = true;
-		else
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Buyer pubkey invalid");
+		else*/
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Buyer pubkey invalid");
 	// check if mediator pubkey exists and is valid
 	if(!mediator.empty())
 		if(pubkey2pk(mediator).IsValid())
 			bMediator = true;
 		else
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Mediator pubkey invalid");
+	if(!mediator.empty() && !(pubkey2pk(mediator).IsValid()))
+		/*if(pubkey2pk(buyer).IsValid())
+			bBuyer = true;
+		else*/
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Mediator pubkey invalid");
 	// checking if mypk != buyerpubkey != mediatorpubkey
-	if(bBuyer && pubkey2pk(buyer) == mypk)
+	if(pubkey2pk(buyer).IsValid() && pubkey2pk(buyer) == mypk)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Seller pubkey cannot be the same as buyer pubkey");
-	if(bMediator && pubkey2pk(mediator) == mypk)
+	if(pubkey2pk(mediator).IsValid() && pubkey2pk(mediator) == mypk)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Seller pubkey cannot be the same as mediator pubkey");
-	if(bBuyer && bMediator && pubkey2pk(mediator) == pubkey2pk(buyer))
+	if(pubkey2pk(buyer).IsValid() && bMediator && pubkey2pk(mediator) == pubkey2pk(buyer))
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Buyer pubkey cannot be the same as mediator pubkey");
 	// if mediator exists, check if mediator fee is sufficient
-	if(bMediator && mediatorfee < CC_MEDIATORFEE_MIN)
+	if(pubkey2pk(mediator).IsValid() && mediatorfee < CC_MEDIATORFEE_MIN)
 		if(mediatorfee == 0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Mediator fee must be specified if valid mediator exists");
 		else
@@ -401,7 +406,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	else
 		mediatorfee = 0;
 	// if mediator exists, check if deposit is sufficient
-	if(bMediator && deposit < CC_DEPOSIT_MIN)
+	if(pubkey2pk(mediator).IsValid() && deposit < CC_DEPOSIT_MIN)
 		if(deposit == 0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Deposit must be specified if valid mediator exists");
 		else
@@ -433,8 +438,8 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	
 	// addnormalinputs
 	
-	std::cerr << "buyer: " << bBuyer << std::endl;
-	std::cerr << "mediator: " << bMediator << std::endl;
+	std::cerr << "buyer: " << pubkey2pk(buyer).IsValid() << std::endl;
+	std::cerr << "mediator: " << pubkey2pk(mediator).IsValid() << std::endl;
 	std::cerr << "mediatorfee: " << mediatorfee << std::endl;
 	std::cerr << "deposit: " << deposit << std::endl;
 	std::cerr << "refagreementtxid: " << refagreementtxid.GetHex() << std::endl;
@@ -450,10 +455,10 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 		mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, GetUnspendable(cp, NULL))); // vout.0 marker
 		/*
 		if(bBuyer)
-			mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, pk.IsValid(), pubkey2pk(buyer))); // vout.1 response hook (with buyer)
+			mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, mypk, pubkey2pk(buyer))); // vout.1 response hook (with buyer)
 		else
 		*/
-			mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, pk.IsValid())); // vout.1 response hook (no buyer)
+			mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, mypk)); // vout.1 response hook (no buyer)
 		return(FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementProposalOpRet('p',std::vector<uint8_t>(mypk.begin(),mypk.end()),buyer,mediator,mediatorfee,deposit,0,datahash,refagreementtxid,prevproposaltxid,name)));
 	}
 	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "error adding normal inputs");
