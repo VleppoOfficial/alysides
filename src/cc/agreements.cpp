@@ -459,7 +459,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 			else
 				CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified proposal has incorrect proposal type, txid " << prevproposaltxid.GetHex());
 		}
-		if(retcode = CCgetspenttxid(spenttxid, vini, height, prevproposaltxid, 2) != 0)
+		if(retcode = CCgetspenttxid(spenttxid, vini, height, prevproposaltxid, 1) != 0)
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified proposal has already been updated by txid " << spenttxid.GetHex());
 		if(mypk != pubkey2pk(refInitiator))
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "-pubkey doesn't match creator of previous proposal txid " << prevproposaltxid.GetHex());
