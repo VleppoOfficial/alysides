@@ -488,9 +488,15 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	std::cerr << "prevproposaltxid: " << prevproposaltxid.GetHex() << std::endl;
 
 	if(AddNormalinputs(mtx,mypk,txfee+CC_MARKER_VALUE+CC_RESPONSE_VALUE,64,pk.IsValid()) >= txfee+CC_MARKER_VALUE+CC_RESPONSE_VALUE) {
-		if(prevproposaltxid != zeroid)
+		if(prevproposaltxid != zeroid) {
+			char mutualaddr[64];
+			GetCCaddress1of2(cp, mutualaddr, pubkey2pk(refInitiator), pubkey2pk(refReceiver));
 			mtx.vin.push_back(CTxIn(prevproposaltxid,1,CScript())); // vin.n-1 previous proposal (optional, will trigger validation)
 			// could also spend marker here, maybe?
+			uint8_t mypriv[32];
+			Myprivkey(mypriv);
+			CCaddr1of2set(cp, pubkey2pk(refInitiator), pubkey2pk(refReceiver), mypriv, mutualaddr);
+		}
 		mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, GetUnspendable(cp, NULL))); // vout.0 marker
 		if(pubkey2pk(buyer).IsValid())
 			mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_RESPONSE_VALUE, mypk, pubkey2pk(buyer))); // vout.1 response hook (with buyer)
