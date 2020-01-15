@@ -397,7 +397,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	int32_t numvouts;
 	uint256 hashBlock, refHash, refAgreementTxid, refPrevProposalTxid;
 	std::vector<uint8_t> refInitiator, refReceiver, refMediator;
-	int64_t dummyMediatorFee, refDeposit, refDepositCut;
+	int64_t refMediatorFee, refDeposit, refDepositCut;
 	std::string refName;
 	uint8_t refProposalType;
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_AGREEMENTS);
