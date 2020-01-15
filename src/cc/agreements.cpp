@@ -365,7 +365,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	- Check if response hook exists and is sent to 1of2 CC addr (we'll confirm if this address is correct later)
 	*/
 	//return(eval->Invalid("no validation yet"));
-	std::cerr << "AgreementsValidate triggered, passing through\n" << std::endl;
+	std::cerr << "AgreementsValidate triggered, passing through" << std::endl;
 	return true;
 }
 
@@ -394,8 +394,8 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	CPubKey mypk;
 	CTransaction prevproposaltx, refagreementtx;
-	int32_t numvouts;
-	uint256 hashBlock, refHash, refAgreementTxid, refPrevProposalTxid;
+	int32_t numvouts, vini, height, retcode;
+	uint256 hashBlock, refHash, refAgreementTxid, refPrevProposalTxid, spenttxid;
 	std::vector<uint8_t> refInitiator, refReceiver, refMediator;
 	int64_t refMediatorFee, refDeposit, refDepositCut;
 	std::string refName;
@@ -459,6 +459,8 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 			else
 				CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified proposal has incorrect proposal type, txid " << prevproposaltxid.GetHex());
 		}
+		if(retcode = CCgetspenttxid(spenttxid, vini, height, prevproposaltxid, 2) != 0)
+			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified proposal has already been updated by txid " << spenttxid.GetHex());
 		if(mypk != pubkey2pk(refInitiator))
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "-pubkey doesn't match creator of previous proposal txid " << prevproposaltxid.GetHex());
 		if(pubkey2pk(buyer).IsValid() && buyer != refReceiver)
