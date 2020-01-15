@@ -365,6 +365,17 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	- Check if response hook exists and is sent to 1of2 CC addr (we'll confirm if this address is correct later)
 	*/
 	//return(eval->Invalid("no validation yet"));
+	
+	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size();
+	CPubkey globalpubkey;
+	
+	// check boundaries:
+    if (numvouts < 1)
+        return eval->Invalid("no vouts\n");
+	
+	globalpubkey = check_signing_pubkey(tx.vin[tx.vin.size()-2].scriptSig);
+	std::cerr << "globalpubkey=" << HexStr(std::vector<uint8_t>(globalpubkey.begin(),globalpubkey.end())) << std::endl;
+			
 	std::cerr << "AgreementsValidate triggered, passing through" << std::endl;
 	return true;
 }
@@ -489,10 +500,10 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 
 	if(AddNormalinputs(mtx,mypk,txfee+CC_MARKER_VALUE+CC_RESPONSE_VALUE,64,pk.IsValid()) >= txfee+CC_MARKER_VALUE+CC_RESPONSE_VALUE) {
 		if(prevproposaltxid != zeroid) {
+			mtx.vin.push_back(CTxIn(prevproposaltxid,0,CScript())); // vin.n-2 previous proposal marker (optional, will trigger validation)
 			char mutualaddr[64];
 			GetCCaddress1of2(cp, mutualaddr, pubkey2pk(refInitiator), pubkey2pk(refReceiver));
-			mtx.vin.push_back(CTxIn(prevproposaltxid,1,CScript())); // vin.n-1 previous proposal (optional, will trigger validation)
-			// could also spend marker here, maybe?
+			mtx.vin.push_back(CTxIn(prevproposaltxid,1,CScript())); // vin.n-1 previous proposal response hook (optional, will trigger validation)
 			uint8_t mypriv[32];
 			Myprivkey(mypriv);
 			CCaddr1of2set(cp, pubkey2pk(refInitiator), pubkey2pk(refReceiver), mypriv, mutualaddr);
