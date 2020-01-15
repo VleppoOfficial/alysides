@@ -367,7 +367,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	//return(eval->Invalid("no validation yet"));
 	
 	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size();
-	CPubkey globalpubkey;
+	CPubKey globalpubkey;
 	
 	// check boundaries:
     if (numvouts < 1)
