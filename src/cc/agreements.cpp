@@ -16,131 +16,68 @@
 #include "CCagreements.h"
 
 /*
+
 Agreements transaction types:
 	
-	'p' - agreement proposal (possibly doesn't have CC inputs):
-	vins.* normal input
-	vin.n-2 previous proposal marker (optional)
-		CC input - triggers validation
-	vin.n-1 previous proposal baton (optional)
-		CC input - triggers validation
-	vout.0 marker
-		can't be spent
-		sent to global address
-	vout.1 response hook
-		can be spent by 'p', 'c' or 'u' transactions
-		sent to seller/buyer 1of2 address
-	vout.n-2 change
-	vout.n-1 OP_RETURN
-		EVAL_AGREEMENTS 'p' proposaltype
-		datahash
-		initiatorpubkey
-		receiverpubkey (can't be changed in subsequent updates, enforced by validation)
-		[description]
-		[mediatorpubkey]
-		[deposit] (can't be changed if proposal was accepted)
-		[mediatorfee](can't be changed if proposal was accepted)
-		[agreementtxid]
-		[prevproposaltxid]
-		[depositsplit](only if tx is a contract cancel request)
+	case 'p':
+		agreement proposal:
+		vins.* normal input
+		vin.n-2 previous proposal marker
+		vin.n-1 previous proposal baton
+		vout.0 marker
+		vout.1 response hook
+		vout.n-2 change
+		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'p' proposaltype initiator receiver mediator mediatorfee deposit depositcut datahash agreementtxid prevproposaltxid name
 	
-	't' - proposal cancel
-	vins.* normal input
-	vin.n-2 previous proposal marker
-	vin.n-1 previous proposal baton
-	vout.n-2 change
-	vout.n-1 OP_RETURN
-		EVAL_AGREEMENTS 't' initiatorpubkey [message]
+	case 't':
+		proposal cancel:
+		vins.* normal input
+		vin.n-2 previous proposal marker
+		vin.n-1 previous proposal baton
+		vout.n-2 change
+		vout.n-1 OP_RETURN EVAL_AGREEMENTS 't' proposaltxid initiator [message]
 	
-	'c' - proposal acceptance and contract creation:
-	vins.* normal input
-	vin.n-1 latest proposal by seller
-	vout.0 marker
-		can't be spent
-		sent to global address
-	vout.1 update baton
-		can be spent by 'u' transactions, provided they also spend the appropriate 'p' transaction
-		sent to seller/buyer 1of2 address
-	vout.2 seller dispute baton
-		can be spent by 'd' transactions
-		sent to seller CC address
-	vout.3 buyer dispute baton
-		can be spent by 'd' transactions
-		sent to buyer CC address
-	vout.4 invoice hook (can also be deposit)
-		sent to agreements global CC address
-		if no mediator:
-			can be spent by a Settlements Payment transaction or 'u' transaction
-		if mediator exists:
-			can be spent by a Settlements Payment transaction (if buyer), 'u' transaction, or a 'r' transaction (if mediator)
-	vout.n-2 change
-	vout.n-1 OP_RETURN
-		EVAL_AGREEMENTS 'c'
-		sellerpubkey
-		buyerpubkey
-		mediator (true/false)
-		[refagreementtxid]
+	case 'c':
+		contract creation:
+		vins.* normal input
+		vin.n-1 latest proposal by seller
+		vout.0 marker
+		vout.1 update baton
+		vout.2 seller dispute baton
+		vout.3 buyer dispute baton
+		vout.4 deposit / agreement completion marker
+		vout.n-2 change
+		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'c' proposaltxid
 	
-	'u' - contract update:
-	vins.* normal input
-	vin.n-1 latest proposal by other party
-	vout.0 next update baton
-		can be spent by 'u' transactions, provided they also spend the appropriate 'p' transaction
-		sent to seller/buyer 1of2 address
-	vout.1 deposit split to party 1
-		sent to party 1 normal address
-	vout.2 deposit split to party 2
-		sent to party 2 normal address
-	vout.n-2 change
-	vout.n-1 OP_RETURN
-		EVAL_AGREEMENTS 'u'
-		initiatorpubkey
-		confirmerpubkey
-		lastupdatetxid
-		updateproposaltxid
-		type (contract update, contract cancel)
+	case 'u':
+		contract update:
+		vins.* normal input
+		vin.n-1 latest proposal by other party
+		vout.0 next update baton
+		vout.1 deposit split to party 1
+		vout.2 deposit split to party 2
+		vout.n-2 change
+		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'u' [initiator] confirmer [lastupdatetxid] updateproposaltxid type
 	
-	'd' - contract dispute:
-	vins.* normal input
-	vin.n-1 previous dispute by disputer
-	vout.0 next dispute baton
-		can be spent by 'd' transactions
-		sent to disputer CC address
-	vout.1 response hook (can also be mediator fee)
-		can be spent by 'r' transactions
-		if no mediator:
-			sent to disputer CC address
-		if mediator exists:
-			sent to mediator CC address
-	vout.n-2 change
-	vout.n-1 OP_RETURN
-		EVAL_AGREEMENTS 'd'
-		lastdisputetxid(is this needed?)
-		disputetype(light, heavy)
-		initiatorpubkey(is this needed?)
-		receiverpubkey(is this needed?)
-		[description]
-		[disputehash]
-		
-	'r' - dispute resolve:
-	vins.* normal input
-	vin.n-1 dispute that is being resolved
-	vout.0 mediator fee OR change
-		if no mediator:
-			sent to disputer CC address
-		if mediator exists:
-			sent to mediator CC address
-	vout.1 deposit redeem
-		sent to either party 1 or 2, dependent on mediator
-	vout.n-2 change
-	vout.n-1 OP_RETURN
-		EVAL_AGREEMENTS 'r'
-		disputetxid
-		verdict(closed by disputer, closed by mediator, deposit redeemed)
-		[rewardedpubkey]
-		[message]
+	case 'd':
+		contract dispute:
+		vins.* normal input
+		vin.n-1 previous dispute by disputer
+		vout.0 next dispute baton
+		vout.1 response hook / mediator fee
+		vout.n-2 change
+		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'd' initiator [receiver] [lastdisputetxid] disputetype disputehash
 	
-Agreements RPCs:
+	case 'r':
+		contract dispute resolve:
+		vins.* normal input
+		vin.n-1 dispute resolved
+		vout.0 mediator fee OR change
+		vout.1 deposit redeem
+		vout.n-2 change
+		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'r' disputetxid verdict rewardedpubkey message
+	
+Agreements statuses:
 	
 	Proposal status:
 	draft
@@ -162,6 +99,8 @@ Agreements RPCs:
 	suspended/in dispute
 	[expired]
 	
+Agreements RPCs:
+
 	agreementpropose (name datahash buyer mediator [mediatorfee][deposit][prevproposaltxid][refagreementtxid])
 	agreementrequestupdate(agreementtxid name datahash [newmediator][prevproposaltxid])
 	agreementrequestcancel(agreementtxid name datahash [depositsplit][prevproposaltxid])
@@ -181,73 +120,6 @@ Agreements RPCs:
 	agreementviewupdates(agreementtxid [samplenum][recursive])
 	agreementviewdisputes(agreementtxid [samplenum][recursive])
 	agreementinventory([pubkey])
-		
-	agreementinfo(txid)
-		Retrieves info about the specified Agreements transaction.
-			- Check funcid of transaction.
-			- If 'p':
-				- Check proposaltype and data.
-				result: success;
-				name: name;
-				type: funcid desc;
-				initiator: pubkey1;
-				- If "p":
-					receiver: pubkey2 (or none);
-					mediator: pubkey3 (or none);
-					deposit: number (or none);
-					mediatorfee: number (or none);
-				- If "u":
-					receiver: pubkey2;
-					mediator: pubkey3 (or none);
-				- If "t":
-					receiver: pubkey2;
-					depositsplit: percentage; (how much the receiver will get)
-				iteration: iteration;
-				datahash: datahash;
-				description: description (or none);
-				prevproposaltxid: txid (or none);
-			- If 'c':
-				- Check accepted proposal and verify if its 'p' type.
-				result: success;
-				txid: txid;
-				name: name;
-				type: funcid desc;
-				seller: pubkey1;
-				buyer: pubkey2;
-				- Check for any 'u' transactions
-				- If canceled:
-					status: canceled;
-				- Else if deposit taken by mediator:
-					status: failed;
-				- Else if deposit spent by Settlements Payment:
-					- If payment has been withdrawn by buyer:
-						status: failed;
-					- Else if payment has been withdrawn by seller:
-						status: completed;
-				- Else:
-					status: active;
-				iteration: iteration;
-				datahash: datahash;
-				description: description (or none);
-				- Check for any 'd' transactions in both vouts
-					sellerdisputes: number;
-					buyerdisputes: number;
-				- If mediator = true:
-					mediator: pubkey3 (or none);
-					deposit: number;
-					mediatorfee: number;
-				proposaltxid: proposaltxid; <- which proposal was accepted
-				refagreementtxid: txid (or none);
-			- If 'u':
-				result: success;
-				txid: txid;
-				- Get update type
-				- If "u":
-					type: contract update;
-				- If "c":
-					type: contract cancel;
-				- Check accepted proposal and verify if its 'p' type.
-		TODO: Finish this later
 
 */
 
@@ -515,12 +387,8 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
 		if(DecodeAgreementProposalOpRet(prevproposaltx.vout[numvouts - 1].scriptPubKey, refProposalType, refInitiator, refReceiver, refMediator, refMediatorFee, refDeposit, refDepositCut, refHash, refAgreementTxid, refPrevProposalTxid, refName) != 'p')
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "invalid agreement proposal txid " << prevproposaltxid.GetHex());
-		if(refProposalType != 'p') {
-			if(refProposalType == 't')
-				CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified proposal terminated by creator, txid " << prevproposaltxid.GetHex());
-			else
-				CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified proposal has incorrect proposal type, txid " << prevproposaltxid.GetHex());
-		}
+		if(refProposalType != 'p')
+			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified proposal has incorrect proposal type, txid " << prevproposaltxid.GetHex());
 		if(retcode = CCgetspenttxid(spenttxid, vini, height, prevproposaltxid, 1) == 0)
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified proposal has already been updated by txid " << spenttxid.GetHex());
 		if(mypk != pubkey2pk(refInitiator))
@@ -620,18 +488,41 @@ UniValue AgreementCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	CPubKey mypk;
 	
-	CTransaction prevproposaltx, refagreementtx;
-	int32_t numvouts;
-	uint256 hashBlock;
+	CTransaction proposaltx;
+	int32_t numvouts, vini, height, retcode;
+	uint256 hashBlock, refHash, refAgreementTxid, refPrevProposalTxid, spenttxid;
+	std::vector<uint8_t> refInitiator, refReceiver, refMediator;
+	int64_t refMediatorFee, refDeposit, refDepositCut;
+	std::string refName;
+	uint8_t refProposalType;
 	
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_AGREEMENTS);
 	if(txfee == 0)
 		txfee = 10000;
 	mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
 	
-	//stuff
+	// check proposaltxid
+	if(proposaltxid != zeroid) {
+		if(myGetTransaction(proposaltxid,proposaltx,hashBlock)==0 || (numvouts=proposaltx.vout.size())<=0)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cant find specified proposal txid " << proposaltxid.GetHex());
+		if(DecodeAgreementProposalOpRet(proposaltx.vout[numvouts - 1].scriptPubKey, refProposalType, refInitiator, refReceiver, refMediator, refMediatorFee, refDeposit, refDepositCut, refHash, refAgreementTxid, refPrevProposalTxid, refName) != 'p')
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid proposal txid " << proposaltxid.GetHex());
+		/*if(refProposalType != 'p')
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "specified proposal has incorrect proposal type, txid " << proposaltxid.GetHex());*/
+		if(retcode = CCgetspenttxid(spenttxid, vini, height, proposaltxid, 1) == 0)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "specified proposal has already been updated by txid " << spenttxid.GetHex());
+		if(mypk != pubkey2pk(refInitiator))
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "-pubkey doesn't match creator of previous proposal txid " << proposaltxid.GetHex());
+		if(pubkey2pk(buyer).IsValid() && !(refReceiver.empty()) && buyer != refReceiver)
+				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "buyer must be the same as specified in previous proposal txid " << proposaltxid.GetHex());
+		if(!(pubkey2pk(buyer).IsValid()) && !(refReceiver.empty()))
+				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cannot remove buyer when one exists in previous proposal txid " << proposaltxid.GetHex());
+	}
+	else
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Proposal transaction id must be specified");
 	
-	CCERR_RESULT("agreementscc",CCLOG_INFO,stream << "incomplete");
+	//stuff
+	CCERR_RESULT("agreementscc", CCLOG_INFO,stream << "incomplete");
 }
 
 /*
@@ -678,6 +569,73 @@ UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid
 
 // agreementinfo
 // 	Note: version numbers should be reset after contract acceptance
+/*
+	Retrieves info about the specified Agreements transaction.
+		- Check funcid of transaction.
+		- If 'p':
+			- Check proposaltype and data.
+			result: success;
+			name: name;
+			type: funcid desc;
+			initiator: pubkey1;
+			- If "p":
+				receiver: pubkey2 (or none);
+				mediator: pubkey3 (or none);
+				deposit: number (or none);
+				mediatorfee: number (or none);
+			- If "u":
+				receiver: pubkey2;
+				mediator: pubkey3 (or none);
+			- If "t":
+				receiver: pubkey2;
+				depositsplit: percentage; (how much the receiver will get)
+			iteration: iteration;
+			datahash: datahash;
+			description: description (or none);
+			prevproposaltxid: txid (or none);
+		- If 'c':
+			- Check accepted proposal and verify if its 'p' type.
+			result: success;
+			txid: txid;
+			name: name;
+			type: funcid desc;
+			seller: pubkey1;
+			buyer: pubkey2;
+			- Check for any 'u' transactions
+			- If canceled:
+				status: canceled;
+			- Else if deposit taken by mediator:
+				status: failed;
+			- Else if deposit spent by Settlements Payment:
+				- If payment has been withdrawn by buyer:
+					status: failed;
+				- Else if payment has been withdrawn by seller:
+					status: completed;
+			- Else:
+				status: active;
+			iteration: iteration;
+			datahash: datahash;
+			description: description (or none);
+			- Check for any 'd' transactions in both vouts
+				sellerdisputes: number;
+				buyerdisputes: number;
+			- If mediator = true:
+				mediator: pubkey3 (or none);
+				deposit: number;
+				mediatorfee: number;
+			proposaltxid: proposaltxid; <- which proposal was accepted
+			refagreementtxid: txid (or none);
+		- If 'u':
+			result: success;
+			txid: txid;
+			- Get update type
+			- If "u":
+				type: contract update;
+			- If "c":
+				type: contract cancel;
+			- Check accepted proposal and verify if its 'p' type.
+	TODO: Finish this later
+*/
 // agreementviewupdates [list]
 // agreementviewdisputes [list]
 // agreementinventory([pubkey])
