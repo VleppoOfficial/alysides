@@ -8247,7 +8247,7 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
 	uint256 datahash, prevproposaltxid, refagreementtxid;
 	std::string name;
 	int64_t mediatorfee, deposit, timelock;
-    if ( fHelp || params.size() < 4 || params.size() > 8)
+    if (fHelp || params.size() < 4 || params.size() > 8)
         throw runtime_error("agreementpropose name datahash buyer mediator [mediatorfee][deposit][prevproposaltxid][refagreementtxid]\n");
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
@@ -8264,6 +8264,11 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
 		Unlock2NSPV(mypk);
         throw runtime_error("Data hash empty or invalid\n");
     }
+	/*std::vector<unsigned char> buyer = 0, mediator = 0;
+	if (params.size() >= 3)
+		buyer = ParseHex(params[2].get_str().c_str());
+	if (params.size() >= 4)
+		mediator = ParseHex(params[3].get_str().c_str());*/
 	std::vector<unsigned char> buyer(ParseHex(params[2].get_str().c_str()));
 	std::vector<unsigned char> mediator(ParseHex(params[3].get_str().c_str()));
 	mediatorfee = 0;
@@ -8290,6 +8295,42 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
         refagreementtxid = Parseuint256((char *)params[7].get_str().c_str());
     }
 	result = AgreementPropose(mypk, 0, name, datahash, buyer, mediator, mediatorfee, deposit, prevproposaltxid, refagreementtxid);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    Unlock2NSPV(mypk);
+    return(result);
+}
+
+UniValue agreementcloseproposal(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    UniValue result(UniValue::VOBJ);
+	uint256 proposaltxid, verifyhash;
+	std::string message;
+    if (fHelp || params.size() < 2 || params.size() > 3)
+        throw runtime_error("agreementcloseproposal proposaltxid verifyhash [message]\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    const CKeyStore& keystore = *pwalletMain;
+    Lock2NSPV(mypk);
+	
+	proposaltxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (proposaltxid == zeroid)   {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Proposal transaction id must be specified\n");
+    }
+    verifyhash = Parseuint256((char *)params[1].get_str().c_str());
+	if (verifyhash == zeroid)   {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Proposal data hash must be correctly specified for verification\n");
+    }
+	if (params.size() == 3)     {
+        message = params[2].get_str();
+		if (name.size() > 1024)   {
+			Unlock2NSPV(mypk);
+			throw runtime_error("Optional message cannot exceed 1024 characters\n");
+		}
+    }
+	result = AgreementCloseProposal(mypk, 0, proposaltxid, verifyhash, message);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
