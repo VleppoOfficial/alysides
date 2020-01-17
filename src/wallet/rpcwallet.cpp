@@ -8325,7 +8325,7 @@ UniValue agreementcloseproposal(const UniValue& params, bool fHelp, const CPubKe
     }
 	if (params.size() == 3)     {
         message = params[2].get_str();
-		if (name.size() > 1024)   {
+		if (message.size() > 1024)   {
 			Unlock2NSPV(mypk);
 			throw runtime_error("Optional message cannot exceed 1024 characters\n");
 		}
