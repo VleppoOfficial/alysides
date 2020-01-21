@@ -500,29 +500,43 @@ UniValue AgreementCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 	if(txfee == 0)
 		txfee = 10000;
 	mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
-	
+
+	// check message, if it exists
+	if(!(message.empty()) && message.size() > 1024)
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Optional message cannot exceed 1024 characters");
+
 	// check proposaltxid
 	if(proposaltxid != zeroid) {
 		if(myGetTransaction(proposaltxid,proposaltx,hashBlock)==0 || (numvouts=proposaltx.vout.size())<=0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cant find specified proposal txid " << proposaltxid.GetHex());
 		if(DecodeAgreementProposalOpRet(proposaltx.vout[numvouts - 1].scriptPubKey, refProposalType, refInitiator, refReceiver, refMediator, refMediatorFee, refDeposit, refDepositCut, refHash, refAgreementTxid, refPrevProposalTxid, refName) != 'p')
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid proposal txid " << proposaltxid.GetHex());
-		/*if(refProposalType != 'p')
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "specified proposal has incorrect proposal type, txid " << proposaltxid.GetHex());*/
 		if(retcode = CCgetspenttxid(spenttxid, vini, height, proposaltxid, 1) == 0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "specified proposal has already been updated by txid " << spenttxid.GetHex());
-		if(mypk != pubkey2pk(refInitiator))
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "-pubkey doesn't match creator of previous proposal txid " << proposaltxid.GetHex());
-		if(pubkey2pk(buyer).IsValid() && !(refReceiver.empty()) && buyer != refReceiver)
-				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "buyer must be the same as specified in previous proposal txid " << proposaltxid.GetHex());
-		if(!(pubkey2pk(buyer).IsValid()) && !(refReceiver.empty()))
-				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cannot remove buyer when one exists in previous proposal txid " << proposaltxid.GetHex());
+		if(mypk != pubkey2pk(refInitiator) && (!(refReceiver.empty()) && mypk != pubkey2pk(refReceiver)))
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "-pubkey must be either initiator or receiver of specified proposal txid " << proposaltxid.GetHex());
+		if(verifyhash != refHash)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "verifyhash doesn't match hash in proposal txid " << proposaltxid.GetHex());
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Proposal transaction id must be specified");
 	
-	//stuff
-	CCERR_RESULT("agreementscc", CCLOG_INFO,stream << "incomplete");
+	if(AddNormalinputs(mtx,mypk,txfee,64,pk.IsValid()) >= txfee) {
+		mtx.vin.push_back(CTxIn(prevproposaltxid,0,CScript())); // vin.n-2 previous proposal marker (optional, will trigger validation)
+		char mutualaddr[64];
+		GetCCaddress1of2(cp, mutualaddr, pubkey2pk(refInitiator), pubkey2pk(refReceiver));
+		mtx.vin.push_back(CTxIn(prevproposaltxid,1,CScript())); // vin.n-1 previous proposal response hook (optional, will trigger validation)
+		uint8_t mypriv[32];
+		Myprivkey(mypriv);
+		CCaddr1of2set(cp, pubkey2pk(refInitiator), pubkey2pk(refReceiver), mypriv, mutualaddr);
+		/*mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, GetUnspendable(cp, NULL))); // vout.0 marker
+		if(pubkey2pk(buyer).IsValid())
+			mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_RESPONSE_VALUE, mypk, pubkey2pk(buyer))); // vout.1 response hook (with buyer)
+		else
+			mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_RESPONSE_VALUE, mypk)); // vout.1 response hook (no buyer)*/
+		return(FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementProposalCloseOpRet(proposaltxid,std::vector<uint8_t>(mypk.begin(),mypk.end()),message)));
+	}
+	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "error adding normal inputs");
 }
 
 /*
