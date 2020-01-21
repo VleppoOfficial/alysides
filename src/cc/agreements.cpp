@@ -88,9 +88,8 @@ Agreements statuses:
 	
 	Contract status:
 	active
-		[approved]
 		[revised/expanded]
-	[change request issued]
+	request pending
 	terminated/cancelled
 	completed
 		[pending payment]
@@ -385,7 +384,9 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	if(prevproposaltxid != zeroid) {
 		if(myGetTransaction(prevproposaltxid,prevproposaltx,hashBlock)==0 || (numvouts=prevproposaltx.vout.size())<=0)
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
-		if(DecodeAgreementProposalOpRet(prevproposaltx.vout[numvouts - 1].scriptPubKey, refProposalType, refInitiator, refReceiver, refMediator, refMediatorFee, refDeposit, refDepositCut, refHash, refAgreementTxid, refPrevProposalTxid, refName) != 'p')
+		if(DecodeAgreementOpRet(prevproposaltx.vout[numvouts - 1].scriptPubKey, refProposalType) == 't')
+			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified agreement proposal has been closed");
+		else if(DecodeAgreementProposalOpRet(prevproposaltx.vout[numvouts - 1].scriptPubKey, refProposalType, refInitiator, refReceiver, refMediator, refMediatorFee, refDeposit, refDepositCut, refHash, refAgreementTxid, refPrevProposalTxid, refName) != 'p') {
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "invalid agreement proposal txid " << prevproposaltxid.GetHex());
 		if(refProposalType != 'p')
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified proposal has incorrect proposal type, txid " << prevproposaltxid.GetHex());
@@ -456,6 +457,7 @@ UniValue AgreementRequestUpdate(const CPubKey& pk, uint64_t txfee, uint256 agree
 	//stuff
 	// if newmediator is 0, maintain current mediator status
 	// don't allow swapping between no mediator <-> mediator
+	// only 1 update/cancel request per party, per agreement
 	
 	CCERR_RESULT("agreementscc",CCLOG_INFO,stream << "incomplete");
 }
@@ -477,6 +479,7 @@ UniValue AgreementRequestCancel(const CPubKey& pk, uint64_t txfee, uint256 agree
 	mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
 	
 	//stuff
+	// only 1 update/cancel request per party, per agreement
 	
 	CCERR_RESULT("agreementscc",CCLOG_INFO,stream << "incomplete");
 }
@@ -509,7 +512,9 @@ UniValue AgreementCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 	if(proposaltxid != zeroid) {
 		if(myGetTransaction(proposaltxid,proposaltx,hashBlock)==0 || (numvouts=proposaltx.vout.size())<=0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cant find specified proposal txid " << proposaltxid.GetHex());
-		if(DecodeAgreementProposalOpRet(proposaltx.vout[numvouts - 1].scriptPubKey, refProposalType, refInitiator, refReceiver, refMediator, refMediatorFee, refDeposit, refDepositCut, refHash, refAgreementTxid, refPrevProposalTxid, refName) != 'p')
+		if(DecodeAgreementOpRet(prevproposaltx.vout[numvouts - 1].scriptPubKey, refProposalType) == 't')
+			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified agreement proposal has been closed");
+		else if(DecodeAgreementProposalOpRet(proposaltx.vout[numvouts - 1].scriptPubKey, refProposalType, refInitiator, refReceiver, refMediator, refMediatorFee, refDeposit, refDepositCut, refHash, refAgreementTxid, refPrevProposalTxid, refName) != 'p')
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid proposal txid " << proposaltxid.GetHex());
 		if(retcode = CCgetspenttxid(spenttxid, vini, height, proposaltxid, 1) == 0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "specified proposal has already been updated by txid " << spenttxid.GetHex());
