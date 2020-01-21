@@ -155,7 +155,7 @@ uint8_t DecodeAgreementOpRet(const CScript scriptPubKey, uint8_t &proposaltype)
 		case 'p':
 			return DecodeAgreementProposalOpRet(scriptPubKey, proposaltype, dummyInitiator, dummyReceiver, dummyMediator, dummyMediatorFee, dummyDeposit, dummyDepositCut, dummyHash, dummyAgreementTxid, dummyPrevProposalTxid, dummyName);
 		case 't':
-			return DecodeAgreementProposalCloseOpRet(scriptPubKey, dummyPrevProposalTxid, dummyInitiator, message);
+			return DecodeAgreementProposalCloseOpRet(scriptPubKey, dummyPrevProposalTxid, dummyInitiator, dummyName);
 		//case 'whatever':
 			//insert new cases here
 		default:
