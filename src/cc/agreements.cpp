@@ -347,8 +347,8 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Data hash empty or invalid");
 	
 	// check expiry time
-	if (expiryTimeSec != -1 && expiryTimeSec < 1)
-		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Invalid expiry time");
+	/*if (expiryTimeSec != -1 && expiryTimeSec < 1)
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Invalid expiry time");*/
 	
 	// check if buyer pubkey exists and is valid
 	if(!buyer.empty() && !(pubkey2pk(buyer).IsValid()))
