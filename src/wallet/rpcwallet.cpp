@@ -8274,9 +8274,9 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
 	expiryTimeSec = -1;
 	if (params.size() >= 5)     {
         expiryTimeSec = atoll(params[4].get_str().c_str());
-		if (expiryTimeSec != -1 && expiryTimeSec < 1) {
+		/*if (expiryTimeSec != -1 && expiryTimeSec < 1) {
 			throw runtime_error("Incorrect expiry time\n");
-		}
+		}*/
     }
 	mediatorfee = 0;
 	if (params.size() >= 6)     {
