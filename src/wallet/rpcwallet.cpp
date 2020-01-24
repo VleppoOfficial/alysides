@@ -8246,9 +8246,9 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
     UniValue result(UniValue::VOBJ);
 	uint256 datahash, prevproposaltxid, refagreementtxid;
 	std::string name;
-	int64_t expiryTimeSec, mediatorfee, deposit, timelock;
+	int64_t expiryTimeSec, mediatorfee, prepayment, timelock;
     if (fHelp || params.size() < 4 || params.size() > 9)
-        throw runtime_error("agreementpropose name datahash buyer mediator [expiryTimeSec][mediatorfee][deposit][prevproposaltxid][refagreementtxid]\n");
+        throw runtime_error("agreementpropose name datahash buyer mediator [expiryTimeSec][mediatorfee][prepayment][prevproposaltxid][refagreementtxid]\n");
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     const CKeyStore& keystore = *pwalletMain;
@@ -8287,12 +8287,12 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
 			throw runtime_error("Mediator fee must be positive\n");
 		}
     }
-	deposit = 0;
+	prepayment = 0;
 	if (params.size() >= 7)     {
-        deposit = atof((char *)params[6].get_str().c_str()) * COIN + 0.00000000499999;
-        if (deposit < 0)    {
+        prepayment = atof((char *)params[6].get_str().c_str()) * COIN + 0.00000000499999;
+        if (prepayment < 0)    {
 			Unlock2NSPV(mypk);
-			throw runtime_error("Deposit must be positive\n");
+			throw runtime_error("Prepayment must be positive\n");
 		}
     }
 	prevproposaltxid = zeroid;
@@ -8302,7 +8302,7 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
 	if (params.size() == 9)     {
         refagreementtxid = Parseuint256((char *)params[8].get_str().c_str());
     }
-	result = AgreementPropose(mypk, 0, name, datahash, buyer, mediator, expiryTimeSec, mediatorfee, deposit, prevproposaltxid, refagreementtxid);
+	result = AgreementPropose(mypk, 0, name, datahash, buyer, mediator, expiryTimeSec, mediatorfee, prepayment, prevproposaltxid, refagreementtxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);

@@ -27,7 +27,7 @@ Agreements transaction types:
 		vout.0 marker
 		vout.1 response hook
 		vout.n-2 change
-		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'p' proposaltype initiator receiver mediator mediatorfee deposit depositcut datahash agreementtxid prevproposaltxid name
+		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'p' proposaltype initiator receiver mediator mediatorfee prepayment prepaymentcut datahash agreementtxid prevproposaltxid name
 	
 	case 't':
 		proposal cancel:
@@ -45,7 +45,7 @@ Agreements transaction types:
 		vout.1 update baton
 		vout.2 seller dispute baton
 		vout.3 buyer dispute baton
-		vout.4 deposit / agreement completion marker
+		vout.4 prepayment / agreement completion marker
 		vout.n-2 change
 		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'c' proposaltxid
 	
@@ -54,8 +54,8 @@ Agreements transaction types:
 		vins.* normal input
 		vin.n-1 latest proposal by other party
 		vout.0 next update baton
-		vout.1 deposit split to party 1
-		vout.2 deposit split to party 2
+		vout.1 prepayment split to party 1
+		vout.2 prepayment split to party 2
 		vout.n-2 change
 		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'u' [initiator] confirmer [lastupdatetxid] updateproposaltxid type
 	
@@ -73,7 +73,7 @@ Agreements transaction types:
 		vins.* normal input
 		vin.n-1 dispute resolved
 		vout.0 mediator fee OR change
-		vout.1 deposit redeem
+		vout.1 prepayment redeem
 		vout.n-2 change
 		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'r' disputetxid verdict rewardedpubkey message
 	
@@ -96,16 +96,16 @@ Agreements statuses:
 		[pending asset transfer]
 		[pending asset collection]
 	suspended/in dispute
-	[expired]
+	expired (priority over 'suspended')
 	
 Agreements RPCs:
 
-	agreementpropose (name datahash buyer mediator [mediatorfee][deposit][prevproposaltxid][refagreementtxid])
+	DONE agreementpropose (name datahash buyer mediator [mediatorfee][prepayment][prevproposaltxid][refagreementtxid])
 	agreementrequestupdate(agreementtxid name datahash [newmediator][prevproposaltxid])
-	agreementrequestcancel(agreementtxid name datahash [depositsplit][prevproposaltxid])
+	agreementrequestcancel(agreementtxid name datahash [prepaymentsplit][prevproposaltxid])
 	Proposal creation
 	
-	agreementcloseproposal(proposaltxid message)
+	DONE agreementcloseproposal(proposaltxid message)
 	agreementaccept(proposaltxid)
 	Proposal response
 	
@@ -113,13 +113,17 @@ Agreements RPCs:
 	agreementresolve(agreementtxid disputetxid verdict [rewardedpubkey][message])
 	Disputes
 	
-	agreementaddress
-	agreementlist
+	DONE agreementaddress
+	DONE agreementlist
 	agreementinfo(txid)
 	agreementviewupdates(agreementtxid [samplenum][recursive])
 	agreementviewdisputes(agreementtxid [samplenum][recursive])
 	agreementinventory([pubkey])
 
+Notes:
+if prepayment exists but there is no mediator, it acts as immediate payment upon acceptance (prepayment)
+remove crappy license token system, replace with license tags set at time of token creation
+when contracts expire, raising disputes should still be allowed
 */
 
 // start of consensus code
@@ -130,18 +134,15 @@ Agreements RPCs:
 
 //uint8_t DecodeAgreementOpRet()
 // just returns funcid of whatever agreement tx opret is fed into it
-uint8_t DecodeAgreementOpRet(const CScript scriptPubKey, uint8_t &proposaltype)
+uint8_t DecodeAgreementOpRet(const CScript scriptPubKey)
 {
 	std::vector<uint8_t> vopret, dummyInitiator, dummyReceiver, dummyMediator;
-	int64_t dummyExpiryTime, dummyMediatorFee, dummyDeposit, dummyDepositCut;
+	int64_t dummyExpiryTime, dummyMediatorFee, dummyPrepayment, dummyPrepaymentCut;
 	uint256 dummyHash, dummyAgreementTxid, dummyPrevProposalTxid;
 	std::string dummyName;
-	uint8_t evalcode, funcid, *script;
-	proposaltype = 0;
-	
+	uint8_t evalcode, funcid, *script, dummyProposalType;
 	GetOpReturnData(scriptPubKey, vopret);
 	script = (uint8_t *)vopret.data();
-
 	if(script != NULL && vopret.size() > 2) {
 		evalcode = script[0];
 		if (evalcode != EVAL_AGREEMENTS) {
@@ -150,12 +151,13 @@ uint8_t DecodeAgreementOpRet(const CScript scriptPubKey, uint8_t &proposaltype)
 		}
 		funcid = script[1];
 		LOGSTREAM((char *)"agreementscc", CCLOG_DEBUG2, stream << "DecodeAgreementOpRet() decoded funcId=" << (char)(funcid ? funcid : ' ') << std::endl);
-
 		switch (funcid) {
 		case 'p':
-			return DecodeAgreementProposalOpRet(scriptPubKey, proposaltype, dummyInitiator, dummyReceiver, dummyMediator, dummyExpiryTime, dummyMediatorFee, dummyDeposit, dummyDepositCut, dummyHash, dummyAgreementTxid, dummyPrevProposalTxid, dummyName);
+			return DecodeAgreementProposalOpRet(scriptPubKey, dummyProposalType, dummyInitiator, dummyReceiver, dummyMediator, dummyExpiryTime, dummyMediatorFee, dummyPrepayment, dummyPrepaymentCut, dummyHash, dummyAgreementTxid, dummyPrevProposalTxid, dummyName);
 		case 't':
 			return DecodeAgreementProposalCloseOpRet(scriptPubKey, dummyPrevProposalTxid, dummyInitiator, dummyName);
+		case 'c':
+			return DecodeAgreementSigningOpRet(scriptPubKey, dummyPrevProposalTxid);
 		//case 'whatever':
 			//insert new cases here
 		default:
@@ -168,18 +170,18 @@ uint8_t DecodeAgreementOpRet(const CScript scriptPubKey, uint8_t &proposaltype)
 	return (uint8_t)0;
 }
 
-CScript EncodeAgreementProposalOpRet(uint8_t proposaltype, std::vector<uint8_t> initiator, std::vector<uint8_t> receiver, std::vector<uint8_t> mediator, int64_t expiryTimeSec, int64_t mediatorfee, int64_t deposit, int64_t depositcut, uint256 datahash, uint256 agreementtxid, uint256 prevproposaltxid, std::string name)
+CScript EncodeAgreementProposalOpRet(uint8_t proposaltype, std::vector<uint8_t> initiator, std::vector<uint8_t> receiver, std::vector<uint8_t> mediator, int64_t expiryTimeSec, int64_t mediatorfee, int64_t prepayment, int64_t prepaymentcut, uint256 datahash, uint256 agreementtxid, uint256 prevproposaltxid, std::string name)
 {
 	CScript opret; uint8_t evalcode = EVAL_AGREEMENTS, funcid = 'p';
 	proposaltype = 'p'; //temporary
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << proposaltype << initiator << receiver << mediator << expiryTimeSec << mediatorfee << deposit << depositcut << datahash << agreementtxid << prevproposaltxid << name);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << proposaltype << initiator << receiver << mediator << expiryTimeSec << mediatorfee << prepayment << prepaymentcut << datahash << agreementtxid << prevproposaltxid << name);
 	return(opret);
 }
-uint8_t DecodeAgreementProposalOpRet(CScript scriptPubKey, uint8_t &proposaltype, std::vector<uint8_t> &initiator, std::vector<uint8_t> &receiver, std::vector<uint8_t> &mediator, int64_t &expiryTimeSec, int64_t &mediatorfee, int64_t &deposit, int64_t &depositcut, uint256 &datahash, uint256 &agreementtxid, uint256 &prevproposaltxid, std::string &name)
+uint8_t DecodeAgreementProposalOpRet(CScript scriptPubKey, uint8_t &proposaltype, std::vector<uint8_t> &initiator, std::vector<uint8_t> &receiver, std::vector<uint8_t> &mediator, int64_t &expiryTimeSec, int64_t &mediatorfee, int64_t &prepayment, int64_t &prepaymentcut, uint256 &datahash, uint256 &agreementtxid, uint256 &prevproposaltxid, std::string &name)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> proposaltype; ss >> initiator; ss >> receiver; ss >> mediator; ss >> expiryTimeSec; ss >> mediatorfee; ss >> deposit; ss >> depositcut; ss >> datahash; ss >> agreementtxid; ss >> prevproposaltxid; ss >> name) != 0 && evalcode == EVAL_AGREEMENTS)
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> proposaltype; ss >> initiator; ss >> receiver; ss >> mediator; ss >> expiryTimeSec; ss >> mediatorfee; ss >> prepayment; ss >> prepaymentcut; ss >> datahash; ss >> agreementtxid; ss >> prevproposaltxid; ss >> name) != 0 && evalcode == EVAL_AGREEMENTS)
 		return(funcid);
 	return(0);
 }
@@ -221,7 +223,7 @@ uint8_t DecodeAgreementSigningOpRet(CScript scriptPubKey, uint256 &proposaltxid)
 bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
 	/*
-	IMPORTANT!!! - deposit is locked under EVAL_AGREEMENTS, but it may also be spent by a specific Settlements transaction. Make sure this code is able to check for this.
+	IMPORTANT!!! - prepayment is locked under EVAL_AGREEMENTS, but it may also be spent by a specific Settlements transaction. Make sure this code is able to check for this.
 	
 	- Fetch transaction
 	- Generic checks (measure boundaries, etc. Check other modules for inspiration)
@@ -236,20 +238,20 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 			- Check if vout2 seller dispute baton exists and is sent to seller CC address. Confirm that the address can only be spent by the specified seller pubkey.
 			- Check if vout3 buyer dispute baton exists and is sent to buyer CC address. Confirm that the address can only be spent by the specified buyer pubkey.
 			- Check if vout4 exists and its nValue is >= 10000 sats.
-				TODO: what to do with this? Which eval code to use for the deposit?
+				TODO: what to do with this? Which eval code to use for the prepayment?
 			- Check if vin.n-1 exists and is a 'p' type transaction. If it is not correct or non-existant, invalidate, otherwise:
 				- Check if vout0 marker exists and is sent to global addr. If not, invalidate
 				- Check if vin.n-1 prevout is vout1 in 'p' tx
 				- Fetch the opret from 'p' tx and make sure all data is included. If opret is malformed or data is missing, invalidate
-				- Get proposaltype, initiatorpubkey, receiverpubkey, mediatorpubkey, agreementtxid, deposit, mediatorfee, depositsplit, datahash, description
+				- Get proposaltype, initiatorpubkey, receiverpubkey, mediatorpubkey, agreementtxid, prepayment, mediatorfee, prepaymentsplit, datahash, description
 					- Proposaltype: must be "p" (proposal). If it is "u" (contract update) or "t" (contract terminate), invalidate
 					- Initiatorpubkey: confirm that 'p' tx came from this pubkey. Make sure that initiatorpubkey == sellerpubkey
 					- Receiverpubkey: confirm that the current tx came from this pubkey. Make sure that receiverpubkey == buyerpubkey
 					- Mediatorpubkey: if mediator == false, must be null (or failing that, just ignored). If mediator == true, must be a valid pubkey
 					- Agreementtxid: can be either null or valid agreement txid, however it must be the same as the refagreementtxid in current tx
-					- Deposit: if mediator == false, must be 0. Otherwise, check if the vout4 nValue is the same as this value
+					- Prepayment: if mediator == false, must be 0. Otherwise, check if the vout4 nValue is the same as this value
 					- Mediatorfee: if mediator == false, must be 0. Otherwise, must be more than 10000 satoshis
-					- Depositsplit: must be 0 (or failing that, just ignored)
+					- Prepaymentsplit: must be 0 (or failing that, just ignored)
 					- Datahash and description doesn't need to be validated, can be w/e
 				- Check if vin.n-1 exists in the 'p' type transaction. If it does, get the prevout txid, then run the Løøp. If it returns false, invalidate
 			- Misc Business rules
@@ -259,16 +261,16 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				- Check if marker exists and is sent to global addr. If not, invalidate
 				- Check if response hook exists and is sent to 1of2 CC addr (we'll confirm if this address is correct later)
 				- Fetch the opret from currenttx and make sure all data is included. If opret is malformed or data is missing, invalidate
-				- Get initiatorpubkey, receiverpubkey, mediatorpubkey, proposaltype, agreementtxid, deposit, mediatorfee, depositsplit, datahash, description
+				- Get initiatorpubkey, receiverpubkey, mediatorpubkey, proposaltype, agreementtxid, prepayment, mediatorfee, prepaymentsplit, datahash, description
 					- Initiatorpubkey: confirm that this tx came from this pubkey
 					- Receiverpubkey: check if pubkey is valid
 					- Mediatorpubkey: can be either null or valid pubkey
 					- Proposaltype: can be 'a'(proposal amend),'u'(contract update) or 't' (contract terminate). If it is 'c'(proposal create), invalidate as 'c' types shouldn't be able to trigger validation
 					- Agreementtxid: if proposaltype is 'a', agreementtxid must be zeroid.
 						Otherwise, check if agreementtxid is valid (optionally, check if its 'c' type and that initiator and receiver match)
-					- Deposit: only relevant if proposaltype is 'a' and mediatorpubkey is valid. Is otherwise ignored for now
+					- Prepayment: only relevant if proposaltype is 'a' and mediatorpubkey is valid. Is otherwise ignored for now
 					- Mediatorfee: only relevant if proposaltype is 'a' and mediatorpubkey is valid, in which case it must be at least 10000 satoshis. Is otherwise ignored for now
-					- Depositsplit: only relevant if proposaltype is 't', and the deposit is non-zero. The deposit must be evenly divisible so that there are no remaining coins left
+					- Prepaymentsplit: only relevant if proposaltype is 't', and the prepayment is non-zero. The prepayment must be evenly divisible so that there are no remaining coins left
 					- Datahash and description doesn't need to be validated, can be w/e
 				- Save all this data somewhere
 				- If a 'p' type is being validated, that means it probably spent a previous 'p' type, therefore check vin.n-1 prevout and get the prevouttxid. if it doesn't exist or is incorrect, invalidate
@@ -277,7 +279,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					- Check if marker exists and is sent to global addr. If not, invalidate
 					- Check if response hook exists and is spent by currenttxid. If not, invalidate
 					- Fetch the opret from prevouttx and make sure all data is included. If opret is malformed or data is missing, invalidate
-					- Get initiatorpubkey, receiverpubkey, mediatorpubkey, proposaltype, agreementtxid, deposit, mediatorfee, depositsplit, datahash, description
+					- Get initiatorpubkey, receiverpubkey, mediatorpubkey, proposaltype, agreementtxid, prepayment, mediatorfee, prepaymentsplit, datahash, description
 						- Initiatorpubkey: confirm that this tx came from this pubkey
 						- Receiverpubkey: check if pubkey is valid. 
 						- Mediatorpubkey: can be either null or valid pubkey
@@ -318,13 +320,16 @@ int64_t IsAgreementsVout(struct CCcontract_info *cp,const CTransaction& tx,int32
 	}
 	return(0);
 }
+// GetLatestExpirationDate
+// GetAgreementData
+// etc.
 
 //===========================================================================
 // RPCs - tx creation
 //===========================================================================
 
 // agreementpropose - constructs a 'p' transaction, with the 'p' proposal type
-UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> buyer, std::vector<uint8_t> mediator, int64_t expiryTimeSec, int64_t mediatorfee, int64_t deposit, uint256 prevproposaltxid, uint256 refagreementtxid)
+UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> buyer, std::vector<uint8_t> mediator, int64_t expiryTimeSec, int64_t mediatorfee, int64_t prepayment, uint256 prevproposaltxid, uint256 refagreementtxid)
 {
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	CPubKey mypk;
@@ -332,7 +337,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	int32_t numvouts, vini, height, retcode;
 	uint256 hashBlock, refHash, refAgreementTxid, refPrevProposalTxid, spenttxid;
 	std::vector<uint8_t> refInitiator, refReceiver, refMediator;
-	int64_t refExpiryTime, refMediatorFee, refDeposit, refDepositCut;
+	int64_t refExpiryTime, refMediatorFee, refPrepayment, refPrepaymentCut;
 	std::string refName;
 	uint8_t refProposalType;
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_AGREEMENTS);
@@ -376,23 +381,23 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	else
 		mediatorfee = 0;
 	
-	// if mediator exists, check if deposit is sufficient
+	// if mediator exists, check if prepayment is sufficient
 	if(pubkey2pk(mediator).IsValid()) {
-		if(deposit == 0)
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Deposit must be specified if valid mediator exists");
-		else if(deposit < CC_DEPOSIT_MIN)
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Deposit is too low");
+		if(prepayment == 0)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Prepayment must be specified if valid mediator exists");
+		else if(prepayment < CC_PAYMENT_MIN)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Prepayment is too low");
 	}
 	else
-		deposit = 0;
+		prepayment = 0;
 	
 	// check prevproposaltxid if specified
 	if(prevproposaltxid != zeroid) {
 		if(myGetTransaction(prevproposaltxid,prevproposaltx,hashBlock)==0 || (numvouts=prevproposaltx.vout.size())<=0)
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
-		if(DecodeAgreementOpRet(prevproposaltx.vout[numvouts - 1].scriptPubKey, refProposalType) == 't')
+		if(DecodeAgreementOpRet(prevproposaltx.vout[numvouts - 1].scriptPubKey) == 't')
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified agreement proposal has been closed");
-		else if(DecodeAgreementProposalOpRet(prevproposaltx.vout[numvouts - 1].scriptPubKey, refProposalType, refInitiator, refReceiver, refMediator, refExpiryTime, refMediatorFee, refDeposit, refDepositCut, refHash, refAgreementTxid, refPrevProposalTxid, refName) != 'p')
+		else if(DecodeAgreementProposalOpRet(prevproposaltx.vout[numvouts - 1].scriptPubKey, refProposalType, refInitiator, refReceiver, refMediator, refExpiryTime, refMediatorFee, refPrepayment, refPrepaymentCut, refHash, refAgreementTxid, refPrevProposalTxid, refName) != 'p')
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "invalid agreement proposal txid " << prevproposaltxid.GetHex());
 		if(refProposalType != 'p')
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified proposal has incorrect proposal type, txid " << prevproposaltxid.GetHex());
@@ -410,7 +415,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	if(refagreementtxid != zeroid) {
 		if(myGetTransaction(refagreementtxid,refagreementtx,hashBlock) == 0 || (numvouts=refagreementtx.vout.size()) <= 0)
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "cant find specified reference agreement txid " << refagreementtxid.GetHex());
-		if(DecodeAgreementOpRet(refagreementtx.vout[numvouts - 1].scriptPubKey, refProposalType) != 'c')
+		if(DecodeAgreementOpRet(refagreementtx.vout[numvouts - 1].scriptPubKey) != 'c')
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "invalid reference agreement txid " << refagreementtxid.GetHex());
 	}
 	/*
@@ -420,7 +425,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	std::cerr << "mediator: " << HexStr(mediator) << std::endl;
 	std::cerr << "mediatorisValid: " << pubkey2pk(mediator).IsValid() << std::endl;
 	std::cerr << "mediatorfee: " << mediatorfee << std::endl;
-	std::cerr << "deposit: " << deposit << std::endl;
+	std::cerr << "prepayment: " << prepayment << std::endl;
 	std::cerr << "refagreementtxid: " << refagreementtxid.GetHex() << std::endl;
 	std::cerr << "prevproposaltxid: " << prevproposaltxid.GetHex() << std::endl;
 	*/
@@ -439,7 +444,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 			mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_RESPONSE_VALUE, mypk, pubkey2pk(buyer))); // vout.1 response hook (with buyer)
 		else
 			mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_RESPONSE_VALUE, mypk)); // vout.1 response hook (no buyer)
-		return(FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementProposalOpRet('p',std::vector<uint8_t>(mypk.begin(),mypk.end()),buyer,mediator,expiryTimeSec,mediatorfee,deposit,0,datahash,refagreementtxid,prevproposaltxid,name)));
+		return(FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementProposalOpRet('p',std::vector<uint8_t>(mypk.begin(),mypk.end()),buyer,mediator,expiryTimeSec,mediatorfee,prepayment,0,datahash,refagreementtxid,prevproposaltxid,name)));
 	}
 	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "error adding normal inputs");
 }
@@ -470,7 +475,7 @@ UniValue AgreementRequestUpdate(const CPubKey& pk, uint64_t txfee, uint256 agree
 
 // agreementrequestcancel - constructs a 'p' transaction, with the 't' proposal type
 // This transaction will only be validated if agreementtxid is specified. Optionally, prevproposaltxid can be used to amend previous cancel requests.
-UniValue AgreementRequestCancel(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 datahash, uint64_t depositcut, uint256 prevproposaltxid)
+UniValue AgreementRequestCancel(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 datahash, uint64_t prepaymentcut, uint256 prevproposaltxid)
 {
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	CPubKey mypk;
@@ -501,7 +506,7 @@ UniValue AgreementCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 	int32_t numvouts, vini, height, retcode;
 	uint256 hashBlock, refHash, refAgreementTxid, refPrevProposalTxid, spenttxid;
 	std::vector<uint8_t> refInitiator, refReceiver, refMediator;
-	int64_t refExpiryTime, refMediatorFee, refDeposit, refDepositCut;
+	int64_t refExpiryTime, refMediatorFee, refPrepayment, refPrepaymentCut;
 	std::string refName;
 	uint8_t refProposalType;
 	
@@ -518,7 +523,7 @@ UniValue AgreementCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 	if(proposaltxid != zeroid) {
 		if(myGetTransaction(proposaltxid,proposaltx,hashBlock)==0 || (numvouts=proposaltx.vout.size())<=0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cant find specified proposal txid " << proposaltxid.GetHex());
-		if(DecodeAgreementProposalOpRet(proposaltx.vout[numvouts-1].scriptPubKey,refProposalType,refInitiator,refReceiver,refMediator,refExpiryTime,refMediatorFee,refDeposit,refDepositCut,refHash,refAgreementTxid,refPrevProposalTxid,refName) != 'p')
+		if(DecodeAgreementProposalOpRet(proposaltx.vout[numvouts-1].scriptPubKey,refProposalType,refInitiator,refReceiver,refMediator,refExpiryTime,refMediatorFee,refPrepayment,refPrepaymentCut,refHash,refAgreementTxid,refPrevProposalTxid,refName) != 'p')
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid proposal txid " << proposaltxid.GetHex());
 		if(retcode = CCgetspenttxid(spenttxid, vini, height, proposaltxid, 1) == 0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "specified proposal has already been updated by txid " << spenttxid.GetHex());
@@ -604,14 +609,14 @@ UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid
 			- If "p":
 				receiver: pubkey2 (or none);
 				mediator: pubkey3 (or none);
-				deposit: number (or none);
+				prepayment: number (or none);
 				mediatorfee: number (or none);
 			- If "u":
 				receiver: pubkey2;
 				mediator: pubkey3 (or none);
 			- If "t":
 				receiver: pubkey2;
-				depositsplit: percentage; (how much the receiver will get)
+				prepaymentsplit: percentage; (how much the receiver will get)
 			iteration: iteration;
 			datahash: datahash;
 			description: description (or none);
@@ -627,9 +632,9 @@ UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid
 			- Check for any 'u' transactions
 			- If canceled:
 				status: canceled;
-			- Else if deposit taken by mediator:
+			- Else if prepayment taken by mediator:
 				status: failed;
-			- Else if deposit spent by Settlements Payment:
+			- Else if prepayment spent by Settlements Payment:
 				- If payment has been withdrawn by buyer:
 					status: failed;
 				- Else if payment has been withdrawn by seller:
@@ -644,7 +649,7 @@ UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid
 				buyerdisputes: number;
 			- If mediator = true:
 				mediator: pubkey3 (or none);
-				deposit: number;
+				prepayment: number;
 				mediatorfee: number;
 			proposaltxid: proposaltxid; <- which proposal was accepted
 			refagreementtxid: txid (or none);
@@ -678,7 +683,7 @@ UniValue AgreementList()
 
 	auto addAgreementTxid = [&](uint256 txid) {
 		if (myGetTransaction(txid, vintx, hashBlock) != 0) {
-			if (vintx.vout.size() > 0 && DecodeAgreementOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey, proposaltype) != 0) {
+			if (vintx.vout.size() > 0 && DecodeAgreementOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey) != 0) {
 				if (std::find(foundtxids.begin(), foundtxids.end(), txid) == foundtxids.end()) {
 					result.push_back(txid.GetHex());
 					foundtxids.push_back(txid);
