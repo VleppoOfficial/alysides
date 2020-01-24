@@ -385,7 +385,7 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	if(pubkey2pk(mediator).IsValid()) {
 		if(prepayment == 0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Prepayment must be specified if valid mediator exists");
-		else if(prepayment < CC_PAYMENT_MIN)
+		else if(prepayment < CC_DEPOSIT_MIN)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Prepayment is too low");
 	}
 	else
