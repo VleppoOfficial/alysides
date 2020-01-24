@@ -1052,8 +1052,68 @@ int32_t GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info
 }
 
 // returns token creation signed raw tx
+/*std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, vscript_t nonfungibleData)
+{
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+	CPubKey mypk; struct CCcontract_info *cp, C;
+	if (tokensupply < 0)	{
+        CCerror = "negative tokensupply";
+        LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() =" << CCerror << "=" << tokensupply << std::endl);
+		return std::string("");
+	}
+    if (!nonfungibleData.empty() && tokensupply != 1) {
+        CCerror = "for non-fungible tokens tokensupply should be equal to 1";
+        LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
+        return std::string("");
+    }
+
+	
+	cp = CCinit(&C, EVAL_TOKENS);
+	if (name.size() > 32 || description.size() > 4096)  // this is also checked on rpc level
+	{
+        LOGSTREAM((char *)"cctokens", CCLOG_DEBUG1, stream << "name len=" << name.size() << " or description len=" << description.size() << " is too big" << std::endl);
+        CCerror = "name should be <= 32, description should be <= 4096";
+		return("");
+	}
+	if (txfee == 0)
+		txfee = 10000;
+	mypk = pubkey2pk(Mypubkey());
+
+	if (AddNormalinputs2(mtx, tokensupply + 2 * txfee, 64) > 0)  // add normal inputs only from mypk
+	{
+        int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);  
+        if (mypkInputs < tokensupply) {     // check that tokens amount are really issued with mypk (because in the wallet there maybe other privkeys)
+            CCerror = "some inputs signed not with -pubkey=pk";
+            return std::string("");
+        }
+
+        uint8_t destEvalCode = EVAL_TOKENS;
+        if( nonfungibleData.size() > 0 )
+            destEvalCode = nonfungibleData.begin()[0];
+
+        // NOTE: we should prevent spending fake-tokens from this marker in IsTokenvout():
+        mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL)));            // new marker to token cc addr, burnable and validated, vout pos now changed to 0 (from 1)
+		mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, tokensupply, mypk));
+		//mtx.vout.push_back(CTxOut(txfee, CScript() << ParseHex(cp->CChexstr) << OP_CHECKSIG));  // old marker (non-burnable because spending could not be validated)
+        //mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL)));          // ...moved to vout=0 for matching with rogue-game token
+
+		return(FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, nonfungibleData)));
+	}
+
+    CCerror = "cant find normal inputs";
+    LOGSTREAM((char *)"cctokens", CCLOG_INFO, stream << "CreateToken() " <<  CCerror << std::endl);
+    return std::string("");
+}
+*/
+enum EDualWeaponFlags
+	{
+		DWF_FIRELEFT = 1,
+		DWF_FIRERIGHT = 2,
+	};
+// returns token creation signed raw tx
 std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerPerc, std::string tokenType, uint256 assetHash, int64_t value, std::string ccode, uint256 referenceTokenId, int64_t expiryTimeSec, vscript_t nonfungibleData)
 {
+	//remove crappy license token system, replace with license tags set at time of token creation
     CTransaction refTokenBaseTx;
     uint256 hashBlock, dummyRefTokenId;
     std::vector<uint8_t> dummyPubkey;

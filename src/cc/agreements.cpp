@@ -17,6 +17,15 @@
 
 /*
 
+Put all notes here!
+if prepayment exists but there is no mediator, it acts as immediate payment upon acceptance (prepayment)
+remove crappy license token system, replace with license tags set at time of token creation
+when contracts expire, raising disputes should still be allowed
+IMPORTANT!!! - prepayment is locked under EVAL_AGREEMENTS, but it may also be spent by a specific Settlements transaction. Make sure this code is able to check for this.
+don't allow swapping between no mediator <-> mediator
+only 1 update/cancel request per party, per agreement
+version numbers should be reset after contract acceptance
+
 Agreements transaction types:
 	
 	case 'p':
@@ -120,10 +129,6 @@ Agreements RPCs:
 	agreementviewdisputes(agreementtxid [samplenum][recursive])
 	agreementinventory([pubkey])
 
-Notes:
-if prepayment exists but there is no mediator, it acts as immediate payment upon acceptance (prepayment)
-remove crappy license token system, replace with license tags set at time of token creation
-when contracts expire, raising disputes should still be allowed
 */
 
 // start of consensus code
@@ -223,7 +228,6 @@ uint8_t DecodeAgreementSigningOpRet(CScript scriptPubKey, uint256 &proposaltxid)
 bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
 	/*
-	IMPORTANT!!! - prepayment is locked under EVAL_AGREEMENTS, but it may also be spent by a specific Settlements transaction. Make sure this code is able to check for this.
 	
 	- Fetch transaction
 	- Generic checks (measure boundaries, etc. Check other modules for inspiration)
@@ -596,7 +600,6 @@ UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid
 //===========================================================================
 
 // agreementinfo
-// 	Note: version numbers should be reset after contract acceptance
 /*
 	Retrieves info about the specified Agreements transaction.
 		- Check funcid of transaction.

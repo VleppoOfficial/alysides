@@ -25,6 +25,17 @@
 
 #include "CCinclude.h"
 
+enum ETokenLicenseFlags
+{
+	TLF_NOCOPYRIGHT = 1,
+	TLF_PERFORM = 2,
+	TLF_DISPLAY = 4,
+	TLF_COPY = 8,
+	TLF_MODIFY = 16,
+	TLF_DISTRIBUTE = 32,
+	TLF_SUBLICENSE = 64,
+};
+
 // CCcustom
 bool TokensValidate(struct CCcontract_info *cp,Eval* eval,const CTransaction &tx, uint32_t nIn);
 bool TokensExactAmounts(bool goDeeper, struct CCcontract_info *cpTokens, int64_t &inputs, int64_t &outputs, Eval* eval, const CTransaction &tx, uint256 tokenid);
