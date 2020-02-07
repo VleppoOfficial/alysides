@@ -7740,7 +7740,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
     }
 
     //hextx = CreateToken(0, supply, name, description, ownerperc, tokentype, assetHash, value, ccode, referencetokenid, expiryTimeSec, nonfungibleData);
-	hextx = CreateToken(0, supply, name, description, ownerPerc, licensetype, datahash, value, ccode, nonfungibleData);
+	hextx = CreateToken(0, supply, name, description, ownerperc, licensetype, datahash, value, ccode, nonfungibleData);
     if( hextx.size() > 0 )     {
         result.push_back(Pair("result", "success"));
         result.push_back(Pair("hex", hextx));
