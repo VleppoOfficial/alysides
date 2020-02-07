@@ -174,7 +174,7 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 			
             // Verifying updaterPubkey by checking tx.vin[0] and tx.vout[1] addresses
             // These addresses should be equal to each other, and updaterPubkey address should be equal to both
-            if (!Getscriptaddress(destaddr, tx.vout[1].scriptPubKey))
+            /*if (!Getscriptaddress(destaddr, tx.vout[1].scriptPubKey))
                 return eval->Invalid("couldn't locate vout1 destaddr");
             if (!(eval->GetTxUnconfirmed(tx.vin[0].prevout.hash, referenceTx, hashBlock) != 0 && myGetTransaction(tx.vin[0].prevout.hash, referenceTx, hashBlock) &&
                 Getscriptaddress(srcaddr, referenceTx.vout[tx.vin[0].prevout.n].scriptPubKey)))
@@ -184,8 +184,10 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
             if (!Getscriptaddress(updaterPubkeyaddr,CScript() << updaterPubkey << OP_CHECKSIG))
                 return eval->Invalid("couldn't get updaterPubkey script address");
             if (strcmp(updaterPubkeyaddr, srcaddr) != 0 || strcmp(updaterPubkeyaddr, destaddr) != 0)
-                return eval->Invalid("updaterPubkey address doesn't match srcaddr or destaddr");
+                return eval->Invalid("updaterPubkey address doesn't match srcaddr or destaddr");*/
             
+			if (TotalPubkeyNormalInputs(tx, pubkey2pk(updaterPubkey)) == 0) // make sure that the updaterPubkey specified in the opret is the pubkey that submitted this tx
+				return eval->Invalid("found no normal inputs signed by updater pubkey");
             if (GetTokenOwnershipPercent(pubkey2pk(updaterPubkey), tokenid) < ownerPerc)
                 return eval->Invalid("updater pubkey does not own enough tokens to update");
 			
