@@ -421,7 +421,7 @@ CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, 
 /// @param expiryTimeSec duration of a license type token until it expires. Can be set to 0 for infinite duration (perpetual license)
 /// @param vopretNonfungible NFT data, could be empty. If not empty, NFT will be created, the first byte if the NFT data should be set to the eval code of the contract validating this NFT data
 /// @returns scriptPubKey with OP_RETURN script
-CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 referencetokenid, int64_t expiryTimeSec, vscript_t vopretNonfungible);
+CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, vscript_t vopretNonfungible);
 
 /// Makes opreturn scriptPubKey for token creation transaction. Normally this function is called internally by the tokencreate rpc. You might need to call this function to create a customized token.
 /// The total opreturn length should not exceed 10001 byte
@@ -436,7 +436,7 @@ CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, 
 /// @param oprets vector of pairs of additional data added to the token opret. The first element in the pair is opretid enum, the second is the data as byte array
 /// @returns scriptPubKey with OP_RETURN script
 /// @see opretid
-CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 referencetokenid, int64_t expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> oprets);
+CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, std::vector<std::pair<uint8_t, vscript_t>> oprets);
 
 /// Makes opreturn scriptPubKey for token transaction. Normally this function is called internally by the token rpcs. You might call this function if your module should create a customized token.
 /// The total opreturn length should not exceed 10001 byte
@@ -483,7 +483,7 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
 /// @param[out] referencetokenid a reference to another existing token id
 /// @param[out] expiryTimeSec duration of a license type token until it expires
 /// @returns funcid ('c') or NULL if errors
-uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc, std::string &tokentype, uint256 &referencetokenid, int64_t &expiryTimeSec);
+uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc);
 
 /// Overload that decodes opreturn scriptPubKey of token creation transaction, containing additional information about the token and also returns additional data blobs. 
 /// Normally this function is called internally by the token rpcs. You might want to call this function if your module should create a customized token.
@@ -497,7 +497,7 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
 /// @param[out] expiryTimeSec duration of a license type token until it expires
 /// @param[out] oprets vector of pairs of additional opreturn data added to the token opret. Could be empty if not set. The first element in the pair is opretid enum, the second is the data as byte array
 /// @returns funcid ('c') or NULL if errors
-uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc, std::string &tokentype, uint256 &referencetokenid, int64_t &expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> &oprets);
+uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc, std::vector<std::pair<uint8_t, vscript_t>> &oprets);
 
 /// Decodes opreturn scriptPubKey of token transaction, also returns additional data blobs. 
 /// Normally this function is called internally by different token rpc. You might want to call if your module created a customized token.
