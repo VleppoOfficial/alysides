@@ -640,14 +640,15 @@ bool IsTokenMarkerVout(CTxOut vout)
 bool IsTokenBatonVout(CTxOut vout)
 {
     CScript opret;
-    uint256 assetHash;
+    uint256 datahash;
     int64_t value;
-    std::string ccode, message;
+	int32_t licensetype;
+    std::string ccode;
 	bool ret;
     
     if (vout.nValue == 10000 &&
         (ret = getCCopret(vout.scriptPubKey, opret)) == true &&
-        (DecodeTokenUpdateCCOpRet(opret, assetHash, value, ccode, message) == 'u'))
+        (DecodeTokenUpdateCCOpRet(opret, datahash, value, ccode, licensetype) == 'u'))
     {
         //std::cerr << "Located a baton vout" << std::endl;
         return true;
@@ -1105,30 +1106,14 @@ int32_t GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info
     return std::string("");
 }
 */
-enum EDualWeaponFlags
-	{
-		DWF_FIRELEFT = 1,
-		DWF_FIRERIGHT = 2,
-	};
 // returns token creation signed raw tx
-std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerPerc, std::string tokenType, uint256 assetHash, int64_t value, std::string ccode, uint256 referenceTokenId, int64_t expiryTimeSec, vscript_t nonfungibleData)
+std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerPerc, int32_t licensetype, uint256 datahash, int64_t value, std::string ccode, vscript_t nonfungibleData);
+//std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerPerc, std::string tokenType, uint256 datahash, int64_t value, std::string ccode, uint256 referenceTokenId, int64_t expiryTimeSec, vscript_t nonfungibleData)
 {
-	//remove crappy license token system, replace with license tags set at time of token creation
-    CTransaction refTokenBaseTx;
-    uint256 hashBlock, dummyRefTokenId;
-    std::vector<uint8_t> dummyPubkey;
-    int64_t refTokenSupply, refExpiryTimeSec;
-    std::string dummyName, dummyDescription, refTokenType;
-    double refOwnerPerc;
-    int32_t numblocks;
-
-    CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-    struct CCcontract_info *cp, C;
-    cp = CCinit(&C, EVAL_TOKENS);
-
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+	struct CCcontract_info *cp, C; cp = CCinit(&C, EVAL_TOKENS);
     if (txfee == 0)
         txfee = 10000;
-
     CPubKey mypk = pubkey2pk(Mypubkey());
 
     //Checking if the specified tokensupply is valid
@@ -1151,68 +1136,14 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
         return ("");
     }
     //Checking the estimated value
-    if (value < 1 && value != 0 )
-    {
+    if (value < 1 && value != 0 ) {
         CCerror = "Estimated value must be positive and cannot be less than 1 satoshi if not 0";
         return std::string("");
     }
-
-    //If token type is "a" and referenceTokenId is (properly) defined, check if it is valid. Else, ignore as it is optional for "a" types
-    if (tokenType == "a" && referenceTokenId != zeroid) {
-        if (!myGetTransaction(referenceTokenId, refTokenBaseTx, hashBlock)) {
-            CCerror = "cant find reference tokenid";
-            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-            return std::string("");
-        }
-    }
-    if (tokenType == "m" || tokenType == "s")
-    {
-        //Checking if tokensupply is equal to 1 if token is master license type
-        if (tokenType == "m" && tokensupply != 1) {
-            CCerror = "for master license tokens tokensupply should be equal to 1";
-            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-            return std::string("");
-        }
-        //checking if referenceTokenId exists
-        if (!myGetTransaction(referenceTokenId, refTokenBaseTx, hashBlock)) {
-            CCerror = "cant find reference tokenid";
-            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-            return std::string("");
-        }
-        double ownedRefTokenPerc = GetTokenOwnershipPercent(mypk, referenceTokenId);
-        //checking reference tokenid opret
-        if (refTokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(refTokenBaseTx.vout[refTokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c') {
-            CCerror = "reference tokenid isn't token creation txid";
-            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-            return std::string("");
-        }
-        //master licenses must reference digital assets owned by mypk
-        if (tokenType == "m" && (refTokenType != "a" || ownedRefTokenPerc < refOwnerPerc)) {
-            CCerror = "for master license tokens reference tokenid must be of type 'a' and owned by this pubkey";
-            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-            return std::string("");
-        }
-        //sub-licenses must reference unexpired master licenses owned by mypk
-        if (tokenType == "s" && (refTokenType != "m" || ownedRefTokenPerc < refOwnerPerc)) {
-            CCerror = "for sub-license tokens reference tokenid must be of type 'm' and owned by this pubkey";
-            LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-            return std::string("");
-        }
-        if (refExpiryTimeSec != 0)
-        {
-            if (tokenType == "s" && (CCduration(numblocks, referenceTokenId) > refExpiryTimeSec))
-            {
-                CCerror = "Can't create a sub-license if master license is expired";
-                LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-                return std::string("");
-            }
-            if (tokenType == "s" && (refExpiryTimeSec - CCduration(numblocks, referenceTokenId) < expiryTimeSec))
-            {
-                CCerror = "Sub-license expire time can't be longer then time left until master license expires";
-                LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
-                return std::string("");
-            }
-        }
+	//Double checking the license flags
+	if (licensetype > 127 || licensetype < 0) {
+		CCerror = "Invalid license flags, must be between 0 and 127";
+        return std::string("");
     }
 
 	if (AddNormalinputs2(mtx, tokensupply + 2 * txfee, 64) > 0)  // add normal inputs only from mypk
@@ -1223,26 +1154,20 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
             return std::string("");
         }
         uint8_t destEvalCode = EVAL_TOKENS;
-        //If nonfungibleData exists, eval code is set to the one specified within nonfungibleData
         if (nonfungibleData.size() > 0)
             destEvalCode = nonfungibleData.begin()[0];
 
-        // vout0 is a marker vout
         // NOTE: we should prevent spending fake-tokens from this marker in IsTokenvout():
         mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, txfee, GetUnspendable(cp, NULL))); // new marker to token cc addr, burnable and validated, vout pos now changed to 0 (from 1)
-        // vout1 issues the tokens to mypk
         mtx.vout.push_back(MakeTokensCC1vout(destEvalCode, tokensupply, mypk));
-        // vout2 is a baton vout containing arbitrary updatable data (should be prevented from spending in IsTokensVout)
-        CScript batonopret = EncodeTokenUpdateCCOpRet(assetHash,value,ccode,"");
+        CScript batonopret = EncodeTokenUpdateCCOpRet(datahash,value,ccode,licensetype);
         std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
-        if (makeCCopret(batonopret, vData))
-        {
+        if (makeCCopret(batonopret, vData)) {
             mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, 10000, GetUnspendable(cp, NULL), &vData));  // BATON_VOUT
             //fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
-            return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, ownerPerc, tokenType, referenceTokenId, expiryTimeSec, nonfungibleData)));
+            return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenCreateOpRet('c', Mypubkey(), name, description, ownerPerc, nonfungibleData)));
         }
-        else
-        {
+        else {
             CCerror = "couldnt embed updatable data to baton vout";
             LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "CreateToken() " << CCerror << std::endl);
             return std::string("");
@@ -1253,13 +1178,12 @@ std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, st
     return std::string("");
 }
 
-std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64_t value, std::string ccode, std::string message)
+std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 datahash, int64_t value, std::string ccode, int32_t licensetype)
 {
     CTransaction tokenBaseTx, prevUpdateTx;
-    uint256 hashBlock, dummyRefTokenId, latesttxid;
+    uint256 hashBlock, latesttxid;
     std::vector<uint8_t> dummyPubkey;
-    int64_t refExpiryTimeSec;
-    std::string dummyName, dummyDescription, refTokenType;
+    std::string dummyName, dummyDescription;
     double refOwnerPerc;
     
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
@@ -1277,7 +1201,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
     }
     double ownedRefTokenPerc = GetTokenOwnershipPercent(mypk, tokenid);
     //checking tokenid create opret
-    if (tokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenBaseTx.vout[tokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc, refTokenType, dummyRefTokenId, refExpiryTimeSec) != 'c') {
+    if (tokenBaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenBaseTx.vout[tokenBaseTx.vout.size() - 1].scriptPubKey, dummyPubkey, dummyName, dummyDescription, refOwnerPerc) != 'c') {
         CCerror = "tokenid isn't token creation txid";
         return std::string("");
     }
@@ -1305,9 +1229,14 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
         CCerror = "Estimated value must be positive and cannot be less than 1 satoshi if not 0";
         return std::string("");
     }
-    //Checking the ccode and message size
-    if (ccode.size() != 3 || message.size() > 24) { // this is also checked on rpc level
-        CCerror = "ccode size should be 3 chars, message size should be <= 24 chars";
+    //Checking the ccode size
+    if (ccode.size() != 3) { // this is also checked on rpc level
+        CCerror = "ccode size should be 3 chars";
+        return std::string("");
+    }
+	//Double checking the license flags
+	if (licensetype > 127 || licensetype < 0) {
+		CCerror = "Invalid license flags, must be between 0 and 127";
         return std::string("");
     }
     
@@ -1330,7 +1259,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64
             return std::string("");
         }
         uint8_t destEvalCode = EVAL_TOKENS;
-        CScript batonopret = EncodeTokenUpdateCCOpRet(assetHash, value, ccode, message);
+        CScript batonopret = EncodeTokenUpdateCCOpRet(datahash, value, ccode, licensetype);
         std::vector<std::vector<unsigned char>> vData = std::vector<std::vector<unsigned char>>();
         if (makeCCopret(batonopret, vData)) {
             //vout0 is next batonvout with cc opret payload
@@ -1422,14 +1351,14 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 {
     UniValue result(UniValue::VOBJ);
     int64_t total = 0LL, amount, value;
-    int32_t vini, height, retcode;
+    int32_t vini, height, retcode, licensetype;
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
     std::vector<uint8_t> updaterPubkey;
-    uint256 batontxid, sourcetxid = tokenid, latesttxid, assetHash, hashBlock, tokenIdInOpret;
+    uint256 batontxid, sourcetxid = tokenid, latesttxid, datahash, hashBlock, tokenIdInOpret;
     CTransaction txBaton;
     uint8_t funcId, evalcode;
     CScript batonopret;
-    std::string ccode, message, dummyName, origdescription;
+    std::string ccode, dummyName, origdescription;
 
     if (recursive == 0) { //from earliest to latest
         // special handling for token creation tx - in this tx, baton vout is vout2
@@ -1439,15 +1368,14 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
         (funcId = DecodeTokenCreateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription)) == 'c' &&
         txBaton.vout[2].nValue == 10000 &&
         getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
-        (funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u')) {
+        (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u')) {
                 total++;
                 UniValue data(UniValue::VOBJ);
                 data.push_back(Pair("creatorPubkey", HexStr(updaterPubkey))); 
-                data.push_back(Pair("hash", assetHash.GetHex())); 
+                data.push_back(Pair("hash", datahash.GetHex())); 
                 data.push_back(Pair("value", (double)value/COIN));
                 data.push_back(Pair("ccode", ccode));
-                if (!origdescription.empty())
-                    data.push_back(Pair("description", origdescription));
+                data.push_back(Pair("licensetype", licensetype));
                 result.push_back(Pair(tokenid.GetHex(), data));
         }
         else {
@@ -1470,16 +1398,15 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             txBaton.vout[0].nValue == 10000 &&
             (funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' &&
             getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
-            (funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
+            (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u'))
         {
             total++;
             UniValue data(UniValue::VOBJ);
             data.push_back(Pair("updaterPubkey", HexStr(updaterPubkey))); 
-            data.push_back(Pair("hash", assetHash.GetHex()));
+            data.push_back(Pair("hash", datahash.GetHex()));
             data.push_back(Pair("value", (double)value/COIN));
             data.push_back(Pair("ccode", ccode));
-            if (!message.empty())
-                    data.push_back(Pair("message", message));
+            data.push_back(Pair("licensetype", licensetype));
             result.push_back(Pair(batontxid.GetHex(), data));
             sourcetxid = batontxid;
         }
@@ -1498,16 +1425,15 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                 txBaton.vout[0].nValue == 10000 &&     // check baton fee 
                 (funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' && // decode opreturn
                 getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
-                (funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
+                (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u'))
             {
                 total++;
                 UniValue data(UniValue::VOBJ);
                 data.push_back(Pair("updaterPubkey", HexStr(updaterPubkey))); 
-                data.push_back(Pair("hash", assetHash.GetHex()));
+                data.push_back(Pair("hash", datahash.GetHex()));
                 data.push_back(Pair("value", (double)value/COIN));
                 data.push_back(Pair("ccode", ccode));
-                if (!message.empty())
-                    data.push_back(Pair("message", message));
+                data.push_back(Pair("licensetype", licensetype));
                 result.push_back(Pair(batontxid.GetHex(), data));
                 sourcetxid = batontxid;
             }
@@ -1537,16 +1463,15 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                 txBaton.vout[0].nValue == 10000 &&     // check baton fee 
                 (funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' && // decode opreturn
                 getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
-                (funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
+                (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u'))
             {
                 total++;
                 UniValue data(UniValue::VOBJ);
                 data.push_back(Pair("updaterPubkey", HexStr(updaterPubkey))); 
-                data.push_back(Pair("hash", assetHash.GetHex()));
+                data.push_back(Pair("hash", datahash.GetHex()));
                 data.push_back(Pair("value", (double)value/COIN));
                 data.push_back(Pair("ccode", ccode));
-                if (!message.empty())
-                    data.push_back(Pair("message", message));
+                data.push_back(Pair("licensetype", licensetype));
                 result.push_back(Pair(sourcetxid.GetHex(), data));
             }
             else {
@@ -1569,16 +1494,15 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             (funcId = DecodeTokenCreateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription)) == 'c' &&
             txBaton.vout[2].nValue == 10000 &&
             getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
-            (funcId = DecodeTokenUpdateCCOpRet(batonopret, assetHash, value, ccode, message) == 'u'))
+            (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u'))
             {
                 total++;
                 UniValue data(UniValue::VOBJ);
                 data.push_back(Pair("creatorPubkey", HexStr(updaterPubkey))); 
-                data.push_back(Pair("hash", assetHash.GetHex()));
+                data.push_back(Pair("hash", datahash.GetHex()));
                 data.push_back(Pair("value", (double)value/COIN));
                 data.push_back(Pair("ccode", ccode));
-                if (!origdescription.empty())
-                    data.push_back(Pair("description", origdescription));
+                data.push_back(Pair("licensetype", licensetype));
                 result.push_back(Pair(tokenid.GetHex(), data));
             }
             else {

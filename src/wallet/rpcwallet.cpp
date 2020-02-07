@@ -7651,15 +7651,17 @@ UniValue tokenbalance(const UniValue& params, bool fHelp, const CPubKey& mypk)
 UniValue tokencreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-    std::string name, description, ccode, hextx; 
+    std::string name, description, ccode = "USD", hextx; 
     std::vector<uint8_t> nonfungibleData;
-    int64_t supply; // changed from uin64_t to int64_t for this 'if ( supply <= 0 )' to work as expected
-    std::string tokentype; int64_t expiryTimeSec = 0, value; double ownerperc = 100.0; uint256 referencetokenid = zeroid, assetHash;
+    int64_t value = 0, supply; // changed from uin64_t to int64_t for this 'if ( supply <= 0 )' to work as expected
+	int32_t licensetype = 0;
+    double ownerperc = 100.0;
+	uint256 datahash = zeroid;
 
     CCerror.clear();
 
-    if ( fHelp || params.size() > 8 || params.size() < 3 )
-        throw runtime_error("tokencreate name supply tokentype [description][assetHash][value][ccode][referencetokenid][expirytime][ownerperc][data]\n");
+    if ( fHelp || params.size() > 9 || params.size() < 3 )
+        throw runtime_error("tokencreate name supply [description][licensetype][datahash][value][ccode][ownerperc][data]\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     
@@ -7678,40 +7680,36 @@ UniValue tokencreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
         return(result);
     }
     
-    tokentype = params[2].get_str();
-    if (tokentype != "a" && tokentype != "m" && tokentype != "s")   {
-        ERR_RESULT("Token type must be 'a', 'm' or 's'");
-        return(result);
-    }
-    
-    if (params.size() >= 4)     {
-        description = params[3].get_str();
+    if (params.size() >= 3)     {
+        description = params[2].get_str();
         if (description.size() > 4096)   {
             ERR_RESULT("Token description must be <= 4096 characters");
             return(result);
         }
     }
     
-    if (params.size() >= 5)     {
-        assetHash = Parseuint256((char *)params[4].get_str().c_str()); //returns zeroid if empty or wrong length
+	if (params.size() >= 4)     {
+        licensetype = atof(params[3].get_str().c_str());
+        if (licensetype > 127 || licensetype < 0)   {
+            ERR_RESULT("Invalid license flag, must be between 0 and 127");
+            return(result);
+        }
     }
-    else
-        assetHash = zeroid;
+	
+    if (params.size() >= 5)     {
+        datahash = Parseuint256((char *)params[4].get_str().c_str()); //returns zeroid if empty or wrong length
+    }
     
-    if (params.size() >= 6)
-    {
+    if (params.size() >= 6)     {
         value = atof(params[5].get_str().c_str()) * COIN;
-        if (value < 1 && value != 0 )
+        if (value < 1 && value != 0)
         {
             ERR_RESULT("Value cannot be less than 1 satoshi if it is not zero");
             return(result);
         }
     }
-    else
-        value = 0;
     
-    if (params.size() >= 7)
-    {
+    if (params.size() >= 7)     {
         ccode = params[6].get_str();
         if (ccode.size() == 0 || ccode.size() != 3)
         {
@@ -7719,37 +7717,17 @@ UniValue tokencreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
             return(result);
         }
     }
-    else
-        ccode = "USD";
     
     if (params.size() >= 8)     {
-        referencetokenid = Parseuint256((char *)params[7].get_str().c_str()); //returns zeroid if empty or wrong length
-        if (tokentype == "m" || tokentype == "s") {
-            if (referencetokenid == zeroid)    {
-                ERR_RESULT("invalid reference tokenid");
-                return(result);
-            }
-        }
-    }
-    
-    if (params.size() >= 9)     {
-        expiryTimeSec = atof(params[8].get_str().c_str());
-        if((tokentype == "m" || tokentype == "s") && expiryTimeSec < 0)    {
-            ERR_RESULT("Expire time must be positive");
-            return(result);
-        }
-    }
-    
-    if (params.size() >= 10)     {
-        ownerperc = atof(params[9].get_str().c_str());
+        ownerperc = atof(params[7].get_str().c_str());
         if (ownerperc <= 0)    {
-        ERR_RESULT("owner percentage must be positive");
-        return(result);
+			ERR_RESULT("Minimum ownership percentage must be positive");
+			return(result);
         }
     }
 
-    if (params.size() == 11)    {
-        nonfungibleData = ParseHex(params[10].get_str());
+    if (params.size() == 9)    {
+        nonfungibleData = ParseHex(params[8].get_str());
         if (nonfungibleData.size() > IGUANA_MAXSCRIPTSIZE) // opret limit
         {
             ERR_RESULT("Non-fungible data size must be <= " + std::to_string(IGUANA_MAXSCRIPTSIZE));
@@ -7761,7 +7739,8 @@ UniValue tokencreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
         }
     }
 
-    hextx = CreateToken(0, supply, name, description, ownerperc, tokentype, assetHash, value, ccode, referencetokenid, expiryTimeSec, nonfungibleData);
+    //hextx = CreateToken(0, supply, name, description, ownerperc, tokentype, assetHash, value, ccode, referencetokenid, expiryTimeSec, nonfungibleData);
+	hextx = CreateToken(0, supply, name, description, ownerPerc, licensetype, datahash, value, ccode, nonfungibleData);
     if( hextx.size() > 0 )     {
         result.push_back(Pair("result", "success"));
         result.push_back(Pair("hex", hextx));
@@ -7778,7 +7757,6 @@ UniValue tokencreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
     std::string name, description, hextx;
     std::vector<uint8_t> nonfungibleData;
     int64_t supply; // changed from uin64_t to int64_t for this 'if ( supply <= 0 )' to work as expected
-	std::string boobs = "why does this exist here?";
 
     CCerror.clear();
 
@@ -7991,10 +7969,11 @@ UniValue tokenupdate(const UniValue& params, bool fHelp, const CPubKey& mypk)
     UniValue result(UniValue::VOBJ);
     std::string ccode, message, hextx; 
     int64_t value;
+	int32_t licensetype = 0;
     uint256 tokenid = zeroid, assethash = zeroid;
     CCerror.clear();
     if ( fHelp || params.size() > 5 || params.size() < 4 )
-        throw runtime_error("tokenupdate tokenid assethash value ccode [message]\n");
+        throw runtime_error("tokenupdate tokenid assethash value ccode licensetype\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
         throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
     const CKeyStore& keystore = *pwalletMain;
@@ -8019,16 +7998,13 @@ UniValue tokenupdate(const UniValue& params, bool fHelp, const CPubKey& mypk)
         ERR_RESULT("Currency code must be 3 characters");
         return(result);
     }
-    if (params.size() == 5)
-    {
-        message = params[4].get_str();
-        if (message.size() > 24)
-        {
-            ERR_RESULT("Update message must be <= 24 characters");
-            return(result);
-        }
+    licensetype = atof(params[4].get_str().c_str());
+    if (licensetype > 127 || licensetype < 0)   {
+        ERR_RESULT("Invalid license flag, must be between 0 and 127");
+        return(result);
     }
-    hextx = UpdateToken(0, tokenid, assethash, value, ccode, message);
+
+    hextx = UpdateToken(0, tokenid, assethash, value, ccode, licensetype);
     if( hextx.size() > 0 )
     {
         result.push_back(Pair("result", "success"));

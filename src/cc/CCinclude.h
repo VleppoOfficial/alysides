@@ -518,12 +518,12 @@ CScript EncodeTokenUpdateOpRet(std::vector<uint8_t> pk, uint256 tokenid);
 
 /// Makes CC opret scriptPubKey for token update transaction. The information in this opret is arbitrary and amendable with further updates. Normally this function is called internally by the tokenupdate rpc.
 /// The total opreturn length should not exceed 10001 byte
-/// @param assetHash SHA-256 hash that can be used for digital asset / license checksums or other purposes
+/// @param datahash SHA-256 hash that can be used for digital asset / license checksums or other purposes
 /// @param value estimated value of the token. Cannot be less than 1 satoshi, but can be set to 0
 /// @param ccode currency code attached to the estimated value. Must be exactly 3 characters long. Default is USD
-/// @param message optional message attached to the update (no more than 24 char)
+/// @param licensetype type of license for the token. Default is 0, max allowed amount is 127
 /// @returns scriptPubKey with OP_RETURN script
-CScript EncodeTokenUpdateCCOpRet(uint256 assetHash, int64_t value, std::string ccode, std::string message);
+CScript EncodeTokenUpdateCCOpRet(uint256 datahash, int64_t value, std::string ccode, int32_t licensetype);
 
 /// Decodes opreturn scriptPubKey of token update transaction.
 /// @param scriptPubKey OP_RETURN script to decode
@@ -534,12 +534,12 @@ uint8_t DecodeTokenUpdateOpRet(const CScript scriptPubKey, std::vector<uint8_t> 
 
 /// Decodes CC opret scriptPubKey of token update transaction.
 /// @param scriptPubKey OP_RETURN script to decode
-/// @param[out] assetHash SHA-256 hash that can be used for digital asset / license checksums or other purposes
+/// @param[out] datahash SHA-256 hash that can be used for digital asset / license checksums or other purposes
 /// @param[out] estimated value of the token
 /// @param[out] ccode currency code attached to the estimated value
-/// @param[out] message optional message attached to the update
+/// @param[out] licensetype type of license for the token
 /// @returns funcid ('u') or NULL if errors
-uint8_t DecodeTokenUpdateCCOpRet(const CScript scriptPubKey, uint256 &assetHash, int64_t &value, std::string &ccode, std::string &message);
+uint8_t DecodeTokenUpdateCCOpRet(const CScript scriptPubKey, uint256 &datahash, int64_t &value, std::string &ccode, int32_t &licensetype);
 
 /// @private
 int64_t AddCClibtxfee(struct CCcontract_info *cp, CMutableTransaction &mtx, CPubKey pk);

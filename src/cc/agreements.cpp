@@ -19,7 +19,6 @@
 
 Put all notes here!
 if prepayment exists but there is no mediator, it acts as immediate payment upon acceptance (prepayment)
-remove crappy license token system, replace with license tags set at time of token creation
 when contracts expire, raising disputes should still be allowed
 IMPORTANT!!! - prepayment is locked under EVAL_AGREEMENTS, but it may also be spent by a specific Settlements transaction. Make sure this code is able to check for this.
 don't allow swapping between no mediator <-> mediator

@@ -25,6 +25,7 @@
 
 #include "CCinclude.h"
 
+
 enum ETokenLicenseFlags
 {
 	TLF_NOCOPYRIGHT = 1,
@@ -39,9 +40,9 @@ enum ETokenLicenseFlags
 // CCcustom
 bool TokensValidate(struct CCcontract_info *cp,Eval* eval,const CTransaction &tx, uint32_t nIn);
 bool TokensExactAmounts(bool goDeeper, struct CCcontract_info *cpTokens, int64_t &inputs, int64_t &outputs, Eval* eval, const CTransaction &tx, uint256 tokenid);
-std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerPerc, std::string tokenType, uint256 assetHash, int64_t value, std::string ccode, uint256 referenceTokenId, int64_t expiryTimeSec, vscript_t nonfungibleData);
+std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerPerc, int32_t licensetype, uint256 datahash, int64_t value, std::string ccode, vscript_t nonfungibleData);
 std::string TokenTransfer(int64_t txfee, uint256 assetid, std::vector<uint8_t> destpubkey, int64_t total);
-std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 assetHash, int64_t value, std::string ccode, std::string message);
+std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 datahash, int64_t value, std::string ccode, int32_t licensetype);
 
 int64_t HasBurnedTokensvouts(struct CCcontract_info *cp, Eval* eval, const CTransaction& tx, uint256 reftokenid);
 CPubKey GetTokenOriginatorPubKey(CScript scriptPubKey);

@@ -16,13 +16,8 @@
 #include "CCsettlements.h"
 
 /*
-TODO:
-permissions on agreement deposit reclaim
 
 Settlements workflow:
-
-0. Party 1 reclaims agreement deposit. (might not be in scope for Settlements?)
-Agreement -> deposit -> P1
 
 1. Party 1 sends invoice/request to party 2 to pay (payment) to escrow. (payment) can be coins or tokens.
 The request can be for an agreement invoice (with agreement id of course), standalone invoice, or loan/deposit.

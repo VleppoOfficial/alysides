@@ -24,9 +24,7 @@
 #endif
 
 //===========================================================================
-//
 // EncodeTokenCreateOpRet
-//
 //===========================================================================
 
 //original Komodo token create encoder, used to process non-fungible data if it exists.
@@ -46,44 +44,39 @@ CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, 
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
     
     //setting defaults for Vleppo-centric data
-    std::string tokenType = "a";
-    int64_t expiryTimeSec = 0;
     double ownerPerc = 50;
     uint256 dummyRefTokenId = zeroid;
     if(!vopretNonfungible.empty())
         oprets.push_back(std::make_pair(OPRETID_NONFUNGIBLEDATA, vopretNonfungible));
-    return EncodeTokenCreateOpRet(funcid, origpubkey, name, description, ownerPerc, tokenType, dummyRefTokenId, expiryTimeSec, oprets);
+    return EncodeTokenCreateOpRet(funcid, origpubkey, name, description, ownerPerc, oprets);
 }
 
 //original Komodo token create encoder
 CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, std::vector<std::pair<uint8_t, vscript_t>> oprets)
 {
     //setting defaults for Vleppo-centric data
-    std::string tokenType = "a";
-    int64_t expiryTimeSec = 0;
     double ownerPerc = 50;
-    uint256 dummyRefTokenId = zeroid;
-    return EncodeTokenCreateOpRet(funcid, origpubkey, name, description, ownerPerc, tokenType, dummyRefTokenId, expiryTimeSec, oprets);
+    return EncodeTokenCreateOpRet(funcid, origpubkey, name, description, ownerPerc, oprets);
 }
 
 //Vleppo token create encoder, includes new data about the token. Also used to process non-fungible data if it exists
-CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 referencetokenid, int64_t expiryTimeSec, vscript_t vopretNonfungible)
+CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, vscript_t vopretNonfungible)
 {
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
 
     if(!vopretNonfungible.empty())
         oprets.push_back(std::make_pair(OPRETID_NONFUNGIBLEDATA, vopretNonfungible));
-    return EncodeTokenCreateOpRet(funcid, origpubkey, name, description, ownerperc, tokentype, referencetokenid, expiryTimeSec, oprets);
+    return EncodeTokenCreateOpRet(funcid, origpubkey, name, description, ownerperc, oprets);
 }
 
 //Vleppo token create encoder, includes new data about the token
-CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, std::string tokentype, uint256 referencetokenid, int64_t expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> oprets)
+CScript EncodeTokenCreateOpRet(uint8_t funcid, std::vector<uint8_t> origpubkey, std::string name, std::string description, double ownerperc, std::vector<std::pair<uint8_t, vscript_t>> oprets)
 {
     CScript opret;
     uint8_t evalcode = EVAL_TOKENS;
     funcid = 'c'; // override the param
     
-    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << name << description << ownerperc << tokentype << referencetokenid << expiryTimeSec;
+    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << origpubkey << name << description << ownerperc;
     for (auto o : oprets) {
         if (o.first != 0) {
             ss << (uint8_t)o.first;
@@ -113,9 +106,7 @@ CScript EncodeTokenImportOpRet(std::vector<uint8_t> origpubkey, std::string name
 */
 
 //===========================================================================
-//
 // EncodeTokenOpRet (transfers and opret data for other modules)
-//
 //===========================================================================
 
 CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std::pair<uint8_t, vscript_t> opretWithId)
@@ -179,9 +170,7 @@ CScript EncodeTokenOpRet(uint256 tokenid, std::vector<CPubKey> voutPubkeys, std:
 //}
 
 //===========================================================================
-//
 // Token Update Encoders (EncodeTokenUpdateOpRet and EncodeTokenUpdateCCOpRet)
-//
 //===========================================================================
 
 // encoder for normal opreturn of 'u' tx
@@ -197,20 +186,18 @@ CScript EncodeTokenUpdateOpRet(std::vector<uint8_t> pk, uint256 tokenid)
 // contains arbitrary amendable data
 // NOTE: the estimated value is measured in satoshis. If specified currency code is not a cryptocurrency, treat the value as if it was convertible to satoshis.
 // 1 coin is 100000000 satoshis, therefore the maximum value in coins (or fiat) is 9223372036.854775807 (approx. 9 billion)
-CScript EncodeTokenUpdateCCOpRet(uint256 assetHash, int64_t value, std::string ccode, std::string message)
+CScript EncodeTokenUpdateCCOpRet(uint256 datahash, int64_t value, std::string ccode, int32_t licensetype)
 {
     CScript opret;
     uint8_t evalcode = EVAL_TOKENS;
     uint8_t funcid = 'u'; // override the param
     
-    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << assetHash << value << ccode << message);
+    opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << datahash << value << ccode << licensetype);
     return(opret);
 }
 
 //===========================================================================
-//
 // DecodeTokenCreateOpRet
-//
 //===========================================================================
 
 //original Komodo tokencreate decoders, kept for compatibility with other modules.
@@ -219,34 +206,28 @@ CScript EncodeTokenUpdateCCOpRet(uint256 assetHash, int64_t value, std::string c
 uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description)
 {
     //defining dummy parameters
-    std::string dummyTokenType;
-    uint256 dummyRefTokenId; 
     double dummyOwnerPerc;
-    int64_t dummyExpiryTimeSec;
 	
 	//vopret_t  vopretNonfungibleDummy;
     std::vector<std::pair<uint8_t, vscript_t>>  opretsDummy;
-    return DecodeTokenCreateOpRet(scriptPubKey, origpubkey, name, description, dummyOwnerPerc, dummyTokenType, dummyRefTokenId, dummyExpiryTimeSec, opretsDummy);
+    return DecodeTokenCreateOpRet(scriptPubKey, origpubkey, name, description, dummyOwnerPerc, opretsDummy);
 }
 uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, std::vector<std::pair<uint8_t, vscript_t>> &oprets)
 {
     //defining dummy parameters
-    std::string dummyTokenType;
-    uint256 dummyRefTokenId; 
     double dummyOwnerPerc;
-    int64_t dummyExpiryTimeSec;
-    return DecodeTokenCreateOpRet(scriptPubKey, origpubkey, name, description, dummyOwnerPerc, dummyTokenType, dummyRefTokenId, dummyExpiryTimeSec, oprets);
+    return DecodeTokenCreateOpRet(scriptPubKey, origpubkey, name, description, dummyOwnerPerc, oprets);
 }
 
 //Vleppo tokencreate decoder overload for fungible tokens
-uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc, std::string &tokentype, uint256 &referencetokenid, int64_t &expiryTimeSec)
+uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc)
 {
     std::vector<std::pair<uint8_t, vscript_t>>  opretsDummy;
-    return DecodeTokenCreateOpRet(scriptPubKey, origpubkey, name, description, ownerperc, tokentype, referencetokenid, expiryTimeSec, opretsDummy);
+    return DecodeTokenCreateOpRet(scriptPubKey, origpubkey, name, description, ownerperc, opretsDummy);
 }
 
 //Vleppo tokencreate decoder, includes new parameters
-uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc, std::string &tokentype, uint256 &referencetokenid, int64_t &expiryTimeSec, std::vector<std::pair<uint8_t, vscript_t>> &oprets)
+uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t> &origpubkey, std::string &name, std::string &description, double &ownerperc, std::vector<std::pair<uint8_t, vscript_t>> &oprets)
 {
     vscript_t vopret, vblob;
     uint8_t dummyEvalcode, funcid, opretId = 0;
@@ -256,7 +237,7 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
 
     if (vopret.size() > 2 && vopret.begin()[0] == EVAL_TOKENS && vopret.begin()[1] == 'c')
     {
-        if (E_UNMARSHAL(vopret, ss >> dummyEvalcode; ss >> funcid; ss >> origpubkey; ss >> name; ss >> description; ss >> ownerperc; ss >> tokentype; ss >> referencetokenid; ss >> expiryTimeSec;
+        if (E_UNMARSHAL(vopret, ss >> dummyEvalcode; ss >> funcid; ss >> origpubkey; ss >> name; ss >> description; ss >> ownerperc;
         while (!ss.eof()) {
             ss >> opretId;
             if (!ss.eof()) {
@@ -273,9 +254,7 @@ uint8_t DecodeTokenCreateOpRet(const CScript &scriptPubKey, std::vector<uint8_t>
 }
 
 //===========================================================================
-//
 // DecodeTokenOpRet (transfers and opret data for other modules)
-//
 //===========================================================================
 
 // decode token opret: 
@@ -386,9 +365,7 @@ uint8_t DecodeTokenOpRet(const CScript scriptPubKey, uint8_t &evalCodeTokens, ui
 }
 
 //===========================================================================
-//
 // Token Update Decoders (DecodeTokenUpdateOpRet and DecodeTokenUpdateCCOpRet)
-//
 //===========================================================================
 
 // decoder for normal opreturn of 'u' tx
@@ -409,7 +386,7 @@ uint8_t DecodeTokenUpdateOpRet(const CScript scriptPubKey, std::vector<uint8_t> 
 
 // decoder for cc opret of baton vouts
 // contains arbitrary amendable data
-uint8_t DecodeTokenUpdateCCOpRet(const CScript scriptPubKey, uint256 &assetHash, int64_t &value, std::string &ccode, std::string &message)
+uint8_t DecodeTokenUpdateCCOpRet(const CScript scriptPubKey, uint256 &datahash, int64_t &value, std::string &ccode, int32_t &licensetype)
 {
     vscript_t vopret;
     uint8_t evalcode, funcid;
@@ -421,12 +398,12 @@ uint8_t DecodeTokenUpdateCCOpRet(const CScript scriptPubKey, uint256 &assetHash,
 		GetOpReturnData(CScript(scriptPubKey.begin()+1, scriptPubKey.end()), vopret); //fix for extra hex num
         if (vopret.size() == 0)
         {
-            std::cerr << "cc opret data fetch unsuccessful" << std::endl;
+            //std::cerr << "cc opret data fetch unsuccessful" << std::endl;
             return(uint8_t)0;
         }
     }
     //std::cerr << "vopret size" << vopret.size() << std::endl;
-    if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> assetHash; ss >> value; ss >> ccode; ss >> message) != 0 && evalcode == EVAL_TOKENS)
+    if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> datahash; ss >> value; ss >> ccode; ss >> licensetype) != 0 && evalcode == EVAL_TOKENS)
     {
         //std::cerr << "cc opret decode successful, found value: " << value << std::endl;
         return(funcid);
@@ -436,9 +413,7 @@ uint8_t DecodeTokenUpdateCCOpRet(const CScript scriptPubKey, uint256 &assetHash,
 }
 
 //===========================================================================
-//
 // Token CCconds and CCvouts
-//
 //===========================================================================
 
 // make three-eval (token+evalcode+evalcode2) 1of2 cryptocondition:
