@@ -1432,14 +1432,14 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             }
             if (!(total < samplenum || samplenum == 0))
                 break;
-            if (myGetTransaction((batontxid = txBaton.vin[txBaton.vin.size() - 1].prevout.hash), txBaton, hashBlock) && 
+            if (myGetTransaction((batontxid = txBaton.vin[1].prevout.hash), txBaton, hashBlock) && 
 			(KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull()) &&
 			DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u') {
                 sourcetxid = batontxid;
             }
 			else {
 				std::cerr << txBaton.vin.size() << std::endl;
-				std::cerr << "error, previous baton for txid " << sourcetxid.GetHex() << "comes from non-update transaction" << std::endl;
+				std::cerr << "error, previous baton for txid " << sourcetxid.GetHex() << " comes from non-update transaction" << std::endl;
                 return (result);
             }
         }
