@@ -1369,12 +1369,12 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             return (result);
         
         // baton vout should be vout0 from now on
-        while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0) { // find a tx which spent the baton vout
-            if (myGetTransaction(batontxid, txBaton, hashBlock) &&  // load the transaction which spent the baton
-                ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&                           // tx not in mempool
+        while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0) {
+            if (myGetTransaction(batontxid, txBaton, hashBlock) &&
+                ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
                 txBaton.vout.size() > 0 &&             
-                txBaton.vout[0].nValue == 10000 &&     // check baton fee 
-                (funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' && // decode opreturn
+                txBaton.vout[0].nValue == 10000 &&
+                (funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' &&
                 getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
                 (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u'))
             {
@@ -1408,11 +1408,11 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
         }
         sourcetxid = latesttxid;
         while (sourcetxid != tokenid) {
-            if (myGetTransaction(sourcetxid, txBaton, hashBlock) &&  // load the transaction which spent the baton
-                ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&                           // tx not in mempool
+            if (myGetTransaction(sourcetxid, txBaton, hashBlock) &&
+                ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
                 txBaton.vout.size() > 0 &&             
-                txBaton.vout[0].nValue == 10000 &&     // check baton fee 
-                (funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' && // decode opreturn
+                txBaton.vout[0].nValue == 10000 &&
+                (funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' &&
                 getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
                 (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u'))
             {
@@ -1438,7 +1438,8 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                 sourcetxid = batontxid;
             }
 			else {
-				std::cerr << "error, previous baton comes from non-update transaction" << std::endl;
+				std::cerr << txBaton.vin.size() << std::endl;
+				std::cerr << "error, previous baton for txid " << sourcetxid.GetHex() << "comes from non-update transaction" << std::endl;
                 return (result);
             }
         }
