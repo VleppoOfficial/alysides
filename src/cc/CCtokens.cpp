@@ -1298,7 +1298,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
     std::vector<uint8_t> updaterPubkey;
     uint256 batontxid, sourcetxid = tokenid, latesttxid, datahash, hashBlock, tokenIdInOpret;
-    CTransaction txBaton;
+    CTransaction txBaton, refTxBaton;
     uint8_t funcId, evalcode;
     CScript batonopret;
     std::string ccode, dummyName, origdescription;
