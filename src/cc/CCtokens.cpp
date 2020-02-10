@@ -1416,14 +1416,21 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                 getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
                 (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u'))
             {
-                total++;
-                UniValue data(UniValue::VOBJ);
-                data.push_back(Pair("author", HexStr(updaterPubkey))); 
-                data.push_back(Pair("hash", datahash.GetHex()));
-                data.push_back(Pair("value", (double)value/COIN));
-                data.push_back(Pair("ccode", ccode));
-                data.push_back(Pair("licensetype", licensetype));
-                result.push_back(Pair(sourcetxid.GetHex(), data));
+				if (!(myGetTransaction((batontxid = txBaton.vin[txBaton.vin.size() - 1].prevout.hash), txBaton, hashBlock) && (KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull()))) {
+					result.push_back(Pair("error", "tokenid isnt token creation txid"));
+					return (result);
+				}
+				else {
+					sourcetxid = batontxid;
+					total++;
+					UniValue data(UniValue::VOBJ);
+					data.push_back(Pair("author", HexStr(updaterPubkey))); 
+					data.push_back(Pair("hash", datahash.GetHex()));
+					data.push_back(Pair("value", (double)value/COIN));
+					data.push_back(Pair("ccode", ccode));
+					data.push_back(Pair("licensetype", licensetype));
+					result.push_back(Pair(sourcetxid.GetHex(), data));
+				}
             }
             else {
                 //result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
@@ -1432,14 +1439,12 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             }
             if (!(total < samplenum || samplenum == 0))
                 break;
-            if (myGetTransaction((batontxid = txBaton.vin[txBaton.vin.size() - 1].prevout.hash), txBaton, hashBlock) && !hashBlock.IsNull()) {
-                sourcetxid = batontxid;
-            }
+            
         }
         if (!(total < samplenum || samplenum == 0))
             return (result);
         // special handling for token creation tx - in this tx, baton vout is vout2
-        if (sourcetxid == tokenid) { //unlikely to fail, hopefully
+        if (sourcetxid == tokenid) {
             if (myGetTransaction(sourcetxid, txBaton, hashBlock) &&
             ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
             txBaton.vout.size() > 2 &&
