@@ -1427,20 +1427,17 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             }
             else {
                 //result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
+				std::cerr << "returning result" << std::endl;
                 return (result);
             }
-            if (!(total < samplenum || samplenum == 0)) {
-				std::cerr << "breaking" << std::endl;
+            if (!(total < samplenum || samplenum == 0))
                 break;
-			}
             if (myGetTransaction((batontxid = txBaton.vin[txBaton.vin.size() - 1].prevout.hash), txBaton, hashBlock) && !hashBlock.IsNull()) {
                 sourcetxid = batontxid;
             }
         }
-        if (!(total < samplenum || samplenum == 0)) {
-			std::cerr << "returning result" << std::endl;
+        if (!(total < samplenum || samplenum == 0))
             return (result);
-		}
         // special handling for token creation tx - in this tx, baton vout is vout2
         if (sourcetxid == tokenid) { //unlikely to fail, hopefully
             if (myGetTransaction(sourcetxid, txBaton, hashBlock) &&
