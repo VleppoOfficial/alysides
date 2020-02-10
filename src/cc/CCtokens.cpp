@@ -1304,6 +1304,14 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
     std::string ccode, dummyName, origdescription;
 
     if (recursive == 0) { //from earliest to latest
+		if (!GetLatestTokenUpdate(tokenid, latesttxid)) {
+            result.push_back(Pair("result", "error"));
+			if( !myGetTransaction(tokenid, txBaton, hashBlock) )
+				result.push_back(Pair("error", "tokenid isnt token creation txid"));
+			else
+				result.push_back(Pair("error", "couldn't get latest token update, possibly still in mempool"));
+            return (result);
+        }
         // special handling for token creation tx - in this tx, baton vout is vout2
         if (myGetTransaction(tokenid, txBaton, hashBlock) &&
         ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
@@ -1314,7 +1322,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
         (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u')) {
                 total++;
                 UniValue data(UniValue::VOBJ);
-                data.push_back(Pair("creatorPubkey", HexStr(updaterPubkey))); 
+                data.push_back(Pair("author", HexStr(updaterPubkey))); 
                 data.push_back(Pair("hash", datahash.GetHex())); 
                 data.push_back(Pair("value", (double)value/COIN));
                 data.push_back(Pair("ccode", ccode));
@@ -1345,7 +1353,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
         {
             total++;
             UniValue data(UniValue::VOBJ);
-            data.push_back(Pair("updaterPubkey", HexStr(updaterPubkey))); 
+            data.push_back(Pair("author", HexStr(updaterPubkey))); 
             data.push_back(Pair("hash", datahash.GetHex()));
             data.push_back(Pair("value", (double)value/COIN));
             data.push_back(Pair("ccode", ccode));
@@ -1372,7 +1380,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             {
                 total++;
                 UniValue data(UniValue::VOBJ);
-                data.push_back(Pair("updaterPubkey", HexStr(updaterPubkey))); 
+                data.push_back(Pair("author", HexStr(updaterPubkey))); 
                 data.push_back(Pair("hash", datahash.GetHex()));
                 data.push_back(Pair("value", (double)value/COIN));
                 data.push_back(Pair("ccode", ccode));
@@ -1410,7 +1418,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             {
                 total++;
                 UniValue data(UniValue::VOBJ);
-                data.push_back(Pair("updaterPubkey", HexStr(updaterPubkey))); 
+                data.push_back(Pair("author", HexStr(updaterPubkey))); 
                 data.push_back(Pair("hash", datahash.GetHex()));
                 data.push_back(Pair("value", (double)value/COIN));
                 data.push_back(Pair("ccode", ccode));
@@ -1441,7 +1449,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             {
                 total++;
                 UniValue data(UniValue::VOBJ);
-                data.push_back(Pair("creatorPubkey", HexStr(updaterPubkey))); 
+                data.push_back(Pair("author", HexStr(updaterPubkey))); 
                 data.push_back(Pair("hash", datahash.GetHex()));
                 data.push_back(Pair("value", (double)value/COIN));
                 data.push_back(Pair("ccode", ccode));
@@ -1518,7 +1526,7 @@ UniValue TokenInfo(uint256 tokenid)
 
     result.push_back(Pair("result", "success"));
     result.push_back(Pair("tokenid", tokenid.GetHex()));
-    result.push_back(Pair("creator", HexStr(origpubkey)));
+    result.push_back(Pair("owner", HexStr(origpubkey)));
     result.push_back(Pair("name", name));
 
     supply = CCfullsupply(tokenid);
