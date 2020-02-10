@@ -1292,7 +1292,7 @@ std::string TokenTransfer(int64_t txfee, uint256 tokenid, vscript_t destpubkey, 
 
 UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 {
-    UniValue result(UniValue::VOBJ);
+    UniValue result(UniValue::VARR);
     int64_t total = 0LL, amount, value;
     int32_t vini, height, retcode, licensetype;
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
