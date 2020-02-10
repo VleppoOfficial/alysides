@@ -1432,7 +1432,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             }
             if (!(total < samplenum || samplenum == 0))
                 break;
-			for (int32_t i = 0; i < tx.vin.size(); i++)
+			for (int32_t i = 0; i < txBaton.vin.size(); i++)
 			{
 				batontxid = sourcetxid;
 				if((txBaton.vin[i].prevout.hash == tokenid && txBaton.vin[i].prevout.n == 2) || //in tokenid tx, baton vout is vout2
