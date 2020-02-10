@@ -1432,11 +1432,19 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             }
             if (!(total < samplenum || samplenum == 0))
                 break;
-            if (myGetTransaction((batontxid = txBaton.vin[1].prevout.hash), txBaton, hashBlock) && 
-			DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u' &&
-			tokenIdInOpret == tokenid) {
+			for (int32_t i = 0; i < tx.vin.size(); i++)
+			{
+				batontxid = sourcetxid;
+				if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || //in tokenid tx, baton vout is vout2
+				myGetTransaction(tx.vin[i].prevout.hash, referenceTx, hashBlock) &&
+				DecodeTokenUpdateOpRet(referenceTx.vout[referenceTx.vout.size() - 1].scriptPubKey, dummyPubkey, updatetokenid) == 'u' &&
+				tx.vin[i].prevout.n == 0) { //in update tx, baton vout is vout0
+					batontxid = tx.vin[i].prevout.hash;
+					break;
+				}
+			}
+            if (batontxid == sourcetxid)
                 sourcetxid = batontxid;
-            }
 			else {
 				std::cerr << "error, previous baton for txid " << sourcetxid.GetHex() << " comes from non-update transaction" << std::endl;
                 return (result);
