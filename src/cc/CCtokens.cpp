@@ -1305,11 +1305,10 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 
     if (recursive == 0) { //from earliest to latest
 		if (!GetLatestTokenUpdate(tokenid, latesttxid)) {
-            /*result.push_back(Pair("result", "error"));
 			if( !myGetTransaction(tokenid, txBaton, hashBlock) )
-				result.push_back(Pair("error", "tokenid isnt token creation txid"));
+				std::cerr << "tokenid isnt token creation txid" << std::endl;
 			else
-				result.push_back(Pair("error", "couldn't get latest token update, possibly still in mempool"));*/
+				std::cerr << "couldn't get latest token update, possibly still in mempool" << std::endl;
             return (result);
         }
         // special handling for token creation tx - in this tx, baton vout is vout2
@@ -1331,11 +1330,10 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			result.push_back(data);
         }
         else {
-            /*result.push_back(Pair("result", "error"));
 			if( !myGetTransaction(tokenid, txBaton, hashBlock) )
-				result.push_back(Pair("error", "tokenid isnt token creation txid"));
+				std::cerr << "tokenid isnt token creation txid" << std::endl;
 			else
-				result.push_back(Pair("error", "couldn't get latest token update, possibly still in mempool"));*/
+				std::cerr << "couldn't get latest token update, possibly still in mempool" << std::endl;
             return (result);
         }
         
@@ -1392,7 +1390,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                 sourcetxid = batontxid;
             }
             else {
-                //result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
+                std::cerr << "error, couldn't decode" << std::endl;
                 return (result);
             }
         if (!(total < samplenum || samplenum == 0))
@@ -1402,11 +1400,10 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
     }
     else { //from latest to earliest
         if (!GetLatestTokenUpdate(tokenid, latesttxid)) {
-            /*result.push_back(Pair("result", "error"));
 			if( !myGetTransaction(tokenid, txBaton, hashBlock) )
-				result.push_back(Pair("error", "tokenid isnt token creation txid"));
+				std::cerr << "tokenid isnt token creation txid" << std::endl;
 			else
-				result.push_back(Pair("error", "couldn't get latest token update"));*/
+				std::cerr << "couldn't get latest token update" << std::endl;
             return (result);
         }
         sourcetxid = latesttxid;
@@ -1430,13 +1427,19 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                 result.push_back(data);
             }
             else {
-				std::cerr << "returning result" << std::endl;
+				std::cerr << "error, couldn't decode" << std::endl;
                 return (result);
             }
             if (!(total < samplenum || samplenum == 0))
                 break;
-            if (myGetTransaction((batontxid = txBaton.vin[txBaton.vin.size() - 1].prevout.hash), txBaton, hashBlock) && (KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull())) {
+            if (myGetTransaction((batontxid = txBaton.vin[txBaton.vin.size() - 1].prevout.hash), txBaton, hashBlock) && 
+			(KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull()) &&
+			DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u') {
                 sourcetxid = batontxid;
+            }
+			else {
+				std::cerr << "error, previous baton comes from non-update transaction" << std::endl;
+                return (result);
             }
         }
         if (!(total < samplenum || samplenum == 0))
@@ -1462,12 +1465,12 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                 result.push_back(data);
             }
             else {
-                //result.push_back(Pair("error", "couldn't decode token creation txid"));
+                std::cerr << "error, couldn't decode" << std::endl;
                 return (result);
             }
         }
-        //else
-            //result.push_back(Pair("error", "initial sample txid isnt token creation txid"));
+        else
+			std::cerr << "initial sample txid isnt token creation txid" << std::endl;
         return (result);
     }
 }
