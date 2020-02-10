@@ -1320,14 +1320,14 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
         txBaton.vout[2].nValue == 10000 &&
         getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
         (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u')) {
-                total++;
-                UniValue data(UniValue::VOBJ);
-                data.push_back(Pair("author", HexStr(updaterPubkey))); 
-                data.push_back(Pair("hash", datahash.GetHex())); 
-                data.push_back(Pair("value", (double)value/COIN));
-                data.push_back(Pair("ccode", ccode));
-                data.push_back(Pair("licensetype", licensetype));
-                result.push_back(Pair(tokenid.GetHex(), data));
+			total++;
+			UniValue data(UniValue::VOBJ);
+			data.push_back(Pair("author", HexStr(updaterPubkey))); 
+			data.push_back(Pair("hash", datahash.GetHex())); 
+			data.push_back(Pair("value", (double)value/COIN));
+			data.push_back(Pair("ccode", ccode));
+			data.push_back(Pair("licensetype", licensetype));
+			result.push_back(Pair(tokenid.GetHex(), data));
         }
         else {
             result.push_back(Pair("result", "error"));
@@ -1429,8 +1429,10 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                 //result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
                 return (result);
             }
-            if (!(total < samplenum || samplenum == 0))
+            if (!(total < samplenum || samplenum == 0)) {
+				strprintf("breaking\n");
                 break;
+			}
             if (myGetTransaction((batontxid = txBaton.vin[txBaton.vin.size() - 1].prevout.hash), txBaton, hashBlock) && !hashBlock.IsNull()) {
                 sourcetxid = batontxid;
             }
