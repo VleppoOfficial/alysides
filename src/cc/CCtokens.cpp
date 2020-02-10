@@ -1183,9 +1183,9 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 datahash, int64_
         return std::string("");
     }
     
-    if (AddNormalinputs(mtx, mypk, txfee + 10000, 64) > 0) {
+    if (AddNormalinputs(mtx, mypk, txfee, 64) > 0) {
         int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
-        if (mypkInputs < txfee + 10000) {
+        if (mypkInputs < txfee) {
             CCerror = "some inputs signed not with -pubkey=pk";
             return std::string("");
         }
@@ -1416,21 +1416,14 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                 getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
                 (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u'))
             {
-				if (!(myGetTransaction((batontxid = txBaton.vin[txBaton.vin.size() - 1].prevout.hash), txBaton, hashBlock) && (KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull()))) {
-					result.push_back(Pair("error", "tokenid isnt token creation txid"));
-					return (result);
-				}
-				else {
-					sourcetxid = batontxid;
-					total++;
-					UniValue data(UniValue::VOBJ);
-					data.push_back(Pair("author", HexStr(updaterPubkey))); 
-					data.push_back(Pair("hash", datahash.GetHex()));
-					data.push_back(Pair("value", (double)value/COIN));
-					data.push_back(Pair("ccode", ccode));
-					data.push_back(Pair("licensetype", licensetype));
-					result.push_back(Pair(sourcetxid.GetHex(), data));
-				}
+                total++;
+                UniValue data(UniValue::VOBJ);
+                data.push_back(Pair("author", HexStr(updaterPubkey))); 
+                data.push_back(Pair("hash", datahash.GetHex()));
+                data.push_back(Pair("value", (double)value/COIN));
+                data.push_back(Pair("ccode", ccode));
+                data.push_back(Pair("licensetype", licensetype));
+                result.push_back(Pair(sourcetxid.GetHex(), data));
             }
             else {
                 //result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
@@ -1439,7 +1432,9 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             }
             if (!(total < samplenum || samplenum == 0))
                 break;
-            
+            if (myGetTransaction((batontxid = txBaton.vin[txBaton.vin.size() - 1].prevout.hash), txBaton, hashBlock) && (KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull())) {
+                sourcetxid = batontxid;
+            }
         }
         if (!(total < samplenum || samplenum == 0))
             return (result);
