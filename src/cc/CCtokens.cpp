@@ -1483,15 +1483,16 @@ int64_t GetTokenBalance(CPubKey pk, uint256 tokenid)
 UniValue TokenInfo(uint256 tokenid)
 {
     UniValue result(UniValue::VOBJ);
-    uint256 hashBlock, referenceTokenId;
-    CTransaction tokenbaseTx;
+    uint256 hashBlock, latesttxid, datahash;
+    CTransaction tokenbaseTx, latestUpdateTx;
+	CScript batonopret;
     std::vector<uint8_t> origpubkey;
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
     vscript_t vopretNonfungible;
-    std::string name, description;
+    std::string name, description, ccode;
     double ownerPerc;
     struct CCcontract_info *cpTokens, tokensCCinfo;
-    int64_t supply = 0;
+    int64_t supply = 0, value;
     int32_t numblocks, licensetype;
 
     cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
@@ -1517,16 +1518,38 @@ UniValue TokenInfo(uint256 tokenid)
 
     result.push_back(Pair("result", "success"));
     result.push_back(Pair("tokenid", tokenid.GetHex()));
-    result.push_back(Pair("owner", HexStr(origpubkey)));
+    result.push_back(Pair("creator", HexStr(origpubkey)));
     result.push_back(Pair("name", name));
 
     supply = CCfullsupply(tokenid);
 
     result.push_back(Pair("supply", supply));
     result.push_back(Pair("description", description));
-    result.push_back(Pair("ownerPerc", ownerPerc));
+    result.push_back(Pair("ownerpercentage", ownerPerc));
 	
-	// note - add updatable info here
+	if (GetLatestTokenUpdate(tokenid, latesttxid)) {
+		if (tokenid == latesttxid) {
+			if (tokenbaseTx.vout[2].nValue == 10000 &&
+			getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret) &&
+			DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u') {
+				result.push_back(Pair("latesthash", datahash));
+				result.push_back(Pair("latestvalue", value));
+				result.push_back(Pair("latestccode", ccode));
+				result.push_back(Pair("license", licensetype));
+			}
+		}
+		else {
+			if (myGetTransaction(latesttxid, latestUpdateTx, hashBlock) &&
+			latestUpdateTx.vout.size() > 0 &&
+			latestUpdateTx.vout[0].nValue == 10000 &&
+			getCCopret(latestUpdateTx.vout[0].scriptPubKey, batonopret) &&
+			DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u')
+				result.push_back(Pair("latesthash", datahash));
+				result.push_back(Pair("latestvalue", value));
+				result.push_back(Pair("latestccode", ccode));
+				result.push_back(Pair("license", licensetype));
+		}
+	}
 
     GetOpretBlob(oprets, OPRETID_NONFUNGIBLEDATA, vopretNonfungible);
     if (!vopretNonfungible.empty())
