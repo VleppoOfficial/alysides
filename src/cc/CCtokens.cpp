@@ -1428,7 +1428,8 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                 break;
 			// looking for the previous update baton
 			if (myGetTransaction((batontxid = txBaton.vin[1].prevout.hash), refTxBaton, hashBlock) &&
-			DecodeTokenUpdateOpRet(refTxBaton.vout[refTxBaton.vout.size() - 1].scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u')
+			(DecodeTokenUpdateOpRet(refTxBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u' ||
+			DecodeTokenCreateOpRet(refTxBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription) == 'c'))
 				sourcetxid = batontxid;
 			else {
 				std::cerr << txBaton.vin[1].prevout.hash.GetHex() << std::endl;
