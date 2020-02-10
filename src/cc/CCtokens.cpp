@@ -1532,8 +1532,8 @@ UniValue TokenInfo(uint256 tokenid)
 			if (tokenbaseTx.vout[2].nValue == 10000 &&
 			getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret) &&
 			DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u') {
-				result.push_back(Pair("latesthash", datahash));
-				result.push_back(Pair("latestvalue", value));
+				result.push_back(Pair("latesthash", datahash.GetHex()));
+				result.push_back(Pair("latestvalue", (double)value/COIN));
 				result.push_back(Pair("latestccode", ccode));
 				result.push_back(Pair("license", licensetype));
 			}
@@ -1544,8 +1544,8 @@ UniValue TokenInfo(uint256 tokenid)
 			latestUpdateTx.vout[0].nValue == 10000 &&
 			getCCopret(latestUpdateTx.vout[0].scriptPubKey, batonopret) &&
 			DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u')
-				result.push_back(Pair("latesthash", datahash));
-				result.push_back(Pair("latestvalue", value));
+				result.push_back(Pair("latesthash", datahash.GetHex()));
+				result.push_back(Pair("latestvalue", (double)value/COIN));
 				result.push_back(Pair("latestccode", ccode));
 				result.push_back(Pair("license", licensetype));
 		}
