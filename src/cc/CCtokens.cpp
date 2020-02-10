@@ -1305,11 +1305,11 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 
     if (recursive == 0) { //from earliest to latest
 		if (!GetLatestTokenUpdate(tokenid, latesttxid)) {
-            result.push_back(Pair("result", "error"));
+            /*result.push_back(Pair("result", "error"));
 			if( !myGetTransaction(tokenid, txBaton, hashBlock) )
 				result.push_back(Pair("error", "tokenid isnt token creation txid"));
 			else
-				result.push_back(Pair("error", "couldn't get latest token update, possibly still in mempool"));
+				result.push_back(Pair("error", "couldn't get latest token update, possibly still in mempool"));*/
             return (result);
         }
         // special handling for token creation tx - in this tx, baton vout is vout2
@@ -1322,19 +1322,20 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
         (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u')) {
 			total++;
 			UniValue data(UniValue::VOBJ);
+			data.push_back(Pair("txid", tokenid.GetHex()));
 			data.push_back(Pair("author", HexStr(updaterPubkey))); 
 			data.push_back(Pair("hash", datahash.GetHex())); 
 			data.push_back(Pair("value", (double)value/COIN));
 			data.push_back(Pair("ccode", ccode));
 			data.push_back(Pair("licensetype", licensetype));
-			result.push_back(Pair(tokenid.GetHex(), data));
+			result.push_back(data);
         }
         else {
-            result.push_back(Pair("result", "error"));
+            /*result.push_back(Pair("result", "error"));
 			if( !myGetTransaction(tokenid, txBaton, hashBlock) )
 				result.push_back(Pair("error", "tokenid isnt token creation txid"));
 			else
-				result.push_back(Pair("error", "couldn't get latest token update, possibly still in mempool"));
+				result.push_back(Pair("error", "couldn't get latest token update, possibly still in mempool"));*/
             return (result);
         }
         
@@ -1353,12 +1354,13 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
         {
             total++;
             UniValue data(UniValue::VOBJ);
+			data.push_back(Pair("txid", batontxid.GetHex()));
             data.push_back(Pair("author", HexStr(updaterPubkey))); 
             data.push_back(Pair("hash", datahash.GetHex()));
             data.push_back(Pair("value", (double)value/COIN));
             data.push_back(Pair("ccode", ccode));
             data.push_back(Pair("licensetype", licensetype));
-            result.push_back(Pair(batontxid.GetHex(), data));
+            result.push_back(data);
             sourcetxid = batontxid;
         }
         else {
@@ -1380,12 +1382,13 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             {
                 total++;
                 UniValue data(UniValue::VOBJ);
+				data.push_back(Pair("txid", batontxid.GetHex()));
                 data.push_back(Pair("author", HexStr(updaterPubkey))); 
                 data.push_back(Pair("hash", datahash.GetHex()));
                 data.push_back(Pair("value", (double)value/COIN));
                 data.push_back(Pair("ccode", ccode));
                 data.push_back(Pair("licensetype", licensetype));
-                result.push_back(Pair(batontxid.GetHex(), data));
+                result.push_back(data);
                 sourcetxid = batontxid;
             }
             else {
@@ -1399,11 +1402,11 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
     }
     else { //from latest to earliest
         if (!GetLatestTokenUpdate(tokenid, latesttxid)) {
-            result.push_back(Pair("result", "error"));
+            /*result.push_back(Pair("result", "error"));
 			if( !myGetTransaction(tokenid, txBaton, hashBlock) )
 				result.push_back(Pair("error", "tokenid isnt token creation txid"));
 			else
-				result.push_back(Pair("error", "couldn't get latest token update"));
+				result.push_back(Pair("error", "couldn't get latest token update"));*/
             return (result);
         }
         sourcetxid = latesttxid;
@@ -1418,15 +1421,15 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             {
                 total++;
                 UniValue data(UniValue::VOBJ);
+				data.push_back(Pair("txid", sourcetxid.GetHex()));
                 data.push_back(Pair("author", HexStr(updaterPubkey))); 
                 data.push_back(Pair("hash", datahash.GetHex()));
                 data.push_back(Pair("value", (double)value/COIN));
                 data.push_back(Pair("ccode", ccode));
                 data.push_back(Pair("licensetype", licensetype));
-                result.push_back(Pair(sourcetxid.GetHex(), data));
+                result.push_back(data);
             }
             else {
-                //result.push_back(Pair(batontxid.GetHex(), "error: couldn't decode"));
 				std::cerr << "returning result" << std::endl;
                 return (result);
             }
@@ -1450,20 +1453,21 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             {
                 total++;
                 UniValue data(UniValue::VOBJ);
+				data.push_back(Pair("txid", tokenid.GetHex()));
                 data.push_back(Pair("author", HexStr(updaterPubkey))); 
                 data.push_back(Pair("hash", datahash.GetHex()));
                 data.push_back(Pair("value", (double)value/COIN));
                 data.push_back(Pair("ccode", ccode));
                 data.push_back(Pair("licensetype", licensetype));
-                result.push_back(Pair(tokenid.GetHex(), data));
+                result.push_back(data);
             }
             else {
-                result.push_back(Pair("error", "couldn't decode token creation txid"));
+                //result.push_back(Pair("error", "couldn't decode token creation txid"));
                 return (result);
             }
         }
-        else
-            result.push_back(Pair("error", "initial sample txid isnt token creation txid"));
+        //else
+            //result.push_back(Pair("error", "initial sample txid isnt token creation txid"));
         return (result);
     }
 }
