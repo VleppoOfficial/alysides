@@ -1430,7 +1430,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                 return (result);
             }
             if (!(total < samplenum || samplenum == 0)) {
-				strprintf("breaking\n");
+				std::cerr << "breaking" << std::endl;
                 break;
 			}
             if (myGetTransaction((batontxid = txBaton.vin[txBaton.vin.size() - 1].prevout.hash), txBaton, hashBlock) && !hashBlock.IsNull()) {
@@ -1438,7 +1438,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             }
         }
         if (!(total < samplenum || samplenum == 0)) {
-			strprintf("returning result\n");
+			std::cerr << "returning result" << std::endl;
             return (result);
 		}
         // special handling for token creation tx - in this tx, baton vout is vout2
