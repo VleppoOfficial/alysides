@@ -1297,28 +1297,29 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
     int32_t vini, height, retcode, licensetype;
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
     std::vector<uint8_t> updaterPubkey;
-    uint256 batontxid, sourcetxid = tokenid, latesttxid, datahash, hashBlock, tokenIdInOpret;
+    uint256 batontxid, sourcetxid, latesttxid, datahash, hashBlock, tokenIdInOpret;
     CTransaction txBaton, refTxBaton;
-    uint8_t funcId, evalcode;
     CScript batonopret;
     std::string ccode, dummyName, origdescription;
 
-    if (recursive == 0) { //from earliest to latest
-		if (!GetLatestTokenUpdate(tokenid, latesttxid)) {
-			if( !myGetTransaction(tokenid, txBaton, hashBlock) )
-				std::cerr << "tokenid isnt token creation txid" << std::endl;
-			else
-				std::cerr << "couldn't get latest token update, possibly still in mempool" << std::endl;
-            return (result);
-        }
+	if (!GetLatestTokenUpdate(tokenid, latesttxid)) {
+		if(!myGetTransaction(tokenid, txBaton, hashBlock))
+			std::cerr << "tokenid isnt token creation txid" << std::endl;
+		else
+			std::cerr << "couldn't get latest token update, possibly still in mempool" << std::endl;
+		return (result);
+    }
+	//from earliest to latest
+    if (recursive == 0) {
+		sourcetxid = tokenid;
         // special handling for token creation tx - in this tx, baton vout is vout2
         if (myGetTransaction(tokenid, txBaton, hashBlock) &&
-        ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
+        (KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull()) &&
         txBaton.vout.size() > 2 &&
-        (funcId = DecodeTokenCreateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription)) == 'c' &&
+        DecodeTokenCreateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription) == 'c' &&
         txBaton.vout[2].nValue == 10000 &&
         getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
-        (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u')) {
+        DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u') {
 			total++;
 			UniValue data(UniValue::VOBJ);
 			data.push_back(Pair("txid", tokenid.GetHex()));
@@ -1342,13 +1343,13 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 
         // find an update tx which spent the token create baton vout, if it exists
         if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
-            myGetTransaction(batontxid, txBaton, hashBlock) &&
-            ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
-            txBaton.vout.size() > 0 &&
-            txBaton.vout[0].nValue == 10000 &&
-            (funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' &&
-            getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
-            (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u'))
+        myGetTransaction(batontxid, txBaton, hashBlock) &&
+        (KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull()) &&
+        txBaton.vout.size() > 0 &&
+        txBaton.vout[0].nValue == 10000 &&
+        DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u' &&
+        getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
+        DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u')
         {
             total++;
             UniValue data(UniValue::VOBJ);
@@ -1371,12 +1372,12 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
         // baton vout should be vout0 from now on
         while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0) {
             if (myGetTransaction(batontxid, txBaton, hashBlock) &&
-                ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
-                txBaton.vout.size() > 0 &&             
-                txBaton.vout[0].nValue == 10000 &&
-                (funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' &&
-                getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
-                (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u'))
+            (KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull()) &&
+            txBaton.vout.size() > 0 &&             
+            txBaton.vout[0].nValue == 10000 &&
+            DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u' &&
+            getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
+            DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u')
             {
                 total++;
                 UniValue data(UniValue::VOBJ);
@@ -1398,24 +1399,17 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
         }
         return (result);
     }
-    else { //from latest to earliest
-        if (!GetLatestTokenUpdate(tokenid, latesttxid)) {
-			if( !myGetTransaction(tokenid, txBaton, hashBlock) )
-				std::cerr << "tokenid isnt token creation txid" << std::endl;
-			else
-				std::cerr << "couldn't get latest token update" << std::endl;
-            return (result);
-        }
+	//from latest to earliest
+    else {
         sourcetxid = latesttxid;
         while (sourcetxid != tokenid) {
             if (myGetTransaction(sourcetxid, txBaton, hashBlock) &&
-                ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
-                txBaton.vout.size() > 0 &&             
-                txBaton.vout[0].nValue == 10000 &&
-                (funcId = DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret)) == 'u' &&
-                getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
-                (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u'))
-            {
+            (KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull()) &&
+            txBaton.vout.size() > 0 &&             
+            txBaton.vout[0].nValue == 10000 &&
+            DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u' &&
+            getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
+            DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u') {
                 total++;
                 UniValue data(UniValue::VOBJ);
 				data.push_back(Pair("txid", sourcetxid.GetHex()));
@@ -1432,19 +1426,10 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             }
             if (!(total < samplenum || samplenum == 0))
                 break;
-			for (int32_t i = 0; i < txBaton.vin.size(); i++)
-			{
-				batontxid = sourcetxid;
-				if((txBaton.vin[i].prevout.hash == tokenid && txBaton.vin[i].prevout.n == 2) || //in tokenid tx, baton vout is vout2
-				myGetTransaction(txBaton.vin[i].prevout.hash, refTxBaton, hashBlock) &&
-				DecodeTokenUpdateOpRet(refTxBaton.vout[refTxBaton.vout.size() - 1].scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u' &&
-				txBaton.vin[i].prevout.n == 0) { //in update tx, baton vout is vout0
-					batontxid = txBaton.vin[i].prevout.hash;
-					break;
-				}
-			}
-            if (batontxid == sourcetxid)
-                sourcetxid = batontxid;
+			// looking for the previous update baton
+			if ((batontxid = myGetTransaction(txBaton.vin[1].prevout.hash, refTxBaton, hashBlock)) &&
+			DecodeTokenUpdateOpRet(refTxBaton.vout[refTxBaton.vout.size() - 1].scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u')
+				sourcetxid = batontxid;
 			else {
 				std::cerr << "error, previous baton for txid " << sourcetxid.GetHex() << " comes from non-update transaction" << std::endl;
                 return (result);
@@ -1457,10 +1442,10 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             if (myGetTransaction(sourcetxid, txBaton, hashBlock) &&
             ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
             txBaton.vout.size() > 2 &&
-            (funcId = DecodeTokenCreateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription)) == 'c' &&
+            DecodeTokenCreateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription) == 'c' &&
             txBaton.vout[2].nValue == 10000 &&
             getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
-            (funcId = DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u'))
+            DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u')
             {
                 total++;
                 UniValue data(UniValue::VOBJ);
