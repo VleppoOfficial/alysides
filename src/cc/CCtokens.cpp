@@ -1435,11 +1435,11 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
 			for (int32_t i = 0; i < tx.vin.size(); i++)
 			{
 				batontxid = sourcetxid;
-				if((tx.vin[i].prevout.hash == tokenid && tx.vin[i].prevout.n == 2) || //in tokenid tx, baton vout is vout2
-				myGetTransaction(tx.vin[i].prevout.hash, referenceTx, hashBlock) &&
-				DecodeTokenUpdateOpRet(referenceTx.vout[referenceTx.vout.size() - 1].scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u' &&
-				tx.vin[i].prevout.n == 0) { //in update tx, baton vout is vout0
-					batontxid = tx.vin[i].prevout.hash;
+				if((txBaton.vin[i].prevout.hash == tokenid && txBaton.vin[i].prevout.n == 2) || //in tokenid tx, baton vout is vout2
+				myGetTransaction(txBaton.vin[i].prevout.hash, refTxBaton, hashBlock) &&
+				DecodeTokenUpdateOpRet(refTxBaton.vout[refTxBaton.vout.size() - 1].scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u' &&
+				txBaton.vin[i].prevout.n == 0) { //in update tx, baton vout is vout0
+					batontxid = txBaton.vin[i].prevout.hash;
 					break;
 				}
 			}
