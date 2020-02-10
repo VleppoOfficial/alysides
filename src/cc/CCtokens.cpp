@@ -1437,8 +1437,10 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
                 sourcetxid = batontxid;
             }
         }
-        if (!(total < samplenum || samplenum == 0))
+        if (!(total < samplenum || samplenum == 0)) {
+			strprintf("returning result\n");
             return (result);
+		}
         // special handling for token creation tx - in this tx, baton vout is vout2
         if (sourcetxid == tokenid) { //unlikely to fail, hopefully
             if (myGetTransaction(sourcetxid, txBaton, hashBlock) &&
