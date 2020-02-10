@@ -7660,7 +7660,7 @@ UniValue tokencreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 
     CCerror.clear();
 
-    if ( fHelp || params.size() > 9 || params.size() < 3 )
+    if ( fHelp || params.size() > 9 || params.size() < 2 )
         throw runtime_error("tokencreate name supply [description][licensetype][datahash][value][ccode][ownerperc][data]\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
@@ -7972,7 +7972,7 @@ UniValue tokenupdate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 	int32_t licensetype = 0;
     uint256 tokenid = zeroid, assethash = zeroid;
     CCerror.clear();
-    if ( fHelp || params.size() > 5 || params.size() < 4 )
+    if ( fHelp || params.size() != 5)
         throw runtime_error("tokenupdate tokenid assethash value ccode licensetype\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
         throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
