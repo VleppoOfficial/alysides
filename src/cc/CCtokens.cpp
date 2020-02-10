@@ -50,16 +50,13 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
 
     CTransaction createTx, referenceTx; //the token creation tx
     uint256 hashBlock, tokenid = zeroid, referenceTokenId, dummyRefTokenId, updatetokenid;
-    int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(), numblocks, vini, height;
+    int32_t numvins = tx.vin.size(), numvouts = tx.vout.size(), numblocks, vini, height, preventCCvins = -1, preventCCvouts = -1, licensetype;
     int64_t outputs = 0, inputs = 0;
     std::vector<CPubKey> vinTokenPubkeys, voutTokenPubkeys; // sender pubkey(s) and destpubkey(s)
     std::vector<uint8_t> creatorPubkey, dummyPubkey, updaterPubkey; // token creator pubkey
-    char updaterPubkeyaddr[64], srcaddr[64], destaddr[64], burnaddr[64], testaddr[64];
-    
-    int32_t preventCCvins = -1, preventCCvouts = -1, licensetype; // debugging
-    
+    //char updaterPubkeyaddr[64], srcaddr[64], destaddr[64], burnaddr[64], testaddr[64];
     uint8_t funcid, evalCodeInOpret; // the funcid and eval code embedded in the opret
-    std::vector<std::pair<uint8_t, vscript_t>> oprets, refoprets; // additional data embedded in the opret
+    std::vector<std::pair<uint8_t, vscript_t>> oprets; // additional data embedded in the opret
     std::string dummyName, dummyDescription;
     double ownerPerc;
     bool isSpendingBaton = false;
@@ -1051,6 +1048,7 @@ int32_t GetOwnerPubkeys(uint256 txid, uint256 reftokenid, struct CCcontract_info
     return std::string("");
 }
 */
+
 // returns token creation signed raw tx
 std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerPerc, int32_t licensetype, uint256 datahash, int64_t value, std::string ccode, vscript_t nonfungibleData)
 //std::string CreateToken(int64_t txfee, int64_t tokensupply, std::string name, std::string description, double ownerPerc, std::string tokenType, uint256 datahash, int64_t value, std::string ccode, uint256 referenceTokenId, int64_t expiryTimeSec, vscript_t nonfungibleData)
@@ -1185,9 +1183,9 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 datahash, int64_
         return std::string("");
     }
     
-    if (AddNormalinputs(mtx, mypk, txfee + 20000, 64) > 0) {
+    if (AddNormalinputs(mtx, mypk, txfee + 10000, 64) > 0) {
         int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
-        if (mypkInputs < 20000) {
+        if (mypkInputs < txfee + 10000) {
             CCerror = "some inputs signed not with -pubkey=pk";
             return std::string("");
         }
@@ -1210,7 +1208,7 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 datahash, int64_
             //vout0 is next batonvout with cc opret payload
             mtx.vout.push_back(MakeCC1vout(destEvalCode, 10000, GetUnspendable(cp, NULL), &vData));
             //vout1 sends some funds back to mypk, later used for validation
-            mtx.vout.push_back(CTxOut(10000,CScript() << ParseHex(HexStr(mypk)) << OP_CHECKSIG));
+            //mtx.vout.push_back(CTxOut(10000,CScript() << ParseHex(HexStr(mypk)) << OP_CHECKSIG));
             //fprintf(stderr, "vout size2.%li\n", mtx.vout.size());
             return (FinalizeCCTx(0, cp, mtx, mypk, txfee, EncodeTokenUpdateOpRet(Mypubkey(), tokenid)));
         }
