@@ -1427,7 +1427,7 @@ UniValue TokenViewUpdates(uint256 tokenid, int32_t samplenum, int recursive)
             if (!(total < samplenum || samplenum == 0))
                 break;
 			// looking for the previous update baton
-			if ((batontxid = myGetTransaction(txBaton.vin[1].prevout.hash, refTxBaton, hashBlock)) &&
+			if (myGetTransaction((batontxid = txBaton.vin[1].prevout.hash), refTxBaton, hashBlock) &&
 			DecodeTokenUpdateOpRet(refTxBaton.vout[refTxBaton.vout.size() - 1].scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u')
 				sourcetxid = batontxid;
 			else {
