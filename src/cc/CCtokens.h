@@ -25,8 +25,7 @@
 
 #include "CCinclude.h"
 
-
-enum ETokenLicenseFlags
+enum ETokenLicenseFlags // currently unused, may come in handy later - dan
 {
 	TLF_NOCOPYRIGHT = 1,
 	TLF_PERFORM = 2,

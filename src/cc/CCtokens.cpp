@@ -168,22 +168,8 @@ bool TokensValidate(struct CCcontract_info* cp, Eval* eval, const CTransaction& 
                 return eval->Invalid("invalid update tx opret data");
             if (updatetokenid != tokenid)
                 return eval->Invalid("incorrect tokenid in update tx opret");
-			
-            // Verifying updaterPubkey by checking tx.vin[0] and tx.vout[1] addresses
-            // These addresses should be equal to each other, and updaterPubkey address should be equal to both
-            /*if (!Getscriptaddress(destaddr, tx.vout[1].scriptPubKey))
-                return eval->Invalid("couldn't locate vout1 destaddr");
-            if (!(eval->GetTxUnconfirmed(tx.vin[0].prevout.hash, referenceTx, hashBlock) != 0 && myGetTransaction(tx.vin[0].prevout.hash, referenceTx, hashBlock) &&
-                Getscriptaddress(srcaddr, referenceTx.vout[tx.vin[0].prevout.n].scriptPubKey)))
-                return eval->Invalid("couldn't locate vin0 srcaddr");
-            if (strcmp(srcaddr, destaddr) != 0)
-                return eval->Invalid("normal input srcaddr != destaddr");
-            if (!Getscriptaddress(updaterPubkeyaddr,CScript() << updaterPubkey << OP_CHECKSIG))
-                return eval->Invalid("couldn't get updaterPubkey script address");
-            if (strcmp(updaterPubkeyaddr, srcaddr) != 0 || strcmp(updaterPubkeyaddr, destaddr) != 0)
-                return eval->Invalid("updaterPubkey address doesn't match srcaddr or destaddr");*/
-            
-			if (TotalPubkeyNormalInputs(tx, pubkey2pk(updaterPubkey)) == 0) // make sure that the updaterPubkey specified in the opret is the pubkey that submitted this tx
+            // make sure that the updaterPubkey specified in the opret is the pubkey that submitted this tx
+			if (TotalPubkeyNormalInputs(tx, pubkey2pk(updaterPubkey)) == 0)
 				return eval->Invalid("found no normal inputs signed by updater pubkey");
             if (GetTokenOwnershipPercent(pubkey2pk(updaterPubkey), tokenid) < ownerPerc)
                 return eval->Invalid("updater pubkey does not own enough tokens to update");
@@ -1185,11 +1171,10 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 datahash, int64_
     
     if (AddNormalinputs2(mtx, txfee, 64) > 0) {
         int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
-		std::cerr << "inputs found=" << mypkInputs << std::endl;
-        /*if (mypkInputs < txfee) {
+        if (mypkInputs < txfee) {
             CCerror = "some inputs signed not with -pubkey=pk";
             return std::string("");
-        }*/
+        }
         if (latesttxid == tokenid) {
             mtx.vin.push_back(CTxIn(tokenid,2,CScript()));
             //fprintf(stderr, "vin size.%li\n", mtx.vin.size());
