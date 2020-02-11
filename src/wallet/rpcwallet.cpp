@@ -7970,10 +7970,10 @@ UniValue tokenupdate(const UniValue& params, bool fHelp, const CPubKey& mypk)
     std::string ccode, message, hextx; 
     int64_t value;
 	int32_t licensetype = 0;
-    uint256 tokenid = zeroid, assethash = zeroid;
+    uint256 tokenid = zeroid, datahash = zeroid;
     CCerror.clear();
     if ( fHelp || params.size() != 5)
-        throw runtime_error("tokenupdate tokenid assethash value ccode licensetype\n");
+        throw runtime_error("tokenupdate tokenid datahash value ccode licensetype\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
         throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
     const CKeyStore& keystore = *pwalletMain;
@@ -7985,7 +7985,7 @@ UniValue tokenupdate(const UniValue& params, bool fHelp, const CPubKey& mypk)
         ERR_RESULT("invalid tokenid");
         return(result);
     }
-    assethash = Parseuint256((char *)params[1].get_str().c_str()); //returns zeroid if empty or wrong length
+    datahash = Parseuint256((char *)params[1].get_str().c_str()); //returns zeroid if empty or wrong length
     value = atof(params[2].get_str().c_str()) * COIN;
     if (value < 1 && value != 0 )
     {
@@ -8004,7 +8004,7 @@ UniValue tokenupdate(const UniValue& params, bool fHelp, const CPubKey& mypk)
         return(result);
     }
 
-    hextx = UpdateToken(0, tokenid, assethash, value, ccode, licensetype);
+    hextx = UpdateToken(0, tokenid, datahash, value, ccode, licensetype);
     if( hextx.size() > 0 )
     {
         result.push_back(Pair("result", "success"));
