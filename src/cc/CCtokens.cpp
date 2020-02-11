@@ -1183,12 +1183,13 @@ std::string UpdateToken(int64_t txfee, uint256 tokenid, uint256 datahash, int64_
         return std::string("");
     }
     
-    if (AddNormalinputs(mtx, mypk, txfee, 64) > 0) {
+    if (AddNormalinputs2(mtx, txfee, 64) > 0) {
         int64_t mypkInputs = TotalPubkeyNormalInputs(mtx, mypk);
-        if (mypkInputs < txfee) {
+		std::cerr << "inputs found=" << mypkInputs << std::endl;
+        /*if (mypkInputs < txfee) {
             CCerror = "some inputs signed not with -pubkey=pk";
             return std::string("");
-        }
+        }*/
         if (latesttxid == tokenid) {
             mtx.vin.push_back(CTxIn(tokenid,2,CScript()));
             //fprintf(stderr, "vin size.%li\n", mtx.vin.size());
