@@ -29,9 +29,9 @@ Agreements transaction types:
 	
 	case 'p':
 		agreement proposal:
-		vins.* normal input
-		vin.n-2 previous proposal marker
-		vin.n-1 previous proposal baton
+		vin.0 normal input
+		vin.1 previous proposal marker
+		vin.2 previous proposal baton
 		vout.0 marker
 		vout.1 response hook
 		vout.n-2 change
@@ -39,16 +39,16 @@ Agreements transaction types:
 	
 	case 't':
 		proposal cancel:
-		vins.* normal input
-		vin.n-2 previous proposal marker
-		vin.n-1 previous proposal baton
+		vin.0 normal input
+		vin.1 previous proposal marker
+		vin.2 previous proposal baton
 		vout.n-2 change
 		vout.n-1 OP_RETURN EVAL_AGREEMENTS 't' proposaltxid initiator [message]
 	
 	case 'c':
 		contract creation:
-		vins.* normal input
-		vin.n-1 latest proposal by seller
+		vin.0 normal input
+		vin.1 latest proposal by seller
 		vout.0 marker
 		vout.1 update baton
 		vout.2 seller dispute baton
@@ -59,8 +59,8 @@ Agreements transaction types:
 	
 	case 'u':
 		contract update:
-		vins.* normal input
-		vin.n-1 latest proposal by other party
+		vin.0 normal input
+		vin.1 latest proposal by other party
 		vout.0 next update baton
 		vout.1 prepayment split to party 1
 		vout.2 prepayment split to party 2
@@ -69,8 +69,8 @@ Agreements transaction types:
 	
 	case 'd':
 		contract dispute:
-		vins.* normal input
-		vin.n-1 previous dispute by disputer
+		vin.0 normal input
+		vin.1 previous dispute by disputer
 		vout.0 next dispute baton
 		vout.1 response hook / mediator fee
 		vout.n-2 change
@@ -78,8 +78,8 @@ Agreements transaction types:
 	
 	case 'r':
 		contract dispute resolve:
-		vins.* normal input
-		vin.n-1 dispute resolved
+		vin.0 normal input
+		vin.1 dispute resolved
 		vout.0 mediator fee OR change
 		vout.1 prepayment redeem
 		vout.n-2 change
