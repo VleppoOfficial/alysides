@@ -43,8 +43,8 @@ int64_t IsAgreementsVout(struct CCcontract_info *cp,const CTransaction& tx,int32
 UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> buyer, std::vector<uint8_t> mediator, int64_t expiryTimeSec, int64_t mediatorfee, int64_t prepayment, uint256 prevproposaltxid, uint256 refagreementtxid);
 UniValue AgreementRequestUpdate(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 datahash, std::vector<uint8_t> newmediator, uint256 prevproposaltxid);
 UniValue AgreementRequestCancel(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 datahash, uint64_t prepaymentcut, uint256 prevproposaltxid);
-UniValue AgreementCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid, uint256 verifyhash, std::string message);
-UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid, uint256 verifyhash);
+UniValue AgreementCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid, std::string message);
+UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid);
 
 UniValue AgreementList();
 
