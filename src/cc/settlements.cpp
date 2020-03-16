@@ -100,6 +100,7 @@ uint8_t DecodeAgreementCreateOpRet(CPubKey &pk,CScript scriptPubKey)
 
 bool SettlementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
+	// Yes
 	return(eval->Invalid("no validation yet"));
 }
 
