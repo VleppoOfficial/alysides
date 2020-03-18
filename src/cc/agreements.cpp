@@ -398,14 +398,16 @@ UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, u
 	if(prevproposaltxid != zeroid) {
 		if(myGetTransaction(prevproposaltxid,prevproposaltx,hashBlock)==0 || (numvouts=prevproposaltx.vout.size())<=0)
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
-		if(DecodeAgreementOpRet(prevproposaltx.vout[numvouts - 1].scriptPubKey) == 't')
-			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified agreement proposal has been closed");
-		else if(DecodeAgreementProposalOpRet(prevproposaltx.vout[numvouts - 1].scriptPubKey, refProposalType, refInitiator, refReceiver, refMediator, refPrepayment, refMediatorFee, refDeposit, refDepositCut, refHash, refAgreementTxid, refPrevProposalTxid, refName) != 'p')
-			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "invalid agreement proposal txid " << prevproposaltxid.GetHex());
-		if(refProposalType != 'p')
-			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified proposal has incorrect proposal type, txid " << prevproposaltxid.GetHex());
-		if(retcode = CCgetspenttxid(spenttxid, vini, height, prevproposaltxid, 1) == 0)
-			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified proposal has already been updated by txid " << spenttxid.GetHex());
+		if(DecodeAgreementOpRet(proposaltx.vout[numvouts - 1].scriptPubKey) == 'c')
+			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified txid is a contract id, needs to be proposal id");
+		else if(DecodeAgreementProposalOpRet(proposaltx.vout[numvouts-1].scriptPubKey,refProposalType,refInitiator,refReceiver,refMediator,refPrepayment,refMediatorFee,refDeposit,refDepositCut,refHash,refAgreementTxid,refPrevProposalTxid,refName) != 'p')
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid proposal txid " << proposaltxid.GetHex());
+		if((retcode = CCgetspenttxid(spenttxid, vini, height, proposaltxid, 1) == 0) && (myGetTransaction(spenttxid,spenttx,hashBlock)!=0 || (numvouts=spenttx.vout.size())>0)) {
+			if(DecodeAgreementOpRet(spenttx.vout[numvouts - 1].scriptPubKey) == 't')
+				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "specified proposal has already been closed by txid " << spenttxid.GetHex());
+			else if(DecodeAgreementOpRet(spenttx.vout[numvouts - 1].scriptPubKey) == 'c')
+				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "specified proposal has already been accepted by txid " << spenttxid.GetHex());
+		}
 		if(mypk != pubkey2pk(refInitiator))
 			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "-pubkey doesn't match creator of previous proposal txid " << prevproposaltxid.GetHex());
 		if(pubkey2pk(buyer).IsValid() && !(refReceiver.empty()) && buyer != refReceiver)
@@ -516,12 +518,16 @@ UniValue AgreementCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 	if(proposaltxid != zeroid) {
 		if(myGetTransaction(proposaltxid,proposaltx,hashBlock)==0 || (numvouts=proposaltx.vout.size())<=0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cant find specified proposal txid " << proposaltxid.GetHex());
-		if(DecodeAgreementOpRet(proposaltx.vout[numvouts - 1].scriptPubKey) == 't')
-			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified agreement proposal has already been closed");
+		if(DecodeAgreementOpRet(proposaltx.vout[numvouts - 1].scriptPubKey) == 'c')
+			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified txid is a contract id, needs to be proposal id");
 		else if(DecodeAgreementProposalOpRet(proposaltx.vout[numvouts-1].scriptPubKey,refProposalType,refInitiator,refReceiver,refMediator,refPrepayment,refMediatorFee,refDeposit,refDepositCut,refHash,refAgreementTxid,refPrevProposalTxid,refName) != 'p')
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid proposal txid " << proposaltxid.GetHex());
-		if(retcode = CCgetspenttxid(spenttxid, vini, height, proposaltxid, 1) == 0)
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "specified proposal has already been updated by txid " << spenttxid.GetHex());
+		if((retcode = CCgetspenttxid(spenttxid, vini, height, proposaltxid, 1) == 0) && (myGetTransaction(spenttxid,spenttx,hashBlock)!=0 || (numvouts=spenttx.vout.size())>0)) {
+			if(DecodeAgreementOpRet(spenttx.vout[numvouts - 1].scriptPubKey) == 't')
+				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "specified proposal has already been closed by txid " << spenttxid.GetHex());
+			else if(DecodeAgreementOpRet(spenttx.vout[numvouts - 1].scriptPubKey) == 'c')
+				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "specified proposal has already been accepted by txid " << spenttxid.GetHex());
+		}
 		if(mypk != pubkey2pk(refInitiator) && (!(refReceiver.empty()) && mypk != pubkey2pk(refReceiver)))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "-pubkey must be either initiator or receiver of specified proposal txid " << proposaltxid.GetHex());
 	}
@@ -550,7 +556,7 @@ UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	CPubKey mypk;
 	
-	CTransaction proposaltx;
+	CTransaction proposaltx, spenttx;
 	int32_t numvouts, vini, height, retcode;
 	uint256 hashBlock, refHash, refAgreementTxid, refPrevProposalTxid, spenttxid;
 	std::vector<uint8_t> refInitiator, refReceiver, refMediator;
@@ -567,12 +573,16 @@ UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid
 	if(proposaltxid != zeroid) {
 		if(myGetTransaction(proposaltxid,proposaltx,hashBlock)==0 || (numvouts=proposaltx.vout.size())<=0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cant find specified proposal txid " << proposaltxid.GetHex());
-		if(DecodeAgreementOpRet(proposaltx.vout[numvouts - 1].scriptPubKey) == 't')
-			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified agreement proposal has already been closed");
+		if(DecodeAgreementOpRet(proposaltx.vout[numvouts - 1].scriptPubKey) == 'c')
+			CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "specified txid is a contract id, needs to be proposal id");
 		else if(DecodeAgreementProposalOpRet(proposaltx.vout[numvouts-1].scriptPubKey,refProposalType,refInitiator,refReceiver,refMediator,refPrepayment,refMediatorFee,refDeposit,refDepositCut,refHash,refAgreementTxid,refPrevProposalTxid,refName) != 'p')
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid proposal txid " << proposaltxid.GetHex());
-		if(retcode = CCgetspenttxid(spenttxid, vini, height, proposaltxid, 1) == 0)
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "specified proposal has already been updated by txid " << spenttxid.GetHex());
+		if((retcode = CCgetspenttxid(spenttxid, vini, height, proposaltxid, 1) == 0) && (myGetTransaction(spenttxid,spenttx,hashBlock)!=0 || (numvouts=spenttx.vout.size())>0)) {
+			if(DecodeAgreementOpRet(spenttx.vout[numvouts - 1].scriptPubKey) == 't')
+				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "specified proposal has already been closed by txid " << spenttxid.GetHex());
+			else if(DecodeAgreementOpRet(spenttx.vout[numvouts - 1].scriptPubKey) == 'c')
+				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "specified proposal has already been accepted by txid " << spenttxid.GetHex());
+		}
 		if(refReceiver.empty())
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "proposal has no designated receiver");
 		else if(mypk != pubkey2pk(refReceiver))
