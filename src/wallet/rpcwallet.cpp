@@ -8173,7 +8173,7 @@ UniValue agreementcloseproposal(const UniValue& params, bool fHelp, const CPubKe
     UniValue result(UniValue::VOBJ);
 	uint256 proposaltxid;
 	std::string message;
-    if (fHelp || params.size() < 2 || params.size() > 3)
+    if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error("agreementcloseproposal proposaltxid [message]\n");
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
