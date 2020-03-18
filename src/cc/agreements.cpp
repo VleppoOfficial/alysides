@@ -652,7 +652,8 @@ UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid
 				mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_BATON_VALUE, mypk, pubkey2pk(refInitiator))); // vout.1 update baton
 				mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_BATON_VALUE, mypk, pubkey2pk(refInitiator))); // vout.2 dispute baton
 				mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, refDeposit, mypk, pubkey2pk(refMediator))); // vout.3 deposit / agreement completion marker
-				mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, refPrepayment, pubkey2pk(refInitiator))); // vout.4 prepayment
+				//mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, refPrepayment, pubkey2pk(refInitiator)));
+				mtx.vout.push_back(CTxOut(refPrepayment,CScript() << ParseHex(HexStr(refInitiator)) << OP_CHECKSIG)); // vout.4 prepayment
 				return(FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementSigningOpRet(proposaltxid)));
 			}
 			else
