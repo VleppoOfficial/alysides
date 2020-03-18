@@ -225,74 +225,7 @@ uint8_t DecodeAgreementSigningOpRet(CScript scriptPubKey, uint256 &proposaltxid)
 
 bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
-	/*
-	
-	- Fetch transaction
-	- Generic checks (measure boundaries, etc. Check other modules for inspiration)
-	- Get transaction funcid
-	- Switch case:
-		if funcid == 'c':
-			- Fetch the opret and make sure all data is included. If opret is malformed or data is missing, invalidate
-			- Get sellerpubkey, buyerpubkey, mediator and refagreementtxid
-				- Buyerpubkey: confirm that it isn't null and that current tx came from this pubkey
-			- Check if vout0 marker exists and is sent to global addr. If not, invalidate
-			- Check if vout1 update baton exists and is sent to seller/buyer 1of2 address. Confirm that 1of2 address can only be spent by the specified seller/buyer pubkeys.
-			- Check if vout2 seller dispute baton exists and is sent to seller CC address. Confirm that the address can only be spent by the specified seller pubkey.
-			- Check if vout3 buyer dispute baton exists and is sent to buyer CC address. Confirm that the address can only be spent by the specified buyer pubkey.
-			- Check if vout4 exists and its nValue is >= 10000 sats.
-				TODO: what to do with this? Which eval code to use for the deposit?
-			- Check if vin.n-1 exists and is a 'p' type transaction. If it is not correct or non-existant, invalidate, otherwise:
-				- Check if vout0 marker exists and is sent to global addr. If not, invalidate
-				- Check if vin.n-1 prevout is vout1 in 'p' tx
-				- Fetch the opret from 'p' tx and make sure all data is included. If opret is malformed or data is missing, invalidate
-				- Get proposaltype, initiatorpubkey, receiverpubkey, mediatorpubkey, agreementtxid, deposit, mediatorfee, depositsplit, datahash, description
-					- Proposaltype: must be "p" (proposal). If it is "u" (contract update) or "t" (contract terminate), invalidate
-					- Initiatorpubkey: confirm that 'p' tx came from this pubkey. Make sure that initiatorpubkey == sellerpubkey
-					- Receiverpubkey: confirm that the current tx came from this pubkey. Make sure that receiverpubkey == buyerpubkey
-					- Mediatorpubkey: if mediator == false, must be null (or failing that, just ignored). If mediator == true, must be a valid pubkey
-					- Agreementtxid: can be either null or valid agreement txid, however it must be the same as the refagreementtxid in current tx
-					- Prepayment: if mediator == false, must be 0. Otherwise, check if the vout4 nValue is the same as this value
-					- Mediatorfee: if mediator == false, must be 0. Otherwise, must be more than 10000 satoshis
-					- Prepaymentsplit: must be 0 (or failing that, just ignored)
-					- Datahash and description doesn't need to be validated, can be w/e
-				- Check if vin.n-1 exists in the 'p' type transaction. If it does, get the prevout txid, then run the Løøp. If it returns false, invalidate
-			- Misc Business rules
-				- Make sure that sellerpubkey != buyerpubkey != mediatorpubkey
-			return true?
-		if funcid == 'p': 
-				- Check if marker exists and is sent to global addr. If not, invalidate
-				- Check if response hook exists and is sent to 1of2 CC addr (we'll confirm if this address is correct later)
-				- Fetch the opret from currenttx and make sure all data is included. If opret is malformed or data is missing, invalidate
-				- Get initiatorpubkey, receiverpubkey, mediatorpubkey, proposaltype, agreementtxid, deposit, mediatorfee, depositsplit, datahash, description
-					- Initiatorpubkey: confirm that this tx came from this pubkey
-					- Receiverpubkey: check if pubkey is valid
-					- Mediatorpubkey: can be either null or valid pubkey
-					- Proposaltype: can be 'a'(proposal amend),'u'(contract update) or 't' (contract terminate). If it is 'c'(proposal create), invalidate as 'c' types shouldn't be able to trigger validation
-					- Agreementtxid: if proposaltype is 'a', agreementtxid must be zeroid.
-						Otherwise, check if agreementtxid is valid (optionally, check if its 'c' type and that initiator and receiver match)
-					- Prepayment: only relevant if proposaltype is 'a' and mediatorpubkey is valid. Is otherwise ignored for now
-					- Mediatorfee: only relevant if proposaltype is 'a' and mediatorpubkey is valid, in which case it must be at least 10000 satoshis. Is otherwise ignored for now
-					- Prepaymentsplit: only relevant if proposaltype is 't', and the deposit is non-zero. The deposit must be evenly divisible so that there are no remaining coins left
-					- Datahash and description doesn't need to be validated, can be w/e
-				- Save all this data somewhere
-				- If a 'p' type is being validated, that means it probably spent a previous 'p' type, therefore check vin.n-1 prevout and get the prevouttxid. if it doesn't exist or is incorrect, invalidate
-				Run the Løøp(currenttxid, currentfuncid, prevouttxid):
-					- Get transaction(prevouttxid)
-					- Check if marker exists and is sent to global addr. If not, invalidate
-					- Check if response hook exists and is spent by currenttxid. If not, invalidate
-					- Fetch the opret from prevouttx and make sure all data is included. If opret is malformed or data is missing, invalidate
-					- Get initiatorpubkey, receiverpubkey, mediatorpubkey, proposaltype, agreementtxid, deposit, mediatorfee, depositsplit, datahash, description
-						- Initiatorpubkey: confirm that this tx came from this pubkey
-						- Receiverpubkey: check if pubkey is valid. 
-						- Mediatorpubkey: can be either null or valid pubkey
-		
-		
-	RecursiveProposalLøøp(proposaltxid,)
-	- Get proposal tx
-	- Check if marker exists and is sent to global addr. If not, invalidate
-	- Check if response hook exists and is sent to 1of2 CC addr (we'll confirm if this address is correct later)
-	*/
-	//return(eval->Invalid("no validation yet"));
+	return(eval->Invalid("no validation yet"));
 	
 	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size();
 	//CPubKey globalpubkey;
