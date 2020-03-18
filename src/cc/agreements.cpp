@@ -651,8 +651,10 @@ UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid
 				mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, GetUnspendable(cp, NULL))); // vout.0 marker
 				mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_BATON_VALUE, mypk, pubkey2pk(refInitiator))); // vout.1 update baton
 				mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_BATON_VALUE, mypk, pubkey2pk(refInitiator))); // vout.2 dispute baton
-				mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, refDeposit, mypk, pubkey2pk(refMediator))); // vout.3 deposit / agreement completion marker
-				//mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, refPrepayment, pubkey2pk(refInitiator)));
+				if(pubkey2pk(refMediator).IsValid())
+					mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, refDeposit, mypk, pubkey2pk(refMediator))); // vout.3 deposit / agreement completion marker (with mediator)
+				else
+					mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, refDeposit, mypk)); // vout.3 deposit / agreement completion marker (without mediator)
 				mtx.vout.push_back(CTxOut(refPrepayment,CScript() << ParseHex(HexStr(refInitiator)) << OP_CHECKSIG)); // vout.4 prepayment
 				return(FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementSigningOpRet(proposaltxid)));
 			}
