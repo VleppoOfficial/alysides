@@ -220,6 +220,17 @@ uint8_t DecodeAgreementSigningOpRet(CScript scriptPubKey, uint256 &proposaltxid)
 	return(0);
 }
 
+/*
+CScript EncodeAgreementUpdateOpRet(uint256 agreementtxid, uint256 proposaltxid)
+uint8_t DecodeAgreementUpdateOpRet(CScript scriptPubKey, uint256 &agreementtxid, uint256 &proposaltxid)
+CScript EncodeAgreementDisputeOpRet(uint256 agreementtxid, uint256 disputehash)
+uint8_t DecodeAgreementDisputeOpRet(CScript scriptPubKey, uint256 &agreementtxid, uint256 &disputehash)
+CScript EncodeAgreementDisputeResolveOpRet(uint256 agreementtxid, uint256 disputetxid, std::vector<uint8_t> rewardedpubkey)
+uint8_t DecodeAgreementDisputeResolveOpRet(CScript scriptPubKey, uint256 &agreementtxid, uint256 &disputetxid, std::vector<uint8_t> &rewardedpubkey)
+
+agreementresolve(agreementtxid disputetxid verdict [rewardedpubkey][message])
+*/
+
 //===========================================================================
 // Validation
 //===========================================================================
