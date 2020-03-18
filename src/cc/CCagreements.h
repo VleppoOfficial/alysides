@@ -24,6 +24,7 @@
 #include "CCinclude.h"
 
 #define CC_MARKER_VALUE 10000
+#define CC_BATON_VALUE 10000
 #define CC_RESPONSE_VALUE 20000
 #define CC_MEDIATORFEE_MIN 10000
 #define CC_DEPOSIT_MIN 10000
