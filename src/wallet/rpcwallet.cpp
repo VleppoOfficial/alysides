@@ -8135,7 +8135,7 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
 		prepayment = atof((char *)params[4].get_str().c_str()) * COIN + 0.00000000499999;
 		if (prepayment < 0) {
 			Unlock2NSPV(mypk);
-			throw runtime_error("Incorrect expiry time\n");
+			throw runtime_error("Prepayment must be positive\n");
 		}
     }
 	mediatorfee = 0;

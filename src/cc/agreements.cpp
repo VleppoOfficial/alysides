@@ -18,12 +18,12 @@
 /*
 
 Put all notes here!
-if deposit exists but there is no mediator, it acts as immediate payment upon acceptance (deposit)
-when contracts expire, raising disputes should still be allowed
+
 IMPORTANT!!! - deposit is locked under EVAL_AGREEMENTS, but it may also be spent by a specific Settlements transaction. Make sure this code is able to check for this.
 don't allow swapping between no mediator <-> mediator
 only 1 update/cancel request per party, per agreement
 version numbers should be reset after contract acceptance
+remove message from agreementcloseproposal
 
 Agreements transaction types:
 	
@@ -216,6 +216,51 @@ uint8_t DecodeAgreementSigningOpRet(CScript scriptPubKey, uint256 &proposaltxid)
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
 	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> proposaltxid) != 0 && evalcode == EVAL_AGREEMENTS)
+		return(funcid);
+	return(0);
+}
+
+CScript EncodeAgreementUpdateOpRet(uint256 agreementtxid, uint256 proposaltxid)
+{
+	CScript opret; uint8_t evalcode = EVAL_AGREEMENTS, funcid = 'u';
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << agreementtxid << proposaltxid);
+	return(opret);
+}
+uint8_t DecodeAgreementUpdateOpRet(CScript scriptPubKey, uint256 &agreementtxid, uint256 &proposaltxid)
+{
+	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
+	GetOpReturnData(scriptPubKey, vopret);
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> agreementtxid; ss >> proposaltxid) != 0 && evalcode == EVAL_AGREEMENTS)
+		return(funcid);
+	return(0);
+}
+
+CScript EncodeAgreementDisputeOpRet(uint256 agreementtxid, uint256 disputehash)
+{
+	CScript opret; uint8_t evalcode = EVAL_AGREEMENTS, funcid = 'd';
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << agreementtxid << disputehash);
+	return(opret);
+}
+uint8_t DecodeAgreementDisputeOpRet(CScript scriptPubKey, uint256 &agreementtxid, uint256 &disputehash)
+{
+	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
+	GetOpReturnData(scriptPubKey, vopret);
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> agreementtxid; ss >> disputehash) != 0 && evalcode == EVAL_AGREEMENTS)
+		return(funcid);
+	return(0);
+}
+
+CScript EncodeAgreementDisputeResolveOpRet(uint256 agreementtxid, uint256 disputetxid, std::vector<uint8_t> rewardedpubkey)
+{
+	CScript opret; uint8_t evalcode = EVAL_AGREEMENTS, funcid = 'r';
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << agreementtxid << disputetxid << rewardedpubkey);
+	return(opret);
+}
+uint8_t DecodeAgreementDisputeResolveOpRet(CScript scriptPubKey, uint256 &agreementtxid, uint256 &disputetxid, std::vector<uint8_t> &rewardedpubkey)
+{
+	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
+	GetOpReturnData(scriptPubKey, vopret);
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> agreementtxid; ss >> disputetxid; ss >> rewardedpubkey) != 0 && evalcode == EVAL_AGREEMENTS)
 		return(funcid);
 	return(0);
 }

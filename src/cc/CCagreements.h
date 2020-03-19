@@ -36,6 +36,12 @@ CScript EncodeAgreementProposalCloseOpRet(uint256 proposaltxid, std::vector<uint
 uint8_t DecodeAgreementProposalCloseOpRet(CScript scriptPubKey, uint256 &proposaltxid, std::vector<uint8_t> &initiator, std::string &message);
 CScript EncodeAgreementSigningOpRet(uint256 proposaltxid);
 uint8_t DecodeAgreementSigningOpRet(CScript scriptPubKey, uint256 &proposaltxid);
+CScript EncodeAgreementUpdateOpRet(uint256 agreementtxid, uint256 proposaltxid);
+uint8_t DecodeAgreementUpdateOpRet(CScript scriptPubKey, uint256 &agreementtxid, uint256 &proposaltxid);
+CScript EncodeAgreementDisputeOpRet(uint256 agreementtxid, uint256 disputehash);
+uint8_t DecodeAgreementDisputeOpRet(CScript scriptPubKey, uint256 &agreementtxid, uint256 &disputehash);
+CScript EncodeAgreementDisputeResolveOpRet(uint256 agreementtxid, uint256 disputetxid, std::vector<uint8_t> rewardedpubkey);
+uint8_t DecodeAgreementDisputeResolveOpRet(CScript scriptPubKey, uint256 &agreementtxid, uint256 &disputetxid, std::vector<uint8_t> &rewardedpubkey);
 
 bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
 
