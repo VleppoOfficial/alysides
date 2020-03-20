@@ -8105,9 +8105,9 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
     UniValue result(UniValue::VOBJ);
 	uint256 datahash, prevproposaltxid, refagreementtxid;
 	std::string name;
-	int64_t prepayment, mediatorfee, deposit;
+	int64_t prepayment, arbitratorfee, deposit;
     if (fHelp || params.size() < 4 || params.size() > 9)
-        throw runtime_error("agreementpropose name datahash buyer mediator [prepayment][mediatorfee][deposit][prevproposaltxid][refagreementtxid]\n");
+        throw runtime_error("agreementpropose name datahash buyer arbitrator [prepayment][arbitratorfee][deposit][prevproposaltxid][refagreementtxid]\n");
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     const CKeyStore& keystore = *pwalletMain;
@@ -8123,13 +8123,13 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
 		Unlock2NSPV(mypk);
         throw runtime_error("Data hash empty or invalid\n");
     }
-	/*std::vector<unsigned char> buyer = 0, mediator = 0;
+	/*std::vector<unsigned char> buyer = 0, arbitrator = 0;
 	if (params.size() >= 3)
 		buyer = ParseHex(params[2].get_str().c_str());
 	if (params.size() >= 4)
-		mediator = ParseHex(params[3].get_str().c_str());*/
+		arbitrator = ParseHex(params[3].get_str().c_str());*/
 	std::vector<unsigned char> buyer(ParseHex(params[2].get_str().c_str()));
-	std::vector<unsigned char> mediator(ParseHex(params[3].get_str().c_str()));
+	std::vector<unsigned char> arbitrator(ParseHex(params[3].get_str().c_str()));
 	prepayment = 0;
 	if (params.size() >= 5)     {
 		prepayment = atof((char *)params[4].get_str().c_str()) * COIN + 0.00000000499999;
@@ -8138,12 +8138,12 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
 			throw runtime_error("Prepayment must be positive\n");
 		}
     }
-	mediatorfee = 0;
+	arbitratorfee = 0;
 	if (params.size() >= 6)     {
-        mediatorfee = atof((char *)params[5].get_str().c_str()) * COIN + 0.00000000499999;
-        if (mediatorfee < 0)    {
+        arbitratorfee = atof((char *)params[5].get_str().c_str()) * COIN + 0.00000000499999;
+        if (arbitratorfee < 0)    {
 			Unlock2NSPV(mypk);
-			throw runtime_error("Mediator fee must be positive\n");
+			throw runtime_error("Arbitrator fee must be positive\n");
 		}
     }
 	deposit = 0;
@@ -8161,7 +8161,7 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
 	if (params.size() == 9)     {
         refagreementtxid = Parseuint256((char *)params[8].get_str().c_str());
     }
-	result = AgreementPropose(mypk, 0, name, datahash, buyer, mediator, prepayment, mediatorfee, deposit, prevproposaltxid, refagreementtxid);
+	result = AgreementPropose(mypk, 0, name, datahash, buyer, arbitrator, prepayment, arbitratorfee, deposit, prevproposaltxid, refagreementtxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
