@@ -23,7 +23,7 @@ IMPORTANT!!! - deposit is locked under EVAL_AGREEMENTS, but it may also be spent
 don't allow swapping between no arbitrator <-> arbitrator
 only 1 update/cancel request per party, per agreement
 version numbers should be reset after contract acceptance
-remove message from agreementcloseproposal
+fix agreementcloseproposal not detecting outdated proposals
 
 Agreements transaction types:
 	
@@ -566,6 +566,7 @@ UniValue AgreementCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 		else if(DecodeAgreementProposalOpRet(proposaltx.vout[numvouts-1].scriptPubKey,refProposalType,refInitiator,refReceiver,refArbitrator,refPrepayment,refArbitratorFee,refDeposit,refDepositCut,refHash,refAgreementTxid,refPrevProposalTxid,refName) != 'p')
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid proposal txid " << proposaltxid.GetHex());
 		if(retcode = CCgetspenttxid(spenttxid, vini, height, proposaltxid, 1) == 0) {
+			std::cerr << "Found a spenttxid" << std::endl;
 			if(myGetTransaction(spenttxid,spenttx,hashBlock)==0 || (numvouts=spenttx.vout.size())<=0)
 				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "specified proposal has already been amended by txid " << spenttxid.GetHex());
 			else {
