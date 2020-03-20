@@ -32,8 +32,8 @@
 uint8_t DecodeAgreementOpRet(const CScript scriptPubKey);
 CScript EncodeAgreementProposalOpRet(uint8_t proposaltype, std::vector<uint8_t> initiator, std::vector<uint8_t> receiver, std::vector<uint8_t> arbitrator, int64_t expiryTimeSec, int64_t arbitratorfee, int64_t prepayment, int64_t prepaymentcut, uint256 datahash, uint256 agreementtxid, uint256 prevproposaltxid, std::string name);
 uint8_t DecodeAgreementProposalOpRet(CScript scriptPubKey, uint8_t &proposaltype, std::vector<uint8_t> &initiator, std::vector<uint8_t> &receiver, std::vector<uint8_t> &arbitrator, int64_t &expiryTimeSec, int64_t &arbitratorfee, int64_t &prepayment, int64_t &prepaymentcut, uint256 &datahash, uint256 &agreementtxid, uint256 &prevproposaltxid, std::string &name);
-CScript EncodeAgreementProposalCloseOpRet(uint256 proposaltxid, std::vector<uint8_t> initiator, std::string message);
-uint8_t DecodeAgreementProposalCloseOpRet(CScript scriptPubKey, uint256 &proposaltxid, std::vector<uint8_t> &initiator, std::string &message);
+CScript EncodeAgreementProposalCloseOpRet(uint256 proposaltxid, std::vector<uint8_t> initiator);
+uint8_t DecodeAgreementProposalCloseOpRet(CScript scriptPubKey, uint256 &proposaltxid, std::vector<uint8_t> &initiator);
 CScript EncodeAgreementSigningOpRet(uint256 proposaltxid);
 uint8_t DecodeAgreementSigningOpRet(CScript scriptPubKey, uint256 &proposaltxid);
 CScript EncodeAgreementUpdateOpRet(uint256 agreementtxid, uint256 proposaltxid);
@@ -50,7 +50,7 @@ int64_t IsAgreementsVout(struct CCcontract_info *cp,const CTransaction& tx,int32
 UniValue AgreementPropose(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> buyer, std::vector<uint8_t> arbitrator, int64_t expiryTimeSec, int64_t arbitratorfee, int64_t prepayment, uint256 prevproposaltxid, uint256 refagreementtxid);
 UniValue AgreementRequestUpdate(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 datahash, std::vector<uint8_t> newarbitrator, uint256 prevproposaltxid);
 UniValue AgreementRequestCancel(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 datahash, uint64_t prepaymentcut, uint256 prevproposaltxid);
-UniValue AgreementCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid, std::string message);
+UniValue AgreementCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid);
 UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid);
 
 UniValue AgreementList();

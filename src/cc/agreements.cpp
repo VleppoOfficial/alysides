@@ -159,7 +159,7 @@ uint8_t DecodeAgreementOpRet(const CScript scriptPubKey)
 		case 'p':
 			return DecodeAgreementProposalOpRet(scriptPubKey, dummyProposalType, dummyInitiator, dummyReceiver, dummyArbitrator, dummyPrepayment, dummyArbitratorFee, dummyDeposit, dummyDepositCut, dummyHash, dummyAgreementTxid, dummyPrevProposalTxid, dummyName);
 		case 't':
-			return DecodeAgreementProposalCloseOpRet(scriptPubKey, dummyPrevProposalTxid, dummyInitiator, dummyName);
+			return DecodeAgreementProposalCloseOpRet(scriptPubKey, dummyPrevProposalTxid, dummyInitiator);
 		case 'c':
 			return DecodeAgreementSigningOpRet(scriptPubKey, dummyPrevProposalTxid);
 		//case 'whatever':
@@ -190,17 +190,17 @@ uint8_t DecodeAgreementProposalOpRet(CScript scriptPubKey, uint8_t &proposaltype
 	return(0);
 }
 
-CScript EncodeAgreementProposalCloseOpRet(uint256 proposaltxid, std::vector<uint8_t> initiator, std::string message)
+CScript EncodeAgreementProposalCloseOpRet(uint256 proposaltxid, std::vector<uint8_t> initiator)
 {
 	CScript opret; uint8_t evalcode = EVAL_AGREEMENTS, funcid = 't';
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << proposaltxid << initiator << message);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << proposaltxid << initiator);
 	return(opret);
 }
-uint8_t DecodeAgreementProposalCloseOpRet(CScript scriptPubKey, uint256 &proposaltxid, std::vector<uint8_t> &initiator, std::string &message)
+uint8_t DecodeAgreementProposalCloseOpRet(CScript scriptPubKey, uint256 &proposaltxid, std::vector<uint8_t> &initiator)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> proposaltxid; ss >> initiator; ss >> message) != 0 && evalcode == EVAL_AGREEMENTS)
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> proposaltxid; ss >> initiator) != 0 && evalcode == EVAL_AGREEMENTS)
 		return(funcid);
 	return(0);
 }
@@ -539,7 +539,7 @@ UniValue AgreementRequestCancel(const CPubKey& pk, uint64_t txfee, uint256 agree
 
 // agreementcloseproposal - constructs a 't' transaction and spends the specified 'p' transaction
 // can always be done by the proposal initiator, as well as the receiver if they are able to accept the proposal.
-UniValue AgreementCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid, std::string message)
+UniValue AgreementCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid)
 {
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	CPubKey mypk;
@@ -556,10 +556,6 @@ UniValue AgreementCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 	if(txfee == 0)
 		txfee = 10000;
 	mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
-
-	// check message, if it exists
-	if(!(message.empty()) && message.size() > 1024)
-		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Optional message cannot exceed 1024 characters");
 
 	// check proposaltxid
 	if(proposaltxid != zeroid) {
@@ -593,7 +589,7 @@ UniValue AgreementCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 		uint8_t mypriv[32];
 		Myprivkey(mypriv);
 		CCaddr1of2set(cp, pubkey2pk(refInitiator), pubkey2pk(refReceiver), mypriv, mutualaddr);
-		return(FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementProposalCloseOpRet(proposaltxid,std::vector<uint8_t>(mypk.begin(),mypk.end()),message)));
+		return(FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementProposalCloseOpRet(proposaltxid,std::vector<uint8_t>(mypk.begin(),mypk.end()))));
 	}
 	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "error adding normal inputs");
 }
