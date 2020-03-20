@@ -8110,7 +8110,6 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
         throw runtime_error("agreementpropose name datahash buyer arbitrator [prepayment][arbitratorfee][deposit][prevproposaltxid][refagreementtxid]\n");
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
-    const CKeyStore& keystore = *pwalletMain;
     Lock2NSPV(mypk);
 	
 	name = params[0].get_str();
@@ -8176,7 +8175,6 @@ UniValue agreementcloseproposal(const UniValue& params, bool fHelp, const CPubKe
         throw runtime_error("agreementcloseproposal proposaltxid\n");
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
-    //const CKeyStore& keystore = *pwalletMain;
     Lock2NSPV(mypk);
 	
 	proposaltxid = Parseuint256((char *)params[0].get_str().c_str());
@@ -8200,7 +8198,6 @@ UniValue agreementaccept(const UniValue& params, bool fHelp, const CPubKey& mypk
         throw runtime_error("agreementaccept proposaltxid\n");
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
-    const CKeyStore& keystore = *pwalletMain;
     Lock2NSPV(mypk);
 	
 	proposaltxid = Parseuint256((char *)params[0].get_str().c_str());
