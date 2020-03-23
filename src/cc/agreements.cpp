@@ -19,11 +19,15 @@
 
 Put all notes here!
 
-IMPORTANT!!! - deposit is locked under EVAL_AGREEMENTS, but it may also be spent by a specific Settlements transaction. Make sure this code is able to check for this.
+
 don't allow swapping between no arbitrator <-> arbitrator
 only 1 update/cancel request per party, per agreement
 version numbers should be reset after contract acceptance
 fix agreementcloseproposal not detecting outdated proposals
+merge deposit and depositcut into depositvalue?
+merge update and dispute batons into one?
+keep closed proposal markers on!
+Note: limit amount of CC inputs for each type of transaction
 
 Agreements transaction types:
 	
@@ -35,55 +39,62 @@ Agreements transaction types:
 		vout.0 marker
 		vout.1 response hook
 		vout.n-2 change
-		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'p' proposaltype initiator receiver arbitrator arbitratorfee deposit depositcut datahash agreementtxid prevproposaltxid name
-	
+		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'p' proposaltype initiator receiver arbitrator prepayment arbitratorfee depositvalue datahash agreementtxid prevproposaltxid name
+
 	case 't':
 		proposal cancel:
 		vin.0 normal input
-		vin.1 previous proposal marker
-		vin.2 previous proposal baton
+		vin.1 previous proposal baton
 		vout.n-2 change
-		vout.n-1 OP_RETURN EVAL_AGREEMENTS 't' proposaltxid initiator [message]
+		vout.n-1 OP_RETURN EVAL_AGREEMENTS 't' proposaltxid initiator
 	
 	case 'c':
 		contract creation:
 		vin.0 normal input
 		vin.1 latest proposal by seller
 		vout.0 marker
-		vout.1 update baton
-		vout.2 dispute baton
-		vout.3 deposit / agreement completion marker
-		vout.4 prepayment
+		vout.1 update/dispute baton
+		vout.2 deposit / agreement completion baton
+		vout.3 prepayment
 		vout.n-2 change
 		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'c' proposaltxid
 	
 	case 'u':
 		contract update:
 		vin.0 normal input
-		vin.1 latest proposal by other party
+		vin.1 last update baton
+		vin.2 latest proposal by other party
 		vout.0 next update baton
-		vout.1 deposit split to party 1
-		vout.2 deposit split to party 2
 		vout.n-2 change
-		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'u' [initiator] confirmer [lastupdatetxid] updateproposaltxid type
+		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'u' agreementtxid proposaltxid
+	
+	case 's':
+		contract close:
+		vin.0 normal input
+		vin.1 last update baton
+		vin.2 latest termination proposal by other party
+		vin.3 deposit
+		vout.0 deposit split to party 1
+		vout.1 deposit split to party 2
+		vout.n-2 change
+		vout.n-1 OP_RETURN EVAL_AGREEMENTS 's' agreementtxid proposaltxid
 	
 	case 'd':
 		contract dispute:
 		vin.0 normal input
-		vin.1 previous dispute by disputer
-		vout.0 next dispute baton
-		vout.1 response hook / arbitrator fee
+		vin.1 last update baton
+		vout.0 response hook / arbitrator fee
 		vout.n-2 change
-		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'd' initiator [receiver] [lastdisputetxid] disputetype disputehash
+		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'd' agreementtxid initiator disputehash
 	
 	case 'r':
 		contract dispute resolve:
 		vin.0 normal input
-		vin.1 dispute resolved
-		vout.0 arbitrator fee OR change
-		vout.1 deposit redeem
+		vin.1 dispute resolved w/ fee
+		vin.2 deposit
+		vout.0 deposit redeem
 		vout.n-2 change
-		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'r' disputetxid verdict rewardedpubkey message
+		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'r' disputetxid rewardedpubkey
 	
 Agreements statuses:
 	
@@ -108,12 +119,12 @@ Agreements statuses:
 	
 Agreements RPCs:
 
-	DONE agreementpropose (name datahash buyer arbitrator [arbitratorfee][deposit][prevproposaltxid][refagreementtxid])
+	agreementpropose (name datahash buyer arbitrator [arbitratorfee][deposit][prevproposaltxid][refagreementtxid])
 	agreementrequestupdate(agreementtxid name datahash [newarbitrator][prevproposaltxid])
 	agreementrequestcancel(agreementtxid name datahash [depositsplit][prevproposaltxid])
 	Proposal creation
 	
-	DONE agreementcloseproposal(proposaltxid message)
+	agreementcloseproposal(proposaltxid message)
 	agreementaccept(proposaltxid)
 	Proposal response
 	
@@ -121,8 +132,8 @@ Agreements RPCs:
 	agreementresolve(agreementtxid disputetxid verdict [rewardedpubkey])
 	Disputes
 	
-	DONE agreementaddress
-	DONE agreementlist
+	agreementaddress
+	agreementlist
 	agreementinfo(txid)
 	agreementviewupdates(agreementtxid [samplenum][recursive])
 	agreementviewdisputes(agreementtxid [samplenum][recursive])
@@ -271,83 +282,313 @@ uint8_t DecodeAgreementDisputeResolveOpRet(CScript scriptPubKey, uint256 &agreem
 
 bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
-	/*
-	- Fetch transaction
-	- Generic checks (measure boundaries, etc. Check other modules for inspiration)
-	- Get transaction funcid
-	- Switch case:
-		if funcid == 'c':
-			- Fetch the opret and make sure all data is included. If opret is malformed or data is missing, invalidate
-			- Get sellerpubkey, buyerpubkey, arbitrator and refagreementtxid
-				- Buyerpubkey: confirm that it isn't null and that current tx came from this pubkey
-			- Check if vout0 marker exists and is sent to global addr. If not, invalidate
-			- Check if vout1 update baton exists and is sent to seller/buyer 1of2 address. Confirm that 1of2 address can only be spent by the specified seller/buyer pubkeys.
-			- Check if vout2 seller dispute baton exists and is sent to seller CC address. Confirm that the address can only be spent by the specified seller pubkey.
-			- Check if vout3 buyer dispute baton exists and is sent to buyer CC address. Confirm that the address can only be spent by the specified buyer pubkey.
-			- Check if vout4 exists and its nValue is >= 10000 sats.
-				TODO: what to do with this? Which eval code to use for the deposit?
-			- Check if vin.n-1 exists and is a 'p' type transaction. If it is not correct or non-existant, invalidate, otherwise:
-				- Check if vout0 marker exists and is sent to global addr. If not, invalidate
-				- Check if vin.n-1 prevout is vout1 in 'p' tx
-				- Fetch the opret from 'p' tx and make sure all data is included. If opret is malformed or data is missing, invalidate
-				- Get proposaltype, initiatorpubkey, receiverpubkey, arbitratorpubkey, agreementtxid, deposit, arbitratorfee, depositsplit, datahash, description
-					- Proposaltype: must be "p" (proposal). If it is "u" (contract update) or "t" (contract terminate), invalidate
-					- Initiatorpubkey: confirm that 'p' tx came from this pubkey. Make sure that initiatorpubkey == sellerpubkey
-					- Receiverpubkey: confirm that the current tx came from this pubkey. Make sure that receiverpubkey == buyerpubkey
-					- Arbitratorpubkey: if arbitrator == false, must be null (or failing that, just ignored). If arbitrator == true, must be a valid pubkey
-					- Agreementtxid: can be either null or valid agreement txid, however it must be the same as the refagreementtxid in current tx
-					- Prepayment: if arbitrator == false, must be 0. Otherwise, check if the vout4 nValue is the same as this value
-					- Arbitratorfee: if arbitrator == false, must be 0. Otherwise, must be more than 10000 satoshis
-					- Prepaymentsplit: must be 0 (or failing that, just ignored)
-					- Datahash and description doesn't need to be validated, can be w/e
-				- Check if vin.n-1 exists in the 'p' type transaction. If it does, get the prevout txid, then run the Løøp. If it returns false, invalidate
-			- Misc Business rules
-				- Make sure that sellerpubkey != buyerpubkey != arbitratorpubkey
-			return true?
-		if funcid == 'p': 
-				- Check if marker exists and is sent to global addr. If not, invalidate
-				- Check if response hook exists and is sent to 1of2 CC addr (we'll confirm if this address is correct later)
-				- Fetch the opret from currenttx and make sure all data is included. If opret is malformed or data is missing, invalidate
-				- Get initiatorpubkey, receiverpubkey, arbitratorpubkey, proposaltype, agreementtxid, deposit, arbitratorfee, depositsplit, datahash, description
-					- Initiatorpubkey: confirm that this tx came from this pubkey
-					- Receiverpubkey: check if pubkey is valid
-					- Arbitratorpubkey: can be either null or valid pubkey
-					- Proposaltype: can be 'a'(proposal amend),'u'(contract update) or 't' (contract terminate). If it is 'c'(proposal create), invalidate as 'c' types shouldn't be able to trigger validation
-					- Agreementtxid: if proposaltype is 'a', agreementtxid must be zeroid.
-						Otherwise, check if agreementtxid is valid (optionally, check if its 'c' type and that initiator and receiver match)
-					- Prepayment: only relevant if proposaltype is 'a' and arbitratorpubkey is valid. Is otherwise ignored for now
-					- Arbitratorfee: only relevant if proposaltype is 'a' and arbitratorpubkey is valid, in which case it must be at least 10000 satoshis. Is otherwise ignored for now
-					- Prepaymentsplit: only relevant if proposaltype is 't', and the deposit is non-zero. The deposit must be evenly divisible so that there are no remaining coins left
-					- Datahash and description doesn't need to be validated, can be w/e
-				- Save all this data somewhere
-				- If a 'p' type is being validated, that means it probably spent a previous 'p' type, therefore check vin.n-1 prevout and get the prevouttxid. if it doesn't exist or is incorrect, invalidate
-				Run the Løøp(currenttxid, currentfuncid, prevouttxid):
-					- Get transaction(prevouttxid)
-					- Check if marker exists and is sent to global addr. If not, invalidate
-					- Check if response hook exists and is spent by currenttxid. If not, invalidate
-					- Fetch the opret from prevouttx and make sure all data is included. If opret is malformed or data is missing, invalidate
-					- Get initiatorpubkey, receiverpubkey, arbitratorpubkey, proposaltype, agreementtxid, deposit, arbitratorfee, depositsplit, datahash, description
-						- Initiatorpubkey: confirm that this tx came from this pubkey
-						- Receiverpubkey: check if pubkey is valid. 
-						- Arbitratorpubkey: can be either null or valid pubkey
+	
+/// How to validate agreements transactions:
+
+/// generic:
+/*
+		check boundaries
+		get funcid (DecodeAgreementOpRet). If funcid unavailable, invalidate until Settlements is finished.
+*/
+/// 	- IMPORTANT!!! - deposit is locked under EVAL_AGREEMENTS, but it may also be spent by a specific Settlements transaction. Make sure this code is able to check for this when Settlements is ready.
+
+/// case 'p':
+///		- Proposal data validation.
+/*	
+		use CheckProposalData(tx)
+		use DecodeAgreementProposalOpRet, get proposaltype, initiator, receiver, prevproposaltxid
+*/
+///		- Checking if selected proposal was already spent.
+/*
+		if prevproposaltxid != zeroid:
+			CheckIfProposalSpent(prevproposaltxid)
+		else
+			if we're in validation code, invalidate
+*/
+///		- Comparing proposal data to previous proposals.
+/*
+		while prevproposaltxid != zeroid:
+			get prevproposal tx
+			CheckProposalData(prevproposaltx)
+			use DecodeAgreementProposalOpRet, get proposaltype, initiator, receiver, prevx2proposaltxid
+			check if proposal types match. else, invalidate
+			check if initiator pubkeys match. else, invalidate
+			prevproposaltxid = prevx2proposaltxid
+			Loop
+*/	
+///		- Checking if our inputs/outputs are correct.
+/*
+		check vout0:
+			does it point to the agreements global address?
+			is it the correct value?
+		check vout1:
+			if receiver undefined:
+				does vout1 point to the initiator's address?
+					does initiatorpubkey point to the same privkey as the address?
+				is the value correct?
+			if receiver defined:
+				does vout1 point to a 1of2 address between initiator and receiver?
+					does initiatorpubkey point to the same privkey as the initiator's address?
+					does receiverpubkey point to the same privkey as the receiver's address?
+				is the value correct?
+		check vin1:
+			does it point to the previous proposal's marker? (if it doesn't, it's probably an original proposal, which isn't validated here)
+		check vin2:
+			does it point to the previous proposal's response? (same as above)
+		Do not allow any additional CC vins.
+		break;
+*/	
+/// case 't':
+///		- Getting the transaction data.
+/*
+		use DecodeAgreementProposalCloseOpRet, get initiator, proposaltxid
+		use TotalPubkeyNormalInputs to verify that initiator == pubkey that submitted tx
+*/
+///		- Checking if selected proposal was already spent.
+/*
+		if proposaltxid != zeroid:
+			CheckIfProposalSpent(proposaltxid)
+		else
+			if we're in validation code, invalidate
+*/	
+///		- Retrieving the proposal data tied to this transaction.
+/*
+		get ref proposal tx
+*/	
+///		- We won't be using CheckProposalData here, since we only care about initiator and receiver, and even if the other data in the proposal is invalid the proposal will be closed anyway
+///		- Instead we'll just check if the initiator of this tx is allowed to close the proposal.
+/*	
+		use DecodeAgreementProposalOpRet on ref proposal tx, get proposaltype, refinitiator, refreceiver, refagreementtxid
+		if proposaltype = 'p' 
+			get status of receiver - is it valid or null?
+			if receiver is null:
+				check if initiator pubkey matches with ref initiator. else, invalidate
+			else
+				check if initiator pubkey matches with either ref initiator or receiver. else, invalidate
+		else if proposaltype = 'u' or 't'
+			if receiver doesn't exist, invalidate.
+			check if refagreementtxid is defined. If not, invalidate
+			CheckIfInitiatorValid(initiator, agreementtxid)
+		else
+			invalidate
+*/	
+///		- Checking if our inputs/outputs are correct.
+/*
+		check vout0:
+			is it a normal output (change)?
+		check vout1:
+			is it the last vout? if not, invalidate
+		check vin1:
+			does it point to the proposal's response?
+		Do not allow any additional CC vins.
+		break;
+*/	
+/// case 'c':
+///		- Getting the transaction data.
+/*
+		use DecodeAgreementProposalSigningOpRet, get proposaltxid
+*/
+///		- Proposal data validation.
+/*	
+		get proposal tx
+		use CheckProposalData(proposaltx)
+		use DecodeAgreementProposalOpRet, get proposaltype, initiator, receiver, prevproposaltxid, prepayment, depositvalue
+		if proposaltype != 'p', invalidate
+		if refreceiver == null, invalidate
+		else, use TotalPubkeyNormalInputs to verify that receiver == pubkey that submitted tx
+*/
+///		- Checking if selected proposal was already spent.
+/*
+		CheckIfProposalSpent(proposaltxid)
+*/
+///		- Checking if our inputs/outputs are correct.
+/*
+		check vout0:
+			does it point to the agreements global address?
+			is it the correct value?
+		check vout1:
+			does vout1 point to a 1of2 address between initiator and receiver?
+				does initiatorpubkey point to the same privkey as the initiator's address?
+				does receiverpubkey point to the same privkey as the receiver's address?
+			is the value correct?
+		check vout2:
+			does vout2 point to a 1of2 address between receiver and arbitrator?
+				does receiverpubkey point to the same privkey as the receiver's address?
+				does arbitratorpubkey point to the same privkey as the arbitrator's address?
+			is the value equal to the deposit specified in the proposal opret?
+		check vout3:
+			is it a normal output?
+			does vout3 point to the initiator's address?
+			is the vout3 value equal to the prepayment specified in the proposal opret?
+		check vin1:
+			does vin1 point to the proposal's marker?
+		check vin2:
+			does vin2 point to the proposal's response?
+		Do not allow any additional CC vins.
+		break;
+*/	
+/// case 'u':
+///		- Getting the transaction data.
+/*
+		use DecodeAgreementUpdateOpRet, get proposaltxid, agreementtxid
+		use GetLatestUpdateType(agreementtxid)
+		if updatefuncid != 'c' or 'u', invalidate
+		use GetLatestAgreementUpdate(agreementtxid) to get the latest update txid
+*/
+///		- Proposal data validation.
+/*	
+		get proposal tx
+		use CheckProposalData(proposaltx)
+		use DecodeAgreementProposalOpRet, get proposaltype, initiator, receiver, prepayment
+		if proposaltype != 'u', invalidate
+		use TotalPubkeyNormalInputs to verify that receiver == pubkey that submitted tx
+		CheckIfInitiatorValid(initiator, agreementtxid)
+		CheckIfInitiatorValid(receiver, agreementtxid)
+*/
+///		- Checking if selected proposal was already spent.
+/*
+		CheckIfProposalSpent(proposaltxid)
+*/
+///		- Checking if the arbitrator is set up correctly.
+/*
+		use GetAgreementArbitrator(agreementtxid) to find out if current agreement has arbitrator or not
+		if agreement has no arbitrator, and if update has arbitrator set to anything but null, invalidate
+		if agreement has arbitrator, and if update has arbitrator set to null:
+		if we're in validation, invalidate (if arbitrator was unchanged, it should be left the same)
+		else, set arbitrator to current agreement arbitrator
+*/
+///		- Checking if our inputs/outputs are correct.
+/*
+		check vout0:
+			does it point to a 1of2 address between initiator and receiver?
+				does initiatorpubkey point to the same privkey as the initiator's address?
+				does receiverpubkey point to the same privkey as the receiver's address?
+			is the value correct?
+		check vin1:
+			does it point to the previous update baton?
+		check vin2:
+			does it point to the proposal's marker?
+		check vin3:
+			does it point to the proposal's response?
+		Do not allow any additional CC vins.
+		break;
+*/
+/// case 's':
+///		- Getting the transaction data.
+/*
+		use DecodeAgreementCloseOpRet, get proposaltxid, agreementtxid
+		use GetLatestUpdateType(agreementtxid)
+		if updatefuncid != 'c' or 'u', invalidate
+		use GetLatestAgreementUpdate(agreementtxid) to get the latest update txid
+		totaldeposit = GetDepositValue(agreementtxid)
+*/
+///		- Proposal data validation.
+/*	
+		get proposal tx
+		use CheckProposalData(proposaltx)
+		use DecodeAgreementProposalOpRet, get proposaltype, initiator, receiver, prepayment, deposit amount
+		if proposaltype != 't', invalidate
+		use TotalPubkeyNormalInputs to verify that receiver == pubkey that submitted tx
+		CheckIfInitiatorValid(initiator, agreementtxid)
+		CheckIfInitiatorValid(receiver, agreementtxid)
+*/
+///		- Checking if selected proposal was already spent.
+/*
+		CheckIfProposalSpent(proposaltxid)
+*/
+///		- Checking if our inputs/outputs are correct.
+/*
+		do the values of vout0+vout1 equal the deposit amount?
+		check vout0:
+			does vout0 point to the initiator's pubkey and is normal input?
+				is it equal to depositcut?
+		check vout1:
+			does vout1 point to the receiver's pubkey and is normal input?
+				is it equal to totaldeposit - depositcut?
+		check vin1:
+			does it point to the previous update baton?
+		check vin2:
+			does it point to the proposal's marker?
+		check vin3:
+			does it point to the proposal's response?
+		check vin4:
+			does it point to the agreement deposit?
+		Do not allow any additional CC vins.
+		break;
+*/
+/// case 'd':
+///		- Getting and verifying the transaction data.
+/*
+		use DecodeAgreementDisputeOpRet, get initiator, agreementtxid, disputehash
+		use GetLatestUpdateType(agreementtxid)
+		if updatefuncid != 'c' or 'u', invalidate
+		use GetLatestAgreementUpdate(agreementtxid) to get the latest update txid
+		check if disputehash is empty. Invalidate if it is.
+		use TotalPubkeyNormalInputs to verify that initiator == pubkey that submitted tx
+		CheckIfInitiatorValid(initiator, agreementtxid)
+*/
+///		- Some arbitrator shenanigans.
+/*	
+		use GetAgreementArbitrator(agreementtxid) to get the current arbitrator
+		if one doesn't exist, invalidate (disputes are disabled when there are no arbitrators)
+		arbitratorfee = GetArbitratorFee(agreementtxid)
+*/
+///		- Checking if our inputs/outputs are correct.
+/*
+		check vout0:
+			does it point to the arbitrator's address?
+				does arbitratorpubkey point to the same privkey as the arbitrator's address?
+			is the value == arbitratorfee?
+		check vin1:
+			does it point to the previous update baton?
+		Do not allow any additional CC vins.
+		break;
+*/
+/// case 'r':
+///		- Getting and verifying the transaction data.
+/*
+		use DecodeAgreementDisputeResolveOpRet, get disputetxid, rewardedpubkey
+		use DecodeAgreementDisputeOpRet, get agreementtxid, initiator
+		use GetLatestUpdateType(agreementtxid)
+		if updatefuncid != 'c' or 'u', invalidate
+		use GetLatestAgreementUpdate(agreementtxid) to get the latest update txid
+		CheckIfInitiatorValid(rewardedpubkey, agreementtxid)
+		deposit = GetDepositValue(agreementtxid)
+*/
+///		- Some arbitrator shenanigans.
+/*	
+		use GetAgreementArbitrator(agreementtxid) to get the current arbitrator
+		if one doesn't exist, invalidate (disputes are disabled when there are no arbitrators)
+		arbitratorfee = GetArbitratorFee(agreementtxid)
+		use TotalPubkeyNormalInputs to verify that arbitrator == pubkey that submitted tx
+*/
+///		- Checking if our inputs/outputs are correct.
+/*
+		check vout0:
+			does it point to the rewardedpubkey's address?
+				does rewardedpubkey point to the same privkey as the rewardedpubkey's address?
+			is the value == deposit?
+		check vin1:
+			does it point to the disputetxid / marker?
+			is the value == arbitratorfee?
+		check vin2:
+			does it point to the agreement deposit?
+		Do not allow any additional CC vins.
+		break;
+*/
+/// default:
+/*
+		invalidate
 		
-	RecursiveProposalLøøp(proposaltxid,)
-	- Get proposal tx
-	- Check if marker exists and is sent to global addr. If not, invalidate
-	- Check if response hook exists and is sent to 1of2 CC addr (we'll confirm if this address is correct later)
-	*/
-	//return(eval->Invalid("no validation yet"));
-	
-	int32_t numvins = tx.vin.size(), numvouts = tx.vout.size();
-	//CPubKey globalpubkey;
-	
+	return true;
+*/
+
 	// check boundaries:
-    if (numvouts < 1)
-        return eval->Invalid("no vouts\n");
+    //if (numvouts < 1)
+    //    return eval->Invalid("no vouts\n");
 	
-	/*globalpubkey = check_signing_pubkey(tx.vin[numvins-2].scriptSig);
-	std::cerr << "globalpubkey=" << HexStr(std::vector<uint8_t>(globalpubkey.begin(),globalpubkey.end())) << std::endl;*/
-			
+	//return(eval->Invalid("no validation yet"));
+
 	std::cerr << "AgreementsValidate triggered, passing through" << std::endl;
 	return true;
 }
@@ -369,6 +610,86 @@ int64_t IsAgreementsVout(struct CCcontract_info *cp,const CTransaction& tx,int32
 // GetLatestExpirationDate
 // GetAgreementData
 // etc.
+/*
+GetLatestDataHash(agreementtxid)
+GetAgreementArbitrator(agreementtxid)
+GetAgreementName(agreementtxid)
+GetProposalVersion(proposaltxid)
+GetAgreementUpdateVersion(updatetxid)
+char GetLatestUpdateType(agreementtxid) - use this to check updates, if contract was closed or failed due to dispute
+GetLatestAgreementUpdate(agreementtxid) 
+
+GetArbitratorFee(agreementtxid)
+	get refagreementtx
+	use DecodeAgreementSigningOpRet on refagreementtx, get proposaltxid
+	get accepted proposal tx
+	use DecodeAgreementProposalOpRet on accepted proposal tx, get arbitratorfee
+	return arbitratorfee
+
+GetDepositValue(agreementtxid)
+	get refagreementtx
+	use DecodeAgreementSigningOpRet on refagreementtx, get proposaltxid
+	get accepted proposal tx
+	use DecodeAgreementProposalOpRet on accepted proposal tx, get deposit
+	check agreement vout for deposit value as well?
+	return deposit
+
+CheckIfInitiatorValid(initiatorpubkey, agreementtxid)
+	get refagreementtx
+	use DecodeAgreementSigningOpRet on refagreementtx, get proposaltxid
+	get accepted proposal tx
+	use DecodeAgreementProposalOpRet on accepted proposal tx, get refinitiator, refreceiver
+	check if initiator pubkey matches either refInitiator or refReceiver. If it doesn't, return false.
+	return true;
+	
+CheckProposalData (CTransaction proposaltx):
+	decode proposal opret (DecodeAgreementProposalOpRet) to get the data
+	check if name meets reqs (not empty, <= 64 chars). Invalidate if it doesn't.
+	check if datahash is empty. Invalidate if it is.
+	check if prepayment is positive
+	use TotalPubkeyNormalInputs to verify that initiator == pubkey that submitted tx
+	get status of receiver - is it valid or null?
+	get status of arbitrator - is it valid or null?
+	if receiver exists:
+		make sure initiator != receiver
+	if arbitrator exists:
+		make sure initiator != arbitrator
+	if receiver exists & if arbitrator exists:
+		make sure receiver != arbitrator
+	check proposaltype
+	case 'p':
+		check if deposit >= default minimum value
+		check if fee >= default minimum value
+		check if agreementtxid is defined. If it is:
+			get agreement tx and its funcid. If it isn't 'c', invalidate.
+	case 'u':
+		if receiver doesn't exist, invalidate.
+		check if agreementtxid is defined. If not, invalidate
+		check if agreement is still active
+		CheckIfInitiatorValid(initiator, agreementtxid)
+		in this type arbitratorfee and deposit value must be -1. If they aren't, invalidate.
+	case 't':
+		if receiver doesn't exist, invalidate.
+		check if agreementtxid is defined. If not, invalidate
+		check if agreement is still active
+		CheckIfInitiatorValid(initiator, agreementtxid)
+		in this type arbitrator must be null, and arbitratorfee must be -1. If it isn't, invalidate.
+		check deposit value - must be between 0 and ref deposit value
+
+CheckIfProposalSpent (proposaltxid):
+	use CCgetspenttxid on prevproposaltxid
+	if prevproposaltxid was spent:
+		if DecodeAgreementOpRet = 'c'
+			invalidate with errormsg indicating proposal was accepted
+		else if DecodeAgreementOpRet = 'p'
+			invalidate with errormsg indicating proposal was amended
+		else if DecodeAgreementOpRet = 't'
+			invalidate with errormsg indicating proposal was closed
+		else
+			invalidate with generic errormsg
+	return true
+
+*/
 
 //===========================================================================
 // RPCs - tx creation
