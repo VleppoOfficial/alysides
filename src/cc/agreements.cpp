@@ -27,7 +27,7 @@ fix agreementcloseproposal not detecting outdated proposals
 merge deposit and depositcut into depositvalue?
 merge update and dispute batons into one?
 keep closed proposal markers on!
-Note: limit amount of CC inputs for each type of transaction
+allow renaming agreements through updates
 
 Agreements transaction types:
 	
@@ -65,6 +65,7 @@ Agreements transaction types:
 		vin.1 last update baton
 		vin.2 latest proposal by other party
 		vout.0 next update baton
+		vout.1 payment
 		vout.n-2 change
 		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'u' agreementtxid proposaltxid
 	
@@ -76,6 +77,7 @@ Agreements transaction types:
 		vin.3 deposit
 		vout.0 deposit split to party 1
 		vout.1 deposit split to party 2
+		vout.2 payment
 		vout.n-2 change
 		vout.n-1 OP_RETURN EVAL_AGREEMENTS 's' agreementtxid proposaltxid
 	
@@ -124,8 +126,8 @@ Agreements RPCs:
 	agreementrequestcancel(agreementtxid name datahash [depositsplit][prevproposaltxid])
 	Proposal creation
 	
-	agreementcloseproposal(proposaltxid message)
 	agreementaccept(proposaltxid)
+	agreementcloseproposal(proposaltxid message)
 	Proposal response
 	
 	agreementdispute(agreementtxid disputetype [disputehash])
@@ -464,6 +466,10 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				does initiatorpubkey point to the same privkey as the initiator's address?
 				does receiverpubkey point to the same privkey as the receiver's address?
 			is the value correct?
+		check vout1:
+			is it a normal output?
+			does vout1 point to the initiator's address?
+			is the vout1 value equal to the prepayment specified in the proposal opret?
 		check vin1:
 			does it point to the previous update baton?
 		check vin2:
@@ -505,6 +511,10 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 		check vout1:
 			does vout1 point to the receiver's pubkey and is normal input?
 				is it equal to totaldeposit - depositcut?
+		check vout2:
+			is it a normal output?
+			does vout2 point to the initiator's address?
+			is the vout2 value equal to the prepayment specified in the proposal opret?
 		check vin1:
 			does it point to the previous update baton?
 		check vin2:
