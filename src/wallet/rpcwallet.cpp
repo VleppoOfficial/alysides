@@ -5611,7 +5611,7 @@ int32_t verus_staked(CBlock *pBlock, CMutableTransaction &txNew, uint32_t &nBits
 #include "../cc/CCMarmara.h"
 #include "../cc/CCPayments.h"
 #include "../cc/CCPegs.h"
-#include "../cc/CCagreements.h"
+#include "../cc/CCcommitments.h"
 #include "../cc/CCsettlements.h"
 
 int32_t ensure_CCrequirements(uint8_t evalcode)
@@ -8025,35 +8025,35 @@ UniValue tokenfillswap(const UniValue& params, bool fHelp, const CPubKey& mypk)
     return(result);
 }
 
-UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue commitmentaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     struct CCcontract_info *cp,C; std::vector<unsigned char> pubkey;
-    cp = CCinit(&C,EVAL_AGREEMENTS);
+    cp = CCinit(&C,EVAL_COMMITMENTS);
     if ( fHelp || params.size() > 1 )
-        throw runtime_error("agreementaddress [pubkey]\n");
+        throw runtime_error("commitmentaddress [pubkey]\n");
     if ( ensure_CCrequirements(0) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     if ( params.size() == 1 )
         pubkey = ParseHex(params[0].get_str().c_str());
-    return(CCaddress(cp,(char *)"Agreements",pubkey));
+    return(CCaddress(cp,(char *)"Commitments",pubkey));
 }
 
-UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue commitmentpropose(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-	uint256 datahash, prevproposaltxid, refagreementtxid;
+	uint256 datahash, prevproposaltxid, refcommitmenttxid;
 	std::string name;
 	int64_t prepayment, arbitratorfee, deposit;
     if (fHelp || params.size() < 4 || params.size() > 9)
-        throw runtime_error("agreementpropose name datahash buyer arbitrator [prepayment][arbitratorfee][deposit][prevproposaltxid][refagreementtxid]\n");
-    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error("commitmentpropose name datahash buyer arbitrator [prepayment][arbitratorfee][deposit][prevproposaltxid][refcommitmenttxid]\n");
+    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
 	
 	name = params[0].get_str();
     if (name.size() == 0 || name.size() > 64)   {
 		Unlock2NSPV(mypk);
-        throw runtime_error("Agreement name must not be empty and up to 64 characters\n");
+        throw runtime_error("Commitment name must not be empty and up to 64 characters\n");
     }
     datahash = Parseuint256((char *)params[1].get_str().c_str());
 	if (datahash == zeroid)   {
@@ -8096,22 +8096,22 @@ UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& myp
         prevproposaltxid = Parseuint256((char *)params[7].get_str().c_str());
     }
 	if (params.size() == 9)     {
-        refagreementtxid = Parseuint256((char *)params[8].get_str().c_str());
+        refcommitmenttxid = Parseuint256((char *)params[8].get_str().c_str());
     }
-	result = AgreementPropose(mypk, 0, name, datahash, buyer, arbitrator, prepayment, arbitratorfee, deposit, prevproposaltxid, refagreementtxid);
+	result = CommitmentPropose(mypk, 0, name, datahash, buyer, arbitrator, prepayment, arbitratorfee, deposit, prevproposaltxid, refcommitmenttxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
     return(result);
 }
 
-UniValue agreementcloseproposal(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue commitmentcloseproposal(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 	uint256 proposaltxid;
     if (fHelp || params.size() != 1)
-        throw runtime_error("agreementcloseproposal proposaltxid\n");
-    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error("commitmentcloseproposal proposaltxid\n");
+    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
 	
@@ -8121,20 +8121,20 @@ UniValue agreementcloseproposal(const UniValue& params, bool fHelp, const CPubKe
         throw runtime_error("Proposal transaction id invalid\n");
     }
 	
-	result = AgreementCloseProposal(mypk, 0, proposaltxid);
+	result = CommitmentCloseProposal(mypk, 0, proposaltxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
     return(result);
 }
 
-UniValue agreementaccept(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue commitmentaccept(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 	uint256 proposaltxid;
     if (fHelp || params.size() != 1)
-        throw runtime_error("agreementaccept proposaltxid\n");
-    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error("commitmentaccept proposaltxid\n");
+    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
 	
@@ -8143,20 +8143,20 @@ UniValue agreementaccept(const UniValue& params, bool fHelp, const CPubKey& mypk
 		Unlock2NSPV(mypk);
         throw runtime_error("Proposal transaction id invalid\n");
     }
-	result = AgreementAccept(mypk, 0, proposaltxid);
+	result = CommitmentAccept(mypk, 0, proposaltxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
     return(result);
 }
 
-UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue commitmentlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     if ( fHelp || params.size() > 0 )
-        throw runtime_error("agreementlist\n");
-    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error("commitmentlist\n");
+    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
-    return(AgreementList());
+    return(CommitmentList());
 }
 
 UniValue settlementaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)

@@ -31,7 +31,7 @@
 #include "CCPayments.h"
 #include "CCGateways.h"
 #include "CCtokens.h"
-#include "CCagreements.h"
+#include "CCcommitments.h"
 #include "CCsettlements.h"
 #include "CCImportGateway.h"
 
@@ -235,13 +235,13 @@ uint8_t TokensCCpriv[32] = { 0x1d, 0x0d, 0x0d, 0xce, 0x2d, 0xd2, 0xe1, 0x9d, 0xf
 #undef FUNCNAME
 #undef EVALCODE
 
-// Agreements
-#define FUNCNAME IsAgreementsInput
-#define EVALCODE EVAL_AGREEMENTS
-const char *AgreementsCCaddr = "RLqMuNM14JBC33gHaufVK1jJs4cFSGpqEY";
-const char *AgreementsNormaladdr = "RKMpncH1SyUJojdc4PR7QYWgKFDS5Z4bxP";
-char AgreementsCChexstr[67] = { "0291ca39fe72f5d0f6a65933239ca7fc608dab04eed3428ba7f425256811ddd07e" };
-uint8_t AgreementsCCpriv[32] = { 0x0d, 0x88, 0x03, 0x42, 0x36, 0x25, 0xd5, 0xe3, 0x35, 0xf2, 0x84, 0x2f, 0xd8, 0x43, 0x51, 0xdf, 0x38, 0x11, 0x1f, 0x8f, 0x03, 0x5e, 0xe6, 0x39, 0xe8, 0x42, 0xf5, 0x4a, 0xbd, 0x74, 0xba, 0x97 };
+// Commitments
+#define FUNCNAME IsCommitmentsInput
+#define EVALCODE EVAL_COMMITMENTS
+const char *CommitmentsCCaddr = "RLqMuNM14JBC33gHaufVK1jJs4cFSGpqEY";
+const char *CommitmentsNormaladdr = "RKMpncH1SyUJojdc4PR7QYWgKFDS5Z4bxP";
+char CommitmentsCChexstr[67] = { "0291ca39fe72f5d0f6a65933239ca7fc608dab04eed3428ba7f425256811ddd07e" };
+uint8_t CommitmentsCCpriv[32] = { 0x0d, 0x88, 0x03, 0x42, 0x36, 0x25, 0xd5, 0xe3, 0x35, 0xf2, 0x84, 0x2f, 0xd8, 0x43, 0x51, 0xdf, 0x38, 0x11, 0x1f, 0x8f, 0x03, 0x5e, 0xe6, 0x39, 0xe8, 0x42, 0xf5, 0x4a, 0xbd, 0x74, 0xba, 0x97 };
 #include "CCcustom.inc"
 #undef FUNCNAME
 #undef EVALCODE
@@ -460,13 +460,13 @@ struct CCcontract_info *CCinit(struct CCcontract_info *cp, uint8_t evalcode)
 			cp->validate = TokensValidate;
 			cp->ismyvin = IsTokensInput;
 			break;
-		case EVAL_AGREEMENTS:
-			strcpy(cp->unspendableCCaddr, AgreementsCCaddr);
-			strcpy(cp->normaladdr, AgreementsNormaladdr);
-			strcpy(cp->CChexstr, AgreementsCChexstr);
-			memcpy(cp->CCpriv, AgreementsCCpriv, 32);
-			cp->validate = AgreementsValidate;
-			cp->ismyvin = IsAgreementsInput;
+		case EVAL_COMMITMENTS:
+			strcpy(cp->unspendableCCaddr, CommitmentsCCaddr);
+			strcpy(cp->normaladdr, CommitmentsNormaladdr);
+			strcpy(cp->CChexstr, CommitmentsCChexstr);
+			memcpy(cp->CCpriv, CommitmentsCCpriv, 32);
+			cp->validate = CommitmentsValidate;
+			cp->ismyvin = IsCommitmentsInput;
 			break;
 		case EVAL_SETTLEMENTS:
 			strcpy(cp->unspendableCCaddr, SettlementsCCaddr);

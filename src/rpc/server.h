@@ -319,11 +319,11 @@ extern UniValue tokenupdate(const UniValue& params, bool fHelp, const CPubKey& m
 extern UniValue tokenviewupdates(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey& mypk);
-extern UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& mypk);
-extern UniValue agreementpropose(const UniValue& params, bool fHelp, const CPubKey& mypk);
-extern UniValue agreementcloseproposal(const UniValue& params, bool fHelp, const CPubKey& mypk);
-extern UniValue agreementaccept(const UniValue& params, bool fHelp, const CPubKey& mypk);
-extern UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue commitmentaddress(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue commitmentpropose(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue commitmentcloseproposal(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue commitmentaccept(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue commitmentlist(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue settlementaddress(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue faucetfund(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue faucetget(const UniValue& params, bool fHelp, const CPubKey& mypk);
