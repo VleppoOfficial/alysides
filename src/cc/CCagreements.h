@@ -23,11 +23,10 @@
 
 #include "CCinclude.h"
 
+#define AGREEMENTCC_VERSION 1
+#define CC_TXFEE 10000
 #define CC_MARKER_VALUE 10000
-#define CC_BATON_VALUE 10000
 #define CC_RESPONSE_VALUE 20000
-#define CC_MEDIATORFEE_MIN 10000
-#define CC_DEPOSIT_MIN 10000
 
 uint8_t DecodeAgreementOpRet(const CScript scriptPubKey);
 CScript EncodeAgreementProposalOpRet(uint8_t proposaltype, std::vector<uint8_t> initiator, std::vector<uint8_t> receiver, std::vector<uint8_t> arbitrator, int64_t expiryTimeSec, int64_t arbitratorfee, int64_t prepayment, int64_t prepaymentcut, uint256 datahash, uint256 agreementtxid, uint256 prevproposaltxid, std::string name);

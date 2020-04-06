@@ -7570,68 +7570,6 @@ UniValue tokencreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
     return(result);
 }
 
-/*
-UniValue tokencreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
-{
-    UniValue result(UniValue::VOBJ);
-    std::string name, description, hextx;
-    std::vector<uint8_t> nonfungibleData;
-    int64_t supply; // changed from uin64_t to int64_t for this 'if ( supply <= 0 )' to work as expected
-
-    CCerror.clear();
-
-    if ( fHelp || params.size() > 4 || params.size() < 2 )
-        throw runtime_error("tokencreate name supply [description][data]\n");
-    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
-        throw runtime_error(CC_REQUIREMENTS_MSG);
-    
-    const CKeyStore& keystore = *pwalletMain;
-    LOCK2(cs_main, pwalletMain->cs_wallet);
-
-    name = params[0].get_str();
-    if (name.size() == 0 || name.size() > 32)   {
-        ERR_RESULT("Token name must not be empty and up to 32 characters");
-        return(result);
-    }
-
-    supply = atof(params[1].get_str().c_str()) * COIN + 0.00000000499999;   // what for is this '+0.00000000499999'? it will be lost while converting double to int64_t (dimxy)
-    if (supply <= 0)    {
-        ERR_RESULT("Token supply must be positive");
-        return(result);
-    }
-    
-    if (params.size() >= 3)     {
-        description = params[2].get_str();
-        if (description.size() > 4096)   {
-            ERR_RESULT("Token description must be <= 4096 characters");
-            return(result);
-        }
-    }
-    
-    if (params.size() == 4)    {
-        nonfungibleData = ParseHex(params[3].get_str());
-        if (nonfungibleData.size() > IGUANA_MAXSCRIPTSIZE) // opret limit
-        {
-            ERR_RESULT("Non-fungible data size must be <= " + std::to_string(IGUANA_MAXSCRIPTSIZE));
-            return(result);
-        }
-        if( nonfungibleData.empty() ) {
-            ERR_RESULT("Non-fungible data incorrect");
-            return(result);
-        }
-    }
-
-    hextx = CreateToken(0, supply, name, description, nonfungibleData);
-    if( hextx.size() > 0 )     {
-        result.push_back(Pair("result", "success"));
-        result.push_back(Pair("hex", hextx));
-    } 
-    else 
-        ERR_RESULT(CCerror);
-    return(result);
-}
-*/
-
 UniValue tokentransfer(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ); 

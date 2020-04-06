@@ -94,7 +94,8 @@ Agreements transaction types:
 		vin.0 normal input
 		vin.1 dispute resolved w/ fee
 		vin.2 deposit
-		vout.0 deposit redeem
+		vout.0 next update baton
+		vout.1 deposit redeem
 		vout.n-2 change
 		vout.n-1 OP_RETURN EVAL_AGREEMENTS 'r' disputetxid rewardedpubkey
 	
@@ -433,8 +434,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 ///		- Getting the transaction data.
 /*
 		use DecodeAgreementUpdateOpRet, get proposaltxid, agreementtxid
-		use GetLatestUpdateType(agreementtxid)
-		if updatefuncid != 'c' or 'u', invalidate
+		use GetLatestAgreementUpdateType(agreementtxid)
+		if updatefuncid != 'c' or 'u' or 'r', invalidate
 		use GetLatestAgreementUpdate(agreementtxid) to get the latest update txid
 */
 ///		- Proposal data validation.
@@ -483,8 +484,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 ///		- Getting the transaction data.
 /*
 		use DecodeAgreementCloseOpRet, get proposaltxid, agreementtxid
-		use GetLatestUpdateType(agreementtxid)
-		if updatefuncid != 'c' or 'u', invalidate
+		use GetLatestAgreementUpdateType(agreementtxid)
+		if updatefuncid != 'c' or 'u' or 'r', invalidate
 		use GetLatestAgreementUpdate(agreementtxid) to get the latest update txid
 		totaldeposit = GetDepositValue(agreementtxid)
 */
@@ -530,8 +531,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 ///		- Getting and verifying the transaction data.
 /*
 		use DecodeAgreementDisputeOpRet, get initiator, agreementtxid, disputehash
-		use GetLatestUpdateType(agreementtxid)
-		if updatefuncid != 'c' or 'u', invalidate
+		use GetLatestAgreementUpdateType(agreementtxid)
+		if updatefuncid != 'c' or 'u' or 'r', invalidate
 		use GetLatestAgreementUpdate(agreementtxid) to get the latest update txid
 		check if disputehash is empty. Invalidate if it is.
 		use TotalPubkeyNormalInputs to verify that initiator == pubkey that submitted tx
@@ -559,9 +560,12 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 /*
 		use DecodeAgreementDisputeResolveOpRet, get disputetxid, rewardedpubkey
 		use DecodeAgreementDisputeOpRet, get agreementtxid, initiator
-		use GetLatestUpdateType(agreementtxid)
-		if updatefuncid != 'c' or 'u', invalidate
+		use GetLatestAgreementUpdateType(agreementtxid)
+		if updatefuncid != 'd', invalidate
 		use GetLatestAgreementUpdate(agreementtxid) to get the latest update txid
+*/
+///		- Depending on what rewardedpubkey is set to, the dispute may or not be cancelled by the arbitrator
+/*
 		CheckIfInitiatorValid(rewardedpubkey, agreementtxid)
 		deposit = GetDepositValue(agreementtxid)
 */
@@ -617,16 +621,63 @@ int64_t IsAgreementsVout(struct CCcontract_info *cp,const CTransaction& tx,int32
 	}
 	return(0);
 }
-// GetLatestExpirationDate
-// GetAgreementData
-// etc.
+
 /*
-GetLatestDataHash(agreementtxid)
-GetAgreementArbitrator(agreementtxid)
+
+uint256 GetLatestAgreementUpdate(agreementtxid)
+	pretty much same thing as GetLatestTokenUpdate
+
 GetAgreementName(agreementtxid)
-GetProposalVersion(proposaltxid)
-GetAgreementUpdateVersion(updatetxid)
-char GetLatestUpdateType(agreementtxid) - use this to check updates, if contract was closed or failed due to dispute
+
+GetAgreementDataHash(agreementtxid)
+
+GetAgreementArbitrator(agreementtxid)
+
+GetAgreementTxVersion(updatetxid) // works for both proposals and agreements
+
+std::string GetAgreementStatus(agreementtxid, bool includeSettlements)
+	updatetxid = GetLatestAgreementUpdate(agreementtxid)
+	if updatetxid = agreementtxid // no updates were made
+		return "active"
+	get update tx
+	DecodeAgreementOpRet on update tx opret, get funcid
+	--
+	check if deposit was spent or not
+	if it was:
+		if funcid = 's' // the agreement was cancelled
+			return "closed"
+		if funcid = 'r' // the arbitrator spent the deposit as part of dispute resolution
+			return "arbitrated"
+		if includeSettlements:
+			TBD. for now, return "completed"
+		return "completed"
+	if it wasn't:
+		if funcid = 'u'
+			return "active"
+		if funcid = 'd'
+			return "suspended"
+		return "unknown"
+
+	Proposal status:
+	draft
+	pending
+	approved
+	closed
+	updated
+	
+	Contract status:
+	active
+		[revised/expanded]
+	request pending
+	terminated/cancelled
+	completed
+		[pending payment]
+		[pending asset transfer]
+		[pending asset collection]
+	suspended/in dispute
+	expired (priority over 'suspended')
+
+
 GetLatestAgreementUpdate(agreementtxid) 
 
 GetArbitratorFee(agreementtxid)
@@ -651,7 +702,7 @@ CheckIfInitiatorValid(initiatorpubkey, agreementtxid)
 	use DecodeAgreementProposalOpRet on accepted proposal tx, get refinitiator, refreceiver
 	check if initiator pubkey matches either refInitiator or refReceiver. If it doesn't, return false.
 	return true;
-	
+
 CheckProposalData (CTransaction proposaltx):
 	decode proposal opret (DecodeAgreementProposalOpRet) to get the data
 	check if name meets reqs (not empty, <= 64 chars). Invalidate if it doesn't.
@@ -1052,73 +1103,7 @@ UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid
 //===========================================================================
 
 // agreementinfo
-/*
-	Retrieves info about the specified Agreements transaction.
-		- Check funcid of transaction.
-		- If 'p':
-			- Check proposaltype and data.
-			result: success;
-			name: name;
-			type: funcid desc;
-			initiator: pubkey1;
-			- If "p":
-				receiver: pubkey2 (or none);
-				arbitrator: pubkey3 (or none);
-				deposit: number (or none);
-				arbitratorfee: number (or none);
-			- If "u":
-				receiver: pubkey2;
-				arbitrator: pubkey3 (or none);
-			- If "t":
-				receiver: pubkey2;
-				depositsplit: percentage; (how much the receiver will get)
-			iteration: iteration;
-			datahash: datahash;
-			description: description (or none);
-			prevproposaltxid: txid (or none);
-		- If 'c':
-			- Check accepted proposal and verify if its 'p' type.
-			result: success;
-			txid: txid;
-			name: name;
-			type: funcid desc;
-			seller: pubkey1;
-			buyer: pubkey2;
-			- Check for any 'u' transactions
-			- If canceled:
-				status: canceled;
-			- Else if deposit taken by arbitrator:
-				status: failed;
-			- Else if deposit spent by Settlements Payment:
-				- If payment has been withdrawn by buyer:
-					status: failed;
-				- Else if payment has been withdrawn by seller:
-					status: completed;
-			- Else:
-				status: active;
-			iteration: iteration;
-			datahash: datahash;
-			description: description (or none);
-			- Check for any 'd' transactions in both vouts
-				sellerdisputes: number;
-				buyerdisputes: number;
-			- If arbitrator = true:
-				arbitrator: pubkey3 (or none);
-				deposit: number;
-				arbitratorfee: number;
-			proposaltxid: proposaltxid; <- which proposal was accepted
-			refagreementtxid: txid (or none);
-		- If 'u':
-			result: success;
-			txid: txid;
-			- Get update type
-			- If "u":
-				type: contract update;
-			- If "c":
-				type: contract cancel;
-			- Check accepted proposal and verify if its 'p' type.
-	TODO: Finish this later
-*/
+
 /*
 UniValue AgreementInfo(uint256 txid)
 {
