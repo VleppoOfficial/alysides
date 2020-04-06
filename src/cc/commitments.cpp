@@ -1,16 +1,16 @@
 /******************************************************************************
- * Copyright © 2014-2019 The SuperNET Developers.							 *
- *																			*
+ * Copyright © 2014-2019 The SuperNET Developers.							  *
+ *																			  *
  * See the AUTHORS, DEVELOPER-AGREEMENT and LICENSE files at				  *
  * the top-level directory of this distribution for the individual copyright  *
  * holder information and the developer policies on copyright and licensing.  *
- *																			*
- * Unless otherwise agreed in a custom licensing agreement, no part of the	*
+ *																			  *
+ * Unless otherwise agreed in a custom licensing agreement, no part of the	  *
  * SuperNET software, including this file may be copied, modified, propagated *
  * or distributed except according to the terms contained in the LICENSE file *
- *																			*
- * Removal or modification of this copyright notice is prohibited.			*
- *																			*
+ *																			  *
+ * Removal or modification of this copyright notice is prohibited.			  *
+ *																			  *
  ******************************************************************************/
 
 #include "CCcommitments.h"
@@ -803,7 +803,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string name, 
 	if(pubkey2pk(arbitrator).IsValid()) {
 		if(arbitratorfee == 0)
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Arbitrator fee must be specified if valid arbitrator exists");
-		else if(arbitratorfee < CC_MEDIATORFEE_MIN)
+		else if(arbitratorfee < CC_MARKER_VALUE)
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Arbitrator fee is too low");
 	}
 	else
@@ -813,7 +813,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string name, 
 	if(pubkey2pk(arbitrator).IsValid()) {
 		if(deposit == 0)
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Deposit must be specified if valid arbitrator exists");
-		else if(deposit < CC_DEPOSIT_MIN)
+		else if(deposit < CC_MARKER_VALUE)
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Deposit is too low");
 	}
 	else
@@ -1053,9 +1053,9 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 			
 			// if arbitrator exists, check if deposit and arbitrator fee are sufficient
 			if(!(refArbitrator.empty())) {
-				if(refArbitratorFee < CC_MEDIATORFEE_MIN)
+				if(refArbitratorFee < CC_MARKER_VALUE)
 					CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Arbitrator is defined in proposal, but arbitrator fee is too low");
-				if(refDeposit < CC_DEPOSIT_MIN)
+				if(refDeposit < CC_MARKER_VALUE)
 					CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Arbitrator is defined in proposal, but deposit is too low");
 			}
 			else {
