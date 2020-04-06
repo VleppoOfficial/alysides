@@ -939,8 +939,10 @@ UniValue CommitmentCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 prop
 		txfee = 10000;
 	mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
 
+	CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "not done yet");
+	
 	// check proposaltxid
-	if(proposaltxid != zeroid) {
+	/*if(proposaltxid != zeroid) {
 		if(myGetTransaction(proposaltxid,proposaltx,hashBlock)==0 || (numvouts=proposaltx.vout.size())<=0)
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "cant find specified proposal txid " << proposaltxid.GetHex());
 		if(DecodeCommitmentOpRet(proposaltx.vout[numvouts - 1].scriptPubKey) == 'c')
@@ -955,7 +957,7 @@ UniValue CommitmentCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 prop
 			else {
 				if(DecodeCommitmentOpRet(spenttx.vout[numvouts - 1].scriptPubKey) == 't')
 					CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified proposal has already been closed by txid " << spenttxid.GetHex());
-				else if(DecodeCommitmentOpRet(spenttx.vout[numvouts - 1].scriptPubKey) == 'c')
+				if(DecodeCommitmentOpRet(spenttx.vout[numvouts - 1].scriptPubKey) == 'c')
 					CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified proposal has already been accepted by txid " << spenttxid.GetHex());
 			}
 		}
@@ -975,7 +977,7 @@ UniValue CommitmentCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 prop
 		CCaddr1of2set(cp, pubkey2pk(refInitiator), pubkey2pk(refReceiver), mypriv, mutualaddr);
 		return(FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentProposalCloseOpRet(proposaltxid,std::vector<uint8_t>(mypk.begin(),mypk.end()))));
 	}
-	CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
+	CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");*/
 }
 
 // commitmentaccept - spend a 'p' transaction that was submitted by the other party.
