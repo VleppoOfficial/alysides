@@ -291,9 +291,9 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 /// generic:
 /*
 		check boundaries
-		get funcid (DecodeCommitmentOpRet). If funcid unavailable, invalidate until Settlements is finished.
+		get funcid (DecodeCommitmentOpRet). If funcid unavailable, invalidate until Exchanges is finished.
 */
-/// 	- IMPORTANT!!! - deposit is locked under EVAL_COMMITMENTS, but it may also be spent by a specific Settlements transaction. Make sure this code is able to check for this when Settlements is ready.
+/// 	- IMPORTANT!!! - deposit is locked under EVAL_COMMITMENTS, but it may also be spent by a specific Exchanges transaction. Make sure this code is able to check for this when Exchanges is ready.
 
 /// case 'p':
 ///		- Proposal data validation.
@@ -635,7 +635,7 @@ GetCommitmentArbitrator(commitmenttxid)
 
 GetCommitmentTxVersion(updatetxid) // works for both proposals and commitments
 
-std::string GetCommitmentStatus(commitmenttxid, bool includeSettlements)
+std::string GetCommitmentStatus(commitmenttxid, bool includeExchanges)
 	updatetxid = GetLatestCommitmentUpdate(commitmenttxid)
 	if updatetxid = commitmenttxid // no updates were made
 		return "active"
@@ -648,7 +648,7 @@ std::string GetCommitmentStatus(commitmenttxid, bool includeSettlements)
 			return "closed"
 		if funcid = 'r' // the arbitrator spent the deposit as part of dispute resolution
 			return "arbitrated"
-		if includeSettlements:
+		if includeExchanges:
 			TBD. for now, return "completed"
 		return "completed"
 	if it wasn't:

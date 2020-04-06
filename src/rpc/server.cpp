@@ -588,8 +588,8 @@ static const CRPCCommand vRPCCommands[] =
 	{ "commitments",   "commitmentaddress", &commitmentaddress,  true },
 	{ "commitments",   "commitmentlist",    &commitmentlist,     true },
 	
-	// settlements
-	{ "settlements",  "settlementaddress",&settlementaddress, true },
+	// exchanges
+	{ "exchanges",  "exchangeaddress",&exchangeaddress, true },
 	
     // pegs
     { "pegs",       "pegscreate",     &pegscreate,      true },

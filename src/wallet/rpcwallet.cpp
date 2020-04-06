@@ -5612,7 +5612,7 @@ int32_t verus_staked(CBlock *pBlock, CMutableTransaction &txNew, uint32_t &nBits
 #include "../cc/CCPayments.h"
 #include "../cc/CCPegs.h"
 #include "../cc/CCcommitments.h"
-#include "../cc/CCsettlements.h"
+#include "../cc/CCexchanges.h"
 
 int32_t ensure_CCrequirements(uint8_t evalcode)
 {
@@ -8159,17 +8159,17 @@ UniValue commitmentlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
     return(CommitmentList());
 }
 
-UniValue settlementaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue exchangeaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     struct CCcontract_info *cp,C; std::vector<unsigned char> pubkey;
-    cp = CCinit(&C,EVAL_SETTLEMENTS);
+    cp = CCinit(&C,EVAL_EXCHANGES);
     if ( fHelp || params.size() > 1 )
-        throw runtime_error("settlementaddress [pubkey]\n");
+        throw runtime_error("exchangeaddress [pubkey]\n");
     if ( ensure_CCrequirements(0) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     if ( params.size() == 1 )
         pubkey = ParseHex(params[0].get_str().c_str());
-    return(CCaddress(cp,(char *)"Settlements",pubkey));
+    return(CCaddress(cp,(char *)"Exchanges",pubkey));
 }
 
 UniValue getbalance64(const UniValue& params, bool fHelp, const CPubKey& mypk)

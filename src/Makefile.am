@@ -310,7 +310,7 @@ libbitcoin_server_a_SOURCES = \
   cc/channels.cpp \
   cc/auction.cpp \
   cc/commitments.cpp \
-  cc/settlements.cpp \
+  cc/exchanges.cpp \
   cc/betprotocol.cpp \
   cc/pricesfeed.cpp \
   cc/priceslibs/cjsonpointer.cpp \
@@ -399,7 +399,7 @@ libbitcoin_wallet_a_SOURCES = \
   cc/CCassetsCore.cpp \
   cc/CCassetstx.cpp \
   cc/commitments.cpp \
-  cc/settlements.cpp \
+  cc/exchanges.cpp \
   cc/CCtx.cpp \
   wallet/rpcwallet.cpp \
   wallet/wallet.cpp \

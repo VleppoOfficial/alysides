@@ -13,11 +13,11 @@
  *                                                                            *
  ******************************************************************************/
 
-#include "CCsettlements.h"
+#include "CCexchanges.h"
 
 /*
 
-Settlements workflow:
+Exchanges workflow:
 
 1. Party 1 sends invoice/request to party 2 to pay (payment) to escrow. (payment) can be coins or tokens.
 The request can be for an agreement invoice (with agreement id of course), standalone invoice, or loan/deposit.
@@ -26,8 +26,8 @@ P1 -> request -> P2
 
 2. Party 2 accepts request, pays the (payment) into escrow. If the request is an agreement invoice, party 2 must reclaim deposit.
 For this step the request must not be expired. The escrow has a new timelock set up, with its value inherited from the request timelock.
-P2 -> (payment) -> Escrow (Settlements 1of2 CC address)
-Agreement -> deposit -> P2 (if agreement invoice)
+P2 -> (payment) -> Escrow (Exchanges 1of2 CC address)
+Exchange -> deposit -> P2 (if agreement invoice)
 
 3a. Party 1 sends (asset) to escrow, reclaims the coins/tokens that were put into escrow by party 2 at step 2.
 (asset) can be coins or tokens, but must be opposite of (payment), i.e. if (payment) is in coins, (asset) must be in tokens, or vice versa. (GOOD PATH)
@@ -49,25 +49,25 @@ Escrow -> (asset) -> P2
 Escrow -> (payment) -> P2
 
 RPC list:
-P1 settlementcreate 'c' - used in step 1
-P2 settlementaccept 'x' - used in step 2
-P1 settlementassetsend 'a' - used in step 3a
-P2 settlementpaymentclaim 'p' - used in steps 3b and 5
-P1 settlementpaymentsend 'r' - used in step 4b
-P2 settlementassetclaim 'l' - used in steps 4a and 4c
+P1 exchangecreate 'c' - used in step 1
+P2 exchangeaccept 'x' - used in step 2
+P1 exchangeassetsend 'a' - used in step 3a
+P2 exchangepaymentclaim 'p' - used in steps 3b and 5
+P1 exchangepaymentsend 'r' - used in step 4b
+P2 exchangeassetclaim 'l' - used in steps 4a and 4c
 
-Agreement/settlement invoice workflow:
-P1 settlementcreate
-P2 settlementaccept
-P1 settlementassetsend or P2 settlementpaymentclaim
-P2 settlementassetclaim
+Exchange/exchange invoice workflow:
+P1 exchangecreate
+P2 exchangeaccept
+P1 exchangeassetsend or P2 exchangepaymentclaim
+P2 exchangeassetclaim
 
 Loan workflow:
-P1 settlementcreate
-P2 settlementaccept
-P1 settlementassetsend or P2 settlementpaymentclaim
-P1 settlementpaymentsend or P2 settlementassetclaim
-P2 settlementpaymentclaim
+P1 exchangecreate
+P2 exchangeaccept
+P1 exchangeassetsend or P2 exchangepaymentclaim
+P1 exchangepaymentsend or P2 exchangeassetclaim
+P2 exchangepaymentclaim
 
 
 */
@@ -76,18 +76,18 @@ P2 settlementpaymentclaim
 // Opret encoding/decoding functions
 //===========================================================================
 
-/*CScript EncodeAgreementCreateOpRet(uint8_t funcid,CPubKey pk)
+/*CScript EncodeExchangeCreateOpRet(uint8_t funcid,CPubKey pk)
 {    
-    CScript opret; uint8_t evalcode = EVAL_AGREEMENTS;
+    CScript opret; uint8_t evalcode = EVAL_EXCHANGES;
     opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << pk);
     return(opret);
 }
 
-uint8_t DecodeAgreementCreateOpRet(CPubKey &pk,CScript scriptPubKey)
+uint8_t DecodeExchangeCreateOpRet(CPubKey &pk,CScript scriptPubKey)
 {
     std::vector<uint8_t> vopret; uint8_t e,f;
     GetOpReturnData(scriptPubKey,vopret);
-    if ( vopret.size() > 2 && E_UNMARSHAL(vopret,ss >> e; ss >> f; ss >> pk) != 0 && e == EVAL_AGREEMENTS )
+    if ( vopret.size() > 2 && E_UNMARSHAL(vopret,ss >> e; ss >> f; ss >> pk) != 0 && e == EVAL_EXCHANGES )
     {
         return(f);
     }
@@ -98,7 +98,7 @@ uint8_t DecodeAgreementCreateOpRet(CPubKey &pk,CScript scriptPubKey)
 // Validation
 //===========================================================================
 
-bool SettlementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
+bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
 	return(eval->Invalid("no validation yet"));
 }
@@ -113,11 +113,11 @@ bool SettlementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 // RPCs
 //===========================================================================
 
-/*UniValue SettlementCreate(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> clientpubkey, int64_t deposit, int64_t timelock)
+/*UniValue ExchangeCreate(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> clientpubkey, int64_t deposit, int64_t timelock)
 {
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	
-    struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_AGREEMENTS);
+    struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_EXCHANGES);
 	
     if ( txfee == 0 )
         txfee = 10000;
