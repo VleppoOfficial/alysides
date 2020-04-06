@@ -1062,10 +1062,10 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 			}
 			else {
 				refArbitratorFee = 0;
-				refDeposit = CC_BATON_VALUE;
+				refDeposit = CC_MARKER_VALUE;
 			}
 			
-			if(AddNormalinputs(mtx,mypk,txfee+CC_MARKER_VALUE+CC_BATON_VALUE*2+refDeposit+refPrepayment,64,pk.IsValid()) >= txfee+CC_MARKER_VALUE+CC_BATON_VALUE*2+refDeposit+refPrepayment) {
+			if(AddNormalinputs(mtx,mypk,txfee+CC_MARKER_VALUE+CC_MARKER_VALUE*2+refDeposit+refPrepayment,64,pk.IsValid()) >= txfee+CC_MARKER_VALUE+CC_MARKER_VALUE*2+refDeposit+refPrepayment) {
 				mtx.vin.push_back(CTxIn(proposaltxid,0,CScript())); // vin.n-2 previous proposal marker (will trigger validation)
 				char mutualaddr[64];
 				GetCCaddress1of2(cp, mutualaddr, pubkey2pk(refInitiator), pubkey2pk(refReceiver));
@@ -1074,8 +1074,8 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 				Myprivkey(mypriv);
 				CCaddr1of2set(cp, pubkey2pk(refInitiator), pubkey2pk(refReceiver), mypriv, mutualaddr);
 				mtx.vout.push_back(MakeCC1vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, GetUnspendable(cp, NULL))); // vout.0 marker
-				mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, CC_BATON_VALUE, mypk, pubkey2pk(refInitiator))); // vout.1 update baton
-				mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, CC_BATON_VALUE, mypk, pubkey2pk(refInitiator))); // vout.2 dispute baton
+				mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, mypk, pubkey2pk(refInitiator))); // vout.1 update baton
+				mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, mypk, pubkey2pk(refInitiator))); // vout.2 dispute baton
 				if(pubkey2pk(refArbitrator).IsValid())
 					mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, refDeposit, mypk, pubkey2pk(refArbitrator))); // vout.3 deposit / commitment completion marker (with arbitrator)
 				else
