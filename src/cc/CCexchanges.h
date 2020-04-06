@@ -18,8 +18,8 @@
  Exchanges stuff
  */
 
-#ifndef CC_SETTLEMENTS_H
-#define CC_SETTLEMENTS_H
+#ifndef CC_EXCHANGES_H
+#define CC_EXCHANGES_H
 
 #include "CCinclude.h"
 
