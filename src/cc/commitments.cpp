@@ -732,7 +732,7 @@ bool CheckRefProposalOpRet(CScript opret, std::string &CCerror)
 	int64_t payment, arbitratorfee, depositval;
 	std::string info;
 	bool bHasReceiver, bHasArbitrator;
-	CPubKey = CPK_src, CPK_dest, CPK_arbitrator;
+	CPubKey CPK_src, CPK_dest, CPK_arbitrator;
 	
 	CCerror = "";
 	
