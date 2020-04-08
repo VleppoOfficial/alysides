@@ -738,7 +738,7 @@ bool CheckRefProposalOpRet(CScript opret, std::string &CCerror)
 	
 	// decode opret
 	if (DecodeCommitmentProposalOpRet(opret, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info) != 'p') {
-		CCerror = "CheckRefProposalOpRet: tx opret invalid!";
+		CCerror = "CheckRefProposalOpRet: tx opret invalid or not a proposal tx!";
 		return false;
 	}
 	// check if info meets requirements (not empty, <= 2048 chars)
@@ -886,7 +886,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string name, 
 	uint256 hashBlock, refHash, refCommitmentTxid, refPrevProposalTxid, spenttxid;
 	std::vector<uint8_t> refInitiator, refReceiver, refArbitrator;
 	int64_t refPrepayment, refArbitratorFee, refDeposit;
-	std::string refName;
+	std::string refName, CCerror;
 	uint8_t refProposalType, version;
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
 	if(txfee == 0)
@@ -945,7 +945,9 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string name, 
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
 		if(DecodeCommitmentOpRet(prevproposaltx.vout[numvouts - 1].scriptPubKey) == 'c')
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "specified txid is a contract id, needs to be proposal id");
-		else if(DecodeCommitmentProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey,version,refProposalType,refInitiator,refReceiver,refArbitrator,refPrepayment,refArbitratorFee,refDeposit,refHash,refCommitmentTxid,refPrevProposalTxid,refName) != 'p')
+		if (!CheckRefProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey, CCerror))
+			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror << prevproposaltxid.GetHex());
+		if(DecodeCommitmentProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey,version,refProposalType,refInitiator,refReceiver,refArbitrator,refPrepayment,refArbitratorFee,refDeposit,refHash,refCommitmentTxid,refPrevProposalTxid,refName) != 'p')
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid proposal txid " << prevproposaltxid.GetHex());
 		if(retcode = CCgetspenttxid(spenttxid, vini, height, prevproposaltxid, 1) == 0) {
 			if(myGetTransaction(spenttxid,spenttx,hashBlock)==0 || (numvouts=spenttx.vout.size())<=0)
