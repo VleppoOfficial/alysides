@@ -16,109 +16,15 @@
 #include "CCcommitments.h"
 
 /*
-
 Put all notes here!
-
 
 don't allow swapping between no arbitrator <-> arbitrator
 only 1 update/cancel request per party, per commitment
 version numbers should be reset after contract acceptance
 fix commitmentcloseproposal not detecting outdated proposals
-merge deposit and depositcut into depositvalue?
-merge update and dispute batons into one?
+
 keep closed proposal markers on!
 allow renaming commitments through updates
-
-Commitments transaction types:
-	
-	case 'p':
-		commitment proposal:
-		vin.0 normal input
-		vin.1 previous proposal marker
-		vin.2 previous proposal baton
-		vout.0 marker
-		vout.1 response hook
-		vout.n-2 change
-		vout.n-1 OP_RETURN EVAL_COMMITMENTS 'p' proposaltype initiator receiver arbitrator prepayment arbitratorfee depositvalue datahash commitmenttxid prevproposaltxid name
-
-	case 't':
-		proposal cancel:
-		vin.0 normal input
-		vin.1 previous proposal baton
-		vout.n-2 change
-		vout.n-1 OP_RETURN EVAL_COMMITMENTS 't' proposaltxid initiator
-	
-	case 'c':
-		contract creation:
-		vin.0 normal input
-		vin.1 latest proposal by seller
-		vout.0 marker
-		vout.1 update/dispute baton
-		vout.2 deposit / commitment completion baton
-		vout.3 prepayment
-		vout.n-2 change
-		vout.n-1 OP_RETURN EVAL_COMMITMENTS 'c' proposaltxid
-	
-	case 'u':
-		contract update:
-		vin.0 normal input
-		vin.1 last update baton
-		vin.2 latest proposal by other party
-		vout.0 next update baton
-		vout.1 payment
-		vout.n-2 change
-		vout.n-1 OP_RETURN EVAL_COMMITMENTS 'u' commitmenttxid proposaltxid
-	
-	case 's':
-		contract close:
-		vin.0 normal input
-		vin.1 last update baton
-		vin.2 latest termination proposal by other party
-		vin.3 deposit
-		vout.0 deposit split to party 1
-		vout.1 deposit split to party 2
-		vout.2 payment
-		vout.n-2 change
-		vout.n-1 OP_RETURN EVAL_COMMITMENTS 's' commitmenttxid proposaltxid
-	
-	case 'd':
-		contract dispute:
-		vin.0 normal input
-		vin.1 last update baton
-		vout.0 response hook / arbitrator fee
-		vout.n-2 change
-		vout.n-1 OP_RETURN EVAL_COMMITMENTS 'd' commitmenttxid initiator disputehash
-	
-	case 'r':
-		contract dispute resolve:
-		vin.0 normal input
-		vin.1 dispute resolved w/ fee
-		vin.2 deposit
-		vout.0 next update baton
-		vout.1 deposit redeem
-		vout.n-2 change
-		vout.n-1 OP_RETURN EVAL_COMMITMENTS 'r' disputetxid rewardedpubkey
-	
-Commitments statuses:
-	
-	Proposal status:
-	draft
-	pending
-	approved
-	closed
-	updated
-	
-	Contract status:
-	active
-		[revised/expanded]
-	request pending
-	terminated/cancelled
-	completed
-		[pending payment]
-		[pending asset transfer]
-		[pending asset collection]
-	suspended/in dispute
-	expired (priority over 'suspended')
 	
 Commitments RPCs:
 
@@ -144,8 +50,6 @@ Commitments RPCs:
 
 */
 
-// start of consensus code
-
 //===========================================================================
 // Opret encoders/decoders
 //===========================================================================
@@ -154,11 +58,11 @@ Commitments RPCs:
 // just returns funcid of whatever commitment tx opret is fed into it
 uint8_t DecodeCommitmentOpRet(const CScript scriptPubKey)
 {
-	std::vector<uint8_t> vopret, dummyInitiator, dummyReceiver, dummyArbitrator;
-	int64_t dummyPrepayment, dummyArbitratorFee, dummyDeposit, dummyDepositCut;
-	uint256 dummyHash, dummyCommitmentTxid, dummyPrevProposalTxid;
-	std::string dummyName;
-	uint8_t evalcode, funcid, *script, dummyProposalType;
+	std::vector<uint8_t> vopret, dummypk;
+	int64_t dummyamount;
+	uint256 dummyhash;
+	std::string dummyinfo;
+	uint8_t evalcode, funcid, *script, dummytype;
 	GetOpReturnData(scriptPubKey, vopret);
 	script = (uint8_t *)vopret.data();
 	if(script != NULL && vopret.size() > 2) {
@@ -171,11 +75,11 @@ uint8_t DecodeCommitmentOpRet(const CScript scriptPubKey)
 		LOGSTREAM((char *)"commitmentscc", CCLOG_DEBUG2, stream << "DecodeCommitmentOpRet() decoded funcId=" << (char)(funcid ? funcid : ' ') << std::endl);
 		switch (funcid) {
 		case 'p':
-			return DecodeCommitmentProposalOpRet(scriptPubKey, dummyProposalType, dummyInitiator, dummyReceiver, dummyArbitrator, dummyPrepayment, dummyArbitratorFee, dummyDeposit, dummyDepositCut, dummyHash, dummyCommitmentTxid, dummyPrevProposalTxid, dummyName);
+			return DecodeCommitmentProposalOpRet(scriptPubKey, dummytype, dummytype, dummypk, dummypk, dummypk, dummyamount, dummyamount, dummyamount, dummyhash, dummyhash, dummyhash, dummyinfo);
 		case 't':
-			return DecodeCommitmentProposalCloseOpRet(scriptPubKey, dummyPrevProposalTxid, dummyInitiator);
+			return DecodeCommitmentProposalCloseOpRet(scriptPubKey, dummytype, dummyhash, dummypk);
 		case 'c':
-			return DecodeCommitmentSigningOpRet(scriptPubKey, dummyPrevProposalTxid);
+			return DecodeCommitmentSigningOpRet(scriptPubKey, dummytype, dummyhash);
 		//case 'whatever':
 			//insert new cases here
 		default:
@@ -188,93 +92,93 @@ uint8_t DecodeCommitmentOpRet(const CScript scriptPubKey)
 	return (uint8_t)0;
 }
 
-CScript EncodeCommitmentProposalOpRet(uint8_t proposaltype, std::vector<uint8_t> initiator, std::vector<uint8_t> receiver, std::vector<uint8_t> arbitrator, int64_t prepayment, int64_t arbitratorfee, int64_t deposit, int64_t depositcut, uint256 datahash, uint256 commitmenttxid, uint256 prevproposaltxid, std::string name)
+CScript EncodeCommitmentProposalOpRet(uint8_t version, uint8_t proposaltype, std::vector<uint8_t> srcpub, std::vector<uint8_t> destpub, std::vector<uint8_t> arbitratorpk, int64_t payment, int64_t arbitratorfee, int64_t depositval, uint256 datahash, uint256 commitmenttxid, uint256 prevproposaltxid, std::string info)
 {
 	CScript opret; uint8_t evalcode = EVAL_COMMITMENTS, funcid = 'p';
 	proposaltype = 'p'; //temporary
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << proposaltype << initiator << receiver << arbitrator << prepayment << arbitratorfee << deposit << depositcut << datahash << commitmenttxid << prevproposaltxid << name);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << proposaltype << srcpub << destpub << arbitratorpk << payment << arbitratorfee << depositval << datahash << commitmenttxid << prevproposaltxid << info);
 	return(opret);
 }
-uint8_t DecodeCommitmentProposalOpRet(CScript scriptPubKey, uint8_t &proposaltype, std::vector<uint8_t> &initiator, std::vector<uint8_t> &receiver, std::vector<uint8_t> &arbitrator, int64_t &prepayment, int64_t &arbitratorfee, int64_t &deposit, int64_t &depositcut, uint256 &datahash, uint256 &commitmenttxid, uint256 &prevproposaltxid, std::string &name)
+uint8_t DecodeCommitmentProposalOpRet(CScript scriptPubKey, uint8_t &version, uint8_t &proposaltype, std::vector<uint8_t> &srcpub, std::vector<uint8_t> &destpub, std::vector<uint8_t> &arbitratorpk, int64_t &payment, int64_t &arbitratorfee, int64_t &depositval, uint256 &datahash, uint256 &commitmenttxid, uint256 &prevproposaltxid, std::string &info)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> proposaltype; ss >> initiator; ss >> receiver; ss >> arbitrator; ss >> prepayment; ss >> arbitratorfee; ss >> deposit; ss >> depositcut; ss >> datahash; ss >> commitmenttxid; ss >> prevproposaltxid; ss >> name) != 0 && evalcode == EVAL_COMMITMENTS)
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> proposaltype; ss >> srcpub; ss >> destpub; ss >> arbitratorpk; ss >> payment; ss >> arbitratorfee; ss >> depositval; ss >> datahash; ss >> commitmenttxid; ss >> prevproposaltxid; ss >> info) != 0 && evalcode == EVAL_COMMITMENTS)
 		return(funcid);
 	return(0);
 }
 
-CScript EncodeCommitmentProposalCloseOpRet(uint256 proposaltxid, std::vector<uint8_t> initiator)
+CScript EncodeCommitmentProposalCloseOpRet(uint8_t version, uint256 proposaltxid, std::vector<uint8_t> srcpub)
 {
 	CScript opret; uint8_t evalcode = EVAL_COMMITMENTS, funcid = 't';
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << proposaltxid << initiator);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << proposaltxid << srcpub);
 	return(opret);
 }
-uint8_t DecodeCommitmentProposalCloseOpRet(CScript scriptPubKey, uint256 &proposaltxid, std::vector<uint8_t> &initiator)
+uint8_t DecodeCommitmentProposalCloseOpRet(CScript scriptPubKey, uint8_t &version, uint256 &proposaltxid, std::vector<uint8_t> &srcpub)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> proposaltxid; ss >> initiator) != 0 && evalcode == EVAL_COMMITMENTS)
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> proposaltxid; ss >> srcpub) != 0 && evalcode == EVAL_COMMITMENTS)
 		return(funcid);
 	return(0);
 }
 
-CScript EncodeCommitmentSigningOpRet(uint256 proposaltxid)
+CScript EncodeCommitmentSigningOpRet(uint8_t version, uint256 proposaltxid)
 {
 	CScript opret; uint8_t evalcode = EVAL_COMMITMENTS, funcid = 'c';
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << proposaltxid);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << proposaltxid);
 	return(opret);
 }
-uint8_t DecodeCommitmentSigningOpRet(CScript scriptPubKey, uint256 &proposaltxid)
+uint8_t DecodeCommitmentSigningOpRet(CScript scriptPubKey, uint8_t &version, uint256 &proposaltxid)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> proposaltxid) != 0 && evalcode == EVAL_COMMITMENTS)
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> proposaltxid) != 0 && evalcode == EVAL_COMMITMENTS)
 		return(funcid);
 	return(0);
 }
 
-CScript EncodeCommitmentUpdateOpRet(uint256 commitmenttxid, uint256 proposaltxid)
+CScript EncodeCommitmentUpdateOpRet(uint8_t version, uint256 commitmenttxid, uint256 proposaltxid)
 {
 	CScript opret; uint8_t evalcode = EVAL_COMMITMENTS, funcid = 'u';
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << commitmenttxid << proposaltxid);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << proposaltxid);
 	return(opret);
 }
-uint8_t DecodeCommitmentUpdateOpRet(CScript scriptPubKey, uint256 &commitmenttxid, uint256 &proposaltxid)
+uint8_t DecodeCommitmentUpdateOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &proposaltxid)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> commitmenttxid; ss >> proposaltxid) != 0 && evalcode == EVAL_COMMITMENTS)
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> proposaltxid) != 0 && evalcode == EVAL_COMMITMENTS)
 		return(funcid);
 	return(0);
 }
 
-CScript EncodeCommitmentDisputeOpRet(uint256 commitmenttxid, uint256 disputehash)
+CScript EncodeCommitmentDisputeOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputehash)
 {
 	CScript opret; uint8_t evalcode = EVAL_COMMITMENTS, funcid = 'd';
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << commitmenttxid << disputehash);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << disputehash);
 	return(opret);
 }
-uint8_t DecodeCommitmentDisputeOpRet(CScript scriptPubKey, uint256 &commitmenttxid, uint256 &disputehash)
+uint8_t DecodeCommitmentDisputeOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputehash)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> commitmenttxid; ss >> disputehash) != 0 && evalcode == EVAL_COMMITMENTS)
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> disputehash) != 0 && evalcode == EVAL_COMMITMENTS)
 		return(funcid);
 	return(0);
 }
 
-CScript EncodeCommitmentDisputeResolveOpRet(uint256 commitmenttxid, uint256 disputetxid, std::vector<uint8_t> rewardedpubkey)
+CScript EncodeCommitmentDisputeResolveOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputetxid, std::vector<uint8_t> rewardedpubkey)
 {
 	CScript opret; uint8_t evalcode = EVAL_COMMITMENTS, funcid = 'r';
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << commitmenttxid << disputetxid << rewardedpubkey);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << disputetxid << rewardedpubkey);
 	return(opret);
 }
-uint8_t DecodeCommitmentDisputeResolveOpRet(CScript scriptPubKey, uint256 &commitmenttxid, uint256 &disputetxid, std::vector<uint8_t> &rewardedpubkey)
+uint8_t DecodeCommitmentDisputeResolveOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputetxid, std::vector<uint8_t> &rewardedpubkey)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> commitmenttxid; ss >> disputetxid; ss >> rewardedpubkey) != 0 && evalcode == EVAL_COMMITMENTS)
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> disputetxid; ss >> rewardedpubkey) != 0 && evalcode == EVAL_COMMITMENTS)
 		return(funcid);
 	return(0);
 }
@@ -285,326 +189,420 @@ uint8_t DecodeCommitmentDisputeResolveOpRet(CScript scriptPubKey, uint256 &commi
 
 bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
+	//vars go here
+
+	numvins = tx.vin.size();
+    numvouts = tx.vout.size();
+    preventCCvins = preventCCvouts = -1;
 	
-/// How to validate commitments transactions:
-
-/// generic:
-/*
-		check boundaries
-		get funcid (DecodeCommitmentOpRet). If funcid unavailable, invalidate until Exchanges is finished.
-*/
-/// 	- IMPORTANT!!! - deposit is locked under EVAL_COMMITMENTS, but it may also be spent by a specific Exchanges transaction. Make sure this code is able to check for this when Exchanges is ready.
-
-/// case 'p':
-///		- Proposal data validation.
-/*	
-		use CheckProposalData(tx)
-		use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, prevproposaltxid
-*/
-///		- Checking if selected proposal was already spent.
-/*
-		if prevproposaltxid != zeroid:
-			CheckIfProposalSpent(prevproposaltxid)
-		else
-			if we're in validation code, invalidate
-*/
-///		- Comparing proposal data to previous proposals.
-/*
-		while prevproposaltxid != zeroid:
-			get prevproposal tx
-			CheckProposalData(prevproposaltx)
-			use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, prevx2proposaltxid
-			check if proposal types match. else, invalidate
-			check if initiator pubkeys match. else, invalidate
-			prevproposaltxid = prevx2proposaltxid
-			Loop
-*/	
-///		- Checking if our inputs/outputs are correct.
-/*
-		check vout0:
-			does it point to the commitments global address?
-			is it the correct value?
-		check vout1:
-			if receiver undefined:
-				does vout1 point to the initiator's address?
-					does initiatorpubkey point to the same privkey as the address?
-				is the value correct?
-			if receiver defined:
-				does vout1 point to a 1of2 address between initiator and receiver?
-					does initiatorpubkey point to the same privkey as the initiator's address?
-					does receiverpubkey point to the same privkey as the receiver's address?
-				is the value correct?
-		check vin1:
-			does it point to the previous proposal's marker? (if it doesn't, it's probably an original proposal, which isn't validated here)
-		check vin2:
-			does it point to the previous proposal's response? (same as above)
-		Do not allow any additional CC vins.
-		break;
-*/	
-/// case 't':
-///		- Getting the transaction data.
-/*
-		use DecodeCommitmentProposalCloseOpRet, get initiator, proposaltxid
-		use TotalPubkeyNormalInputs to verify that initiator == pubkey that submitted tx
-*/
-///		- Checking if selected proposal was already spent.
-/*
-		if proposaltxid != zeroid:
-			CheckIfProposalSpent(proposaltxid)
-		else
-			if we're in validation code, invalidate
-*/	
-///		- Retrieving the proposal data tied to this transaction.
-/*
-		get ref proposal tx
-*/	
-///		- We won't be using CheckProposalData here, since we only care about initiator and receiver, and even if the other data in the proposal is invalid the proposal will be closed anyway
-///		- Instead we'll just check if the initiator of this tx is allowed to close the proposal.
-/*	
-		use DecodeCommitmentProposalOpRet on ref proposal tx, get proposaltype, refinitiator, refreceiver, refcommitmenttxid
-		if proposaltype = 'p' 
-			get status of receiver - is it valid or null?
-			if receiver is null:
-				check if initiator pubkey matches with ref initiator. else, invalidate
-			else
-				check if initiator pubkey matches with either ref initiator or receiver. else, invalidate
-		else if proposaltype = 'u' or 't'
-			if receiver doesn't exist, invalidate.
-			check if refcommitmenttxid is defined. If not, invalidate
-			CheckIfInitiatorValid(initiator, commitmenttxid)
-		else
-			invalidate
-*/	
-///		- Checking if our inputs/outputs are correct.
-/*
-		check vout0:
-			is it a normal output (change)?
-		check vout1:
-			is it the last vout? if not, invalidate
-		check vin1:
-			does it point to the proposal's response?
-		Do not allow any additional CC vins.
-		break;
-*/	
-/// case 'c':
-///		- Getting the transaction data.
-/*
-		use DecodeCommitmentProposalSigningOpRet, get proposaltxid
-*/
-///		- Proposal data validation.
-/*	
-		get proposal tx
-		use CheckProposalData(proposaltx)
-		use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, prevproposaltxid, prepayment, depositvalue
-		if proposaltype != 'p', invalidate
-		if refreceiver == null, invalidate
-		else, use TotalPubkeyNormalInputs to verify that receiver == pubkey that submitted tx
-*/
-///		- Checking if selected proposal was already spent.
-/*
-		CheckIfProposalSpent(proposaltxid)
-*/
-///		- Checking if our inputs/outputs are correct.
-/*
-		check vout0:
-			does it point to the commitments global address?
-			is it the correct value?
-		check vout1:
-			does vout1 point to a 1of2 address between initiator and receiver?
-				does initiatorpubkey point to the same privkey as the initiator's address?
-				does receiverpubkey point to the same privkey as the receiver's address?
-			is the value correct?
-		check vout2:
-			does vout2 point to a 1of2 address between receiver and arbitrator?
-				does receiverpubkey point to the same privkey as the receiver's address?
-				does arbitratorpubkey point to the same privkey as the arbitrator's address?
-			is the value equal to the deposit specified in the proposal opret?
-		check vout3:
-			is it a normal output?
-			does vout3 point to the initiator's address?
-			is the vout3 value equal to the prepayment specified in the proposal opret?
-		check vin1:
-			does vin1 point to the proposal's marker?
-		check vin2:
-			does vin2 point to the proposal's response?
-		Do not allow any additional CC vins.
-		break;
-*/	
-/// case 'u':
-///		- Getting the transaction data.
-/*
-		use DecodeCommitmentUpdateOpRet, get proposaltxid, commitmenttxid
-		use GetLatestCommitmentUpdateType(commitmenttxid)
-		if updatefuncid != 'c' or 'u' or 'r', invalidate
-		use GetLatestCommitmentUpdate(commitmenttxid) to get the latest update txid
-*/
-///		- Proposal data validation.
-/*	
-		get proposal tx
-		use CheckProposalData(proposaltx)
-		use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, prepayment
-		if proposaltype != 'u', invalidate
-		use TotalPubkeyNormalInputs to verify that receiver == pubkey that submitted tx
-		CheckIfInitiatorValid(initiator, commitmenttxid)
-		CheckIfInitiatorValid(receiver, commitmenttxid)
-*/
-///		- Checking if selected proposal was already spent.
-/*
-		CheckIfProposalSpent(proposaltxid)
-*/
-///		- Checking if the arbitrator is set up correctly.
-/*
-		use GetCommitmentArbitrator(commitmenttxid) to find out if current commitment has arbitrator or not
-		if commitment has no arbitrator, and if update has arbitrator set to anything but null, invalidate
-		if commitment has arbitrator, and if update has arbitrator set to null:
-		if we're in validation, invalidate (if arbitrator was unchanged, it should be left the same)
-		else, set arbitrator to current commitment arbitrator
-*/
-///		- Checking if our inputs/outputs are correct.
-/*
-		check vout0:
-			does it point to a 1of2 address between initiator and receiver?
-				does initiatorpubkey point to the same privkey as the initiator's address?
-				does receiverpubkey point to the same privkey as the receiver's address?
-			is the value correct?
-		check vout1:
-			is it a normal output?
-			does vout1 point to the initiator's address?
-			is the vout1 value equal to the prepayment specified in the proposal opret?
-		check vin1:
-			does it point to the previous update baton?
-		check vin2:
-			does it point to the proposal's marker?
-		check vin3:
-			does it point to the proposal's response?
-		Do not allow any additional CC vins.
-		break;
-*/
-/// case 's':
-///		- Getting the transaction data.
-/*
-		use DecodeCommitmentCloseOpRet, get proposaltxid, commitmenttxid
-		use GetLatestCommitmentUpdateType(commitmenttxid)
-		if updatefuncid != 'c' or 'u' or 'r', invalidate
-		use GetLatestCommitmentUpdate(commitmenttxid) to get the latest update txid
-		totaldeposit = GetDepositValue(commitmenttxid)
-*/
-///		- Proposal data validation.
-/*	
-		get proposal tx
-		use CheckProposalData(proposaltx)
-		use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, prepayment, deposit amount
-		if proposaltype != 't', invalidate
-		use TotalPubkeyNormalInputs to verify that receiver == pubkey that submitted tx
-		CheckIfInitiatorValid(initiator, commitmenttxid)
-		CheckIfInitiatorValid(receiver, commitmenttxid)
-*/
-///		- Checking if selected proposal was already spent.
-/*
-		CheckIfProposalSpent(proposaltxid)
-*/
-///		- Checking if our inputs/outputs are correct.
-/*
-		do the values of vout0+vout1 equal the deposit amount?
-		check vout0:
-			does vout0 point to the initiator's pubkey and is normal input?
-				is it equal to depositcut?
-		check vout1:
-			does vout1 point to the receiver's pubkey and is normal input?
-				is it equal to totaldeposit - depositcut?
-		check vout2:
-			is it a normal output?
-			does vout2 point to the initiator's address?
-			is the vout2 value equal to the prepayment specified in the proposal opret?
-		check vin1:
-			does it point to the previous update baton?
-		check vin2:
-			does it point to the proposal's marker?
-		check vin3:
-			does it point to the proposal's response?
-		check vin4:
-			does it point to the commitment deposit?
-		Do not allow any additional CC vins.
-		break;
-*/
-/// case 'd':
-///		- Getting and verifying the transaction data.
-/*
-		use DecodeCommitmentDisputeOpRet, get initiator, commitmenttxid, disputehash
-		use GetLatestCommitmentUpdateType(commitmenttxid)
-		if updatefuncid != 'c' or 'u' or 'r', invalidate
-		use GetLatestCommitmentUpdate(commitmenttxid) to get the latest update txid
-		check if disputehash is empty. Invalidate if it is.
-		use TotalPubkeyNormalInputs to verify that initiator == pubkey that submitted tx
-		CheckIfInitiatorValid(initiator, commitmenttxid)
-*/
-///		- Some arbitrator shenanigans.
-/*	
-		use GetCommitmentArbitrator(commitmenttxid) to get the current arbitrator
-		if one doesn't exist, invalidate (disputes are disabled when there are no arbitrators)
-		arbitratorfee = GetArbitratorFee(commitmenttxid)
-*/
-///		- Checking if our inputs/outputs are correct.
-/*
-		check vout0:
-			does it point to the arbitrator's address?
-				does arbitratorpubkey point to the same privkey as the arbitrator's address?
-			is the value == arbitratorfee?
-		check vin1:
-			does it point to the previous update baton?
-		Do not allow any additional CC vins.
-		break;
-*/
-/// case 'r':
-///		- Getting and verifying the transaction data.
-/*
-		use DecodeCommitmentDisputeResolveOpRet, get disputetxid, rewardedpubkey
-		use DecodeCommitmentDisputeOpRet, get commitmenttxid, initiator
-		use GetLatestCommitmentUpdateType(commitmenttxid)
-		if updatefuncid != 'd', invalidate
-		use GetLatestCommitmentUpdate(commitmenttxid) to get the latest update txid
-*/
-///		- Depending on what rewardedpubkey is set to, the dispute may or not be cancelled by the arbitrator
-/*
-		CheckIfInitiatorValid(rewardedpubkey, commitmenttxid)
-		deposit = GetDepositValue(commitmenttxid)
-*/
-///		- Some arbitrator shenanigans.
-/*	
-		use GetCommitmentArbitrator(commitmenttxid) to get the current arbitrator
-		if one doesn't exist, invalidate (disputes are disabled when there are no arbitrators)
-		arbitratorfee = GetArbitratorFee(commitmenttxid)
-		use TotalPubkeyNormalInputs to verify that arbitrator == pubkey that submitted tx
-*/
-///		- Checking if our inputs/outputs are correct.
-/*
-		check vout0:
-			does it point to the rewardedpubkey's address?
-				does rewardedpubkey point to the same privkey as the rewardedpubkey's address?
-			is the value == deposit?
-		check vin1:
-			does it point to the disputetxid / marker?
-			is the value == arbitratorfee?
-		check vin2:
-			does it point to the commitment deposit?
-		Do not allow any additional CC vins.
-		break;
-*/
-/// default:
-/*
-		invalidate
-		
-	return true;
-*/
-
-	// check boundaries:
-    //if (numvouts < 1)
-    //    return eval->Invalid("no vouts\n");
+    if (numvouts < 1)
+        return eval->Invalid("no vouts");
 	
-	//return(eval->Invalid("no validation yet"));
+	CCOpretCheck(eval,tx,true,true,true);
+    CCExactAmounts(eval,tx,CC_TXFEE);
+    //if (ChannelsExactAmounts(cp,eval,tx) == false )
+    //{
+    //    return eval->Invalid("invalid channel inputs vs. outputs!");            
+    //}
+	
+	if ((funcid = DecodeCommitmentOpRet(tx.vout[numvouts-1].scriptPubKey)) != 0) {
+		switch (funcid)
+        {
+			case 'p':
+				/*
+				commitment proposal:
+				vin.0 normal input
+				vin.1 previous proposal marker
+				vin.2 previous proposal baton
+				vout.0 marker
+				vout.1 response hook
+				vout.n-2 change
+				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'p' version proposaltype srcpub destpub arbitratorpk prepayment arbitratorfee depositvalue datahash commitmenttxid prevproposaltxid info
+				*/
+				std::cerr << "funcid - 'p'" << std::endl;
+				///		- Proposal data validation.
+				/*	
+						use CheckProposalData(tx)
+						use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, prevproposaltxid
+				*/
+				///		- Checking if selected proposal was already spent.
+				/*
+						if prevproposaltxid != zeroid:
+							CheckIfProposalSpent(prevproposaltxid)
+						else
+							if we're in validation code, invalidate
+				*/
+				///		- Comparing proposal data to previous proposals.
+				/*
+						while prevproposaltxid != zeroid:
+							get prevproposal tx
+							CheckProposalData(prevproposaltx)
+							use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, prevx2proposaltxid
+							check if proposal types match. else, invalidate
+							check if initiator pubkeys match. else, invalidate
+							prevproposaltxid = prevx2proposaltxid
+							Loop
+				*/	
+				///		- Checking if our inputs/outputs are correct.
+				/*
+						check vout0:
+							does it point to the commitments global address?
+							is it the correct value?
+						check vout1:
+							if receiver undefined:
+								does vout1 point to the initiator's address?
+									does initiatorpubkey point to the same privkey as the address?
+								is the value correct?
+							if receiver defined:
+								does vout1 point to a 1of2 address between initiator and receiver?
+									does initiatorpubkey point to the same privkey as the initiator's address?
+									does receiverpubkey point to the same privkey as the receiver's address?
+								is the value correct?
+						check vin1:
+							does it point to the previous proposal's marker? (if it doesn't, it's probably an original proposal, which isn't validated here)
+						check vin2:
+							does it point to the previous proposal's response? (same as above)
+						Do not allow any additional CC vins.
+						break;
+				*/	
+				break;
+			case 't':
+				/*
+				proposal cancel:
+				vin.0 normal input
+				vin.1 previous proposal baton
+				vout.n-2 change
+				vout.n-1 OP_RETURN EVAL_COMMITMENTS 't' proposaltxid initiator
+				*/
+				return eval->Invalid("funcid - 't'");
+				///		- Getting the transaction data.
+				/*
+						use DecodeCommitmentProposalCloseOpRet, get initiator, proposaltxid
+						use TotalPubkeyNormalInputs to verify that initiator == pubkey that submitted tx
+				*/
+				///		- Checking if selected proposal was already spent.
+				/*
+						if proposaltxid != zeroid:
+							CheckIfProposalSpent(proposaltxid)
+						else
+							if we're in validation code, invalidate
+				*/	
+				///		- Retrieving the proposal data tied to this transaction.
+				/*
+						get ref proposal tx
+				*/	
+				///		- We won't be using CheckProposalData here, since we only care about initiator and receiver, and even if the other data in the proposal is invalid the proposal will be closed anyway
+				///		- Instead we'll just check if the initiator of this tx is allowed to close the proposal.
+				/*	
+						use DecodeCommitmentProposalOpRet on ref proposal tx, get proposaltype, refinitiator, refreceiver, refcommitmenttxid
+						if proposaltype = 'p' 
+							get status of receiver - is it valid or null?
+							if receiver is null:
+								check if initiator pubkey matches with ref initiator. else, invalidate
+							else
+								check if initiator pubkey matches with either ref initiator or receiver. else, invalidate
+						else if proposaltype = 'u' or 't'
+							if receiver doesn't exist, invalidate.
+							check if refcommitmenttxid is defined. If not, invalidate
+							CheckIfInitiatorValid(initiator, commitmenttxid)
+						else
+							invalidate
+				*/	
+				///		- Checking if our inputs/outputs are correct.
+				/*
+						check vout0:
+							is it a normal output (change)?
+						check vout1:
+							is it the last vout? if not, invalidate
+						check vin1:
+							does it point to the proposal's response?
+						Do not allow any additional CC vins.
+						break;
+				*/	
+				break;
+			case 'c':
+				/*
+				contract creation:
+				vin.0 normal input
+				vin.1 latest proposal by seller
+				vout.0 marker
+				vout.1 update/dispute baton
+				vout.2 deposit / commitment completion baton
+				vout.3 prepayment (optional)
+				vout.n-2 change
+				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'c' proposaltxid
+				*/
+				return eval->Invalid("funcid - 'c'");
+				///		- Getting the transaction data.
+				/*
+						use DecodeCommitmentProposalSigningOpRet, get proposaltxid
+				*/
+				///		- Proposal data validation.
+				/*	
+						get proposal tx
+						use CheckProposalData(proposaltx)
+						use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, prevproposaltxid, prepayment, depositvalue
+						if proposaltype != 'p', invalidate
+						if refreceiver == null, invalidate
+						else, use TotalPubkeyNormalInputs to verify that receiver == pubkey that submitted tx
+				*/
+				///		- Checking if selected proposal was already spent.
+				/*
+						CheckIfProposalSpent(proposaltxid)
+				*/
+				///		- Checking if our inputs/outputs are correct.
+				/*
+						check vout0:
+							does it point to the commitments global address?
+							is it the correct value?
+						check vout1:
+							does vout1 point to a 1of2 address between initiator and receiver?
+								does initiatorpubkey point to the same privkey as the initiator's address?
+								does receiverpubkey point to the same privkey as the receiver's address?
+							is the value correct?
+						check vout2:
+							does vout2 point to a 1of2 address between receiver and arbitrator?
+								does receiverpubkey point to the same privkey as the receiver's address?
+								does arbitratorpubkey point to the same privkey as the arbitrator's address?
+							is the value equal to the deposit specified in the proposal opret?
+						check vout3:
+							is it a normal output?
+							does vout3 point to the initiator's address?
+							is the vout3 value equal to the prepayment specified in the proposal opret?
+						check vin1:
+							does vin1 point to the proposal's marker?
+						check vin2:
+							does vin2 point to the proposal's response?
+						Do not allow any additional CC vins.
+						break;
+				*/	
+				break;
+			case 'u':
+				/*
+				contract update:
+				vin.0 normal input
+				vin.1 last update baton
+				vin.2 latest proposal by other party
+				vout.0 next update baton
+				vout.1 payment (optional)
+				vout.n-2 change
+				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'u' commitmenttxid proposaltxid
+				*/
+				return eval->Invalid("funcid - 'u'");
+				///		- Getting the transaction data.
+				/*
+						use DecodeCommitmentUpdateOpRet, get proposaltxid, commitmenttxid
+						use GetLatestCommitmentUpdateType(commitmenttxid)
+						if updatefuncid != 'c' or 'u' or 'r', invalidate
+						use GetLatestCommitmentUpdate(commitmenttxid) to get the latest update txid
+				*/
+				///		- Proposal data validation.
+				/*	
+						get proposal tx
+						use CheckProposalData(proposaltx)
+						use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, prepayment
+						if proposaltype != 'u', invalidate
+						use TotalPubkeyNormalInputs to verify that receiver == pubkey that submitted tx
+						CheckIfInitiatorValid(initiator, commitmenttxid)
+						CheckIfInitiatorValid(receiver, commitmenttxid)
+				*/
+				///		- Checking if selected proposal was already spent.
+				/*
+						CheckIfProposalSpent(proposaltxid)
+				*/
+				///		- Checking if the arbitrator is set up correctly.
+				/*
+						use GetCommitmentArbitrator(commitmenttxid) to find out if current commitment has arbitrator or not
+						if commitment has no arbitrator, and if update has arbitrator set to anything but null, invalidate
+						if commitment has arbitrator, and if update has arbitrator set to null:
+						if we're in validation, invalidate (if arbitrator was unchanged, it should be left the same)
+						else, set arbitrator to current commitment arbitrator
+				*/
+				///		- Checking if our inputs/outputs are correct.
+				/*
+						check vout0:
+							does it point to a 1of2 address between initiator and receiver?
+								does initiatorpubkey point to the same privkey as the initiator's address?
+								does receiverpubkey point to the same privkey as the receiver's address?
+							is the value correct?
+						check vout1:
+							is it a normal output?
+							does vout1 point to the initiator's address?
+							is the vout1 value equal to the prepayment specified in the proposal opret?
+						check vin1:
+							does it point to the previous update baton?
+						check vin2:
+							does it point to the proposal's marker?
+						check vin3:
+							does it point to the proposal's response?
+						Do not allow any additional CC vins.
+						break;
+				*/
+				break;
+			case 's':
+				/*
+				contract close:
+				vin.0 normal input
+				vin.1 last update baton
+				vin.2 latest termination proposal by other party
+				vin.3 deposit
+				vout.0 deposit split to party 1
+				vout.1 deposit split to party 2
+				vout.2 payment
+				vout.n-2 change
+				vout.n-1 OP_RETURN EVAL_COMMITMENTS 's' commitmenttxid proposaltxid
+				*/
+				return eval->Invalid("funcid - 's'");
+				///		- Getting the transaction data.
+				/*
+						use DecodeCommitmentCloseOpRet, get proposaltxid, commitmenttxid
+						use GetLatestCommitmentUpdateType(commitmenttxid)
+						if updatefuncid != 'c' or 'u' or 'r', invalidate
+						use GetLatestCommitmentUpdate(commitmenttxid) to get the latest update txid
+						totaldeposit = GetDepositValue(commitmenttxid)
+				*/
+				///		- Proposal data validation.
+				/*	
+						get proposal tx
+						use CheckProposalData(proposaltx)
+						use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, prepayment, deposit amount
+						if proposaltype != 't', invalidate
+						use TotalPubkeyNormalInputs to verify that receiver == pubkey that submitted tx
+						CheckIfInitiatorValid(initiator, commitmenttxid)
+						CheckIfInitiatorValid(receiver, commitmenttxid)
+				*/
+				///		- Checking if selected proposal was already spent.
+				/*
+						CheckIfProposalSpent(proposaltxid)
+				*/
+				///		- Checking if our inputs/outputs are correct.
+				/*
+						do the values of vout0+vout1 equal the deposit amount?
+						check vout0:
+							does vout0 point to the initiator's pubkey and is normal input?
+								is it equal to depositcut?
+						check vout1:
+							does vout1 point to the receiver's pubkey and is normal input?
+								is it equal to totaldeposit - depositcut?
+						check vout2:
+							is it a normal output?
+							does vout2 point to the initiator's address?
+							is the vout2 value equal to the prepayment specified in the proposal opret?
+						check vin1:
+							does it point to the previous update baton?
+						check vin2:
+							does it point to the proposal's marker?
+						check vin3:
+							does it point to the proposal's response?
+						check vin4:
+							does it point to the commitment deposit?
+						Do not allow any additional CC vins.
+						break;
+				*/
+				break;
+			case 'd':
+				/*
+				contract dispute:
+				vin.0 normal input
+				vin.1 last update baton
+				vout.0 response hook / arbitrator fee
+				vout.n-2 change
+				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'd' commitmenttxid initiator disputehash
+				*/
+				return eval->Invalid("funcid - 'd'");
+				///		- Getting and verifying the transaction data.
+				/*
+						use DecodeCommitmentDisputeOpRet, get initiator, commitmenttxid, disputehash
+						use GetLatestCommitmentUpdateType(commitmenttxid)
+						if updatefuncid != 'c' or 'u' or 'r', invalidate
+						use GetLatestCommitmentUpdate(commitmenttxid) to get the latest update txid
+						check if disputehash is empty. Invalidate if it is.
+						use TotalPubkeyNormalInputs to verify that initiator == pubkey that submitted tx
+						CheckIfInitiatorValid(initiator, commitmenttxid)
+				*/
+				///		- Some arbitrator shenanigans.
+				/*
+						use GetCommitmentArbitrator(commitmenttxid) to get the current arbitrator
+						if one doesn't exist, invalidate (disputes are disabled when there are no arbitrators)
+						arbitratorfee = GetArbitratorFee(commitmenttxid)
+				*/
+				///		- Checking if our inputs/outputs are correct.
+				/*
+						check vout0:
+							does it point to the arbitrator's address?
+								does arbitratorpubkey point to the same privkey as the arbitrator's address?
+							is the value == arbitratorfee?
+						check vin1:
+							does it point to the previous update baton?
+						Do not allow any additional CC vins.
+						break;
+				*/
+				break;
+			case 'r':
+				/*
+				contract dispute resolve:
+				vin.0 normal input
+				vin.1 dispute resolved w/ fee
+				vin.2 deposit
+				vout.0 next update baton
+				vout.1 deposit redeem
+				vout.n-2 change
+				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'r' disputetxid rewardedpubkey
+				*/
+				return eval->Invalid("funcid - 'r'");
+				///		- Getting and verifying the transaction data.
+				/*
+						use DecodeCommitmentDisputeResolveOpRet, get disputetxid, rewardedpubkey
+						use DecodeCommitmentDisputeOpRet, get commitmenttxid, initiator
+						use GetLatestCommitmentUpdateType(commitmenttxid)
+						if updatefuncid != 'd', invalidate
+						use GetLatestCommitmentUpdate(commitmenttxid) to get the latest update txid
+				*/
+				///		- Depending on what rewardedpubkey is set to, the dispute may or not be cancelled by the arbitrator
+				/*
+						CheckIfInitiatorValid(rewardedpubkey, commitmenttxid)
+						deposit = GetDepositValue(commitmenttxid)
+				*/
+				///		- Some arbitrator shenanigans.
+				/*	
+						use GetCommitmentArbitrator(commitmenttxid) to get the current arbitrator
+						if one doesn't exist, invalidate (disputes are disabled when there are no arbitrators)
+						arbitratorfee = GetArbitratorFee(commitmenttxid)
+						use TotalPubkeyNormalInputs to verify that arbitrator == pubkey that submitted tx
+				*/
+				///		- Checking if our inputs/outputs are correct.
+				/*
+						check vout0:
+							does it point to the rewardedpubkey's address?
+								does rewardedpubkey point to the same privkey as the rewardedpubkey's address?
+							is the value == deposit?
+						check vin1:
+							does it point to the disputetxid / marker?
+							is the value == arbitratorfee?
+						check vin2:
+							does it point to the commitment deposit?
+						Do not allow any additional CC vins.
+						break;
+				*/
+				break;
+			default:
+                fprintf(stderr,"unexpected commitments funcid (%c)\n",funcid);
+                return eval->Invalid("unexpected commitments funcid!");
+		}
+    }
+	//IMPORTANT!!! - deposit is locked under EVAL_COMMITMENTS, but it may also be spent by a specific Exchanges transaction.
+	else {
+		// this part will be needed to validate Exchanges that withdraw the deposit. for now, this is invalid
+		return eval->Invalid("must be valid commitments funcid!"); 
+	}
 
-	std::cerr << "CommitmentsValidate triggered, passing through" << std::endl;
-	return true;
+	retval = PreventCC(eval,tx,preventCCvins,numvins,preventCCvouts,numvouts);
+    if (retval != 0)
+        LOGSTREAM("commitments",CCLOG_INFO, stream << "Commitments tx validated" << std::endl);
+    else
+		fprintf(stderr,"Commitments tx invalid\n");
+	std::cerr << "CommitmentsValidate triggered" << std::endl;
+    return(retval);
 }
 
 //===========================================================================
@@ -677,9 +675,6 @@ std::string GetCommitmentStatus(commitmenttxid, bool includeExchanges)
 	suspended/in dispute
 	expired (priority over 'suspended')
 
-
-GetLatestCommitmentUpdate(commitmenttxid) 
-
 GetArbitratorFee(commitmenttxid)
 	get refcommitmenttx
 	use DecodeCommitmentSigningOpRet on refcommitmenttx, get proposaltxid
@@ -694,15 +689,37 @@ GetDepositValue(commitmenttxid)
 	use DecodeCommitmentProposalOpRet on accepted proposal tx, get deposit
 	check commitment vout for deposit value as well?
 	return deposit
+*/
 
-CheckIfInitiatorValid(initiatorpubkey, commitmenttxid)
-	get refcommitmenttx
-	use DecodeCommitmentSigningOpRet on refcommitmenttx, get proposaltxid
-	get accepted proposal tx
-	use DecodeCommitmentProposalOpRet on accepted proposal tx, get refinitiator, refreceiver
-	check if initiator pubkey matches either refInitiator or refReceiver. If it doesn't, return false.
+bool GetCommitmentParties(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk)
+{
+	CTransaction commitmenttx, proposaltx;
+	uint256 proposaltxid, datahash, commitmenttxid, prevproposaltxid, hashBlock;
+	uint8_t version, proposaltype;
+	std::vector<uint8_t> sellerpk, clientpk, firstarbitratorpk;
+	int64_t payment, arbitratorfee, depositval;
+	std::string info;
+	
+	if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) == 0 || commitmenttx.vout.size() <= 0) {
+		std::cerr << "couldn't find commitment tx" << std::endl;
+		return false;
+	}
+	if (DecodeCommitmentSigningOpRet(commitmenttx.vout[commitmenttx.vout.size() - 1].scriptPubKey, proposaltxid) != 'c') {
+		std::cerr << "given tx is not a contract signing tx" << std::endl;
+		return false;	
+	}
+	if (myGetTransaction(commitmenttx, proposaltx, hashBlock) == 0 || proposaltx.vout.size() <= 0) {
+		std::cerr << "couldn't find commitment accepted proposal tx" << std::endl;
+		return false;
+	}
+	if (DecodeCommitmentProposalOpRet(proposaltx.vout[proposaltx.vout.size() - 1].scriptPubKey, version, proposaltype, sellerpk, clientpk, firstarbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info) != 'p' || proposaltype != 'p') {
+		std::cerr << "commitment accepted proposal tx opret invalid" << std::endl;
+		return false;	
+	}
 	return true;
+}
 
+/*
 CheckProposalData (CTransaction proposaltx):
 	decode proposal opret (DecodeCommitmentProposalOpRet) to get the data
 	check if name meets reqs (not empty, <= 64 chars). Invalidate if it doesn't.
@@ -736,21 +753,26 @@ CheckProposalData (CTransaction proposaltx):
 		CheckIfInitiatorValid(initiator, commitmenttxid)
 		in this type arbitrator must be null, and arbitratorfee must be -1. If it isn't, invalidate.
 		check deposit value - must be between 0 and ref deposit value
-
-CheckIfProposalSpent (proposaltxid):
-	use CCgetspenttxid on prevproposaltxid
-	if prevproposaltxid was spent:
-		if DecodeCommitmentOpRet = 'c'
-			invalidate with errormsg indicating proposal was accepted
-		else if DecodeCommitmentOpRet = 'p'
-			invalidate with errormsg indicating proposal was amended
-		else if DecodeCommitmentOpRet = 't'
-			invalidate with errormsg indicating proposal was closed
-		else
-			invalidate with generic errormsg
-	return true
-
 */
+
+bool IsProposalSpent(uint256 proposaltxid, uint256 &spendingtxid, uint8_t &spendingfuncid)
+{
+	int32_t vini, height, retcode;
+	uint256 hashBlock;
+	CTransaction spendingtx;
+	
+	if (retcode = CCgetspenttxid(spendingtxid, vini, height, proposaltxid, 1) == 0) {
+		if (myGetTransaction(spendingtxid, spendingtx, hashBlock) != 0 && spendingtx.vout.size() > 0)
+			spendingfuncid = DecodeCommitmentOpRet(spendingtx.vout[spendingtx.vout.size() - 1].scriptPubKey);
+			// if 'c', proposal was accepted
+			// if 'p', proposal was amended with another proposal
+			// if 't', proposal was closed
+		else
+			spendingfuncid = 0;
+		return false;
+	}
+	return true;
+}
 
 //===========================================================================
 // RPCs - tx creation
