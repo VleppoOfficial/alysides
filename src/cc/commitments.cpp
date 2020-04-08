@@ -189,7 +189,10 @@ uint8_t DecodeCommitmentDisputeResolveOpRet(CScript scriptPubKey, uint8_t &versi
 
 bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
-	//vars go here
+	int32_t numvins,numvouts,preventCCvins,preventCCvouts;
+	bool retval;
+    uint256 hashBlock;
+    uint8_t funcid;
 
 	numvins = tx.vin.size();
     numvouts = tx.vout.size();
@@ -694,9 +697,9 @@ GetDepositValue(commitmenttxid)
 bool GetCommitmentParties(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk)
 {
 	CTransaction commitmenttx, proposaltx;
-	uint256 proposaltxid, datahash, commitmenttxid, prevproposaltxid, hashBlock;
+	uint256 proposaltxid, datahash, prevproposaltxid, hashBlock;
 	uint8_t version, proposaltype;
-	std::vector<uint8_t> sellerpk, clientpk, firstarbitratorpk;
+	std::vector<uint8_t> firstarbitratorpk;
 	int64_t payment, arbitratorfee, depositval;
 	std::string info;
 	
@@ -704,11 +707,11 @@ bool GetCommitmentParties(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk
 		std::cerr << "couldn't find commitment tx" << std::endl;
 		return false;
 	}
-	if (DecodeCommitmentSigningOpRet(commitmenttx.vout[commitmenttx.vout.size() - 1].scriptPubKey, proposaltxid) != 'c') {
+	if (DecodeCommitmentSigningOpRet(commitmenttx.vout[commitmenttx.vout.size() - 1].scriptPubKey, version, proposaltxid) != 'c') {
 		std::cerr << "given tx is not a contract signing tx" << std::endl;
 		return false;	
 	}
-	if (myGetTransaction(commitmenttx, proposaltx, hashBlock) == 0 || proposaltx.vout.size() <= 0) {
+	if (myGetTransaction(proposaltxid, proposaltx, hashBlock) == 0 || proposaltx.vout.size() <= 0) {
 		std::cerr << "couldn't find commitment accepted proposal tx" << std::endl;
 		return false;
 	}
@@ -787,7 +790,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string name, 
 	int32_t numvouts, vini, height, retcode;
 	uint256 hashBlock, refHash, refCommitmentTxid, refPrevProposalTxid, spenttxid;
 	std::vector<uint8_t> refInitiator, refReceiver, refArbitrator;
-	int64_t refPrepayment, refArbitratorFee, refDeposit, refDepositCut;
+	int64_t refPrepayment, refArbitratorFee, refDeposit;
 	std::string refName;
 	uint8_t refProposalType, version;
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
@@ -847,7 +850,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string name, 
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
 		if(DecodeCommitmentOpRet(prevproposaltx.vout[numvouts - 1].scriptPubKey) == 'c')
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "specified txid is a contract id, needs to be proposal id");
-		else if(DecodeCommitmentProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey,version,refProposalType,refInitiator,refReceiver,refArbitrator,refPrepayment,refArbitratorFee,refDeposit,refDepositCut,refHash,refCommitmentTxid,refPrevProposalTxid,refName) != 'p')
+		else if(DecodeCommitmentProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey,version,refProposalType,refInitiator,refReceiver,refArbitrator,refPrepayment,refArbitratorFee,refDeposit,refHash,refCommitmentTxid,refPrevProposalTxid,refName) != 'p')
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid proposal txid " << prevproposaltxid.GetHex());
 		if(retcode = CCgetspenttxid(spenttxid, vini, height, prevproposaltxid, 1) == 0) {
 			if(myGetTransaction(spenttxid,spenttx,hashBlock)==0 || (numvouts=spenttx.vout.size())<=0)
@@ -952,7 +955,7 @@ UniValue CommitmentCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 prop
 	int32_t numvouts, vini, height, retcode;
 	uint256 hashBlock, refHash, refCommitmentTxid, refPrevProposalTxid, spenttxid;
 	std::vector<uint8_t> refInitiator, refReceiver, refArbitrator;
-	int64_t refPrepayment, refArbitratorFee, refDeposit, refDepositCut;
+	int64_t refPrepayment, refArbitratorFee, refDeposit;
 	std::string refName;
 	uint8_t refProposalType;
 	
@@ -1015,7 +1018,7 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 	int32_t numvouts, vini, height, retcode;
 	uint256 hashBlock, refHash, refCommitmentTxid, refPrevProposalTxid, spenttxid;
 	std::vector<uint8_t> refInitiator, refReceiver, refArbitrator;
-	int64_t refPrepayment, refArbitratorFee, refDeposit, refDepositCut;
+	int64_t refPrepayment, refArbitratorFee, refDeposit;
 	std::string refName;
 	uint8_t refProposalType, version;
 	
@@ -1030,7 +1033,7 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "cant find specified proposal txid " << proposaltxid.GetHex());
 		if(DecodeCommitmentOpRet(proposaltx.vout[numvouts - 1].scriptPubKey) == 'c')
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "specified txid is a contract id, needs to be proposal id");
-		else if(DecodeCommitmentProposalOpRet(proposaltx.vout[numvouts-1].scriptPubKey,version,refProposalType,refInitiator,refReceiver,refArbitrator,refPrepayment,refArbitratorFee,refDeposit,refDepositCut,refHash,refCommitmentTxid,refPrevProposalTxid,refName) != 'p')
+		else if(DecodeCommitmentProposalOpRet(proposaltx.vout[numvouts-1].scriptPubKey,version,refProposalType,refInitiator,refReceiver,refArbitrator,refPrepayment,refArbitratorFee,refDeposit,refHash,refCommitmentTxid,refPrevProposalTxid,refName) != 'p')
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid proposal txid " << proposaltxid.GetHex());
 		if(retcode = CCgetspenttxid(spenttxid, vini, height, proposaltxid, 1) == 0) {
 			if(myGetTransaction(spenttxid,spenttx,hashBlock)==0 || (numvouts=spenttx.vout.size())<=0)
