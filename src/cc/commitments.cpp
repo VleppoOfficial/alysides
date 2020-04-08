@@ -227,6 +227,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				/*	
 						use CheckProposalData(tx)
 						use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, prevproposaltxid
+						use TotalPubkeyNormalInputs to verify that initiator == pubkey that submitted tx
 				*/
 				///		- Checking if selected proposal was already spent.
 				/*
@@ -694,7 +695,7 @@ GetDepositValue(commitmenttxid)
 	return deposit
 */
 
-bool GetCommitmentParties(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk)
+bool GetCommitmentMembers(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk)
 {
 	CTransaction commitmenttx, proposaltx;
 	uint256 proposaltxid, datahash, prevproposaltxid, hashBlock;
@@ -722,41 +723,135 @@ bool GetCommitmentParties(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk
 	return true;
 }
 
-/*
-CheckProposalData (CTransaction proposaltx):
-	decode proposal opret (DecodeCommitmentProposalOpRet) to get the data
-	check if name meets reqs (not empty, <= 64 chars). Invalidate if it doesn't.
-	check if datahash is empty. Invalidate if it is.
-	check if prepayment is positive
-	use TotalPubkeyNormalInputs to verify that initiator == pubkey that submitted tx
-	get status of receiver - is it valid or null?
-	get status of arbitrator - is it valid or null?
-	if receiver exists:
-		make sure initiator != receiver
-	if arbitrator exists:
-		make sure initiator != arbitrator
-	if receiver exists & if arbitrator exists:
-		make sure receiver != arbitrator
-	check proposaltype
-	case 'p':
-		check if deposit >= default minimum value
-		check if fee >= default minimum value
-		check if commitmenttxid is defined. If it is:
-			get commitment tx and its funcid. If it isn't 'c', invalidate.
-	case 'u':
-		if receiver doesn't exist, invalidate.
-		check if commitmenttxid is defined. If not, invalidate
-		check if commitment is still active
-		CheckIfInitiatorValid(initiator, commitmenttxid)
-		in this type arbitratorfee and deposit value must be -1. If they aren't, invalidate.
-	case 't':
-		if receiver doesn't exist, invalidate.
-		check if commitmenttxid is defined. If not, invalidate
-		check if commitment is still active
-		CheckIfInitiatorValid(initiator, commitmenttxid)
-		in this type arbitrator must be null, and arbitratorfee must be -1. If it isn't, invalidate.
-		check deposit value - must be between 0 and ref deposit value
-*/
+bool CheckRefProposalOpRet(CScript opret, std::string &CCerror)
+{
+	CTransaction commitmenttx;
+	uint256 proposaltxid, datahash, commitmenttxid, prevproposaltxid, hashBlock;
+	uint8_t version, proposaltype;
+	std::vector<uint8_t> srcpub, destpub, sellerpk, clientpk, arbitratorpk;
+	int64_t payment, arbitratorfee, depositval;
+	std::string info;
+	bool bHasReceiver, bHasArbitrator;
+	CPubKey = CPK_src, CPK_dest, CPK_arbitrator;
+	
+	CCerror = "";
+	
+	// decode opret
+	if (DecodeCommitmentProposalOpRet(opret, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info) != 'p') {
+		CCerror = "CheckRefProposalOpRet: tx opret invalid!";
+		return false;
+	}
+	// check if info meets requirements (not empty, <= 2048 chars)
+	if (info.empty() || info.size > 2048) {
+		CCerror = "CheckRefProposalOpRet: info empty or exceeds 2048 chars!";
+		return false;
+	}
+	// check if datahash meets requirements (not empty)
+	if (datahash == zeroid) {
+		CCerror = "CheckRefProposalOpRet: datahash empty!";
+		return false;
+	}
+	// check if payment is positive
+	if (payment < 0) {
+		CCerror = "CheckRefProposalOpRet: payment < 0!";
+		return false;
+	}
+	
+	CPK_src = pubkey2pk(srcpub);
+	CPK_dest = pubkey2pk(destpub);
+	CPK_arbitrator = pubkey2pk(arbitratorpk);
+	bHasReceiver = CPK_dest.IsValid();
+	bHasArbitrator = CPK_arbitrator.IsValid();
+	
+	// making sure srcpub != destpub != arbitratorpk
+	if (bHasReceiver && CPK_src == CPK_dest) {
+		CCerror = "CheckRefProposalOpRet: srcpub cannot be the same as destpub!";
+		return false;
+	}
+	if (bHasArbitrator && CPK_src == CPK_arbitrator) {
+		CCerror = "CheckRefProposalOpRet: srcpub cannot be the same as arbitrator pubkey!";
+		return false;
+	}
+	if (bHasReceiver && bHasArbitrator && CPK_dest == CPK_arbitrator) {
+		CCerror = "CheckRefProposalOpRet: destpub cannot be the same as arbitrator pubkey!";
+		return false;
+	}
+	
+	switch (proposaltype) {
+		case 'p':
+			// checking deposit value
+			if (depositval < 0 || bHasArbitrator && depositval < CC_MARKER_VALUE) {
+				CCerror = "CheckRefProposalOpRet: invalid deposit value!";
+				return false;
+			}
+			// checking arbitrator fee
+			if (arbitratorfee < 0 || bHasArbitrator && arbitratorfee < CC_MARKER_VALUE) {
+				CCerror = "CheckRefProposalOpRet: invalid arbitrator fee value!";
+				return false;
+			}
+			// if refcommitment was defined, check if it's a correct tx
+			if (commitmenttxid != zeroid) {
+				if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) == 0 || commitmenttx.vout.size() <= 0) {
+					CCerror = "CheckRefProposalOpRet: couldn't find ref commitment tx!";
+					return false;
+				}
+				if (DecodeCommitmentSigningOpRet(commitmenttx.vout[commitmenttx.vout.size() - 1].scriptPubKey, version, proposaltxid) != 'c') {
+					CCerror = "CheckRefProposalOpRet: given refcommitment tx is not a contract signing tx!";
+					return false;	
+				}
+			}
+			break;
+			
+		case 'u':
+			// checking deposit value
+			if (depositval != 0) {
+				CCerror = "CheckRefProposalOpRet: invalid deposit value for update proposal!";
+				return false;
+			}
+		// intentional fall-through
+		
+		case 't':
+			// update/termination proposals must have destpub
+			if (!bHasReceiver) {
+				CCerror = "CheckRefProposalOpRet: no defined receiver on update/termination proposal!";
+				return false;
+			}
+			// checking arbitrator fee - must be 0 in this case
+			if (arbitratorfee != 0) {
+				CCerror = "CheckRefProposalOpRet: invalid arbitrator fee value!";
+				return false;
+			}
+			// commitmenttxid must be defined
+			if (commitmenttxid == zeroid) {
+				CCerror = "CheckRefProposalOpRet: no commitmenttxid defined for update/termination proposal!";
+				return false;
+			}
+			// checking if srcpub and destpub are members of the commitment
+			if (!GetCommitmentMembers(commitmenttxid, sellerpk, clientpk)) {
+				CCerror = "CheckRefProposalOpRet: couldn't get commitment member pubkeys!";
+				return false;
+			}
+			if (CPK_src != pubkey2pk(sellerpk) && CPK_src != pubkey2pk(clientpk)) {
+				CCerror = "CheckRefProposalOpRet: srcpub is not a member of the specified commitment!";
+				return false;
+			}
+			if (CPK_dest != pubkey2pk(sellerpk) && CPK_dest != pubkey2pk(clientpk)) {
+				CCerror = "CheckRefProposalOpRet: destpub is not a member of the specified commitment!";
+				return false;
+			}
+			
+			// put status check here
+			
+			//would be nice if arbitrator was null here
+			// put deposit check here - must be between 0 and ref deposit value
+			
+			break;
+			
+		default:
+            CCerror = "CheckRefProposalOpRet: invalid proposaltype!";
+			return false;
+	}
+}
 
 bool IsProposalSpent(uint256 proposaltxid, uint256 &spendingtxid, uint8_t &spendingfuncid)
 {
