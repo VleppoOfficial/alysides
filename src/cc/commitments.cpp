@@ -742,7 +742,7 @@ bool CheckRefProposalOpRet(CScript opret, std::string &CCerror)
 		return false;
 	}
 	// check if info meets requirements (not empty, <= 2048 chars)
-	if (info.empty() || info.size > 2048) {
+	if (info.empty() || info.size() > 2048) {
 		CCerror = "CheckRefProposalOpRet: info empty or exceeds 2048 chars!";
 		return false;
 	}
