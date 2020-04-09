@@ -736,24 +736,24 @@ bool CheckRefProposalOpRet(CScript opret, std::string &CCerror)
 	
 	CCerror = "";
 	
-	// decode opret
+	std::cerr << "CheckRefProposalOpRet: decoding opret" << std::endl;
 	if (DecodeCommitmentProposalOpRet(opret, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info) != 'p') {
-		CCerror = "CheckRefProposalOpRet: tx opret invalid or not a proposal tx!";
+		CCerror = "proposal tx opret invalid or not a proposal tx!";
 		return false;
 	}
-	// check if info meets requirements (not empty, <= 2048 chars)
+	std::cerr << "CheckRefProposalOpRet: check if info meets requirements (not empty, <= 2048 chars)" << std::endl;
 	if (info.empty() || info.size() > 2048) {
-		CCerror = "CheckRefProposalOpRet: info empty or exceeds 2048 chars!";
+		CCerror = "proposal info empty or exceeds 2048 chars!";
 		return false;
 	}
-	// check if datahash meets requirements (not empty)
+	std::cerr << "CheckRefProposalOpRet: check if datahash meets requirements (not empty)" << std::endl;
 	if (datahash == zeroid) {
-		CCerror = "CheckRefProposalOpRet: datahash empty!";
+		CCerror = "proposal datahash empty!";
 		return false;
 	}
-	// check if payment is positive
+	std::cerr << "CheckRefProposalOpRet: check if payment is positive" << std::endl;
 	if (payment < 0) {
-		CCerror = "CheckRefProposalOpRet: payment < 0!";
+		CCerror = "proposal has payment < 0!";
 		return false;
 	}
 	
@@ -763,80 +763,80 @@ bool CheckRefProposalOpRet(CScript opret, std::string &CCerror)
 	bHasReceiver = CPK_dest.IsValid();
 	bHasArbitrator = CPK_arbitrator.IsValid();
 	
-	// making sure srcpub != destpub != arbitratorpk
+	std::cerr << "CheckRefProposalOpRet: making sure srcpub != destpub != arbitratorpk" << std::endl;
 	if (bHasReceiver && CPK_src == CPK_dest) {
-		CCerror = "CheckRefProposalOpRet: srcpub cannot be the same as destpub!";
+		CCerror = "proposal srcpub cannot be the same as destpub!";
 		return false;
 	}
 	if (bHasArbitrator && CPK_src == CPK_arbitrator) {
-		CCerror = "CheckRefProposalOpRet: srcpub cannot be the same as arbitrator pubkey!";
+		CCerror = "proposal srcpub cannot be the same as arbitrator pubkey!";
 		return false;
 	}
 	if (bHasReceiver && bHasArbitrator && CPK_dest == CPK_arbitrator) {
-		CCerror = "CheckRefProposalOpRet: destpub cannot be the same as arbitrator pubkey!";
+		CCerror = "proposal destpub cannot be the same as arbitrator pubkey!";
 		return false;
 	}
 	
 	switch (proposaltype) {
 		case 'p':
-			// checking deposit value
+			std::cerr << "CheckRefProposalOpRet: checking deposit value" << std::endl;
 			if (depositval < 0 || bHasArbitrator && depositval < CC_MARKER_VALUE) {
-				CCerror = "CheckRefProposalOpRet: invalid deposit value!";
+				CCerror = "proposal has invalid deposit value!";
 				return false;
 			}
-			// checking arbitrator fee
+			std::cerr << "CheckRefProposalOpRet: checking arbitrator fee" << std::endl;
 			if (arbitratorfee < 0 || bHasArbitrator && arbitratorfee < CC_MARKER_VALUE) {
-				CCerror = "CheckRefProposalOpRet: invalid arbitrator fee value!";
+				CCerror = "proposal has invalid arbitrator fee value!";
 				return false;
 			}
-			// if refcommitment was defined, check if it's a correct tx
 			if (commitmenttxid != zeroid) {
+				std::cerr << "CheckRefProposalOpRet: refcommitment was defined, check if it's a correct tx" << std::endl;
 				if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) == 0 || commitmenttx.vout.size() <= 0) {
-					CCerror = "CheckRefProposalOpRet: couldn't find ref commitment tx!";
+					CCerror = "proposal has refcommitment txid does not have a tx!";
 					return false;
 				}
 				if (DecodeCommitmentSigningOpRet(commitmenttx.vout[commitmenttx.vout.size() - 1].scriptPubKey, version, proposaltxid) != 'c') {
-					CCerror = "CheckRefProposalOpRet: given refcommitment tx is not a contract signing tx!";
+					CCerror = "proposal refcommitment tx is not a contract signing tx!";
 					return false;	
 				}
 			}
 			break;
 			
 		case 'u':
-			// checking deposit value
+			std::cerr << "CheckRefProposalOpRet: checking deposit value" << std::endl;
 			if (depositval != 0) {
-				CCerror = "CheckRefProposalOpRet: invalid deposit value for update proposal!";
+				CCerror = "proposal has invalid deposit value for update!";
 				return false;
 			}
 		// intentional fall-through
 		
 		case 't':
-			// update/termination proposals must have destpub
+			std::cerr << "CheckRefProposalOpRet: checking if update/termination proposal has destpub" << std::endl;
 			if (!bHasReceiver) {
-				CCerror = "CheckRefProposalOpRet: no defined receiver on update/termination proposal!";
+				CCerror = "proposal has no defined receiver on update/termination proposal!";
 				return false;
 			}
-			// checking arbitrator fee - must be 0 in this case
+			std::cerr << "CheckRefProposalOpRet: checking arbitrator fee - must be 0 in this case" << std::endl;
 			if (arbitratorfee != 0) {
-				CCerror = "CheckRefProposalOpRet: invalid arbitrator fee value!";
+				CCerror = "proposal has invalid arbitrator fee value!";
 				return false;
 			}
-			// commitmenttxid must be defined
+			std::cerr << "CheckRefProposalOpRet: checking if commitmenttxid defined" << std::endl;
 			if (commitmenttxid == zeroid) {
-				CCerror = "CheckRefProposalOpRet: no commitmenttxid defined for update/termination proposal!";
+				CCerror = "proposal has no commitmenttxid defined for update/termination proposal!";
 				return false;
 			}
-			// checking if srcpub and destpub are members of the commitment
+			std::cerr << "CheckRefProposalOpRet: checking if srcpub and destpub are members of the commitment" << std::endl;
 			if (!GetCommitmentMembers(commitmenttxid, sellerpk, clientpk)) {
-				CCerror = "CheckRefProposalOpRet: couldn't get commitment member pubkeys!";
+				CCerror = "proposal commitment tx has invalid commitment member pubkeys!";
 				return false;
 			}
 			if (CPK_src != pubkey2pk(sellerpk) && CPK_src != pubkey2pk(clientpk)) {
-				CCerror = "CheckRefProposalOpRet: srcpub is not a member of the specified commitment!";
+				CCerror = "proposal srcpub is not a member of the specified commitment!";
 				return false;
 			}
 			if (CPK_dest != pubkey2pk(sellerpk) && CPK_dest != pubkey2pk(clientpk)) {
-				CCerror = "CheckRefProposalOpRet: destpub is not a member of the specified commitment!";
+				CCerror = "proposal destpub is not a member of the specified commitment!";
 				return false;
 			}
 			
@@ -848,7 +848,7 @@ bool CheckRefProposalOpRet(CScript opret, std::string &CCerror)
 			break;
 			
 		default:
-            CCerror = "CheckRefProposalOpRet: invalid proposaltype!";
+            CCerror = "proposal has invalid proposaltype!";
 			return false;
 	}
 }
