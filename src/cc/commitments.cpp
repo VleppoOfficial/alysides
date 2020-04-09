@@ -872,7 +872,7 @@ bool IsProposalSpent(uint256 proposaltxid, uint256 &spendingtxid, uint8_t &spend
 	uint256 hashBlock;
 	CTransaction spendingtx;
 	
-	if (retcode = CCgetspenttxid(spendingtxid, vini, height, proposaltxid, 1) == 0) {
+	if ((retcode = CCgetspenttxid(spendingtxid, vini, height, proposaltxid, 1)) == 0) {
 		if (myGetTransaction(spendingtxid, spendingtx, hashBlock) != 0 && spendingtx.vout.size() > 0)
 			spendingfuncid = DecodeCommitmentOpRet(spendingtx.vout[spendingtx.vout.size() - 1].scriptPubKey);
 			// if 'c' or 'u' or 's', proposal was accepted
