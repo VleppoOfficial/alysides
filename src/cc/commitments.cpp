@@ -1049,7 +1049,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 			mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, CC_RESPONSE_VALUE, mypk, pubkey2pk(destpub))); // vout.1 response hook (with destpub)
 		else
 			mtx.vout.push_back(MakeCC1vout(EVAL_COMMITMENTS, CC_RESPONSE_VALUE, mypk)); // vout.1 response hook (no destpub)
-		return(FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,));
+		return(FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret));
 	}
 	CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
 }
