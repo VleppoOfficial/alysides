@@ -8042,18 +8042,18 @@ UniValue commitmentpropose(const UniValue& params, bool fHelp, const CPubKey& my
 {
     UniValue result(UniValue::VOBJ);
 	uint256 datahash, prevproposaltxid, refcommitmenttxid;
-	std::string name;
+	std::string info;
 	int64_t prepayment, arbitratorfee, deposit;
     if (fHelp || params.size() < 4 || params.size() > 9)
-        throw runtime_error("commitmentpropose name datahash buyer arbitrator [prepayment][arbitratorfee][deposit][prevproposaltxid][refcommitmenttxid]\n");
+        throw runtime_error("commitmentpropose info datahash buyer arbitrator [prepayment][arbitratorfee][deposit][prevproposaltxid][refcommitmenttxid]\n");
     if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
 	
-	name = params[0].get_str();
-    if (name.size() == 0 || name.size() > 64)   {
+	info = params[0].get_str();
+    if (info.size() == 0 || info.size() > 2048)   {
 		Unlock2NSPV(mypk);
-        throw runtime_error("Commitment name must not be empty and up to 64 characters\n");
+        throw runtime_error("Commitment info must not be empty and up to 2048 characters\n");
     }
     datahash = Parseuint256((char *)params[1].get_str().c_str());
 	if (datahash == zeroid)   {
@@ -8098,7 +8098,7 @@ UniValue commitmentpropose(const UniValue& params, bool fHelp, const CPubKey& my
 	if (params.size() == 9)     {
         refcommitmenttxid = Parseuint256((char *)params[8].get_str().c_str());
     }
-	result = CommitmentPropose(mypk, 0, name, datahash, buyer, arbitrator, prepayment, arbitratorfee, deposit, prevproposaltxid, refcommitmenttxid);
+	result = CommitmentPropose(mypk, 0, info, datahash, buyer, arbitrator, prepayment, arbitratorfee, deposit, prevproposaltxid, refcommitmenttxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
