@@ -949,13 +949,13 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	if(!arbitrator.empty() && !(pubkey2pk(arbitrator).IsValid()))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Arbitrator pubkey invalid");
 	
-	// checking if mypk != destpubpubkey != arbitratorpubkey
+	/*// checking if mypk != destpubpubkey != arbitratorpubkey
 	if(pubkey2pk(destpub).IsValid() && pubkey2pk(destpub) == mypk)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Seller pubkey cannot be the same as destpub pubkey");
 	if(pubkey2pk(arbitrator).IsValid() && pubkey2pk(arbitrator) == mypk)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Seller pubkey cannot be the same as arbitrator pubkey");
 	if(pubkey2pk(destpub).IsValid() && pubkey2pk(arbitrator).IsValid() && pubkey2pk(arbitrator) == pubkey2pk(destpub))
-		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Buyer pubkey cannot be the same as arbitrator pubkey");
+		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Buyer pubkey cannot be the same as arbitrator pubkey");*/
 	
 	// if arbitrator exists, check if arbitrator fee is sufficient
 	if(pubkey2pk(arbitrator).IsValid()) {
