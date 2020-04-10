@@ -624,91 +624,9 @@ int64_t IsCommitmentsVout(struct CCcontract_info *cp,const CTransaction& tx,int3
 	return(0);
 }
 
-/*
-GetAcceptedProposalOpRet (just gets the opret from a accepted commitment's proposal)
-
-validation:
-	ValidateRefProposalOpRet
-	
-might not do this one
-CompareProposalPubkeys (proposal1, proposal2)
-	gets two proposal txids, checks opret
-	switch(proposaltype)
-		if 'p':
-			srcpub must be the same
-		if 'u' or 't':
-			srcpub, destpub must be the same
-
-IsProposalSpent
-IsDepositSpent (if it is spent, retrieves spendingtxid and spendingfuncid)
-
-static data:
-	GetCommitmentMembers (gets seller, client and firstarbitrator if they exist)
-	GetCommitmentDeposit (gets deposit from opret, checks if the vout value matches it)
-	
-
-updateable data:
-	GetLatestCommitmentUpdate(commitmenttxid)
-		pretty much same thing as GetLatestTokenUpdate, gets latest update txid
-	GetCommitmentUpdateData(updatetxid)
-		takes a 'u' transaction, finds its 'p' transaction and gets the data from there:
-		info
-		datahash
-		arbitrator pk
-		arbitrator fee
-
-dynamic data (non-user):
-	GetProposalTxRevisions(proposaltxid)
-		starts from beginning, counts up revisions up until proposaltxid
-	GetCommitmentTxRevisions(commitmenttxid)
-		counts number of updates to the commitment ('u' txs)
-	GetCommitmentStatus(commitmenttxid, bool includeExchanges)
-		updatetxid = GetLatestCommitmentUpdate(commitmenttxid)
-		if updatetxid = commitmenttxid // no updates were made
-			return "active"
-		get update tx
-		DecodeCommitmentOpRet on update tx opret, get funcid
-		--
-		check if deposit was spent or not
-		if it was:
-			if funcid = 's' // the commitment was cancelled
-				return "closed"
-			if funcid = 'r' // the arbitrator spent the deposit as part of dispute resolution
-				return "arbitrated"
-			if includeExchanges:
-				TBD. for now, return "completed"
-			return "completed"
-		if it wasn't:
-			if funcid = 'u'
-				return "active"
-			if funcid = 'd'
-				return "suspended"
-			return "unknown"
-	--------------------------------------
-		Proposal status:
-		draft
-		pending
-		approved
-		closed
-		updated
-	-------------------------------------	
-		Contract status:
-		active
-			[revised/expanded]
-		request pending
-		terminated/cancelled
-		completed
-			[pending payment]
-			[pending asset transfer]
-			[pending asset collection]
-		suspended/in dispute
-		expired (priority over 'suspended')
-		
-how tf to get these???
-	update/termination proposal list (?)
-	settlement list (?)
-
-*/
+// gets the opret object of a proposal transaction that was signed by its receiver. 
+// This object contains data such as seller, client pubkeys and other "official" commitment info.
+// takes the tx of the commitment as input, returns true if opret was returned succesfully
 bool GetAcceptedProposalOpRet(CTransaction commitmenttx, CScript &opret)
 {
 	CTransaction proposaltx;
@@ -731,6 +649,8 @@ bool GetAcceptedProposalOpRet(CTransaction commitmenttx, CScript &opret)
 	return true;
 }
 
+// checks if the data in the given proposal opret is valid.
+// used in validation and some RPCs
 bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 {
 	CTransaction commitmenttx;
@@ -861,6 +781,17 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 	}
 }
 
+/*
+CompareProposals (proposaltx1, proposaltx2)
+	gets two oprets from each proposal
+	makes sure both of them have the same proposal type. If they don't, invalidate
+	switch(proposaltype)
+		if 'p':
+			srcpub must be the same
+		if 'u' or 't':
+			srcpub, destpub must be the same
+*/
+
 bool IsProposalSpent(uint256 proposaltxid, uint256 &spendingtxid, uint8_t &spendingfuncid)
 {
 	int32_t vini, height, retcode;
@@ -879,6 +810,15 @@ bool IsProposalSpent(uint256 proposaltxid, uint256 &spendingtxid, uint8_t &spend
 	}
 	return false;
 }
+
+/*
+IsDepositSpent (if it is spent, retrieves spendingtxid and spendingfuncid)
+or AddDepositInputs?
+
+static data:
+	GetCommitmentMembers (gets seller, client and firstarbitrator if they exist)
+	GetCommitmentDeposit (gets deposit from opret, checks if the vout value matches it)
+*/
 
 bool GetCommitmentMembers(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk)
 {
@@ -915,6 +855,69 @@ bool GetCommitmentMembers(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk
 
 	return true;
 }
+
+/*
+updateable data:
+	GetLatestCommitmentUpdate(commitmenttxid)
+		pretty much same thing as GetLatestTokenUpdate, gets latest update txid
+	GetCommitmentUpdateData(updatetxid)
+		takes a 'u' transaction, finds its 'p' transaction and gets the data from there:
+		info
+		datahash
+		arbitrator pk
+		arbitrator fee
+
+dynamic data (non-user):
+	GetProposalTxRevisions(proposaltxid)
+		starts from beginning, counts up revisions up until proposaltxid
+	GetCommitmentTxRevisions(commitmenttxid)
+		counts number of updates to the commitment ('u' txs)
+	GetCommitmentStatus(commitmenttxid, bool includeExchanges)
+		updatetxid = GetLatestCommitmentUpdate(commitmenttxid)
+		if updatetxid = commitmenttxid // no updates were made
+			return "active"
+		get update tx
+		DecodeCommitmentOpRet on update tx opret, get funcid
+		--
+		check if deposit was spent or not
+		if it was:
+			if funcid = 's' // the commitment was cancelled
+				return "closed"
+			if funcid = 'r' // the arbitrator spent the deposit as part of dispute resolution
+				return "arbitrated"
+			if includeExchanges:
+				TBD. for now, return "completed"
+			return "completed"
+		if it wasn't:
+			if funcid = 'u'
+				return "active"
+			if funcid = 'd'
+				return "suspended"
+			return "unknown"
+	--------------------------------------
+		Proposal status:
+		draft
+		pending
+		approved
+		closed
+		updated
+	-------------------------------------	
+		Contract status:
+		active
+			[revised/expanded]
+		request pending
+		terminated/cancelled
+		completed
+			[pending payment]
+			[pending asset transfer]
+			[pending asset collection]
+		suspended/in dispute
+		expired (priority over 'suspended')
+		
+how tf to get these???
+	update/termination proposal list (?)
+	settlement list (?)
+*/
 
 //===========================================================================
 // RPCs - tx creation
