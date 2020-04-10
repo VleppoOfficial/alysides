@@ -713,7 +713,7 @@ bool GetAcceptedProposalOpRet(CTransaction commitmenttx, CScript &opret)
 {
 	CTransaction proposaltx;
 	uint8_t version;
-	uint256 proposaltxid;
+	uint256 proposaltxid, hashBlock;
 	
 	if (commitmenttx.vout.size() <= 0) {
 		std::cerr << "GetAcceptedProposalOpRet: commitment tx has no vouts" << std::endl;
