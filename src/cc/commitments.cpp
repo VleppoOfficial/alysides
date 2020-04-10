@@ -18,6 +18,7 @@
 /*
 Put all notes here!
 
+subcontracts must have at least 1 party that's a member in a refcommitment
 don't allow swapping between no arbitrator <-> arbitrator
 only 1 update/cancel request per party, per commitment
 version numbers should be reset after contract acceptance
@@ -1384,7 +1385,7 @@ UniValue CommitmentInfo(uint256 txid)
 	txid
 	type (based on funcid)
 	switch (funcid) {
-		for 'p' (proposals) show:
+		for 'p' show:
 			sender_pubkey
 			receiver_pubkey
 			proposal_type
@@ -1410,11 +1411,12 @@ UniValue CommitmentInfo(uint256 txid)
 				deposit_for_client
 				total_deposit
 				
-		for 't' (proposal closing) show:
+		for 't' show:
 			source_pubkey
 			proposal_txid
+			(if proposaltype =/= contract) commitment_txid
 			
-		for 'c' (contract) show:
+		for 'c' show:
 			accepted_txid
 			seller_pubkey
 			client_pubkey
@@ -1425,6 +1427,8 @@ UniValue CommitmentInfo(uint256 txid)
 			closing_txid OR dispute_txid
 			proposals: [
 			]
+			subcontracts: [
+			]
 			settlements: [
 			]
 			revision_number
@@ -1432,10 +1436,12 @@ UniValue CommitmentInfo(uint256 txid)
 			latest_hash
 			
 		for 'u' show:
+			commitment_txid
 			source_pubkey
 			proposal_txid
 			
 		for 's' show:
+			commitment_txid
 			source_pubkey
 			proposal_txid
 			deposit_for_seller
