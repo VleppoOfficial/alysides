@@ -153,6 +153,21 @@ uint8_t DecodeCommitmentUpdateOpRet(CScript scriptPubKey, uint8_t &version, uint
 	return(0);
 }
 
+CScript EncodeCommitmentCloseOpRet(uint8_t version, uint256 commitmenttxid, uint256 proposaltxid, int64_t deposit_send, int64_t deposit_keep)
+{
+	CScript opret; uint8_t evalcode = EVAL_COMMITMENTS, funcid = 's';
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << proposaltxid << deposit_send << deposit_keep);
+	return(opret);
+}
+uint8_t DecodeCommitmentCloseOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &proposaltxid, int64_t &deposit_send, int64_t &deposit_keep)
+{
+	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
+	GetOpReturnData(scriptPubKey, vopret);
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> proposaltxid; ss >> deposit_send; ss >> deposit_keep) != 0 && evalcode == EVAL_COMMITMENTS)
+		return(funcid);
+	return(0);
+}
+
 CScript EncodeCommitmentDisputeOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputehash)
 {
 	CScript opret; uint8_t evalcode = EVAL_COMMITMENTS, funcid = 'd';
@@ -624,23 +639,86 @@ int64_t IsCommitmentsVout(struct CCcontract_info *cp,const CTransaction& tx,int3
 	return(0);
 }
 
-// gets the opret object of a proposal transaction that was signed by its receiver. 
-// This object contains data such as seller, client pubkeys and other "official" commitment info.
-// takes the tx of the commitment as input, returns true if opret was returned succesfully
-bool GetAcceptedProposalOpRet(CTransaction commitmenttx, CScript &opret)
+/*
+bool ChannelsExactAmounts(struct CCcontract_info *cp,Eval* eval,const CTransaction &tx)
+{
+    uint256 txid,param3,tokenid;
+    CPubKey srcpub,destpub; uint16_t confirmation;
+    int32_t param1,numvouts; int64_t param2; uint8_t funcid,version;
+    CTransaction vinTx; uint256 hashBlock; int64_t inputs=0,outputs=0;
+
+    if ((numvouts=tx.vout.size()) > 0 && (funcid=DecodeChannelsOpRet(tx.vout[numvouts-1].scriptPubKey, tokenid, txid, srcpub, destpub, param1, param2, param3, version, confirmation))!=0)
+    {        
+        switch (funcid)
+        {
+            case 'O':
+                return (true);
+            case 'P':
+                if ( eval->GetTxUnconfirmed(tx.vin[1].prevout.hash,vinTx,hashBlock) == 0 )
+                    return eval->Invalid("cant find vinTx");
+                inputs = vinTx.vout[tx.vin[1].prevout.n].nValue;
+                outputs = tx.vout[0].nValue + tx.vout[3].nValue; 
+                break;
+            case 'C':
+                if ( eval->GetTxUnconfirmed(tx.vin[1].prevout.hash,vinTx,hashBlock) == 0 )
+                    return eval->Invalid("cant find vinTx");
+                inputs = vinTx.vout[tx.vin[1].prevout.n].nValue;
+                outputs = tx.vout[0].nValue; 
+                break;
+            case 'R':
+                if ( eval->GetTxUnconfirmed(tx.vin[1].prevout.hash,vinTx,hashBlock) == 0 )
+                    return eval->Invalid("cant find vinTx");
+                inputs = vinTx.vout[tx.vin[1].prevout.n].nValue;
+                outputs = tx.vout[2].nValue; 
+                break;   
+            default:
+                return (false);
+        }
+        if ( inputs != outputs )
+        {
+            LOGSTREAM("channelscc",CCLOG_INFO, stream << "inputs " << inputs << " vs outputs " << outputs << std::endl);            
+            return eval->Invalid("mismatched inputs != outputs");
+        } 
+        else return (true);       
+    }
+    else
+    {
+        return eval->Invalid("invalid op_return data");
+    }
+    return(false);
+}
+*/
+
+// gets the opret object of a proposal transaction that was or is being accepted by its receiver. 
+// use this to extract data for validating "accept" txes like 'c', 'u' or 's'
+// takes a CTransaction as input, returns true if its proposal opret was returned succesfully
+bool GetAcceptedProposalOpRet(CTransaction tx, CScript &opret)
 {
 	CTransaction proposaltx;
-	uint8_t version;
-	uint256 proposaltxid, hashBlock;
+	uint8_t version, funcid;
+	uint256 commitmenttxid, proposaltxid, hashBlock;
+	int64_t deposit_send, deposit_keep;
 	
-	if (commitmenttx.vout.size() <= 0) {
-		std::cerr << "GetAcceptedProposalOpRet: commitment tx has no vouts" << std::endl;
+	if (tx.vout.size() <= 0) {
+		std::cerr << "GetAcceptedProposalOpRet: given tx has no vouts" << std::endl;
 		return false;
 	}
-	if (DecodeCommitmentSigningOpRet(commitmenttx.vout[commitmenttx.vout.size() - 1].scriptPubKey, version, proposaltxid) != 'c') {
-		std::cerr << "GetAcceptedProposalOpRet: given tx is not a contract signing tx" << std::endl;
+	if ((funcid = DecodeCommitmentOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey)) != 'c' || funcid != 'u' || funcid != 's') {
+		std::cerr << "GetAcceptedProposalOpRet: given tx doesn't have a correct funcid" << std::endl;
 		return false;	
 	}
+	switch (funcid) {
+		case 'c':
+			DecodeCommitmentSigningOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, version, proposaltxid);
+			break;
+		case 'u':
+			DecodeCommitmentUpdateOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, version, commitmenttxid, proposaltxid);
+			break;
+		case 's':
+			DecodeCommitmentCloseOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, version, commitmenttxid, proposaltxid, deposit_send, deposit_keep);
+			break;
+	}
+	
 	if (myGetTransaction(proposaltxid, proposaltx, hashBlock) == 0 || proposaltx.vout.size() <= 0) {
 		std::cerr << "GetAcceptedProposalOpRet: couldn't find commitment accepted proposal tx" << std::endl;
 		return false;
@@ -661,7 +739,6 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 	std::string info;
 	bool bHasReceiver, bHasArbitrator;
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator;
-	
 	CCerror = "";
 	
 	std::cerr << "ValidateRefProposalOpRet: decoding opret" << std::endl;
@@ -704,7 +781,6 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 		CCerror = "proposal destpub cannot be the same as arbitrator pubkey!";
 		return false;
 	}
-	
 	switch (proposaltype) {
 		case 'p':
 			std::cerr << "ValidateRefProposalOpRet: checking deposit value" << std::endl;
@@ -729,7 +805,6 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 				}
 			}
 			break;
-			
 		case 'u':
 			std::cerr << "ValidateRefProposalOpRet: checking deposit value" << std::endl;
 			if (depositval != 0) {
@@ -737,7 +812,6 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 				return false;
 			}
 		// intentional fall-through
-		
 		case 't':
 			std::cerr << "ValidateRefProposalOpRet: checking if update/termination proposal has destpub" << std::endl;
 			if (!bHasReceiver) {
@@ -769,12 +843,10 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 			}
 			
 			// put status check here
-			
-			//would be nice if arbitrator was null here
+
 			// put deposit check here - must be between 0 and ref deposit value
 			
 			break;
-			
 		default:
             CCerror = "proposal has invalid proposaltype!";
 			return false;
@@ -814,45 +886,30 @@ bool IsProposalSpent(uint256 proposaltxid, uint256 &spendingtxid, uint8_t &spend
 /*
 IsDepositSpent (if it is spent, retrieves spendingtxid and spendingfuncid)
 or AddDepositInputs?
-
-static data:
-	GetCommitmentMembers (gets seller, client and firstarbitrator if they exist)
-	GetCommitmentDeposit (gets deposit from opret, checks if the vout value matches it)
 */
 
-bool GetCommitmentMembers(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk)
+// gets the data from the accepted proposal for the specified commitment txid
+// this is for "static" data like seller and client pubkeys. gathering "updateable" data like info, datahash etc are handled by different functions
+bool GetCommitmentInitialData(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk, std::vector<uint8_t> &firstarbitratorpk, int64_t &firstarbitratorfee, int64_t &deposit, uint256 &firstdatahash, uint256 &refcommitmenttxid, std::string &firstinfo)
 {
 	CScript proposalopret;
-	CTransaction commitmenttx, proposaltx;
-	uint256 proposaltxid, datahash, prevproposaltxid, hashBlock;
+	CTransaction commitmenttx;
+	uint256 prevproposaltxid, hashBlock;
 	uint8_t version, proposaltype;
-	std::vector<uint8_t> firstarbitratorpk;
-	int64_t payment, arbitratorfee, depositval;
-	std::string info;
-	
+	int64_t payment;
+
 	if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) == 0 || commitmenttx.vout.size() <= 0) {
 		std::cerr << "GetCommitmentMembers: couldn't find commitment tx" << std::endl;
 		return false;
 	}
-	
-	/*if (DecodeCommitmentSigningOpRet(commitmenttx.vout[commitmenttx.vout.size() - 1].scriptPubKey, version, proposaltxid) != 'c') {
-		std::cerr << "GetCommitmentMembers: given tx is not a contract signing tx" << std::endl;
-		return false;	
-	}
-	if (myGetTransaction(proposaltxid, proposaltx, hashBlock) == 0 || proposaltx.vout.size() <= 0) {
-		std::cerr << "GetCommitmentMembers: couldn't find commitment accepted proposal tx" << std::endl;
-		return false;
-	}*/
-	
 	if (!GetAcceptedProposalOpRet(commitmenttx, proposalopret)) {
 		std::cerr << "GetCommitmentMembers: couldn't get accepted proposal tx opret" << std::endl;
 		return false;	
 	}
-	if (DecodeCommitmentProposalOpRet(proposaltx.vout[proposaltx.vout.size() - 1].scriptPubKey, version, proposaltype, sellerpk, clientpk, firstarbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info) != 'p' || proposaltype != 'p') {
+	if (DecodeCommitmentProposalOpRet(proposalopret, version, proposaltype, sellerpk, clientpk, firstarbitratorpk, payment, firstarbitratorfee, deposit, firstdatahash, refcommitmenttxid, prevproposaltxid, firstinfo) != 'p' || proposaltype != 'p') {
 		std::cerr << "GetCommitmentMembers: commitment accepted proposal tx opret invalid" << std::endl;
 		return false;	
 	}
-
 	return true;
 }
 
@@ -975,12 +1032,10 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	if (payment < 0)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Prepayment must be positive");*/
 	
-	// check if destpub pubkey exists and is valid
-	if(!destpub.empty() && !(pubkey2pk(destpub).IsValid()))
+	// check if destpub & arbitrator pubkeys exist and are valid
+	if(!destpub.empty() && !(pubkey2pk(destpub).IsFullyValid()))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Buyer pubkey invalid");
-	
-	// check if arbitrator pubkey exists and is valid
-	if(!arbitrator.empty() && !(pubkey2pk(arbitrator).IsValid()))
+	if(!arbitrator.empty() && !(pubkey2pk(arbitrator).IsFullyValid()))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Arbitrator pubkey invalid");
 	
 	/*// checking if mypk != destpubpubkey != arbitratorpubkey
@@ -1323,7 +1378,81 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 // RPCs - informational
 //===========================================================================
 
-// commitmentinfo
+/*
+UniValue CommitmentInfo(uint256 txid)
+
+	txid
+	type (based on funcid)
+	switch (funcid) {
+		for 'p' (proposals) show:
+			sender_pubkey
+			receiver_pubkey
+			proposal_type
+			status (draft, open, updated, closed, accepted)
+			update_txid
+			previous_proposal_txid
+			revision_number
+			required_payment
+			info
+			data_hash
+			if (proposal_type == contract) show:
+				arbitrator_pubkey
+				arbitrator_fee
+				deposit
+				ref_commitment_txid
+			if (proposal_type == update) show:
+				commitment_txid
+				new_arbitrator_pubkey
+				new_arbitrator_fee
+			if (proposal_type == close) show:
+				commitment_txid
+				deposit_for_seller
+				deposit_for_client
+				total_deposit
+				
+		for 't' (proposal closing) show:
+			source_pubkey
+			proposal_txid
+			
+		for 'c' (contract) show:
+			accepted_txid
+			seller_pubkey
+			client_pubkey
+			arbitrator_pubkey
+			ref_commitment_txid
+			deposit
+			status (open, closed, disputed, arbitrated, etc.)
+			closing_txid OR dispute_txid
+			proposals: [
+			]
+			settlements: [
+			]
+			revision_number
+			latest_info
+			latest_hash
+			
+		for 'u' show:
+			source_pubkey
+			proposal_txid
+			
+		for 's' show:
+			source_pubkey
+			proposal_txid
+			deposit_for_seller
+			deposit_for_client
+			
+		for 'd' show:
+			commitment_txid
+			source_pubkey
+			arbitrator_pubkey
+			data_hash
+			
+		for 'r' show:
+			commitment_txid
+			dispute_txid
+			source_pubkey
+			rewarded_pubkey
+	}
 
 /*
 UniValue CommitmentInfo(uint256 txid)
