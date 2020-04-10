@@ -625,48 +625,6 @@ int64_t IsCommitmentsVout(struct CCcontract_info *cp,const CTransaction& tx,int3
 }
 
 /*
-std::string GetCommitmentStatus(commitmenttxid, bool includeExchanges)
-	updatetxid = GetLatestCommitmentUpdate(commitmenttxid)
-	if updatetxid = commitmenttxid // no updates were made
-		return "active"
-	get update tx
-	DecodeCommitmentOpRet on update tx opret, get funcid
-	--
-	check if deposit was spent or not
-	if it was:
-		if funcid = 's' // the commitment was cancelled
-			return "closed"
-		if funcid = 'r' // the arbitrator spent the deposit as part of dispute resolution
-			return "arbitrated"
-		if includeExchanges:
-			TBD. for now, return "completed"
-		return "completed"
-	if it wasn't:
-		if funcid = 'u'
-			return "active"
-		if funcid = 'd'
-			return "suspended"
-		return "unknown"
-
-	Proposal status:
-	draft
-	pending
-	approved
-	closed
-	updated
-	
-	Contract status:
-	active
-		[revised/expanded]
-	request pending
-	terminated/cancelled
-	completed
-		[pending payment]
-		[pending asset transfer]
-		[pending asset collection]
-	suspended/in dispute
-	expired (priority over 'suspended')
-
 GetAcceptedProposalOpRet (just gets the opret from a accepted commitment's proposal)
 
 validation:
@@ -681,10 +639,13 @@ CompareProposalPubkeys (proposal1, proposal2)
 		if 'u' or 't':
 			srcpub, destpub must be the same
 
+IsProposalSpent
+IsDepositSpent (if it is spent, retrieves spendingtxid and spendingfuncid)
+
 static data:
 	GetCommitmentMembers (gets seller, client and firstarbitrator if they exist)
 	GetCommitmentDeposit (gets deposit from opret, checks if the vout value matches it)
-	IsDepositSpent (if it is spent, retrieves spendingtxid and spendingfuncid)
+	
 
 updateable data:
 	GetLatestCommitmentUpdate(commitmenttxid)
@@ -701,38 +662,72 @@ dynamic data (non-user):
 		starts from beginning, counts up revisions up until proposaltxid
 	GetCommitmentTxRevisions(commitmenttxid)
 		counts number of updates to the commitment ('u' txs)
+	GetCommitmentStatus(commitmenttxid, bool includeExchanges)
+		updatetxid = GetLatestCommitmentUpdate(commitmenttxid)
+		if updatetxid = commitmenttxid // no updates were made
+			return "active"
+		get update tx
+		DecodeCommitmentOpRet on update tx opret, get funcid
+		--
+		check if deposit was spent or not
+		if it was:
+			if funcid = 's' // the commitment was cancelled
+				return "closed"
+			if funcid = 'r' // the arbitrator spent the deposit as part of dispute resolution
+				return "arbitrated"
+			if includeExchanges:
+				TBD. for now, return "completed"
+			return "completed"
+		if it wasn't:
+			if funcid = 'u'
+				return "active"
+			if funcid = 'd'
+				return "suspended"
+			return "unknown"
+	--------------------------------------
+		Proposal status:
+		draft
+		pending
+		approved
+		closed
+		updated
+	-------------------------------------	
+		Contract status:
+		active
+			[revised/expanded]
+		request pending
+		terminated/cancelled
+		completed
+			[pending payment]
+			[pending asset transfer]
+			[pending asset collection]
+		suspended/in dispute
+		expired (priority over 'suspended')
 		
 how tf to get these???
 	update/termination proposal list (?)
 	settlement list (?)
 
 */
-
-bool GetCommitmentMembers(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk)
+bool GetAcceptedProposalOpRet(CTransaction commitmenttx, CScript &opret)
 {
-	CTransaction commitmenttx, proposaltx;
-	uint256 proposaltxid, datahash, prevproposaltxid, hashBlock;
-	uint8_t version, proposaltype;
-	std::vector<uint8_t> firstarbitratorpk;
-	int64_t payment, arbitratorfee, depositval;
-	std::string info;
+	CTransaction proposaltx;
+	uint8_t version;
+	uint256 proposaltxid;
 	
-	if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) == 0 || commitmenttx.vout.size() <= 0) {
-		std::cerr << "GetCommitmentMembers: couldn't find commitment tx" << std::endl;
+	if (commitmenttx.vout.size() <= 0) {
+		std::cerr << "GetAcceptedProposalOpRet: commitment tx has no vouts" << std::endl;
 		return false;
 	}
 	if (DecodeCommitmentSigningOpRet(commitmenttx.vout[commitmenttx.vout.size() - 1].scriptPubKey, version, proposaltxid) != 'c') {
-		std::cerr << "GetCommitmentMembers: given tx is not a contract signing tx" << std::endl;
+		std::cerr << "GetAcceptedProposalOpRet: given tx is not a contract signing tx" << std::endl;
 		return false;	
 	}
 	if (myGetTransaction(proposaltxid, proposaltx, hashBlock) == 0 || proposaltx.vout.size() <= 0) {
-		std::cerr << "GetCommitmentMembers: couldn't find commitment accepted proposal tx" << std::endl;
+		std::cerr << "GetAcceptedProposalOpRet: couldn't find commitment accepted proposal tx" << std::endl;
 		return false;
 	}
-	if (DecodeCommitmentProposalOpRet(proposaltx.vout[proposaltx.vout.size() - 1].scriptPubKey, version, proposaltype, sellerpk, clientpk, firstarbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info) != 'p' || proposaltype != 'p') {
-		std::cerr << "GetCommitmentMembers: commitment accepted proposal tx opret invalid" << std::endl;
-		return false;	
-	}
+	opret = proposaltx.vout[proposaltx.vout.size() - 1].scriptPubKey;
 	return true;
 }
 
@@ -883,6 +878,42 @@ bool IsProposalSpent(uint256 proposaltxid, uint256 &spendingtxid, uint8_t &spend
 		return true;
 	}
 	return false;
+}
+
+bool GetCommitmentMembers(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk)
+{
+	CScript proposalopret;
+	CTransaction commitmenttx, proposaltx;
+	uint256 proposaltxid, datahash, prevproposaltxid, hashBlock;
+	uint8_t version, proposaltype;
+	std::vector<uint8_t> firstarbitratorpk;
+	int64_t payment, arbitratorfee, depositval;
+	std::string info;
+	
+	if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) == 0 || commitmenttx.vout.size() <= 0) {
+		std::cerr << "GetCommitmentMembers: couldn't find commitment tx" << std::endl;
+		return false;
+	}
+	
+	/*if (DecodeCommitmentSigningOpRet(commitmenttx.vout[commitmenttx.vout.size() - 1].scriptPubKey, version, proposaltxid) != 'c') {
+		std::cerr << "GetCommitmentMembers: given tx is not a contract signing tx" << std::endl;
+		return false;	
+	}
+	if (myGetTransaction(proposaltxid, proposaltx, hashBlock) == 0 || proposaltx.vout.size() <= 0) {
+		std::cerr << "GetCommitmentMembers: couldn't find commitment accepted proposal tx" << std::endl;
+		return false;
+	}*/
+	
+	if (!GetAcceptedProposalOpRet(commitmenttx, proposalopret)) {
+		std::cerr << "GetCommitmentMembers: couldn't get accepted proposal tx opret" << std::endl;
+		return false;	
+	}
+	if (DecodeCommitmentProposalOpRet(proposaltx.vout[proposaltx.vout.size() - 1].scriptPubKey, version, proposaltype, sellerpk, clientpk, firstarbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info) != 'p' || proposaltype != 'p') {
+		std::cerr << "GetCommitmentMembers: commitment accepted proposal tx opret invalid" << std::endl;
+		return false;	
+	}
+
+	return true;
 }
 
 //===========================================================================
