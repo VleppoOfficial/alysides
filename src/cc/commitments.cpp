@@ -793,7 +793,7 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 			if (commitmenttxid != zeroid) {
 				std::cerr << "ValidateProposalOpRet: refcommitment was defined, check if it's a correct tx" << std::endl;
 				if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) == 0 || commitmenttx.vout.size() <= 0) {
-					CCerror = "proposal has refcommitment txid that does not have a tx!";
+					CCerror = "proposal's refcommitmenttxid has nonexistent tx!";
 					return false;
 				}
 				if (DecodeCommitmentSigningOpRet(commitmenttx.vout[commitmenttx.vout.size() - 1].scriptPubKey, version, proposaltxid) != 'c') {
