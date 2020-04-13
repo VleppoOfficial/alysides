@@ -726,7 +726,7 @@ bool GetAcceptedProposalOpRet(CTransaction tx, CScript &opret)
 
 // checks if the data in the given proposal opret is valid.
 // used in validation and some RPCs
-bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
+bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 {
 	CTransaction commitmenttx;
 	uint256 proposaltxid, datahash, commitmenttxid, refcommitmenttxid, prevproposaltxid, hashBlock;
@@ -738,22 +738,22 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator;
 	CCerror = "";
 	
-	std::cerr << "ValidateRefProposalOpRet: decoding opret" << std::endl;
+	std::cerr << "ValidateProposalOpRet: decoding opret" << std::endl;
 	if (DecodeCommitmentProposalOpRet(opret, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info) != 'p') {
 		CCerror = "proposal tx opret invalid or not a proposal tx!";
 		return false;
 	}
-	std::cerr << "ValidateRefProposalOpRet: check if info meets requirements (not empty, <= 2048 chars)" << std::endl;
+	std::cerr << "ValidateProposalOpRet: check if info meets requirements (not empty, <= 2048 chars)" << std::endl;
 	if (info.empty() || info.size() > 2048) {
 		CCerror = "proposal info empty or exceeds 2048 chars!";
 		return false;
 	}
-	std::cerr << "ValidateRefProposalOpRet: check if datahash meets requirements (not empty)" << std::endl;
+	std::cerr << "ValidateProposalOpRet: check if datahash meets requirements (not empty)" << std::endl;
 	if (datahash == zeroid) {
 		CCerror = "proposal datahash empty!";
 		return false;
 	}
-	std::cerr << "ValidateRefProposalOpRet: check if payment is positive" << std::endl;
+	std::cerr << "ValidateProposalOpRet: check if payment is positive" << std::endl;
 	if (payment < 0) {
 		CCerror = "proposal has payment < 0!";
 		return false;
@@ -765,7 +765,7 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 	bHasReceiver = CPK_dest.IsValid();
 	bHasArbitrator = CPK_arbitrator.IsValid();
 	
-	std::cerr << "ValidateRefProposalOpRet: making sure srcpub != destpub != arbitratorpk" << std::endl;
+	std::cerr << "ValidateProposalOpRet: making sure srcpub != destpub != arbitratorpk" << std::endl;
 	if (bHasReceiver && CPK_src == CPK_dest) {
 		CCerror = "proposal srcpub cannot be the same as destpub!";
 		return false;
@@ -780,18 +780,18 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 	}
 	switch (proposaltype) {
 		case 'p':
-			std::cerr << "ValidateRefProposalOpRet: checking deposit value" << std::endl;
+			std::cerr << "ValidateProposalOpRet: checking deposit value" << std::endl;
 			if (depositval < 0 || bHasArbitrator && depositval < CC_MARKER_VALUE) {
 				CCerror = "proposal has invalid deposit value!";
 				return false;
 			}
-			std::cerr << "ValidateRefProposalOpRet: checking arbitrator fee" << std::endl;
+			std::cerr << "ValidateProposalOpRet: checking arbitrator fee" << std::endl;
 			if (arbitratorfee < 0 || bHasArbitrator && arbitratorfee < CC_MARKER_VALUE) {
 				CCerror = "proposal has invalid arbitrator fee value!";
 				return false;
 			}
 			if (commitmenttxid != zeroid) {
-				std::cerr << "ValidateRefProposalOpRet: refcommitment was defined, check if it's a correct tx" << std::endl;
+				std::cerr << "ValidateProposalOpRet: refcommitment was defined, check if it's a correct tx" << std::endl;
 				if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) == 0 || commitmenttx.vout.size() <= 0) {
 					CCerror = "proposal has refcommitment txid that does not have a tx!";
 					return false;
@@ -800,8 +800,7 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 					CCerror = "proposal refcommitment tx is not a contract signing tx!";
 					return false;	
 				}
-				
-				std::cerr << "ValidateRefProposalOpRet: checking if subcontract's srcpub and destpub are members of the refcommitment" << std::endl;
+				std::cerr << "ValidateProposalOpRet: checking if subcontract's srcpub and destpub are members of the refcommitment" << std::endl;
 				if (!GetCommitmentInitialData(commitmenttxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, depositval, datahash, refcommitmenttxid, info)) {
 					CCerror = "refcommitment tx has invalid commitment member pubkeys!";
 					return false;
@@ -813,24 +812,24 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 			}
 			break;
 		case 'u':
-			std::cerr << "ValidateRefProposalOpRet: checking deposit value" << std::endl;
+			std::cerr << "ValidateProposalOpRet: checking deposit value" << std::endl;
 			if (depositval != 0) {
 				CCerror = "proposal has invalid deposit value for update!";
 				return false;
 			}
 		// intentional fall-through
 		case 't':
-			std::cerr << "ValidateRefProposalOpRet: checking if update/termination proposal has destpub" << std::endl;
+			std::cerr << "ValidateProposalOpRet: checking if update/termination proposal has destpub" << std::endl;
 			if (!bHasReceiver) {
 				CCerror = "proposal has no defined receiver on update/termination proposal!";
 				return false;
 			}
-			std::cerr << "ValidateRefProposalOpRet: checking arbitrator fee" << std::endl;
+			std::cerr << "ValidateProposalOpRet: checking arbitrator fee" << std::endl;
 			if (arbitratorfee < 0 || bHasArbitrator && arbitratorfee < CC_MARKER_VALUE) {
 				CCerror = "proposal has invalid arbitrator fee value!";
 				return false;
 			}
-			std::cerr << "ValidateRefProposalOpRet: checking if commitmenttxid defined" << std::endl;
+			std::cerr << "ValidateProposalOpRet: checking if commitmenttxid defined" << std::endl;
 			if (commitmenttxid == zeroid) {
 				CCerror = "proposal has no commitmenttxid defined for update/termination proposal!";
 				return false;
@@ -840,7 +839,7 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 
 			// put deposit check here - must be between 0 and ref deposit value
 			
-			std::cerr << "ValidateRefProposalOpRet: checking if srcpub and destpub are members of the commitment" << std::endl;
+			std::cerr << "ValidateProposalOpRet: checking if srcpub and destpub are members of the commitment" << std::endl;
 			if (!GetCommitmentInitialData(commitmenttxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, depositval, datahash, refcommitmenttxid, info)) {
 				CCerror = "proposal commitment tx has invalid commitment member pubkeys!";
 				return false;
@@ -1073,9 +1072,9 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	else
 		deposit = 0;
 	
-	// additional checks are done using ValidateRefProposalOpRet
+	// additional checks are done using ValidateProposalOpRet
 	CScript opret = EncodeCommitmentProposalOpRet(COMMITMENTCC_VERSION,'p',std::vector<uint8_t>(mypk.begin(),mypk.end()),destpub,arbitrator,payment,arbitratorfee,deposit,datahash,refcommitmenttxid,prevproposaltxid,info);
-	if (!ValidateRefProposalOpRet(opret, CCerror))
+	if (!ValidateProposalOpRet(opret, CCerror))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror);
 	
 	// check prevproposaltxid if specified
@@ -1085,7 +1084,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 		if(DecodeCommitmentOpRet(prevproposaltx.vout[numvouts - 1].scriptPubKey) == 'c')
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "specified txid is a contract id, needs to be proposal id");
 		
-		if (!ValidateRefProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey, CCerror))
+		if (!ValidateProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey, CCerror))
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "previous " << CCerror << " txid: " << prevproposaltxid.GetHex());
 		
 		DecodeCommitmentProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey,version,refProposalType,refInitiator,refReceiver,refArbitrator,refPrepayment,refArbitratorFee,refDeposit,refHash,refCommitmentTxid,refPrevProposalTxid,refName);
