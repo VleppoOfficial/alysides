@@ -996,6 +996,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	CTransaction prevproposaltx;
 	uint256 hashBlock, ref_datahash, commitmenttxid, ref_prevproposaltxid, spendingtxid;
 	std::vector<uint8_t> ref_srcpub, ref_destpub, ref_arbitrator;
+	int32_t numvouts;
 	int64_t ref_payment, ref_arbitratorfee, ref_deposit;
 	std::string ref_info, CCerror;
 	bool bHasReceiver, bHasArbitrator;
