@@ -790,7 +790,7 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 				CCerror = "proposal has invalid arbitrator fee value!";
 				return false;
 			}
-			std::cerr << commitmenttxid << std::endl;
+			std::cerr << commitmenttxid.GetHex() << std::endl;
 			if (commitmenttxid != zeroid) {
 				std::cerr << "ValidateProposalOpRet: refcommitment was defined, check if it's a correct tx" << std::endl;
 				if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) == 0 || commitmenttx.vout.size() <= 0) {
