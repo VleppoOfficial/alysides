@@ -729,7 +729,7 @@ bool GetAcceptedProposalOpRet(CTransaction tx, CScript &opret)
 bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 {
 	CTransaction commitmenttx;
-	uint256 proposaltxid, datahash, commitmenttxid, prevproposaltxid, hashBlock;
+	uint256 proposaltxid, datahash, commitmenttxid, refcommitmenttxid, prevproposaltxid, hashBlock;
 	uint8_t version, proposaltype;
 	std::vector<uint8_t> srcpub, destpub, sellerpk, clientpk, arbitratorpk;
 	int64_t payment, arbitratorfee, depositval;
@@ -800,8 +800,9 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 					CCerror = "proposal refcommitment tx is not a contract signing tx!";
 					return false;	
 				}
+				
 				std::cerr << "ValidateRefProposalOpRet: checking if subcontract's srcpub and destpub are members of the refcommitment" << std::endl;
-				if (!GetCommitmentMembers(commitmenttxid, sellerpk, clientpk)) {
+				if (!GetCommitmentInitialData(commitmenttxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, depositval, datahash, refcommitmenttxid, info)) {
 					CCerror = "refcommitment tx has invalid commitment member pubkeys!";
 					return false;
 				}
@@ -834,8 +835,13 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 				CCerror = "proposal has no commitmenttxid defined for update/termination proposal!";
 				return false;
 			}
+			
+			// put status check here
+
+			// put deposit check here - must be between 0 and ref deposit value
+			
 			std::cerr << "ValidateRefProposalOpRet: checking if srcpub and destpub are members of the commitment" << std::endl;
-			if (!GetCommitmentMembers(commitmenttxid, sellerpk, clientpk)) {
+			if (!GetCommitmentInitialData(commitmenttxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, depositval, datahash, refcommitmenttxid, info)) {
 				CCerror = "proposal commitment tx has invalid commitment member pubkeys!";
 				return false;
 			}
@@ -847,11 +853,6 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 				CCerror = "proposal destpub is not a member of the specified commitment!";
 				return false;
 			}
-			
-			// put status check here
-
-			// put deposit check here - must be between 0 and ref deposit value
-			
 			break;
 		default:
             CCerror = "proposal has invalid proposaltype!";
