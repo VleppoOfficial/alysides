@@ -790,6 +790,7 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 				CCerror = "proposal has invalid arbitrator fee value!";
 				return false;
 			}
+			std::cerr << commitmenttxid << std::endl;
 			if (commitmenttxid != zeroid) {
 				std::cerr << "ValidateProposalOpRet: refcommitment was defined, check if it's a correct tx" << std::endl;
 				if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) == 0 || commitmenttx.vout.size() <= 0) {
@@ -992,8 +993,7 @@ how tf to get these???
 UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, uint256 datahash, std::vector<uint8_t> destpub, std::vector<uint8_t> arbitrator, int64_t payment, int64_t arbitratorfee, int64_t deposit, uint256 prevproposaltxid, uint256 refcommitmenttxid)
 {
 	CPubKey mypk, CPK_src, CPK_dest, CPK_arbitrator;
-	CTransaction prevproposaltx, refcommitmenttx;
-	int32_t numvouts, vini, height, retcode;
+	CTransaction prevproposaltx;
 	uint256 hashBlock, ref_datahash, commitmenttxid, ref_prevproposaltxid, spendingtxid;
 	std::vector<uint8_t> ref_srcpub, ref_destpub, ref_arbitrator;
 	int64_t ref_payment, ref_arbitratorfee, ref_deposit;
@@ -1006,7 +1006,6 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
 	if (txfee == 0) txfee = CC_TXFEE;
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
-
 	CPK_dest = pubkey2pk(destpub);
 	CPK_arbitrator = pubkey2pk(arbitrator);
 	bHasReceiver = CPK_dest.IsFullyValid();
@@ -1017,7 +1016,6 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Buyer pubkey invalid");
 	if (!arbitrator.empty() && !bHasArbitrator)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Arbitrator pubkey invalid");
-	
 	// if arbitrator exists, check if arbitrator fee is sufficient
 	if (bHasArbitrator) {
 		if (arbitratorfee == 0)
@@ -1027,7 +1025,6 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	}
 	else
 		arbitratorfee = 0;
-	
 	// if arbitrator exists, check if deposit is sufficient
 	if (bHasArbitrator) {
 		if (deposit == 0)
@@ -1037,21 +1034,17 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	}
 	else
 		deposit = CC_MARKER_VALUE;
-	
 	// additional checks are done using ValidateProposalOpRet
 	CScript opret = EncodeCommitmentProposalOpRet(COMMITMENTCC_VERSION,'p',std::vector<uint8_t>(mypk.begin(),mypk.end()),destpub,arbitrator,payment,arbitratorfee,deposit,datahash,commitmenttxid,prevproposaltxid,info);
 	if (!ValidateProposalOpRet(opret, CCerror))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror);
-	
 	// check prevproposaltxid if specified
 	if (prevproposaltxid != zeroid) {
 		if (myGetTransaction(prevproposaltxid,prevproposaltx,hashBlock)==0 || (numvouts=prevproposaltx.vout.size())<=0)
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
 		if (!ValidateProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey, CCerror))
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "previous " << CCerror << " txid: " << prevproposaltxid.GetHex());
-		
-		DecodeCommitmentProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey,version,ref_proposaltype,ref_srcpub,ref_destpub,ref_arbitrator,ref_payment,ref_arbitratorfee,ref_deposit,ref_datahash,ref_prevproposaltxid,ref_prevproposaltxid,ref_info);
-		
+		DecodeCommitmentProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey,ref_version,ref_proposaltype,ref_srcpub,ref_destpub,ref_arbitrator,ref_payment,ref_arbitratorfee,ref_deposit,ref_datahash,ref_prevproposaltxid,ref_prevproposaltxid,ref_info);
 		if (IsProposalSpent(prevproposaltxid, spendingtxid, spendingfuncid)) {
 			switch (spendingfuncid) {
 				case 'p':
@@ -1064,12 +1057,10 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 					CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified proposal has been spent by txid " << spendingtxid.GetHex());
 			}
 		}
-		
 		// TODO: just put CompareProposals here
 		if (mypk != pubkey2pk(ref_srcpub))
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "-pubkey doesn't match creator of previous proposal txid " << prevproposaltxid.GetHex());
 	}
-
 	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 64) >= txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE) {
 		if (prevproposaltxid != zeroid) {
 			mtx.vin.push_back(CTxIn(prevproposaltxid,0,CScript())); // vin.n-2 previous proposal marker (optional, will trigger validation)
