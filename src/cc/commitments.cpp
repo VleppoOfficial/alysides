@@ -834,11 +834,8 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 				CCerror = "proposal has no commitmenttxid defined for update/termination proposal!";
 				return false;
 			}
-			
-			// put status check here
-
-			// put deposit check here - must be between 0 and ref deposit value
-			
+			// TODO: put status check here
+			// TODO: put deposit check here - must be between 0 and ref deposit value
 			std::cerr << "ValidateProposalOpRet: checking if srcpub and destpub are members of the commitment" << std::endl;
 			if (!GetCommitmentInitialData(commitmenttxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, depositval, datahash, refcommitmenttxid, info)) {
 				CCerror = "proposal commitment tx has invalid commitment member pubkeys!";
@@ -1041,12 +1038,11 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	// check prevproposaltxid if specified
 	if (prevproposaltxid != zeroid) {
 		if (myGetTransaction(prevproposaltxid,prevproposaltx,hashBlock)==0 || (numvouts=prevproposaltx.vout.size())<=0)
-			
-		// TODO: is this necessary?
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
+		// TODO: is this necessary?
 		if (!ValidateProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey, CCerror))
-			
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "previous " << CCerror << " txid: " << prevproposaltxid.GetHex());
+		// ^^^
 		DecodeCommitmentProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey,ref_version,ref_proposaltype,ref_srcpub,ref_destpub,ref_arbitrator,ref_payment,ref_arbitratorfee,ref_deposit,ref_datahash,ref_prevproposaltxid,ref_prevproposaltxid,ref_info);
 		if (IsProposalSpent(prevproposaltxid, spendingtxid, spendingfuncid)) {
 			switch (spendingfuncid) {
