@@ -994,7 +994,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 {
 	CPubKey mypk, CPK_src, CPK_dest, CPK_arbitrator;
 	CTransaction prevproposaltx;
-	uint256 hashBlock, ref_datahash, commitmenttxid, ref_prevproposaltxid, spendingtxid;
+	uint256 hashBlock, ref_datahash, ref_prevproposaltxid, spendingtxid;
 	std::vector<uint8_t> ref_srcpub, ref_destpub, ref_arbitrator;
 	int32_t numvouts;
 	int64_t ref_payment, ref_arbitratorfee, ref_deposit;
@@ -1036,14 +1036,17 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	else
 		deposit = CC_MARKER_VALUE;
 	// additional checks are done using ValidateProposalOpRet
-	CScript opret = EncodeCommitmentProposalOpRet(COMMITMENTCC_VERSION,'p',std::vector<uint8_t>(mypk.begin(),mypk.end()),destpub,arbitrator,payment,arbitratorfee,deposit,datahash,commitmenttxid,prevproposaltxid,info);
+	CScript opret = EncodeCommitmentProposalOpRet(COMMITMENTCC_VERSION,'p',std::vector<uint8_t>(mypk.begin(),mypk.end()),destpub,arbitrator,payment,arbitratorfee,deposit,datahash,refcommitmenttxid,prevproposaltxid,info);
 	if (!ValidateProposalOpRet(opret, CCerror))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror);
 	// check prevproposaltxid if specified
 	if (prevproposaltxid != zeroid) {
 		if (myGetTransaction(prevproposaltxid,prevproposaltx,hashBlock)==0 || (numvouts=prevproposaltx.vout.size())<=0)
+			
+		// TODO: is this necessary?
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
 		if (!ValidateProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey, CCerror))
+			
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "previous " << CCerror << " txid: " << prevproposaltxid.GetHex());
 		DecodeCommitmentProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey,ref_version,ref_proposaltype,ref_srcpub,ref_destpub,ref_arbitrator,ref_payment,ref_arbitratorfee,ref_deposit,ref_datahash,ref_prevproposaltxid,ref_prevproposaltxid,ref_info);
 		if (IsProposalSpent(prevproposaltxid, spendingtxid, spendingfuncid)) {
