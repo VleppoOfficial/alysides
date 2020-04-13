@@ -997,6 +997,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	std::vector<uint8_t> ref_srcpub, ref_destpub, ref_arbitrator;
 	int64_t ref_payment, ref_arbitratorfee, ref_deposit;
 	std::string ref_info, CCerror;
+	bool bHasReceiver, bHasArbitrator;
 	uint8_t ref_proposaltype, version, ref_version, spendingfuncid, mypriv[32];
 	char mutualaddr[64];
 	
@@ -1005,7 +1006,6 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	if (txfee == 0) txfee = CC_TXFEE;
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 
-	CPK_src = pubkey2pk(srcpub);
 	CPK_dest = pubkey2pk(destpub);
 	CPK_arbitrator = pubkey2pk(arbitrator);
 	bHasReceiver = CPK_dest.IsFullyValid();
@@ -1069,7 +1069,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "-pubkey doesn't match creator of previous proposal txid " << prevproposaltxid.GetHex());
 	}
 
-	if (AddNormalinputs2(mypk,txfee+CC_MARKER_VALUE+CC_RESPONSE_VALUE,64) >= txfee+CC_MARKER_VALUE+CC_RESPONSE_VALUE) {
+	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 64) >= txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE) {
 		if (prevproposaltxid != zeroid) {
 			mtx.vin.push_back(CTxIn(prevproposaltxid,0,CScript())); // vin.n-2 previous proposal marker (optional, will trigger validation)
 			GetCCaddress1of2(cp, mutualaddr, pubkey2pk(ref_srcpub), pubkey2pk(ref_destpub));
