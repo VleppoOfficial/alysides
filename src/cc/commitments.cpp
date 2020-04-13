@@ -857,6 +857,7 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
             CCerror = "proposal has invalid proposaltype!";
 			return false;
 	}
+	return true;
 }
 
 /*
@@ -1000,7 +1001,6 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	bool bHasReceiver, bHasArbitrator;
 	uint8_t ref_proposaltype, version, ref_version, spendingfuncid, mypriv[32];
 	char mutualaddr[64];
-	CCerror = "";
 	
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
@@ -1045,7 +1045,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	
 	// check prevproposaltxid if specified
 	if (prevproposaltxid != zeroid) {
-		if(myGetTransaction(prevproposaltxid,prevproposaltx,hashBlock)==0 || (numvouts=prevproposaltx.vout.size())<=0)
+		if (myGetTransaction(prevproposaltxid,prevproposaltx,hashBlock)==0 || (numvouts=prevproposaltx.vout.size())<=0)
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
 		if (!ValidateProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey, CCerror))
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "previous " << CCerror << " txid: " << prevproposaltxid.GetHex());
