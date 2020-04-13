@@ -1000,6 +1000,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	bool bHasReceiver, bHasArbitrator;
 	uint8_t ref_proposaltype, version, ref_version, spendingfuncid, mypriv[32];
 	char mutualaddr[64];
+	CCerror = "";
 	
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
