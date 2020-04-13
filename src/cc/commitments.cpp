@@ -20,12 +20,8 @@ Put all notes here!
 
 subcontracts must have at least 1 party that's a member in a refcommitment
 don't allow swapping between no arbitrator <-> arbitrator
-only 1 update/cancel request per party, per commitment
 version numbers should be reset after contract acceptance
-fix commitmentcloseproposal not detecting outdated proposals
-
 keep closed proposal markers on!
-allow renaming commitments through updates
 	
 Commitments RPCs:
 
@@ -803,6 +799,15 @@ bool ValidateRefProposalOpRet(CScript opret, std::string &CCerror)
 				if (DecodeCommitmentSigningOpRet(commitmenttx.vout[commitmenttx.vout.size() - 1].scriptPubKey, version, proposaltxid) != 'c') {
 					CCerror = "proposal refcommitment tx is not a contract signing tx!";
 					return false;	
+				}
+				std::cerr << "ValidateRefProposalOpRet: checking if subcontract's srcpub and destpub are members of the refcommitment" << std::endl;
+				if (!GetCommitmentMembers(commitmenttxid, sellerpk, clientpk)) {
+					CCerror = "refcommitment tx has invalid commitment member pubkeys!";
+					return false;
+				}
+				if (!bHasReceiver || CPK_src != pubkey2pk(sellerpk) && CPK_src != pubkey2pk(clientpk) && CPK_dest != pubkey2pk(sellerpk) && CPK_dest != pubkey2pk(clientpk)) {
+					CCerror = "subcontracts must have at least one party that's a member in the refcommitmenttxid!";
+					return false;
 				}
 			}
 			break;
