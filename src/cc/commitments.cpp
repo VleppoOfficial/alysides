@@ -1096,9 +1096,9 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 		deposit = CC_MARKER_VALUE;
 	}
 	
-	// additional checks are done using ValidateProposalOpRet
+	// additional checks are done using ValidateProposalOpRet*/
 	CScript opret = EncodeCommitmentProposalOpRet(COMMITMENTCC_VERSION,'p',std::vector<uint8_t>(mypk.begin(),mypk.end()),destpub,arbitrator,payment,arbitratorfee,deposit,datahash,refcommitmenttxid,prevproposaltxid,info);
-	if (!ValidateProposalOpRet(opret, CCerror))
+	/*if (!ValidateProposalOpRet(opret, CCerror))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror);
 	
 	// check prevproposaltxid if specified
