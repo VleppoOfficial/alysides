@@ -201,19 +201,18 @@ uint8_t DecodeCommitmentDisputeResolveOpRet(CScript scriptPubKey, uint8_t &versi
 bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
 	int32_t numvins, numvouts;
-	std::string CCerror = "";
 	uint256 hashBlock, datahash, commitmenttxid, prevproposaltxid, spendingtxid;
-	std::vector<uint8_t> srcpub, destpub, arbitrator;
+	std::vector<uint8_t> srcpub, destpub, arbitratorpk;
 	int64_t payment, arbitratorfee, depositval;
-	std::string ref_info, CCerror;
-	bool retval;
+	std::string info, CCerror;
+	bool retval, bHasReceiver, bHasArbitrator;
 	uint8_t proposaltype, version, spendingfuncid, funcid;
-	char destaddr[65], depositaddr[65];
+	char markeraddr[65], destaddr[65], depositaddr[65];
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator;
 
+	CCerror = "";
 	numvins = tx.vin.size();
     numvouts = tx.vout.size();
-    preventCCvins = preventCCvouts = -1;
 	
     if (numvouts < 1)
         return eval->Invalid("no vouts");
@@ -226,6 +225,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
     //}
 	
 	if ((funcid = DecodeCommitmentOpRet(tx.vout[numvouts-1].scriptPubKey)) != 0) {
+		GetCCaddress(cp, markeraddr, GetUnspendable(cp, NULL));
 		switch (funcid)
         {
 			case 'p':
@@ -247,9 +247,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				
 				CPK_src = pubkey2pk(srcpub);
 				CPK_dest = pubkey2pk(destpub);
-				CPK_arbitrator = pubkey2pk(arbitratorpk);
 				bHasReceiver = CPK_dest.IsValid();
-				bHasArbitrator = CPK_arbitrator.IsValid();
 				
 				if (TotalPubkeyNormalInputs(tx, CPK_src) == 0 && TotalPubkeyCCInputs(tx, CPK_src) == 0)
 					return eval->Invalid("found no normal or cc inputs signed by source pubkey!");
@@ -257,7 +255,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				if (prevproposaltxid != zeroid) {
 					// Checking if selected proposal was already spent.
 					if (IsProposalSpent(prevproposaltxid, spendingtxid, spendingfuncid))
-						return eval->Invalid("found '" << spendingfuncid << "' tx with txid " << spendingtxid.GetHex() << " that already spent prevproposal!");
+						return eval->Invalid("prevproposal has already been spent!");
 					// Comparing proposal data to previous proposal.
 					if (!CompareProposals(tx.vout[numvouts-1].scriptPubKey, prevproposaltxid, CCerror))
 						return eval->Invalid(CCerror);
@@ -273,7 +271,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				// Checking if vins/vouts are correct.
 				if (numvouts < 3)
 					return eval->Invalid("not enough vouts for 'p' tx!");
-				else if (ConstrainVout(tx.vout[0], 1, GetUnspendable(cp, NULL), CC_MARKER_VALUE) == 0)
+				else if (ConstrainVout(tx.vout[0], 1, markeraddr, CC_MARKER_VALUE) == 0)
 					return eval->Invalid("vout.0 must be CC marker to commitments global address!");
 				else if (ConstrainVout(tx.vout[1], 1, destaddr, CC_RESPONSE_VALUE) == 0)
 					return eval->Invalid("vout.1 must be CC baton to mutual or srcpub CC address!");
@@ -283,7 +281,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 					return eval->Invalid("vin.0 must be normal for commitmentpropose!");
 				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
 					return eval->Invalid("vin.1 must be CC for commitmentpropose!");
-				// does vin0 and vin1 point to the previous proposal's vout0 and vout1? (if it doesn't, it might have no previous proposal, in that case it shouldn't have CC inputs)
+				// does vin0 and vin1 point to the previous proposal's vout0 and vout1? (if it doesn't, the tx might have no previous proposal, in that case it shouldn't have CC inputs)
 				else if (tx.vin[1].prevout.hash != prevproposaltxid)
 					return eval->Invalid("vin.1 tx hash doesn't match prevproposaltxid!");
 				else if (IsCCInput(tx.vin[2].scriptSig) == 0)
@@ -294,7 +292,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				// Do not allow any additional CC vins.
 				for (int32_t i = 3; i > numvins; i++) {
 					if (IsCCInput(tx.vin[i].scriptSig) != 0)
-						return eval->Invalid("vin." << i << " cannot be CC input!");
+						return eval->Invalid("tx exceeds allowed amount of CC vins!");
 				}
 				
 				break;
