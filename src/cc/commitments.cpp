@@ -748,25 +748,21 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator;
 	CCerror = "";
 	
-	//std::cerr << "ValidateProposalOpRet: decoding opret" << std::endl;
 	LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: decoding opret" << std::endl);
 	if (DecodeCommitmentProposalOpRet(opret, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info) != 'p') {
 		CCerror = "proposal tx opret invalid or not a proposal tx!";
 		return false;
 	}
-	//std::cerr << "ValidateProposalOpRet: check if info meets requirements (not empty, <= 2048 chars)" << std::endl;
 	LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: check if info meets requirements (not empty, <= 2048 chars)" << std::endl);
 	if (info.empty() || info.size() > 2048) {
 		CCerror = "proposal info empty or exceeds 2048 chars!";
 		return false;
 	}
-	//std::cerr << "ValidateProposalOpRet: check if datahash meets requirements (not empty)" << std::endl;
 	LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: check if datahash meets requirements (not empty)" << std::endl);
 	if (datahash == zeroid) {
 		CCerror = "proposal datahash empty!";
 		return false;
 	}
-	//std::cerr << "ValidateProposalOpRet: check if payment is positive" << std::endl;
 	LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: check if payment is positive" << std::endl);
 	if (payment < 0) {
 		CCerror = "proposal has payment < 0!";
@@ -778,8 +774,7 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 	CPK_arbitrator = pubkey2pk(arbitratorpk);
 	bHasReceiver = CPK_dest.IsValid();
 	bHasArbitrator = CPK_arbitrator.IsValid();
-	
-	//std::cerr << "ValidateProposalOpRet: making sure srcpub != destpub != arbitratorpk" << std::endl;
+
 	LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: making sure srcpub != destpub != arbitratorpk" << std::endl);
 	if (bHasReceiver && CPK_src == CPK_dest) {
 		CCerror = "proposal srcpub cannot be the same as destpub!";
@@ -795,20 +790,17 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 	}
 	switch (proposaltype) {
 		case 'p':
-			//std::cerr << "ValidateProposalOpRet: checking deposit value" << std::endl;
 			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking deposit value" << std::endl);
 			if (depositval < CC_MARKER_VALUE) {
 				CCerror = "proposal doesn't have minimum required deposit!";
 				return false;
 			}
-			//std::cerr << "ValidateProposalOpRet: checking arbitrator fee" << std::endl;
 			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking arbitrator fee" << std::endl);
 			if (arbitratorfee < 0 || bHasArbitrator && arbitratorfee < CC_MARKER_VALUE) {
 				CCerror = "proposal has invalid arbitrator fee value!";
 				return false;
 			}
 			if (commitmenttxid != zeroid) {
-				//std::cerr << "ValidateProposalOpRet: refcommitment was defined, check if it's a correct tx" << std::endl;
 				LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: refcommitment was defined, check if it's a correct tx" << std::endl);
 				if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) == 0 || commitmenttx.vout.size() <= 0) {
 					CCerror = "proposal's refcommitmenttxid has nonexistent tx!";
@@ -818,7 +810,6 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 					CCerror = "proposal refcommitment tx is not a contract signing tx!";
 					return false;	
 				}
-				//std::cerr << "ValidateProposalOpRet: checking if subcontract's srcpub and destpub are members of the refcommitment" << std::endl;
 				LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking if subcontract's srcpub and destpub are members of the refcommitment" << std::endl);
 				if (!GetCommitmentInitialData(commitmenttxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, depositval, datahash, refcommitmenttxid, info)) {
 					CCerror = "refcommitment tx has invalid commitment member pubkeys!";
@@ -831,7 +822,6 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 			}
 			break;
 		case 'u':
-			//std::cerr << "ValidateProposalOpRet: checking deposit value" << std::endl;
 			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking deposit value" << std::endl);
 			if (depositval != 0) {
 				CCerror = "proposal has invalid deposit value for update!";
@@ -839,19 +829,16 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 			}
 		// intentional fall-through
 		case 't':
-			//std::cerr << "ValidateProposalOpRet: checking if update/termination proposal has destpub" << std::endl;
 			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking if update/termination proposal has destpub" << std::endl);
 			if (!bHasReceiver) {
 				CCerror = "proposal has no defined receiver on update/termination proposal!";
 				return false;
 			}
-			//std::cerr << "ValidateProposalOpRet: checking arbitrator fee" << std::endl;
 			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking arbitrator fee" << std::endl);
 			if (arbitratorfee < 0 || bHasArbitrator && arbitratorfee < CC_MARKER_VALUE) {
 				CCerror = "proposal has invalid arbitrator fee value!";
 				return false;
 			}
-			//std::cerr << "ValidateProposalOpRet: checking if commitmenttxid defined" << std::endl;
 			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking if commitmenttxid defined" << std::endl);
 			if (commitmenttxid == zeroid) {
 				CCerror = "proposal has no commitmenttxid defined for update/termination proposal!";
@@ -861,7 +848,6 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 			// TODO: put status check here (if deposit was spent)
 			// TODO: put deposit check here - must be between 0 and ref deposit value
 			
-			//std::cerr << "ValidateProposalOpRet: checking if srcpub and destpub are members of the commitment" << std::endl;
 			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking if srcpub and destpub are members of the commitment" << std::endl);
 			if (!GetCommitmentInitialData(commitmenttxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, depositval, datahash, refcommitmenttxid, info)) {
 				CCerror = "proposal commitment tx has invalid commitment member pubkeys!";
@@ -895,31 +881,26 @@ bool CompareProposals(CScript proposalopret, uint256 refproposaltxid, std::strin
 	uint8_t proposaltype, ref_proposaltype, version, ref_version;
 	CCerror = "";
 
-	std::cerr << "CompareProposals: decoding opret" << std::endl;
 	LOGSTREAM("commitments", CCLOG_INFO, stream << "CompareProposals: decoding opret" << std::endl);
 	if (DecodeCommitmentProposalOpRet(proposalopret, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, deposit, datahash, commitmenttxid, prevproposaltxid, info) != 'p') {
 		CCerror = "proposal tx opret invalid or not a proposal tx!";
 		return false;
 	}
-	std::cerr << "CompareProposals: fetching refproposal tx" << std::endl;
 	LOGSTREAM("commitments", CCLOG_INFO, stream << "CompareProposals: fetching refproposal tx" << std::endl);
 	if (myGetTransaction(refproposaltxid, refproposaltx, hashBlock) == 0 || refproposaltx.vout.size() <= 0) {
 		std::cerr << "GetCommitmentMembers: couldn't find previous proposal tx" << std::endl;
 		return false;
 	}
-	std::cerr << "CompareProposals: decoding refproposaltx opret" << std::endl;
 	LOGSTREAM("commitments", CCLOG_INFO, stream << "CompareProposals: decoding refproposaltx opret" << std::endl);
 	if (DecodeCommitmentProposalOpRet(refproposaltx.vout[refproposaltx.vout.size()-1].scriptPubKey, ref_version, ref_proposaltype, ref_srcpub, ref_destpub, ref_arbitratorpk, payment, arbitratorfee, deposit, datahash, ref_commitmenttxid, ref_prevproposaltxid, info) != 'p') {
 		CCerror = "previous proposal tx opret invalid or not a proposal tx!";
 		return false;
 	}
-	std::cerr << "CompareProposals: checking if refproposaltxid = prevproposaltxid" << std::endl;
 	LOGSTREAM("commitments", CCLOG_INFO, stream << "CompareProposals: checking if refproposaltxid = prevproposaltxid" << std::endl);
 	if (refproposaltxid != prevproposaltxid) {
 		CCerror = "current proposal doesn't correctly refer to the previous proposal!";
 		return false;
 	}
-	std::cerr << "CompareProposals: checking if proposal types match" << std::endl;
 	LOGSTREAM("commitments", CCLOG_INFO, stream << "CompareProposals: checking if proposal types match" << std::endl);
 	if (proposaltype != ref_proposaltype) {
 		CCerror = "current and previous proposal types don't match!";
@@ -928,13 +909,11 @@ bool CompareProposals(CScript proposalopret, uint256 refproposaltxid, std::strin
 	switch (proposaltype) {
 		case 't':
 		case 'u':
-			std::cerr << "CompareProposals: checking if dest pubkeys match" << std::endl;
 			LOGSTREAM("commitments", CCLOG_INFO, stream << "CompareProposals: checking if dest pubkeys match" << std::endl);
 			if (destpub != ref_destpub) {
 				CCerror = "current and previous proposal destination pubkeys don't match!";
 				return false;
 			}
-			std::cerr << "CompareProposals: checking if commitmenttxid matches" << std::endl;
 			LOGSTREAM("commitments", CCLOG_INFO, stream << "CompareProposals: checking if commitmenttxid matches" << std::endl);
 			if (commitmenttxid != ref_commitmenttxid) {
 				CCerror = "current and previous proposal commitment id doesn't match!";
@@ -942,7 +921,6 @@ bool CompareProposals(CScript proposalopret, uint256 refproposaltxid, std::strin
 			}
 		// intentional fall-through
 		case 'p':
-			std::cerr << "CompareProposals: checking if src pubkeys match" << std::endl;
 			LOGSTREAM("commitments", CCLOG_INFO, stream << "CompareProposals: checking if src pubkeys match" << std::endl);
 			if (srcpub != ref_srcpub) {
 				CCerror = "current and previous proposal source pubkeys don't match!";
@@ -1097,7 +1075,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	bHasArbitrator = CPK_arbitrator.IsFullyValid();
 	
 	// check if destpub & arbitrator pubkeys exist and are valid
-	if (!destpub.empty() && !bHasReceiver)
+	/*if (!destpub.empty() && !bHasReceiver)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Buyer pubkey invalid");
 	if (!arbitrator.empty() && !bHasArbitrator)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Arbitrator pubkey invalid");
@@ -1142,7 +1120,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 		}
 		if (!CompareProposals(opret, prevproposaltxid, CCerror))
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror << " txid: " << prevproposaltxid.GetHex());
-	}
+	}*/
 	
 	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 64) >= txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE) {
 		if (prevproposaltxid != zeroid) {
