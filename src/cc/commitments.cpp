@@ -1102,10 +1102,9 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror);
 	
 	// check prevproposaltxid if specified
-	if (prevproposaltxid != zeroid) {
+	if (prevproposaltxid != zeroid) {*/
 		if (myGetTransaction(prevproposaltxid,prevproposaltx,hashBlock)==0 || (numvouts=prevproposaltx.vout.size())<=0)
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
-		*/
 		DecodeCommitmentProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey,ref_version,ref_proposaltype,ref_srcpub,ref_destpub,ref_arbitrator,ref_payment,ref_arbitratorfee,ref_deposit,ref_datahash,ref_prevproposaltxid,ref_prevproposaltxid,ref_info);
 		/*
 		if (IsProposalSpent(prevproposaltxid, spendingtxid, spendingfuncid)) {
