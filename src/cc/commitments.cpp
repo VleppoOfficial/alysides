@@ -200,10 +200,16 @@ uint8_t DecodeCommitmentDisputeResolveOpRet(CScript scriptPubKey, uint8_t &versi
 
 bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
-	int32_t numvins,numvouts,preventCCvins,preventCCvouts;
+	int32_t numvins, numvouts;
+	std::string CCerror = "";
+	uint256 hashBlock, datahash, commitmenttxid, prevproposaltxid, spendingtxid;
+	std::vector<uint8_t> srcpub, destpub, arbitrator;
+	int64_t payment, arbitratorfee, depositval;
+	std::string ref_info, CCerror;
 	bool retval;
-    uint256 hashBlock;
-    uint8_t funcid;
+	uint8_t proposaltype, version, spendingfuncid, funcid;
+	char destaddr[65], depositaddr[65];
+	CPubKey CPK_src, CPK_dest, CPK_arbitrator;
 
 	numvins = tx.vin.size();
     numvouts = tx.vout.size();
@@ -233,53 +239,64 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				vout.n-2 change
 				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'p' version proposaltype srcpub destpub arbitratorpk payment arbitratorfee depositvalue datahash commitmenttxid prevproposaltxid info
 				*/
-				std::cerr << "funcid - 'p'" << std::endl;
-				///		- Proposal data validation.
-				/*	
-						use CheckProposalData(tx)
-						use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, prevproposaltxid
-						use TotalPubkeyNormalInputs to verify that initiator == pubkey that submitted tx
-				*/
-				///		- Checking if selected proposal was already spent.
-				/*
-						if prevproposaltxid != zeroid:
-							CheckIfProposalSpent(prevproposaltxid)
-						else
-							if we're in validation code, invalidate
-				*/
-				///		- Comparing proposal data to previous proposals.
-				/*
-						while prevproposaltxid != zeroid:
-							get prevproposal tx
-							CheckProposalData(prevproposaltx)
-							use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, prevx2proposaltxid
-							check if proposal types match. else, invalidate
-							check if initiator pubkeys match. else, invalidate
-							prevproposaltxid = prevx2proposaltxid
-							Loop
-				*/	
-				///		- Checking if our inputs/outputs are correct.
-				/*
-						check vout0:
-							does it point to the commitments global address?
-							is it the correct value?
-						check vout1:
-							if receiver undefined:
-								does vout1 point to the initiator's address?
-									does initiatorpubkey point to the same privkey as the address?
-								is the value correct?
-							if receiver defined:
-								does vout1 point to a 1of2 address between initiator and receiver?
-									does initiatorpubkey point to the same privkey as the initiator's address?
-									does receiverpubkey point to the same privkey as the receiver's address?
-								is the value correct?
-						check vin1:
-							does it point to the previous proposal's marker? (if it doesn't, it's probably an original proposal, which isn't validated here)
-						check vin2:
-							does it point to the previous proposal's response? (same as above)
-						Do not allow any additional CC vins.
-						break;
-				*/	
+				
+				// Proposal data validation.
+				if (!ValidateProposalOpRet(tx.vout[numvouts-1].scriptPubKey, CCerror))
+					return eval->Invalid(CCerror);
+				DecodeCommitmentProposalOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info);
+				
+				CPK_src = pubkey2pk(srcpub);
+				CPK_dest = pubkey2pk(destpub);
+				CPK_arbitrator = pubkey2pk(arbitratorpk);
+				bHasReceiver = CPK_dest.IsValid();
+				bHasArbitrator = CPK_arbitrator.IsValid();
+				
+				if (TotalPubkeyNormalInputs(tx, CPK_src) == 0 && TotalPubkeyCCInputs(tx, CPK_src) == 0)
+					return eval->Invalid("found no normal or cc inputs signed by source pubkey!");
+				
+				if (prevproposaltxid != zeroid) {
+					// Checking if selected proposal was already spent.
+					if (IsProposalSpent(prevproposaltxid, spendingtxid, spendingfuncid))
+						return eval->Invalid("found '" << spendingfuncid << "' tx with txid " << spendingtxid.GetHex() << " that already spent prevproposal!");
+					// Comparing proposal data to previous proposal.
+					if (!CompareProposals(tx.vout[numvouts-1].scriptPubKey, prevproposaltxid, CCerror))
+						return eval->Invalid(CCerror);
+				}
+				else
+					return eval->Invalid("unexpected proposal with no prevproposaltxid in CommitmentsValidate!");
+				
+				if (bHasReceiver)
+					GetCCaddress1of2(cp, destaddr, CPK_src, CPK_dest);
+				else
+					GetCCaddress(cp, destaddr, CPK_src);
+
+				// Checking if vins/vouts are correct.
+				if (numvouts < 3)
+					return eval->Invalid("not enough vouts for 'p' tx!");
+				else if (ConstrainVout(tx.vout[0], 1, GetUnspendable(cp, NULL), CC_MARKER_VALUE) == 0)
+					return eval->Invalid("vout.0 must be CC marker to commitments global address!");
+				else if (ConstrainVout(tx.vout[1], 1, destaddr, CC_RESPONSE_VALUE) == 0)
+					return eval->Invalid("vout.1 must be CC baton to mutual or srcpub CC address!");
+				if (numvins < 3)
+					return eval->Invalid("not enough vins for 'p' tx in CommitmentsValidate!");
+				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
+					return eval->Invalid("vin.0 must be normal for commitmentpropose!");
+				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
+					return eval->Invalid("vin.1 must be CC for commitmentpropose!");
+				// does vin0 and vin1 point to the previous proposal's vout0 and vout1? (if it doesn't, it might have no previous proposal, in that case it shouldn't have CC inputs)
+				else if (tx.vin[1].prevout.hash != prevproposaltxid)
+					return eval->Invalid("vin.1 tx hash doesn't match prevproposaltxid!");
+				else if (IsCCInput(tx.vin[2].scriptSig) == 0)
+					return eval->Invalid("vin.2 must be CC for commitmentpropose!");
+				else if (tx.vin[2].prevout.hash != prevproposaltxid)
+					return eval->Invalid("vin.2 tx hash doesn't match prevproposaltxid!");
+				
+				// Do not allow any additional CC vins.
+				for (int32_t i = 3; i > numvins; i++) {
+					if (IsCCInput(tx.vin[i].scriptSig) != 0)
+						return eval->Invalid("vin." << i << " cannot be CC input!");
+				}
+				
 				break;
 			case 't':
 				/*
@@ -611,13 +628,9 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 		return eval->Invalid("must be valid commitments funcid!"); 
 	}
 
-	retval = PreventCC(eval,tx,preventCCvins,numvins,preventCCvouts,numvouts);
-    if (retval != 0)
-        LOGSTREAM("commitments",CCLOG_INFO, stream << "Commitments tx validated" << std::endl);
-    else
-		fprintf(stderr,"Commitments tx invalid\n");
-	std::cerr << "CommitmentsValidate triggered" << std::endl;
-    return(retval);
+	LOGSTREAM("commitments", CCLOG_INFO, stream << "Commitments tx validated" << std::endl);
+	std::cerr << "Commitments tx validated" << std::endl;
+    return true;
 }
 
 //===========================================================================
@@ -1116,8 +1129,6 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	if (prevproposaltxid != zeroid) {
 		if (myGetTransaction(prevproposaltxid,prevproposaltx,hashBlock)==0 || (numvouts=prevproposaltx.vout.size())<=0)
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
-		//if (!ValidateProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey, CCerror))
-		//	CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "previous " << CCerror << " txid: " << prevproposaltxid.GetHex());
 		DecodeCommitmentProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey,ref_version,ref_proposaltype,ref_srcpub,ref_destpub,ref_arbitrator,ref_payment,ref_arbitratorfee,ref_deposit,ref_datahash,ref_prevproposaltxid,ref_prevproposaltxid,ref_info);
 		if (IsProposalSpent(prevproposaltxid, spendingtxid, spendingfuncid)) {
 			switch (spendingfuncid) {
@@ -1133,8 +1144,6 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 		}
 		if (!CompareProposals(opret, prevproposaltxid, CCerror))
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror << " txid: " << prevproposaltxid.GetHex());
-		//if (mypk != pubkey2pk(ref_srcpub))
-		//	CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "-pubkey doesn't match creator of previous proposal txid " << prevproposaltxid.GetHex());
 	}
 	
 	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 64) >= txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE) {
