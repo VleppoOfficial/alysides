@@ -864,7 +864,7 @@ bool CompareProposals(CScript proposalopret, uint256 refproposaltxid, std::strin
 	uint256 hashBlock, datahash, commitmenttxid, ref_commitmenttxid, prevproposaltxid, ref_prevproposaltxid;
 	std::vector<uint8_t> srcpub, ref_srcpub, destpub, ref_destpub, arbitratorpk, ref_arbitratorpk;
 	int64_t payment, arbitratorfee, deposit;
-	std::string info, CCerror;
+	std::string info;
 	uint8_t proposaltype, ref_proposaltype, version, ref_version;
 	CCerror = "";
 
