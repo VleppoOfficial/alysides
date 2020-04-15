@@ -57,7 +57,7 @@ bool GetCommitmentInitialData(uint256 commitmenttxid, std::vector<uint8_t> &sell
 
 UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> buyer, std::vector<uint8_t> arbitrator, int64_t expiryTimeSec, int64_t arbitratorfee, int64_t prepayment, uint256 prevproposaltxid, uint256 refagreementtxid);
 UniValue CommitmentRequestUpdate(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 datahash, std::vector<uint8_t> newarbitrator, uint256 prevproposaltxid);
-UniValue CommitmentRequestCancel(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 datahash, uint64_t prepaymentcut, uint256 prevproposaltxid);
+UniValue CommitmentRequestClose(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 datahash, uint64_t prepaymentcut, uint256 prevproposaltxid);
 UniValue CommitmentCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid);
 UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid);
 
