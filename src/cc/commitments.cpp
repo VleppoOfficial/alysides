@@ -874,7 +874,7 @@ bool CompareProposals(CScript proposalopret, uint256 refproposaltxid, std::strin
 		return false;
 	}
 	std::cerr << "CompareProposals: fetching refproposal tx" << std::endl;
-	if (myGetTransaction(refproposaltxid, refproposaltx, hashBlock) == 0 || commitmenttx.vout.size() <= 0) {
+	if (myGetTransaction(refproposaltxid, refproposaltx, hashBlock) == 0 || refproposaltx.vout.size() <= 0) {
 		std::cerr << "GetCommitmentMembers: couldn't find previous proposal tx" << std::endl;
 		return false;
 	}
