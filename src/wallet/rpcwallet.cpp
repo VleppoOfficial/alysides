@@ -8060,11 +8060,6 @@ UniValue commitmentpropose(const UniValue& params, bool fHelp, const CPubKey& my
 		Unlock2NSPV(mypk);
         throw runtime_error("Data hash empty or invalid\n");
     }
-	/*std::vector<unsigned char> buyer = 0, arbitrator = 0;
-	if (params.size() >= 3)
-		buyer = ParseHex(params[2].get_str().c_str());
-	if (params.size() >= 4)
-		arbitrator = ParseHex(params[3].get_str().c_str());*/
 	std::vector<unsigned char> buyer(ParseHex(params[2].get_str().c_str()));
 	std::vector<unsigned char> arbitrator(ParseHex(params[3].get_str().c_str()));
 	prepayment = 0;
