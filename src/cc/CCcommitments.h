@@ -49,6 +49,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 int64_t IsCommitmentsVout(struct CCcontract_info *cp,const CTransaction& tx,int32_t v);
 bool GetAcceptedProposalOpRet(CTransaction tx, CScript &opret);
 bool ValidateProposalOpRet(CScript opret, std::string &CCerror);
+bool CompareProposals(CScript proposalopret, uint256 refproposaltxid, std::string &CCerror);
 bool IsProposalSpent(uint256 proposaltxid, uint256 &spendingtxid, uint8_t &spendingfuncid);
 bool GetCommitmentInitialData(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk, std::vector<uint8_t> &firstarbitratorpk, int64_t &firstarbitratorfee, int64_t &deposit, uint256 &firstdatahash, uint256 &refcommitmenttxid, std::string &firstinfo);
 
