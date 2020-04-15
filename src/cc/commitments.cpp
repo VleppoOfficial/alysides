@@ -1075,7 +1075,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	bHasArbitrator = CPK_arbitrator.IsFullyValid();
 	
 	// check if destpub & arbitrator pubkeys exist and are valid
-	/*if (!destpub.empty() && !bHasReceiver)
+	if (!destpub.empty() && !bHasReceiver)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Buyer pubkey invalid");
 	if (!arbitrator.empty() && !bHasArbitrator)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Arbitrator pubkey invalid");
@@ -1096,17 +1096,16 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 		deposit = CC_MARKER_VALUE;
 	}
 	
-	// additional checks are done using ValidateProposalOpRet*/
+	// additional checks are done using ValidateProposalOpRet
 	CScript opret = EncodeCommitmentProposalOpRet(COMMITMENTCC_VERSION,'p',std::vector<uint8_t>(mypk.begin(),mypk.end()),destpub,arbitrator,payment,arbitratorfee,deposit,datahash,refcommitmenttxid,prevproposaltxid,info);
-	/*if (!ValidateProposalOpRet(opret, CCerror))
+	if (!ValidateProposalOpRet(opret, CCerror))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror);
 	
 	// check prevproposaltxid if specified
-	if (prevproposaltxid != zeroid) {*/
+	if (prevproposaltxid != zeroid) {
 		if (myGetTransaction(prevproposaltxid,prevproposaltx,hashBlock)==0 || (numvouts=prevproposaltx.vout.size())<=0)
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "cant find specified previous proposal txid " << prevproposaltxid.GetHex());
 		DecodeCommitmentProposalOpRet(prevproposaltx.vout[numvouts-1].scriptPubKey,ref_version,ref_proposaltype,ref_srcpub,ref_destpub,ref_arbitrator,ref_payment,ref_arbitratorfee,ref_deposit,ref_datahash,ref_prevproposaltxid,ref_prevproposaltxid,ref_info);
-		/*
 		if (IsProposalSpent(prevproposaltxid, spendingtxid, spendingfuncid)) {
 			switch (spendingfuncid) {
 				case 'p':
@@ -1121,7 +1120,7 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 		}
 		if (!CompareProposals(opret, prevproposaltxid, CCerror))
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror << " txid: " << prevproposaltxid.GetHex());
-	}*/
+	}
 	
 	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 64) >= txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE) {
 		if (prevproposaltxid != zeroid) {
