@@ -1402,7 +1402,7 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 // RPCs - informational
 //===========================================================================
 
-UniValue CommitmentInfo(uint256 txid)
+UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 {
 	UniValue result(UniValue::VOBJ);
 	CPubKey mypk;

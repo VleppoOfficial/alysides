@@ -8213,7 +8213,7 @@ UniValue commitmentinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
         throw runtime_error(EVAL_COMMITMENTS);
     txid = Parseuint256((char *)params[0].get_str().c_str());
-    return(CommitmentInfo(txid));
+    return(CommitmentInfo(mypk, txid));
 }
 
 UniValue commitmentlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
