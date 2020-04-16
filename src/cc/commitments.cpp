@@ -201,6 +201,7 @@ uint8_t DecodeCommitmentDisputeResolveOpRet(CScript scriptPubKey, uint8_t &versi
 bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
 	CTransaction proposaltx;
+	CScript proposalopret;
 	int32_t numvins, numvouts;
 	uint256 hashBlock, datahash, commitmenttxid, proposaltxid, prevproposaltxid, spendingtxid;
 	std::vector<uint8_t> srcpub, destpub, arbitratorpk, origpubkey;
@@ -383,12 +384,15 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				*/
 				
 				// Getting the transaction data.
-				DecodeCommitmentSigningOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltxid);
+				if (!GetAcceptedProposalOpRet(tx, proposalopret))
+					return eval->Invalid("couldn't find proposal tx opret for 'c' tx!");
+				
+				/*DecodeCommitmentSigningOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltxid);
 				if (myGetTransaction(proposaltxid, proposaltx, hashBlock) == 0 || proposaltx.vout.size() <= 0)
-					return eval->Invalid("couldn't find proposaltx for 'c' tx!");
+					return eval->Invalid("couldn't find proposaltx for 'c' tx!");*/
 				
 				// Retrieving the proposal data tied to this transaction.
-				DecodeCommitmentProposalOpRet(proposaltx.vout[proposaltx.vout.size()-1].scriptPubKey, version, proposaltype, origpubkey, destpub, arbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info);
+				DecodeCommitmentProposalOpRet(proposalopret, version, proposaltype, origpubkey, destpub, arbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info);
 				
 				CPK_origpubkey = pubkey2pk(origpubkey);
 				CPK_dest = pubkey2pk(destpub);
@@ -397,7 +401,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				bHasArbitrator = CPK_arbitrator.IsValid();
 				
 				// Proposal data validation.
-				if (!ValidateProposalOpRet(proposaltx.vout[proposaltx.vout.size()-1].scriptPubKey, CCerror))
+				if (!ValidateProposalOpRet(proposalopret, CCerror))
 					return eval->Invalid(CCerror);
 				if (proposaltype != 'p')
 					return eval->Invalid("attempting to create 'c' tx for non-'p' proposal type!");
@@ -933,11 +937,6 @@ bool IsProposalSpent(uint256 proposaltxid, uint256 &spendingtxid, uint8_t &spend
 	return false;
 }
 
-/*
-IsDepositSpent (if it is spent, retrieves spendingtxid and spendingfuncid)
-or AddDepositInputs?
-*/
-
 // gets the data from the accepted proposal for the specified commitment txid
 // this is for "static" data like seller and client pubkeys. gathering "updateable" data like info, datahash etc are handled by different functions
 bool GetCommitmentInitialData(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk, std::vector<uint8_t> &firstarbitratorpk, int64_t &firstarbitratorfee, int64_t &deposit, uint256 &firstdatahash, uint256 &refcommitmenttxid, std::string &firstinfo)
@@ -963,8 +962,7 @@ bool GetCommitmentInitialData(uint256 commitmenttxid, std::vector<uint8_t> &sell
 	return true;
 }
 
-// gets the latest baton txid of a commitment
-// 
+// gets the latest update baton txid of a commitment
 bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint8_t &funcid)
 {
     int32_t vini, height, retcode;
@@ -1015,8 +1013,6 @@ bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint
 
 /*
 updateable data:
-	GetLatestCommitmentUpdate(commitmenttxid)
-		pretty much same thing as GetLatestTokenUpdate, gets latest update txid
 	GetCommitmentUpdateData(updatetxid)
 		takes a 'u' transaction, finds its 'p' transaction and gets the data from there:
 		info
@@ -1171,21 +1167,30 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 
 // commitmentrequestupdate - constructs a 'p' transaction, with the 'u' proposal type
 // This transaction will only be validated if commitmenttxid is specified. prevproposaltxid can be used to amend previous update requests.
-UniValue CommitmentRequestUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, uint256 datahash, std::vector<uint8_t> newarbitrator, uint256 prevproposaltxid)
+UniValue CommitmentRequestUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, std::string info, uint256 datahash, int64_t payment, uint256 prevproposaltxid, std::vector<uint8_t> newarbitrator, int64_t newarbitratorfee)
 {
-	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	CPubKey mypk;
-	
-	CTransaction prevproposaltx, refcommitmenttx;
+	CPubKey mypk, CPK_src, CPK_dest;
+	CTransaction proposaltx;
+	uint256 hashBlock, datahash, prevproposaltxid, spendingtxid;
+	std::vector<uint8_t> srcpub, destpub, arbitrator;
 	int32_t numvouts;
-	uint256 hashBlock;
+	int64_t payment, arbitratorfee, deposit;
+	std::string info;
+	bool bHasReceiver, bHasArbitrator;
+	uint8_t proposaltype, version, spendingfuncid, mypriv[32];
+	char mutualaddr[65];
 	
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
-	if(txfee == 0)
-		txfee = 10000;
-	mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
+	if (txfee == 0) txfee = CC_TXFEE;
+	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 	
-	//stuff
+	if (GetLatestCommitmentUpdate(commitmenttxid, spendingtxid, spendingfuncid))
+		std::cerr << "success" << std::endl;
+	
+	std::cerr << "updatetxid:" << spendingtxid.GetHex() << std::endl;
+	std::cerr << "updatefuncid:" << spendingfuncid << std::endl;
+	
 	// if newarbitrator is 0, maintain current arbitrator status
 	// don't allow swapping between no arbitrator <-> arbitrator
 	// only 1 update/cancel request per party, per commitment
@@ -1197,19 +1202,22 @@ UniValue CommitmentRequestUpdate(const CPubKey& pk, uint64_t txfee, uint256 comm
 // This transaction will only be validated if commitmenttxid is specified. prevproposaltxid can be used to amend previous cancel requests.
 UniValue CommitmentRequestClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, uint256 datahash, uint64_t depositcut, uint256 prevproposaltxid)
 {
-	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	CPubKey mypk;
-	
-	CTransaction prevproposaltx, refcommitmenttx;
+	CPubKey mypk, CPK_src, CPK_dest;
+	CTransaction proposaltx;
+	uint256 hashBlock, datahash, prevproposaltxid, spendingtxid;
+	std::vector<uint8_t> srcpub, destpub, arbitrator;
 	int32_t numvouts;
-	uint256 hashBlock;
+	int64_t payment, arbitratorfee, deposit;
+	std::string info;
+	bool bHasReceiver, bHasArbitrator;
+	uint8_t proposaltype, version, spendingfuncid, mypriv[32];
+	char mutualaddr[65];
 	
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
-	if(txfee == 0)
-		txfee = 10000;
-	mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
-	
-	//stuff
+	if (txfee == 0) txfee = CC_TXFEE;
+	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
+
 	// only 1 update/cancel request per party, per commitment
 	
 	CCERR_RESULT("commitmentscc",CCLOG_INFO,stream << "incomplete");

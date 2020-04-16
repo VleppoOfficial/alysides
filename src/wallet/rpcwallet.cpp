@@ -8146,6 +8146,64 @@ UniValue commitmentaccept(const UniValue& params, bool fHelp, const CPubKey& myp
     return(result);
 }
 
+UniValue commitmentrequestupdate(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    UniValue result(UniValue::VOBJ);
+	uint256 datahash, prevproposaltxid, commitmenttxid;
+	std::string info;
+	std::vector<unsigned char> arbitrator = 0;
+	int64_t payment, arbitratorfee;
+    if (fHelp || params.size() < 3 || params.size() > 7)
+        throw runtime_error("commitmentrequestupdate commitmenttxid info datahash [payment][prevproposaltxid][arbitrator][arbitratorfee]\n");
+    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    Lock2NSPV(mypk);
+	
+	commitmenttxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (commitmenttxid == zeroid) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Commitment id invalid\n");
+    }
+	info = params[1].get_str();
+    if (info.size() == 0 || info.size() > 2048) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Update request info must not be empty and up to 2048 characters\n");
+    }
+    datahash = Parseuint256((char *)params[2].get_str().c_str());
+	if (datahash == zeroid) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Data hash empty or invalid\n");
+    }
+	payment = 0;
+	if (params.size() >= 4) {
+		payment = atof((char *)params[3].get_str().c_str()) * COIN + 0.00000000499999;
+		if (payment < 0) {
+			Unlock2NSPV(mypk);
+			throw runtime_error("Payment must be positive\n");
+		}
+    }
+	prevproposaltxid = zeroid;
+	if (params.size() >= 5) {
+        prevproposaltxid = Parseuint256((char *)params[4].get_str().c_str());
+    }
+	if (params.size() >= 6) {
+		arbitrator = ParseHex(params[5].get_str().c_str());
+	}
+	arbitratorfee = 0;
+	if (params.size() == 7)     {
+        arbitratorfee = atof((char *)params[6].get_str().c_str()) * COIN + 0.00000000499999;
+        if (arbitratorfee < 0)    {
+			Unlock2NSPV(mypk);
+			throw runtime_error("Arbitrator fee must be positive\n");
+		}
+    }
+	result = CommitmentRequestUpdate(mypk, 0, commitmenttxid, info, datahash, payment, prevproposaltxid, arbitrator, arbitratorfee);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    Unlock2NSPV(mypk);
+    return(result);
+}
+
 UniValue commitmentlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     if ( fHelp || params.size() > 0 )

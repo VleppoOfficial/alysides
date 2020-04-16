@@ -323,6 +323,7 @@ extern UniValue commitmentaddress(const UniValue& params, bool fHelp, const CPub
 extern UniValue commitmentpropose(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue commitmentcloseproposal(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue commitmentaccept(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue commitmentrequestupdate(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue commitmentlist(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue exchangeaddress(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue faucetfund(const UniValue& params, bool fHelp, const CPubKey& mypk);
