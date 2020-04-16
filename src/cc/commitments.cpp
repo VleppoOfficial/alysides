@@ -1202,7 +1202,7 @@ UniValue CommitmentRequestUpdate(const CPubKey& pk, uint64_t txfee, uint256 comm
 UniValue CommitmentRequestClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, uint256 datahash, uint64_t depositcut, uint256 prevproposaltxid)
 {
 	CPubKey mypk, CPK_src, CPK_dest;
-	CTransaction proposaltx;
+	/*CTransaction proposaltx;
 	uint256 hashBlock, datahash, prevproposaltxid, spendingtxid;
 	std::vector<uint8_t> srcpub, destpub, arbitrator;
 	int32_t numvouts;
@@ -1210,7 +1210,7 @@ UniValue CommitmentRequestClose(const CPubKey& pk, uint64_t txfee, uint256 commi
 	std::string info;
 	bool bHasReceiver, bHasArbitrator;
 	uint8_t proposaltype, version, spendingfuncid, mypriv[32];
-	char mutualaddr[65];
+	char mutualaddr[65];*/
 	
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
