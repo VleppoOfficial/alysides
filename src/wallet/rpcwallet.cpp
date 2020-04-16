@@ -8210,8 +8210,8 @@ UniValue commitmentinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
     uint256 txid;
     if ( fHelp || params.size() != 1 )
         throw runtime_error("commitmentinfo txid\n");
-    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
-        throw runtime_error(EVAL_COMMITMENTS);
+    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
     txid = Parseuint256((char *)params[0].get_str().c_str());
     return(CommitmentInfo(mypk, txid));
 }
