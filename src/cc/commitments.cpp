@@ -1171,11 +1171,10 @@ UniValue CommitmentRequestUpdate(const CPubKey& pk, uint64_t txfee, uint256 comm
 {
 	CPubKey mypk, CPK_src, CPK_dest;
 	CTransaction proposaltx;
-	uint256 hashBlock, datahash, prevproposaltxid, spendingtxid;
+	uint256 hashBlock, spendingtxid;
 	std::vector<uint8_t> srcpub, destpub, arbitrator;
 	int32_t numvouts;
-	int64_t payment, arbitratorfee, deposit;
-	std::string info;
+	int64_t arbitratorfee, deposit;
 	bool bHasReceiver, bHasArbitrator;
 	uint8_t proposaltype, version, spendingfuncid, mypriv[32];
 	char mutualaddr[65];
