@@ -60,7 +60,7 @@ UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid);
 UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid);
 
-UniValue CommitmentInfo(uint256 txid);
+UniValue CommitmentInfo(const CPubKey& pk, uint256 txid);
 UniValue CommitmentList();
 
 #endif
