@@ -424,7 +424,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				else if (ConstrainVout(tx.vout[2], 1, depositaddr, depositval) == 0)
 					return eval->Invalid("vout.2 must be deposit to CC address!");
 				else if (payment > 0 && ConstrainVout(tx.vout[3], 0, srcaddr, payment) == 0)
-					return eval->Invalid("vout.3 must be payment to srcaddr when payment defined!");
+					return eval->Invalid("vout.3 must be normal payment to srcaddr when payment defined!");
 				if (numvins < 3)
 					return eval->Invalid("not enough vins for 'c' tx!");
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
@@ -446,32 +446,6 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				}
 				
 				break;
-				///		- Checking if our inputs/outputs are correct.
-				/*
-						check vout0:
-							does it point to the commitments global address?
-							is it the correct value?
-						check vout1:
-							does vout1 point to a 1of2 address between initiator and receiver?
-								does initiatorpubkey point to the same privkey as the initiator's address?
-								does receiverpubkey point to the same privkey as the receiver's address?
-							is the value correct?
-						check vout2:
-							does vout2 point to a 1of2 address between receiver and arbitrator?
-								does receiverpubkey point to the same privkey as the receiver's address?
-								does arbitratorpubkey point to the same privkey as the arbitrator's address?
-							is the value equal to the deposit specified in the proposal opret?
-						check vout3:
-							is it a normal output?
-							does vout3 point to the initiator's address?
-							is the vout3 value equal to the payment specified in the proposal opret?
-						check vin1:
-							does vin1 point to the proposal's marker?
-						check vin2:
-							does vin2 point to the proposal's response?
-						Do not allow any additional CC vins.
-						break;
-				*/	
 			case 'u':
 				/*
 				contract update:
@@ -1337,7 +1311,7 @@ UniValue CommitmentCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 prop
 // if txid opret has the 'u' or 't' proposal type, will create a 'u' transaction (update contract)
 UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid)
 {
-	CPubKey mypk, CPK_src, CPK_dest;
+	CPubKey mypk, CPK_src, CPK_dest, CPK_arbitrator;
 	CTransaction proposaltx;
 	uint256 hashBlock, datahash, prevproposaltxid, spendingtxid;
 	std::vector<uint8_t> srcpub, destpub, arbitrator;
