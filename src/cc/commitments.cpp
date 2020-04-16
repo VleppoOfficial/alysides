@@ -16,21 +16,16 @@
 #include "CCcommitments.h"
 
 /*
-Put all notes here!
 
-don't allow swapping between no arbitrator <-> arbitrator
-version numbers should be reset after contract acceptance
-keep closed proposal markers on!
-	
 Commitments RPCs:
 
-	commitmentpropose (info datahash destpub arbitrator [arbitratorfee][deposit][prevproposaltxid][refcommitmenttxid])
-	commitmentrequestupdate(commitmenttxid info datahash [newarbitrator][prevproposaltxid])
-	commitmentrequestcancel(commitmenttxid info datahash [depositsplit][prevproposaltxid])
+	commitmentcreate (info datahash destpub arbitrator [arbitratorfee][deposit][prevproposaltxid][refcommitmenttxid])
+	commitmentupdate(commitmenttxid info datahash [newarbitrator][prevproposaltxid])
+	commitmentclose(commitmenttxid info datahash [depositsplit][prevproposaltxid])
 	Proposal creation
 	
 	commitmentaccept(proposaltxid)
-	commitmentcloseproposal(proposaltxid message)
+	commitmentcancelproposal(proposaltxid message)
 	Proposal response
 	
 	commitmentdispute(commitmenttxid disputetype [disputehash])
@@ -59,6 +54,7 @@ uint8_t DecodeCommitmentOpRet(const CScript scriptPubKey)
 	uint256 dummyhash;
 	std::string dummyinfo;
 	uint8_t evalcode, funcid, *script, dummytype;
+	bool dummybool;
 	GetOpReturnData(scriptPubKey, vopret);
 	script = (uint8_t *)vopret.data();
 	if(script != NULL && vopret.size() > 2) {
@@ -76,8 +72,14 @@ uint8_t DecodeCommitmentOpRet(const CScript scriptPubKey)
 			return DecodeCommitmentProposalCloseOpRet(scriptPubKey, dummytype, dummyhash, dummypk);
 		case 'c':
 			return DecodeCommitmentSigningOpRet(scriptPubKey, dummytype, dummyhash);
-		//case 'whatever':
-			//insert new cases here
+		case 'u':
+			return DecodeCommitmentUpdateOpRet(scriptPubKey, dummytype, dummyhash, dummyhash);
+		case 's':
+			return DecodeCommitmentCloseOpRet(scriptPubKey, dummytype, dummyhash, dummyhash, dummyamount, dummyamount);
+		case 'd':
+			return DecodeCommitmentDisputeOpRet(scriptPubKey, dummytype, dummyhash, dummyhash, dummypk);
+		case 'r':
+			return DecodeCommitmentDisputeResolveOpRet(scriptPubKey, dummytype, dummyhash, dummyhash, dummybool);
 		default:
 			LOGSTREAM((char *)"commitmentscc", CCLOG_DEBUG1, stream << "DecodeCommitmentOpRet() illegal funcid=" << (int)funcid << std::endl);
 			return (uint8_t)0;
@@ -91,7 +93,6 @@ uint8_t DecodeCommitmentOpRet(const CScript scriptPubKey)
 CScript EncodeCommitmentProposalOpRet(uint8_t version, uint8_t proposaltype, std::vector<uint8_t> srcpub, std::vector<uint8_t> destpub, std::vector<uint8_t> arbitratorpk, int64_t payment, int64_t arbitratorfee, int64_t depositval, uint256 datahash, uint256 commitmenttxid, uint256 prevproposaltxid, std::string info)
 {
 	CScript opret; uint8_t evalcode = EVAL_COMMITMENTS, funcid = 'p';
-	proposaltype = 'p'; //temporary
 	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << proposaltype << srcpub << destpub << arbitratorpk << payment << arbitratorfee << depositval << datahash << commitmenttxid << prevproposaltxid << info);
 	return(opret);
 }
@@ -164,32 +165,32 @@ uint8_t DecodeCommitmentCloseOpRet(CScript scriptPubKey, uint8_t &version, uint2
 	return(0);
 }
 
-CScript EncodeCommitmentDisputeOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputehash)
+CScript EncodeCommitmentDisputeOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputehash, std::vector<uint8_t> arbitratorpk)
 {
 	CScript opret; uint8_t evalcode = EVAL_COMMITMENTS, funcid = 'd';
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << disputehash);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << disputehash << arbitratorpk);
 	return(opret);
 }
-uint8_t DecodeCommitmentDisputeOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputehash)
+uint8_t DecodeCommitmentDisputeOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputehash, std::vector<uint8_t> &arbitratorpk)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> disputehash) != 0 && evalcode == EVAL_COMMITMENTS)
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> disputehash; ss >> arbitratorpk) != 0 && evalcode == EVAL_COMMITMENTS)
 		return(funcid);
 	return(0);
 }
 
-CScript EncodeCommitmentDisputeResolveOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputetxid, std::vector<uint8_t> rewardedpubkey)
+CScript EncodeCommitmentDisputeResolveOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputetxid, bool rewardsender)
 {
 	CScript opret; uint8_t evalcode = EVAL_COMMITMENTS, funcid = 'r';
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << disputetxid << rewardedpubkey);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << disputetxid << rewardsender);
 	return(opret);
 }
-uint8_t DecodeCommitmentDisputeResolveOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputetxid, std::vector<uint8_t> &rewardedpubkey)
+uint8_t DecodeCommitmentDisputeResolveOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputetxid, bool &rewardsender)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> disputetxid; ss >> rewardedpubkey) != 0 && evalcode == EVAL_COMMITMENTS)
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> disputetxid; ss >> rewardsender) != 0 && evalcode == EVAL_COMMITMENTS)
 		return(funcid);
 	return(0);
 }
@@ -218,13 +219,8 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 	
     if (numvouts < 1)
         return eval->Invalid("no vouts");
-	
 	CCOpretCheck(eval,tx,true,true,true);
     CCExactAmounts(eval,tx,CC_TXFEE);
-    //if (ChannelsExactAmounts(cp,eval,tx) == false )
-    //{
-    //    return eval->Invalid("invalid channel inputs vs. outputs!");            
-    //}
 	
 	if ((funcid = DecodeCommitmentOpRet(tx.vout[numvouts-1].scriptPubKey)) != 0) {
 		GetCCaddress(cp, markeraddr, GetUnspendable(cp, NULL));
@@ -280,14 +276,14 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				if (numvins < 3)
 					return eval->Invalid("not enough vins for 'p' tx in CommitmentsValidate!");
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
-					return eval->Invalid("vin.0 must be normal for commitmentpropose!");
+					return eval->Invalid("vin.0 must be normal for commitmentcreate!");
 				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
-					return eval->Invalid("vin.1 must be CC for commitmentpropose!");
+					return eval->Invalid("vin.1 must be CC for commitmentcreate!");
 				// does vin1 and vin2 point to the previous proposal's vout0 and vout1? (if it doesn't, the tx might have no previous proposal, in that case it shouldn't have CC inputs)
 				else if (tx.vin[1].prevout.hash != prevproposaltxid || tx.vin[1].prevout.n != 0)
 					return eval->Invalid("vin.1 tx hash doesn't match prevproposaltxid!");
 				else if (IsCCInput(tx.vin[2].scriptSig) == 0)
-					return eval->Invalid("vin.2 must be CC for commitmentpropose!");
+					return eval->Invalid("vin.2 must be CC for commitmentcreate!");
 				else if (tx.vin[2].prevout.hash != prevproposaltxid || tx.vin[2].prevout.n != 1)
 					return eval->Invalid("vin.2 tx hash doesn't match prevproposaltxid!");
 				
@@ -457,8 +453,10 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				vin.0 normal input
 				vin.1 last update baton
 				vin.2 latest proposal by other party
+				vin.3 deposit
 				vout.0 next update baton
-				vout.1 payment (optional)
+				vout.1 deposit to (new) 1of2 address
+				vout.2 payment (optional)
 				vout.n-2 change
 				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'u' commitmenttxid proposaltxid
 				*/
@@ -1076,8 +1074,8 @@ how tf to get these???
 // RPCs - tx creation
 //===========================================================================
 
-// commitmentpropose - constructs a 'p' transaction, with the 'p' proposal type
-UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, uint256 datahash, std::vector<uint8_t> destpub, std::vector<uint8_t> arbitrator, int64_t payment, int64_t arbitratorfee, int64_t deposit, uint256 prevproposaltxid, uint256 refcommitmenttxid)
+// commitmentcreate - constructs a 'p' transaction, with the 'p' proposal type
+UniValue CommitmentCreate(const CPubKey& pk, uint64_t txfee, std::string info, uint256 datahash, std::vector<uint8_t> destpub, std::vector<uint8_t> arbitrator, int64_t payment, int64_t arbitratorfee, int64_t deposit, uint256 prevproposaltxid, uint256 refcommitmenttxid)
 {
 	CPubKey mypk, CPK_src, CPK_dest, CPK_arbitrator;
 	CTransaction prevproposaltx;
@@ -1165,9 +1163,9 @@ UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string info, 
 	CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
 }
 
-// commitmentrequestupdate - constructs a 'p' transaction, with the 'u' proposal type
+// commitmentupdate - constructs a 'p' transaction, with the 'u' proposal type
 // This transaction will only be validated if commitmenttxid is specified. prevproposaltxid can be used to amend previous update requests.
-UniValue CommitmentRequestUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, std::string info, uint256 datahash, int64_t payment, uint256 prevproposaltxid, std::vector<uint8_t> newarbitrator, int64_t newarbitratorfee)
+UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, std::string info, uint256 datahash, int64_t payment, uint256 prevproposaltxid, std::vector<uint8_t> newarbitrator, int64_t newarbitratorfee)
 {
 	CPubKey mypk, CPK_src, CPK_dest;
 	CTransaction proposaltx;
@@ -1197,9 +1195,9 @@ UniValue CommitmentRequestUpdate(const CPubKey& pk, uint64_t txfee, uint256 comm
 	CCERR_RESULT("commitmentscc",CCLOG_INFO,stream << "incomplete");
 }
 
-// commitmentrequestclose - constructs a 'p' transaction, with the 't' proposal type
+// commitmentclose - constructs a 'p' transaction, with the 't' proposal type
 // This transaction will only be validated if commitmenttxid is specified. prevproposaltxid can be used to amend previous cancel requests.
-UniValue CommitmentRequestClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, uint256 datahash, uint64_t depositcut, uint256 prevproposaltxid)
+UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, uint256 datahash, uint64_t depositcut, uint256 prevproposaltxid)
 {
 	CPubKey mypk, CPK_src, CPK_dest;
 	/*CTransaction proposaltx;
@@ -1404,7 +1402,29 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 // RPCs - informational
 //===========================================================================
 
+UniValue CommitmentInfo(uint256 txid)
+{
+	UniValue result(UniValue::VOBJ);
+	CPubKey mypk;
+	CTransaction tx;
+	uint256 hashBlock;
+	std::vector<uint8_t> srcpub, destpub, arbitrator;
+	int32_t numvouts;
+	int64_t payment, arbitratorfee, deposit;
+	bool bHasReceiver, bHasArbitrator;
+	
+	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
+	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
+	
+	if (myGetTransaction(txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
+    (DecodeCommitmentOpRet(tx.vout[numvouts-1].scriptPubKey) != 0)) { 
+		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "win! :D");
+	}
+	CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "no win :(");
+}
 /*
+version numbers should be reset after contract acceptance
+
 UniValue CommitmentInfo(uint256 txid)
 
 	txid

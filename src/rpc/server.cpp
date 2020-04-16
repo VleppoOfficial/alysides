@@ -574,20 +574,20 @@ static const CRPCCommand vRPCCommands[] =
     { "tokens",       "tokenfillask",     &tokenfillask,      true },
     //{ "tokens",       "tokenfillswap",    &tokenfillswap,     true },
     { "tokens",       "tokenconvert", &tokenconvert, true },
-	
-	// Vleppo exclusive token rpcs
+
 	{ "tokens",       "tokenupdate",      &tokenupdate,       true },
 	{ "tokens",       "tokenviewupdates", &tokenviewupdates,  true },
 	{ "tokens",       "tokenowners", 	  &tokenowners,       true },
 	{ "tokens",       "tokeninventory",   &tokeninventory,    true },
 
 	// commitments
-	{ "commitments",   "commitmentpropose", &commitmentpropose,  true },
-	{ "commitments",   "commitmentcloseproposal", &commitmentcloseproposal,  true },
-	{ "commitments",   "commitmentaccept",  &commitmentaccept,   true },
-	{ "commitments",   "commitmentrequestupdate", &commitmentrequestupdate,  true }, 
-	{ "commitments",   "commitmentaddress", &commitmentaddress,  true },
-	{ "commitments",   "commitmentlist",    &commitmentlist,     true },
+	{ "commitments",  "commitmentcreate", &commitmentcreate, true },
+	{ "commitments",  "commitmentcloseproposal", &commitmentcloseproposal, true },
+	{ "commitments",  "commitmentaccept",  &commitmentaccept,  true },
+	{ "commitments",  "commitmentupdate", &commitmentupdate, true }, 
+	{ "commitments",  "commitmentaddress", &commitmentaddress, true },
+	{ "commitments",  "commitmentinfo",	   &commitmentinfo,	   true },
+	{ "commitments",  "commitmentlist",    &commitmentlist,    true },
 	
 	// exchanges
 	{ "exchanges",  "exchangeaddress",&exchangeaddress, true },

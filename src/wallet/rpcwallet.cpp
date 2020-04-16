@@ -8038,14 +8038,14 @@ UniValue commitmentaddress(const UniValue& params, bool fHelp, const CPubKey& my
     return(CCaddress(cp,(char *)"Commitments",pubkey));
 }
 
-UniValue commitmentpropose(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue commitmentcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 	uint256 datahash, prevproposaltxid, refcommitmenttxid;
 	std::string info;
 	int64_t prepayment, arbitratorfee, deposit;
     if (fHelp || params.size() < 4 || params.size() > 9)
-        throw runtime_error("commitmentpropose info datahash buyer arbitrator [prepayment][arbitratorfee][deposit][prevproposaltxid][refcommitmenttxid]\n");
+        throw runtime_error("commitmentcreate info datahash buyer arbitrator [prepayment][arbitratorfee][deposit][prevproposaltxid][refcommitmenttxid]\n");
     if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
@@ -8093,7 +8093,7 @@ UniValue commitmentpropose(const UniValue& params, bool fHelp, const CPubKey& my
 	if (params.size() == 9)     {
         refcommitmenttxid = Parseuint256((char *)params[8].get_str().c_str());
     }
-	result = CommitmentPropose(mypk, 0, info, datahash, buyer, arbitrator, prepayment, arbitratorfee, deposit, prevproposaltxid, refcommitmenttxid);
+	result = CommitmentCreate(mypk, 0, info, datahash, buyer, arbitrator, prepayment, arbitratorfee, deposit, prevproposaltxid, refcommitmenttxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
@@ -8146,7 +8146,7 @@ UniValue commitmentaccept(const UniValue& params, bool fHelp, const CPubKey& myp
     return(result);
 }
 
-UniValue commitmentrequestupdate(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue commitmentupdate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 	uint256 datahash, prevproposaltxid, commitmenttxid;
@@ -8154,7 +8154,7 @@ UniValue commitmentrequestupdate(const UniValue& params, bool fHelp, const CPubK
 	std::vector<unsigned char> arbitrator;
 	int64_t payment, arbitratorfee;
     if (fHelp || params.size() < 3 || params.size() > 7)
-        throw runtime_error("commitmentrequestupdate commitmenttxid info datahash [payment][prevproposaltxid][arbitrator][arbitratorfee]\n");
+        throw runtime_error("commitmentupdate commitmenttxid info datahash [payment][prevproposaltxid][arbitrator][arbitratorfee]\n");
     if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
@@ -8198,11 +8198,22 @@ UniValue commitmentrequestupdate(const UniValue& params, bool fHelp, const CPubK
 			throw runtime_error("Arbitrator fee must be positive\n");
 		}
     }
-	result = CommitmentRequestUpdate(mypk, 0, commitmenttxid, info, datahash, payment, prevproposaltxid, arbitrator, arbitratorfee);
+	result = CommitmentUpdate(mypk, 0, commitmenttxid, info, datahash, payment, prevproposaltxid, arbitrator, arbitratorfee);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
     return(result);
+}
+
+UniValue commitmentinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    uint256 txid;
+    if ( fHelp || params.size() != 1 )
+        throw runtime_error("commitmentinfo txid\n");
+    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
+        throw runtime_error(EVAL_COMMITMENTS);
+    txid = Parseuint256((char *)params[0].get_str().c_str());
+    return(CommitmentInfo(txid));
 }
 
 UniValue commitmentlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
