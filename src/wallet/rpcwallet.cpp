@@ -8151,7 +8151,7 @@ UniValue commitmentrequestupdate(const UniValue& params, bool fHelp, const CPubK
     UniValue result(UniValue::VOBJ);
 	uint256 datahash, prevproposaltxid, commitmenttxid;
 	std::string info;
-	std::vector<unsigned char> arbitrator = 0;
+	std::vector<unsigned char> arbitrator;
 	int64_t payment, arbitratorfee;
     if (fHelp || params.size() < 3 || params.size() > 7)
         throw runtime_error("commitmentrequestupdate commitmenttxid info datahash [payment][prevproposaltxid][arbitrator][arbitratorfee]\n");
@@ -8186,6 +8186,7 @@ UniValue commitmentrequestupdate(const UniValue& params, bool fHelp, const CPubK
 	if (params.size() >= 5) {
         prevproposaltxid = Parseuint256((char *)params[4].get_str().c_str());
     }
+	arbitrator.clear();
 	if (params.size() >= 6) {
 		arbitrator = ParseHex(params[5].get_str().c_str());
 	}
