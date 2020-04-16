@@ -582,7 +582,7 @@ static const CRPCCommand vRPCCommands[] =
 
 	// commitments
 	{ "commitments",  "commitmentcreate", &commitmentcreate, true },
-	{ "commitments",  "commitmentcloseproposal", &commitmentcloseproposal, true },
+	{ "commitments",  "commitmentstopproposal", &commitmentstopproposal, true },
 	{ "commitments",  "commitmentaccept",  &commitmentaccept,  true },
 	{ "commitments",  "commitmentupdate", &commitmentupdate, true }, 
 	{ "commitments",  "commitmentaddress", &commitmentaddress, true },

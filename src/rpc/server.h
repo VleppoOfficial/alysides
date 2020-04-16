@@ -321,7 +321,7 @@ extern UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& m
 extern UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue commitmentaddress(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue commitmentcreate(const UniValue& params, bool fHelp, const CPubKey& mypk);
-extern UniValue commitmentcloseproposal(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue commitmentstopproposal(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue commitmentaccept(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue commitmentupdate(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue commitmentinfo(const UniValue& params, bool fHelp, const CPubKey& mypk);

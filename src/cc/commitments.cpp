@@ -351,9 +351,9 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				if (numvins < 2)
 					return eval->Invalid("not enough vins for 't' tx!");
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
-					return eval->Invalid("vin.0 must be normal for commitmentcloseproposal!");
+					return eval->Invalid("vin.0 must be normal for commitmentstopproposal!");
 				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
-					return eval->Invalid("vin.1 must be CC for commitmentcloseproposal!");
+					return eval->Invalid("vin.1 must be CC for commitmentstopproposal!");
 				// does vin1 point to the previous proposal's vout1?
 				else if (tx.vin[1].prevout.hash != proposaltxid || tx.vin[1].prevout.n != 1)
 					return eval->Invalid("vin.1 tx hash doesn't match proposaltxid!");
@@ -1220,9 +1220,9 @@ UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttx
 	CCERR_RESULT("commitmentscc",CCLOG_INFO,stream << "incomplete");
 }
 
-// commitmentcloseproposal - constructs a 't' transaction and spends the specified 'p' transaction
+// commitmentstopproposal - constructs a 't' transaction and spends the specified 'p' transaction
 // can be done by the proposal initiator, as well as the receiver if they are able to accept the proposal.
-UniValue CommitmentCloseProposal(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid)
+UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid)
 {
 	CPubKey mypk, CPK_src, CPK_dest;
 	CTransaction proposaltx;

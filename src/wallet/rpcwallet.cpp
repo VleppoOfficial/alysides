@@ -8100,12 +8100,12 @@ UniValue commitmentcreate(const UniValue& params, bool fHelp, const CPubKey& myp
     return(result);
 }
 
-UniValue commitmentcloseproposal(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue commitmentstopproposal(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 	uint256 proposaltxid;
     if (fHelp || params.size() != 1)
-        throw runtime_error("commitmentcloseproposal proposaltxid\n");
+        throw runtime_error("commitmentstopproposal proposaltxid\n");
     if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
@@ -8116,7 +8116,7 @@ UniValue commitmentcloseproposal(const UniValue& params, bool fHelp, const CPubK
         throw runtime_error("Proposal transaction id invalid\n");
     }
 	
-	result = CommitmentCloseProposal(mypk, 0, proposaltxid);
+	result = CommitmentStopProposal(mypk, 0, proposaltxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
