@@ -372,7 +372,8 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				/*
 				contract creation:
 				vin.0 normal input
-				vin.1 latest proposal by seller
+				vin.1 proposal marker
+				vin.2 proposal baton
 				vout.0 marker
 				vout.1 update/dispute baton
 				vout.2 deposit / commitment completion baton
@@ -396,7 +397,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				bHasArbitrator = CPK_arbitrator.IsValid();
 				
 				// Proposal data validation.
-				if (!ValidateProposalOpRet(proposaltx.vout[numvouts-1].scriptPubKey, CCerror))
+				if (!ValidateProposalOpRet(proposaltx.vout[proposaltx.vout.size()-1].scriptPubKey, CCerror))
 					return eval->Invalid(CCerror);
 				if (proposaltype != 'p')
 					return eval->Invalid("attempting to create 'c' tx for non-'p' proposal type!");
