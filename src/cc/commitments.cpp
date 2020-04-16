@@ -356,7 +356,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
 					return eval->Invalid("vin.0 must be normal for commitmentcloseproposal!");
 				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
-					return eval->Invalid("vin.1 must be CC for commitmentpropose!");
+					return eval->Invalid("vin.1 must be CC for commitmentcloseproposal!");
 				// does vin1 point to the previous proposal's vout1?
 				else if (tx.vin[1].prevout.hash != proposaltxid || tx.vin[1].prevout.n != 1)
 					return eval->Invalid("vin.1 tx hash doesn't match proposaltxid!");
@@ -385,7 +385,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				// Getting the transaction data.
 				DecodeCommitmentSigningOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltxid);
 				if (myGetTransaction(proposaltxid, proposaltx, hashBlock) == 0 || proposaltx.vout.size() <= 0)
-					return eval->Invalid("couldn't find proposaltx for 't' tx!");
+					return eval->Invalid("couldn't find proposaltx for 'c' tx!");
 				
 				// Retrieving the proposal data tied to this transaction.
 				DecodeCommitmentProposalOpRet(proposaltx.vout[proposaltx.vout.size()-1].scriptPubKey, version, proposaltype, origpubkey, destpub, arbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info);
