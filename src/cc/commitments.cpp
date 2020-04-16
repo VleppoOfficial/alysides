@@ -408,7 +408,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				if (TotalPubkeyNormalInputs(tx, CPK_dest) == 0 && TotalPubkeyCCInputs(tx, CPK_dest) == 0)
 					return eval->Invalid("found no normal or cc inputs signed by proposal receiver pubkey!");
 				
-				GetCCaddress(cp, srcaddr, CPK_origpubkey);
+				Getscriptaddress(srcaddr, CScript() << ParseHex(HexStr(CPK_origpubkey)) << OP_CHECKSIG);
 				GetCCaddress1of2(cp, destaddr, CPK_origpubkey, CPK_dest);
 				if (bHasArbitrator)
 					GetCCaddress1of2(cp, depositaddr, CPK_dest, CPK_arbitrator);
@@ -1369,14 +1369,14 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 				Myprivkey(mypriv);
 				CCaddr1of2set(cp, CPK_src, CPK_dest, mypriv, mutualaddr);
 				mtx.vout.push_back(MakeCC1vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, GetUnspendable(cp, NULL))); // vout.0 marker
-				mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, mypk, CPK_src)); // vout.1 baton / update log
+				mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, CPK_src, mypk)); // vout.1 baton / update log
 				if (bHasArbitrator) {
 					mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, deposit, mypk, CPK_arbitrator)); // vout.2 deposit (can be spent by client & arbitrator)
 				}
 				else
 					mtx.vout.push_back(MakeCC1vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, mypk)); // vout.2 contract completion marker (no arbitrator)
 				if (payment > 0)
-					mtx.vout.push_back(CTxOut(payment,CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.4 payment (optional)
+					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.4 payment (optional)
 				return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentSigningOpRet(COMMITMENTCC_VERSION, proposaltxid));
 			}
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
