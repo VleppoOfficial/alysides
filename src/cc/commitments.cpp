@@ -675,67 +675,6 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 // Helper functions
 //===========================================================================
 
-int64_t IsCommitmentsVout(struct CCcontract_info *cp,const CTransaction& tx,int32_t v)
-{
-	char destaddr[64];
-	if( tx.vout[v].scriptPubKey.IsPayToCryptoCondition() != 0 )
-	{
-		if( Getscriptaddress(destaddr,tx.vout[v].scriptPubKey) > 0 && strcmp(destaddr,cp->unspendableCCaddr) == 0 )
-			return(tx.vout[v].nValue);
-	}
-	return(0);
-}
-
-/*
-bool ChannelsExactAmounts(struct CCcontract_info *cp,Eval* eval,const CTransaction &tx)
-{
-    uint256 txid,param3,tokenid;
-    CPubKey srcpub,destpub; uint16_t confirmation;
-    int32_t param1,numvouts; int64_t param2; uint8_t funcid,version;
-    CTransaction vinTx; uint256 hashBlock; int64_t inputs=0,outputs=0;
-
-    if ((numvouts=tx.vout.size()) > 0 && (funcid=DecodeChannelsOpRet(tx.vout[numvouts-1].scriptPubKey, tokenid, txid, srcpub, destpub, param1, param2, param3, version, confirmation))!=0)
-    {        
-        switch (funcid)
-        {
-            case 'O':
-                return (true);
-            case 'P':
-                if ( eval->GetTxUnconfirmed(tx.vin[1].prevout.hash,vinTx,hashBlock) == 0 )
-                    return eval->Invalid("cant find vinTx");
-                inputs = vinTx.vout[tx.vin[1].prevout.n].nValue;
-                outputs = tx.vout[0].nValue + tx.vout[3].nValue; 
-                break;
-            case 'C':
-                if ( eval->GetTxUnconfirmed(tx.vin[1].prevout.hash,vinTx,hashBlock) == 0 )
-                    return eval->Invalid("cant find vinTx");
-                inputs = vinTx.vout[tx.vin[1].prevout.n].nValue;
-                outputs = tx.vout[0].nValue; 
-                break;
-            case 'R':
-                if ( eval->GetTxUnconfirmed(tx.vin[1].prevout.hash,vinTx,hashBlock) == 0 )
-                    return eval->Invalid("cant find vinTx");
-                inputs = vinTx.vout[tx.vin[1].prevout.n].nValue;
-                outputs = tx.vout[2].nValue; 
-                break;   
-            default:
-                return (false);
-        }
-        if ( inputs != outputs )
-        {
-            LOGSTREAM("channelscc",CCLOG_INFO, stream << "inputs " << inputs << " vs outputs " << outputs << std::endl);            
-            return eval->Invalid("mismatched inputs != outputs");
-        } 
-        else return (true);       
-    }
-    else
-    {
-        return eval->Invalid("invalid op_return data");
-    }
-    return(false);
-}
-*/
-
 // gets the opret object of a proposal transaction that was or is being accepted by its receiver. 
 // use this to extract data for validating "accept" txes like 'c', 'u' or 's'
 // takes a CTransaction as input, returns true if its proposal opret was returned succesfully
@@ -1022,6 +961,56 @@ bool GetCommitmentInitialData(uint256 commitmenttxid, std::vector<uint8_t> &sell
 		return false;	
 	}
 	return true;
+}
+
+// gets the latest baton txid of a commitment
+// 
+bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint8_t &funcid)
+{
+    int32_t vini, height, retcode;
+    std::vector<std::pair<uint8_t, vscript_t>> oprets;
+	std::vector<CPubKey> voutPubkeysDummy;
+    uint256 batontxid, sourcetxid = commitmenttxid, hashBlock;
+    CTransaction commitmenttx, batontx;
+    uint8_t evalcode;
+
+    // special handling for commitment tx - baton vout is vout1
+	if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) == 0 || commitmenttx.vout.size() <= 0) {
+		std::cerr << "GetLatestCommitmentUpdate: couldn't find commitment tx" << std::endl;
+		return false;
+	}
+	if (DecodeCommitmentOpRet(commitmenttx.vout[commitmenttx.vout.size() - 1].scriptPubKey) != 'c') {
+		std::cerr << "GetLatestCommitmentUpdate: commitment tx is not a contract signing tx" << std::endl;
+		return false;	
+	}
+	if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) != 0) {
+		latesttxid = commitmenttxid; // no updates, return commitmenttxid
+		funcid = 'c';
+		return true;	
+	}
+	else if (!(myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 && 
+	(funcid = DecodeCommitmentOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey) == 'u') || funcid == 's' || funcid == 'd' || funcid == 'r') &&
+	txBaton.vout[2].nValue == CC_MARKER_VALUE) {
+		std::cerr << "GetLatestCommitmentUpdate: found first update, but it has incorrect funcid" << std::endl;
+		return false;	
+	}
+	
+	sourcetxid = batontxid;
+
+    // baton vout should be vout0 from now on
+    while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0) {
+        if (myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 &&             
+        batontx.vout[0].nValue == CC_MARKER_VALUE &&
+        (funcid = DecodeCommitmentOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey) == 'u') || funcid == 's' || funcid == 'd' || funcid == 'r') {
+            sourcetxid = batontxid;
+        }
+        else {
+			std::cerr << "GetLatestCommitmentUpdate: found an update, but it has incorrect funcid" << std::endl;
+			return false;	
+		}
+    }
+	latesttxid = sourcetxid;
+    return true;
 }
 
 /*

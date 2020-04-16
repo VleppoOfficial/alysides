@@ -52,7 +52,7 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror);
 bool CompareProposals(CScript proposalopret, uint256 refproposaltxid, std::string &CCerror);
 bool IsProposalSpent(uint256 proposaltxid, uint256 &spendingtxid, uint8_t &spendingfuncid);
 bool GetCommitmentInitialData(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk, std::vector<uint8_t> &firstarbitratorpk, int64_t &firstarbitratorfee, int64_t &deposit, uint256 &firstdatahash, uint256 &refcommitmenttxid, std::string &firstinfo);
-
+bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint8_t &funcid);
 
 
 UniValue CommitmentPropose(const CPubKey& pk, uint64_t txfee, std::string name, uint256 datahash, std::vector<uint8_t> buyer, std::vector<uint8_t> arbitrator, int64_t expiryTimeSec, int64_t arbitratorfee, int64_t prepayment, uint256 prevproposaltxid, uint256 refagreementtxid);
