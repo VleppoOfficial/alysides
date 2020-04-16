@@ -750,9 +750,9 @@ bool GetAcceptedProposalOpRet(CTransaction tx, CScript &opret)
 		std::cerr << "GetAcceptedProposalOpRet: given tx has no vouts" << std::endl;
 		return false;
 	}
-	if ((funcid = DecodeCommitmentOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey)) != 'c' || funcid != 'u' || funcid != 's') {
+	if ((funcid = DecodeCommitmentOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey)) != 'c' && funcid != 'u' && funcid != 's') {
 		std::cerr << "GetAcceptedProposalOpRet: given tx doesn't have a correct funcid" << std::endl;
-		return false;	
+		return false;
 	}
 	switch (funcid) {
 		case 'c':
@@ -1010,15 +1010,15 @@ bool GetCommitmentInitialData(uint256 commitmenttxid, std::vector<uint8_t> &sell
 	int64_t payment;
 
 	if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) == 0 || commitmenttx.vout.size() <= 0) {
-		std::cerr << "GetCommitmentMembers: couldn't find commitment tx" << std::endl;
+		std::cerr << "GetCommitmentInitialData: couldn't find commitment tx" << std::endl;
 		return false;
 	}
 	if (!GetAcceptedProposalOpRet(commitmenttx, proposalopret)) {
-		std::cerr << "GetCommitmentMembers: couldn't get accepted proposal tx opret" << std::endl;
+		std::cerr << "GetCommitmentInitialData: couldn't get accepted proposal tx opret" << std::endl;
 		return false;	
 	}
 	if (DecodeCommitmentProposalOpRet(proposalopret, version, proposaltype, sellerpk, clientpk, firstarbitratorpk, payment, firstarbitratorfee, deposit, firstdatahash, refcommitmenttxid, prevproposaltxid, firstinfo) != 'p' || proposaltype != 'p') {
-		std::cerr << "GetCommitmentMembers: commitment accepted proposal tx opret invalid" << std::endl;
+		std::cerr << "GetCommitmentInitialData: commitment accepted proposal tx opret invalid" << std::endl;
 		return false;	
 	}
 	return true;
