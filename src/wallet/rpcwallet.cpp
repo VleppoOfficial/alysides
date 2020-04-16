@@ -8138,6 +8138,7 @@ UniValue commitmentaccept(const UniValue& params, bool fHelp, const CPubKey& myp
 		Unlock2NSPV(mypk);
         throw runtime_error("Proposal transaction id invalid\n");
     }
+	
 	result = CommitmentAccept(mypk, 0, proposaltxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
