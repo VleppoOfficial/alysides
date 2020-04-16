@@ -408,8 +408,8 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				if (TotalPubkeyNormalInputs(tx, CPK_dest) == 0 && TotalPubkeyCCInputs(tx, CPK_dest) == 0)
 					return eval->Invalid("found no normal or cc inputs signed by proposal receiver pubkey!");
 				
-				GetCCaddress(cp, srcaddr, CPK_src);
-				GetCCaddress1of2(cp, destaddr, CPK_src, CPK_dest);
+				GetCCaddress(cp, srcaddr, CPK_origpubkey);
+				GetCCaddress1of2(cp, destaddr, CPK_origpubkey, CPK_dest);
 				if (bHasArbitrator)
 					GetCCaddress1of2(cp, depositaddr, CPK_dest, CPK_arbitrator);
 				else
