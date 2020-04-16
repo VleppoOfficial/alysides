@@ -988,7 +988,7 @@ bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint
 	}
 	else if (!(myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 && 
 	(funcid = DecodeCommitmentOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey) == 'u') || funcid == 's' || funcid == 'd' || funcid == 'r') &&
-	txBaton.vout[2].nValue == CC_MARKER_VALUE) {
+	batontx.vout[2].nValue == CC_MARKER_VALUE) {
 		std::cerr << "GetLatestCommitmentUpdate: found first update, but it has incorrect funcid" << std::endl;
 		return false;	
 	}
