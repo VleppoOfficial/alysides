@@ -46,7 +46,7 @@ uint8_t DecodeCommitmentDisputeResolveOpRet(CScript scriptPubKey, uint8_t &versi
 
 bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
 
-bool GetAcceptedProposalOpRet(CTransaction tx, CScript &opret);
+bool GetAcceptedProposalOpRet(CTransaction tx, uint256 &proposaltxid, CScript &opret);
 bool ValidateProposalOpRet(CScript opret, std::string &CCerror);
 bool CompareProposals(CScript proposalopret, uint256 refproposaltxid, std::string &CCerror);
 bool IsProposalSpent(uint256 proposaltxid, uint256 &spendingtxid, uint8_t &spendingfuncid);
