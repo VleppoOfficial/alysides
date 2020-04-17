@@ -77,7 +77,7 @@ uint8_t DecodeCommitmentOpRet(const CScript scriptPubKey)
 		case 's':
 			return DecodeCommitmentCloseOpRet(scriptPubKey, dummytype, dummyhash, dummyhash, dummyamount, dummyamount);
 		case 'd':
-			return DecodeCommitmentDisputeOpRet(scriptPubKey, dummytype, dummyhash, dummyhash, dummypk);
+			return DecodeCommitmentDisputeOpRet(scriptPubKey, dummytype, dummyhash, dummyhash);
 		case 'r':
 			return DecodeCommitmentDisputeResolveOpRet(scriptPubKey, dummytype, dummyhash, dummyhash, dummybool);
 		default:
@@ -165,17 +165,17 @@ uint8_t DecodeCommitmentCloseOpRet(CScript scriptPubKey, uint8_t &version, uint2
 	return(0);
 }
 
-CScript EncodeCommitmentDisputeOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputehash, std::vector<uint8_t> arbitratorpk)
+CScript EncodeCommitmentDisputeOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputehash)
 {
 	CScript opret; uint8_t evalcode = EVAL_COMMITMENTS, funcid = 'd';
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << disputehash << arbitratorpk);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << disputehash);
 	return(opret);
 }
-uint8_t DecodeCommitmentDisputeOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputehash, std::vector<uint8_t> &arbitratorpk)
+uint8_t DecodeCommitmentDisputeOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputehash)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> disputehash; ss >> arbitratorpk) != 0 && evalcode == EVAL_COMMITMENTS)
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> disputehash) != 0 && evalcode == EVAL_COMMITMENTS)
 		return(funcid);
 	return(0);
 }
@@ -1520,7 +1520,7 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				// TODO: add updateable data support
 				result.push_back(Pair("arbitrator_fee",arbitratorfee));
 				result.push_back(Pair("latest_info",info));
-				result.push_back(Pair("latest_data_hash",datahash));
+				result.push_back(Pair("latest_data_hash",datahash.GetHex()));
 				break;
 				/*
 				TODO: 
