@@ -1469,8 +1469,8 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 						result.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
 						// TODO: deposit_for_seller, deposit_for_client, total_deposit
 						break;
-				result.push_back(Pair("members",members));
 				}
+				result.push_back(Pair("members",members));
 				if (IsProposalSpent(txid, spendingtxid, spendingfuncid)) {
 					switch (spendingfuncid) {
 						case 'p':
@@ -1520,8 +1520,7 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 			
 				// TODO: add revision numbers here (version numbers should be reset after contract acceptance)
 				
-				// TODO: add updateable data support
-				
+				// TODO: add updateable data support for the stuff below
 				data.push_back(Pair("arbitrator_fee",arbitratorfee));
 				data.push_back(Pair("latest_info",info));
 				data.push_back(Pair("latest_data_hash",datahash.GetHex()));
