@@ -1420,7 +1420,7 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 	int64_t payment, arbitratorfee, deposit;
 	std::string info, CCerror;
 	bool bHasReceiver, bHasArbitrator;
-	uint8_t funcid, version, spendingfuncid, mypriv[32];
+	uint8_t funcid, version, proposaltype, spendingfuncid, mypriv[32];
 	char mutualaddr[65];
 	
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
