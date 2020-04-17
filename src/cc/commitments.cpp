@@ -380,7 +380,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				*/
 				
 				// Getting the transaction data.
-				if (!GetAcceptedProposalOpRet(tx, proposalopret))
+				if (!GetAcceptedProposalOpRet(tx, proposaltxid, proposalopret))
 					return eval->Invalid("couldn't find proposal tx opret for 'c' tx!");
 				
 				/*DecodeCommitmentSigningOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltxid);
@@ -679,11 +679,11 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 // gets the opret object of a proposal transaction that was or is being accepted by its receiver. 
 // use this to extract data for validating "accept" txes like 'c', 'u' or 's'
 // takes a CTransaction as input, returns true if its proposal opret was returned succesfully
-bool GetAcceptedProposalOpRet(CTransaction tx, CScript &opret)
+bool GetAcceptedProposalOpRet(CTransaction tx, uint256 &proposaltxid, CScript &opret)
 {
 	CTransaction proposaltx;
 	uint8_t version, funcid;
-	uint256 commitmenttxid, proposaltxid, hashBlock;
+	uint256 commitmenttxid, hashBlock;
 	int64_t deposit_send, deposit_keep;
 	
 	if (tx.vout.size() <= 0) {
@@ -791,7 +791,7 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 					return false;	
 				}
 				LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking if subcontract's srcpub and destpub are members of the refcommitment" << std::endl);
-				if (!GetCommitmentInitialData(commitmenttxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, depositval, datahash, refcommitmenttxid, info)) {
+				if (!GetCommitmentInitialData(commitmenttxid, proposaltxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, depositval, datahash, refcommitmenttxid, info)) {
 					CCerror = "refcommitment tx has invalid commitment member pubkeys!";
 					return false;
 				}
@@ -827,7 +827,7 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 			
 			// TODO: put status check here (if deposit was spent)
 
-			if (!GetCommitmentInitialData(commitmenttxid, sellerpk, clientpk, ref_arbitratorpk, arbitratorfee, ref_depositval, datahash, refcommitmenttxid, info)) {
+			if (!GetCommitmentInitialData(commitmenttxid, proposaltxid, sellerpk, clientpk, ref_arbitratorpk, arbitratorfee, ref_depositval, datahash, refcommitmenttxid, info)) {
 				CCerror = "proposal commitment tx has invalid commitment member pubkeys!";
 				return false;
 			}
@@ -945,7 +945,7 @@ bool IsProposalSpent(uint256 proposaltxid, uint256 &spendingtxid, uint8_t &spend
 
 // gets the data from the accepted proposal for the specified commitment txid
 // this is for "static" data like seller, client & arbitrator pubkeys. gathering "updateable" data like info, datahash etc are handled by different functions
-bool GetCommitmentInitialData(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk, std::vector<uint8_t> &arbitratorpk, int64_t &firstarbitratorfee, int64_t &deposit, uint256 &firstdatahash, uint256 &refcommitmenttxid, std::string &firstinfo)
+bool GetCommitmentInitialData(uint256 commitmenttxid, uint256 &proposaltxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk, std::vector<uint8_t> &arbitratorpk, int64_t &firstarbitratorfee, int64_t &deposit, uint256 &firstdatahash, uint256 &refcommitmenttxid, std::string &firstinfo)
 {
 	CScript proposalopret;
 	CTransaction commitmenttx;
@@ -957,7 +957,7 @@ bool GetCommitmentInitialData(uint256 commitmenttxid, std::vector<uint8_t> &sell
 		std::cerr << "GetCommitmentInitialData: couldn't find commitment tx" << std::endl;
 		return false;
 	}
-	if (!GetAcceptedProposalOpRet(commitmenttx, proposalopret)) {
+	if (!GetAcceptedProposalOpRet(commitmenttx, proposaltxid, proposalopret)) {
 		std::cerr << "GetCommitmentInitialData: couldn't get accepted proposal tx opret" << std::endl;
 		return false;	
 	}
@@ -1504,8 +1504,8 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 			case 'c':
 				result.push_back(Pair("type","contract"));
 				DecodeCommitmentSigningOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltxid);
+				GetCommitmentInitialData(txid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, deposit, datahash, commitmenttxid, info);
 				result.push_back(Pair("accepted_txid",proposaltxid.GetHex()));
-				GetCommitmentInitialData(txid, srcpub, destpub, arbitrator, arbitratorfee, deposit, datahash, commitmenttxid, info);
 				members.push_back(Pair("seller",HexStr(srcpub)));
 				members.push_back(Pair("client",HexStr(destpub)));
 				if (pubkey2pk(arbitrator).IsFullyValid()) {
