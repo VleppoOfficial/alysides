@@ -1411,7 +1411,7 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 
 UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 {
-	UniValue result(UniValue::VOBJ), typedata(UniValue::VOBJ);
+	UniValue result(UniValue::VOBJ), members(UniValue::VOBJ), data(UniValue::VOBJ);
 	CPubKey mypk, CPK_src, CPK_dest, CPK_arbitrator;
 	CTransaction tx, proposaltx;
 	uint256 hashBlock, datahash, proposaltxid, prevproposaltxid, commitmenttxid, spendingtxid;
@@ -1439,89 +1439,93 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				CPK_arbitrator = pubkey2pk(arbitrator);
 				bHasReceiver = CPK_dest.IsFullyValid();
 				bHasArbitrator = CPK_arbitrator.IsFullyValid();
-				typedata.push_back(Pair("sender_pubkey",HexStr(srcpub)));
+				members.push_back(Pair("sender",HexStr(srcpub)));
 				if (bHasReceiver)
-					typedata.push_back(Pair("receiver_pubkey",HexStr(destpub)));
+					members.push_back(Pair("receiver",HexStr(destpub)));
 				if (payment > 0)
-					typedata.push_back(Pair("required_payment",payment));
-				typedata.push_back(Pair("info",info));
-				typedata.push_back(Pair("data_hash",datahash.GetHex()));
+					data.push_back(Pair("required_payment",payment));
+				data.push_back(Pair("info",info));
+				data.push_back(Pair("data_hash",datahash.GetHex()));
 				switch (proposaltype) {
 					case 'p':
-						typedata.push_back(Pair("proposal_type","contract_create"));
+						result.push_back(Pair("proposal_type","contract_create"));
 						if (bHasArbitrator) {
-							typedata.push_back(Pair("arbitrator_pubkey",HexStr(arbitrator)));
-							typedata.push_back(Pair("arbitrator_fee",arbitratorfee));
-							typedata.push_back(Pair("deposit",deposit));
+							members.push_back(Pair("arbitrator",HexStr(arbitrator)));
+							data.push_back(Pair("arbitrator_fee",arbitratorfee));
+							data.push_back(Pair("deposit",deposit));
 						}
 						if (commitmenttxid != zeroid)
-							typedata.push_back(Pair("master_contract_txid",commitmenttxid.GetHex()));
+							data.push_back(Pair("master_contract_txid",commitmenttxid.GetHex()));
 						break;
 					case 'u':
-						typedata.push_back(Pair("proposal_type","contract_update"));
-						typedata.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
+						result.push_back(Pair("proposal_type","contract_update"));
+						result.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
 						if (bHasArbitrator)
-							typedata.push_back(Pair("new_arbitrator_fee", arbitratorfee));
+							data.push_back(Pair("new_arbitrator_fee", arbitratorfee));
 						// TODO: also compare if new fee == old fee
 						break;
 					case 't':
-						typedata.push_back(Pair("proposal_type","contract_close"));
-						typedata.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
+						result.push_back(Pair("proposal_type","contract_close"));
+						result.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
 						// TODO: deposit_for_seller, deposit_for_client, total_deposit
 						break;
+				result.push_back(Pair("members",members));
 				}
 				if (IsProposalSpent(txid, spendingtxid, spendingfuncid)) {
 					switch (spendingfuncid) {
 						case 'p':
-							typedata.push_back(Pair("status","updated"));
+							result.push_back(Pair("status","updated"));
 							break;
 						case 'c':
-							typedata.push_back(Pair("status","accepted"));
+							result.push_back(Pair("status","accepted"));
 							break;
 						case 't':
-							typedata.push_back(Pair("status","closed"));
+							result.push_back(Pair("status","closed"));
 							break;
 					}
-					typedata.push_back(Pair("next_txid",spendingtxid.GetHex()));
+					result.push_back(Pair("next_txid",spendingtxid.GetHex()));
 				}
 				else {
 					if (bHasReceiver)
-						typedata.push_back(Pair("status","open"));
+						result.push_back(Pair("status","open"));
 					else
-						typedata.push_back(Pair("status","draft"));
+						result.push_back(Pair("status","draft"));
 				}
 				if (prevproposaltxid != zeroid)
-					typedata.push_back(Pair("previous_txid",prevproposaltxid.GetHex()));
+					result.push_back(Pair("previous_txid",prevproposaltxid.GetHex()));
+				result.push_back(Pair("data",data));
 				break;
 			case 't':
 				result.push_back(Pair("type","proposal cancel"));
 				DecodeCommitmentProposalCloseOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltxid, initiator);
-				typedata.push_back(Pair("source_pubkey",HexStr(initiator)));
-				typedata.push_back(Pair("proposal_txid",proposaltxid.GetHex()));
+				result.push_back(Pair("source_pubkey",HexStr(initiator)));
+				result.push_back(Pair("proposal_txid",proposaltxid.GetHex()));
 				break;
 			case 'c':
 				result.push_back(Pair("type","contract"));
 				DecodeCommitmentSigningOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltxid);
-				typedata.push_back(Pair("accepted_txid",proposaltxid.GetHex()));
+				result.push_back(Pair("accepted_txid",proposaltxid.GetHex()));
 				GetCommitmentInitialData(txid, srcpub, destpub, arbitrator, arbitratorfee, deposit, datahash, commitmenttxid, info);
-				typedata.push_back(Pair("seller",HexStr(srcpub)));
-				typedata.push_back(Pair("client",HexStr(destpub)));
+				members.push_back(Pair("seller",HexStr(srcpub)));
+				members.push_back(Pair("client",HexStr(destpub)));
 				if (pubkey2pk(arbitrator).IsFullyValid()) {
-					result.push_back(Pair("arbitrator",HexStr(arbitrator)));
-					result.push_back(Pair("deposit",deposit));
+					members.push_back(Pair("arbitrator",HexStr(arbitrator)));
+					data.push_back(Pair("deposit",deposit));
 				}
+				result.push_back(Pair("members",members));
 				if (commitmenttxid != zeroid)
-					result.push_back(Pair("master_contract_txid",commitmenttxid.GetHex()));
+					data.push_back(Pair("master_contract_txid",commitmenttxid.GetHex()));
 				
 				// TODO: status (open, closed, disputed, arbitrated, etc.); last_txid
 			
 				// TODO: add revision numbers here (version numbers should be reset after contract acceptance)
 				
 				// TODO: add updateable data support
-				typedata.push_back(Pair("arbitrator_fee",arbitratorfee));
-				typedata.push_back(Pair("latest_info",info));
-				typedata.push_back(Pair("latest_data_hash",datahash.GetHex()));
-				break;
+				
+				data.push_back(Pair("arbitrator_fee",arbitratorfee));
+				data.push_back(Pair("latest_info",info));
+				data.push_back(Pair("latest_data_hash",datahash.GetHex()));
+				result.push_back(Pair("data",data));
 				/*
 				TODO: 
 					proposals: [
@@ -1531,6 +1535,7 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 					settlements: [
 					]
 				*/
+				break;	
 			case 'u':
 				result.push_back(Pair("type","contract update"));
 				break;
@@ -1544,30 +1549,93 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				result.push_back(Pair("type","dispute resolution"));
 				break;
 		}
-		result.push_back(Pair("data",typedata));
 		return(result);
 	}
 	CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid Commitments transaction id");
 }
 /*	
+UniValue CommitmentInfo(uint256 txid)
+
+	txid
+	type (based on funcid)
+	
+	switch (funcid) {
+		for 'p' (proposals) show:
+			
+			proposal_type
+
+			members:
+				sender
+				receiver
+				proposed_arbitrator
+			
+			status (draft, open, updated, closed, accepted)
+			update_txid
+			revision_number
+			previous_proposal_txid
+			
+			data:
+				required_payment
+				info
+				data_hash
+				if (proposal_type == contract) show:
+					arbitrator_fee
+					deposit
+					ref_commitment_txid
+				if (proposal_type == update) show:
+					commitment_txid
+					new_arbitrator_fee
+				if (proposal_type == close) show:
+					commitment_txid
+					deposit_for_seller
+					deposit_for_client
+					total_deposit
+					
+		for 't' (proposal closing) show:
+			source_pubkey
+			proposal_txid
+
+		for 'c' (contract) show:
+			accepted_txid
+			
+			members:
+				seller_pubkey
+				client_pubkey
+				arbitrator_pubkey
+			
+			status (open, closed, disputed, arbitrated, etc.)
+			closing_txid OR dispute_txid			
+			
+			data:
+				ref_commitment_txid
+				revision_number
+				latest_info
+				latest_hash
+				arbitrator_fee
+				deposit
+			
+			proposals: [
+			]
+			subcontracts: [
+			]
+			settlements: [
+			]
+			
 		for 'u' show:
 			commitment_txid
 			source_pubkey
 			proposal_txid
-			
 		for 's' show:
 			commitment_txid
 			source_pubkey
 			proposal_txid
 			deposit_for_seller
 			deposit_for_client
-			
 		for 'd' show:
 			commitment_txid
 			source_pubkey
 			arbitrator_pubkey
 			data_hash
-			
 		for 'r' show:
 			commitment_txid
 			dispute_txid
