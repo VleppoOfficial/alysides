@@ -39,8 +39,8 @@ CScript EncodeCommitmentUpdateOpRet(uint8_t version, uint256 commitmenttxid, uin
 uint8_t DecodeCommitmentUpdateOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &proposaltxid);
 CScript EncodeCommitmentCloseOpRet(uint8_t version, uint256 commitmenttxid, uint256 proposaltxid, int64_t deposit_send, int64_t deposit_keep);
 uint8_t DecodeCommitmentCloseOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &proposaltxid, int64_t &deposit_send, int64_t &deposit_keep);
-CScript EncodeCommitmentDisputeOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputehash, std::vector<uint8_t> arbitratorpk);
-uint8_t DecodeCommitmentDisputeOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputehash, std::vector<uint8_t> &arbitratorpk);
+CScript EncodeCommitmentDisputeOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputehash);
+uint8_t DecodeCommitmentDisputeOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputehash);
 CScript EncodeCommitmentDisputeResolveOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputetxid, bool rewardsender);
 uint8_t DecodeCommitmentDisputeResolveOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputetxid, bool &rewardsender);
 
@@ -50,7 +50,7 @@ bool GetAcceptedProposalOpRet(CTransaction tx, CScript &opret);
 bool ValidateProposalOpRet(CScript opret, std::string &CCerror);
 bool CompareProposals(CScript proposalopret, uint256 refproposaltxid, std::string &CCerror);
 bool IsProposalSpent(uint256 proposaltxid, uint256 &spendingtxid, uint8_t &spendingfuncid);
-bool GetCommitmentInitialData(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk, std::vector<uint8_t> &firstarbitratorpk, int64_t &firstarbitratorfee, int64_t &deposit, uint256 &firstdatahash, uint256 &refcommitmenttxid, std::string &firstinfo);
+bool GetCommitmentInitialData(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk, std::vector<uint8_t> &arbitratorpk, int64_t &firstarbitratorfee, int64_t &deposit, uint256 &firstdatahash, uint256 &refcommitmenttxid, std::string &firstinfo);
 bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint8_t &funcid);
 
 

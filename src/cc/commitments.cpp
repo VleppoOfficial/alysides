@@ -451,12 +451,11 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				/*
 				contract update:
 				vin.0 normal input
-				vin.1 last update baton
-				vin.2 latest proposal by other party
-				vin.3 deposit
+				vin.1 update proposal marker
+				vin.2 update proposal response
+				vin.3 last update baton
 				vout.0 next update baton
-				vout.1 deposit to (new) 1of2 address
-				vout.2 payment (optional)
+				vout.1 payment (optional)
 				vout.n-2 change
 				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'u' commitmenttxid proposaltxid
 				*/
@@ -722,8 +721,8 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 	CTransaction commitmenttx;
 	uint256 proposaltxid, datahash, commitmenttxid, refcommitmenttxid, prevproposaltxid, hashBlock;
 	uint8_t version, proposaltype;
-	std::vector<uint8_t> srcpub, destpub, sellerpk, clientpk, arbitratorpk;
-	int64_t payment, arbitratorfee, depositval;
+	std::vector<uint8_t> srcpub, destpub, sellerpk, clientpk, arbitratorpk, ref_arbitratorpk;
+	int64_t payment, arbitratorfee, depositval, ref_depositval;
 	std::string info;
 	bool bHasReceiver, bHasArbitrator;
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator;
@@ -796,6 +795,11 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 					CCerror = "refcommitment tx has invalid commitment member pubkeys!";
 					return false;
 				}
+				LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking arbitrator fee" << std::endl);
+				if (arbitratorfee < 0 || bHasArbitrator && arbitratorfee < CC_MARKER_VALUE) {
+					CCerror = "proposal has invalid arbitrator fee value!";
+					return false;
+				}
 				if (!bHasReceiver || CPK_src != pubkey2pk(sellerpk) && CPK_src != pubkey2pk(clientpk) && CPK_dest != pubkey2pk(sellerpk) && CPK_dest != pubkey2pk(clientpk)) {
 					CCerror = "subcontracts must have at least one party that's a member in the refcommitmenttxid!";
 					return false;
@@ -803,7 +807,7 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 			}
 			break;
 		case 'u':
-			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking deposit value" << std::endl);
+			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking deposit value for 'u' tx" << std::endl);
 			if (depositval != 0) {
 				CCerror = "proposal has invalid deposit value for update!";
 				return false;
@@ -815,11 +819,6 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 				CCerror = "proposal has no defined receiver on update/termination proposal!";
 				return false;
 			}
-			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking arbitrator fee" << std::endl);
-			if (arbitratorfee < 0 || bHasArbitrator && arbitratorfee < CC_MARKER_VALUE) {
-				CCerror = "proposal has invalid arbitrator fee value!";
-				return false;
-			}
 			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking if commitmenttxid defined" << std::endl);
 			if (commitmenttxid == zeroid) {
 				CCerror = "proposal has no commitmenttxid defined for update/termination proposal!";
@@ -827,19 +826,28 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 			}
 			
 			// TODO: put status check here (if deposit was spent)
-			// TODO: put deposit check here - must be between 0 and ref deposit value
-			
-			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking if srcpub and destpub are members of the commitment" << std::endl);
-			if (!GetCommitmentInitialData(commitmenttxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, depositval, datahash, refcommitmenttxid, info)) {
+
+			if (!GetCommitmentInitialData(commitmenttxid, sellerpk, clientpk, ref_arbitratorpk, arbitratorfee, ref_depositval, datahash, refcommitmenttxid, info)) {
 				CCerror = "proposal commitment tx has invalid commitment member pubkeys!";
 				return false;
 			}
-			if (CPK_src != pubkey2pk(sellerpk) && CPK_src != pubkey2pk(clientpk)) {
-				CCerror = "proposal srcpub is not a member of the specified commitment!";
+			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking deposit value" << std::endl);
+			if (depositval < 0 || depositval > ref_depositval) {
+				CCerror = "proposal has invalid deposit value!";
 				return false;
 			}
-			if (CPK_dest != pubkey2pk(sellerpk) && CPK_dest != pubkey2pk(clientpk)) {
-				CCerror = "proposal destpub is not a member of the specified commitment!";
+			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking if srcpub and destpub are members of the commitment" << std::endl);
+			if (proposaltype == 'u' && CPK_src != pubkey2pk(sellerpk) && CPK_src != pubkey2pk(clientpk) || CPK_dest != pubkey2pk(sellerpk) && CPK_dest != pubkey2pk(clientpk)) {
+				CCerror = "proposal srcpub or destpub is not a member of the specified commitment!";
+				return false;
+			}
+			else if (proposaltype == 't' && CPK_src != pubkey2pk(sellerpk) || CPK_dest != pubkey2pk(clientpk)) {
+				CCerror = "proposal srcpub or destpub is invalid for close tx!";
+				return false;
+			}
+			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking arbitrator" << std::endl);
+			if (bHasArbitrator && CPK_arbitrator != pubkey2pk(ref_arbitratorpk)) {
+				CCerror = "proposal has incorrect arbitrator defined!";
 				return false;
 			}
 			break;
@@ -936,8 +944,8 @@ bool IsProposalSpent(uint256 proposaltxid, uint256 &spendingtxid, uint8_t &spend
 }
 
 // gets the data from the accepted proposal for the specified commitment txid
-// this is for "static" data like seller and client pubkeys. gathering "updateable" data like info, datahash etc are handled by different functions
-bool GetCommitmentInitialData(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk, std::vector<uint8_t> &firstarbitratorpk, int64_t &firstarbitratorfee, int64_t &deposit, uint256 &firstdatahash, uint256 &refcommitmenttxid, std::string &firstinfo)
+// this is for "static" data like seller, client & arbitrator pubkeys. gathering "updateable" data like info, datahash etc are handled by different functions
+bool GetCommitmentInitialData(uint256 commitmenttxid, std::vector<uint8_t> &sellerpk, std::vector<uint8_t> &clientpk, std::vector<uint8_t> &arbitratorpk, int64_t &firstarbitratorfee, int64_t &deposit, uint256 &firstdatahash, uint256 &refcommitmenttxid, std::string &firstinfo)
 {
 	CScript proposalopret;
 	CTransaction commitmenttx;
@@ -953,7 +961,7 @@ bool GetCommitmentInitialData(uint256 commitmenttxid, std::vector<uint8_t> &sell
 		std::cerr << "GetCommitmentInitialData: couldn't get accepted proposal tx opret" << std::endl;
 		return false;	
 	}
-	if (DecodeCommitmentProposalOpRet(proposalopret, version, proposaltype, sellerpk, clientpk, firstarbitratorpk, payment, firstarbitratorfee, deposit, firstdatahash, refcommitmenttxid, prevproposaltxid, firstinfo) != 'p' || proposaltype != 'p') {
+	if (DecodeCommitmentProposalOpRet(proposalopret, version, proposaltype, sellerpk, clientpk, arbitratorpk, payment, firstarbitratorfee, deposit, firstdatahash, refcommitmenttxid, prevproposaltxid, firstinfo) != 'p' || proposaltype != 'p') {
 		std::cerr << "GetCommitmentInitialData: commitment accepted proposal tx opret invalid" << std::endl;
 		return false;	
 	}
@@ -1015,7 +1023,7 @@ updateable data:
 		takes a 'u' transaction, finds its 'p' transaction and gets the data from there:
 		info
 		datahash
-		arbitrator pk
+		arbitrator pk (not anymore!)
 		arbitrator fee
 
 dynamic data (non-user):
@@ -1188,8 +1196,7 @@ UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmentt
 	std::cerr << "updatetxid:" << spendingtxid.GetHex() << std::endl;
 	std::cerr << "updatefuncid:" << spendingfuncid << std::endl;
 	
-	// if newarbitrator is 0, maintain current arbitrator status
-	// don't allow swapping between no arbitrator <-> arbitrator
+	// fixed arbitrator!!!!
 	// only 1 update/cancel request per party, per commitment
 	
 	CCERR_RESULT("commitmentscc",CCLOG_INFO,stream << "incomplete");
@@ -1405,81 +1412,143 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 {
 	UniValue result(UniValue::VOBJ);
-	CPubKey mypk;
-	CTransaction tx;
-	uint256 hashBlock;
-	std::vector<uint8_t> srcpub, destpub, arbitrator;
+	CPubKey mypk, CPK_src, CPK_dest, CPK_arbitrator;
+	CTransaction tx, proposaltx;
+	uint256 hashBlock, datahash, proposaltxid, prevproposaltxid, commitmenttxid, spendingtxid;
+	std::vector<uint8_t> srcpub, destpub, arbitrator, initiator;
 	int32_t numvouts;
 	int64_t payment, arbitratorfee, deposit;
+	std::string info, CCerror;
 	bool bHasReceiver, bHasArbitrator;
+	uint8_t funcid, version, spendingfuncid, mypriv[32];
+	char mutualaddr[65];
 	
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 	
 	if (myGetTransaction(txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
-    (DecodeCommitmentOpRet(tx.vout[numvouts-1].scriptPubKey) != 0)) { 
-		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "win! :D");
-	}
-	CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "no win :(");
-}
-/*
-version numbers should be reset after contract acceptance
-
-UniValue CommitmentInfo(uint256 txid)
-
-	txid
-	type (based on funcid)
-	switch (funcid) {
-		for 'p' show:
-			sender_pubkey
-			receiver_pubkey
-			proposal_type
-			status (draft, open, updated, closed, accepted)
-			update_txid
-			previous_proposal_txid
-			revision_number
-			required_payment
-			info
-			data_hash
-			if (proposal_type == contract) show:
-				arbitrator_pubkey
-				arbitrator_fee
-				deposit
-				ref_commitment_txid
-			if (proposal_type == update) show:
-				commitment_txid
-				new_arbitrator_pubkey
-				new_arbitrator_fee
-			if (proposal_type == close) show:
-				commitment_txid
-				deposit_for_seller
-				deposit_for_client
-				total_deposit
+    (funcid = DecodeCommitmentOpRet(tx.vout[numvouts-1].scriptPubKey)) != 0) {
+		result.push_back(Pair("result", "success"));
+        result.push_back(Pair("txid", txid.GetHex()));
+		switch (funcid) {
+			case 'p':
+				result.push_back(Pair("type","proposal"));
+				DecodeCommitmentProposalOpRet(tx.vout[numvouts-1].scriptPubKey,version,proposaltype,srcpub,destpub,arbitrator,payment,arbitratorfee,deposit,datahash,commitmenttxid,prevproposaltxid,info);
+				CPK_src = pubkey2pk(srcpub);
+				CPK_dest = pubkey2pk(destpub);
+				CPK_arbitrator = pubkey2pk(arbitrator);
+				bHasReceiver = CPK_dest.IsFullyValid();
+				bHasArbitrator = CPK_arbitrator.IsFullyValid();
+				result.push_back(Pair("sender_pubkey",HexStr(srcpub)));
+				if (bHasReceiver)
+					result.push_back(Pair("receiver_pubkey",HexStr(destpub)));
+				if (payment > 0)
+					result.push_back(Pair("required_payment",payment));
+				result.push_back(Pair("info",info));
+				result.push_back(Pair("data_hash",datahash.GetHex()));
+				switch (proposaltype) {
+					case 'p':
+						result.push_back(Pair("proposal_type","contract_create"));
+						if (bHasArbitrator) {
+							result.push_back(Pair("arbitrator_pubkey",HexStr(arbitrator)));
+							result.push_back(Pair("arbitrator_fee",arbitratorfee));
+							result.push_back(Pair("deposit",deposit));
+						}
+						if (commitmenttxid != zeroid)
+							result.push_back(Pair("master_commitment_txid",commitmenttxid.GetHex()));
+						break;
+					case 'u':
+						result.push_back(Pair("proposal_type","contract_update"));
+						result.push_back(Pair("commitment_txid",commitmenttxid.GetHex()));
+						if (bHasArbitrator)
+							result.push_back(Pair("new_arbitrator_fee", arbitratorfee));
+						// TODO: also compare if new fee == old fee
+						break;
+					case 't':
+						result.push_back(Pair("proposal_type","contract_close"));
+						result.push_back(Pair("commitment_txid",commitmenttxid.GetHex()));
+						// TODO: deposit_for_seller, deposit_for_client, total_deposit
+						break;
+				}
+				if (IsProposalSpent(proposaltxid, spendingtxid, spendingfuncid)) {
+					switch (spendingfuncid) {
+						case 'p':
+							result.push_back(Pair("status","updated"));
+							break;
+						case 'c':
+							result.push_back(Pair("status","accepted"));
+							break;
+						case 't':
+							result.push_back(Pair("status","closed"));
+							break;
+					}
+					result.push_back(Pair("next_txid",spendingtxid.GetHex()));
+				}
+				else {
+					if (bHasReceiver)
+						result.push_back(Pair("status","open"));
+					else
+						result.push_back(Pair("status","draft"));
+				}
+				if (prevproposaltxid != zeroid)
+					result.push_back(Pair("previous_txid",prevproposaltxid.GetHex()));
+				break;
+			case 't':
+				result.push_back(Pair("type","proposal cancel"));
+				DecodeCommitmentProposalCloseOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltxid, initiator);
+				result.push_back(Pair("source_pubkey",HexStr(initiator)));
+				result.push_back(Pair("proposal_txid",proposaltxid.GetHex()));
+				break;
+			case 'c':
+				result.push_back(Pair("type","contract"));
+				DecodeCommitmentSigningOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltxid);
+				result.push_back(Pair("accepted_txid",proposaltxid.GetHex()));
+				GetCommitmentInitialData(txid, srcpub, destpub, arbitrator, arbitratorfee, deposit, datahash, commitmenttxid, info);
+				result.push_back(Pair("seller",HexStr(srcpub)));
+				result.push_back(Pair("client",HexStr(destpub)));
+				if (pubkey2pk(arbitrator).IsFullyValid()) {
+					result.push_back(Pair("arbitrator",HexStr(arbitrator)));
+					result.push_back(Pair("deposit",deposit));
+				}
+				if (commitmenttxid != zeroid)
+					result.push_back(Pair("master_commitment_txid",commitmenttxid.GetHex()));
 				
-		for 't' show:
-			source_pubkey
-			proposal_txid
-			(if proposaltype =/= contract) commitment_txid
+				// TODO: status (open, closed, disputed, arbitrated, etc.); last_txid
 			
-		for 'c' show:
-			accepted_txid
-			seller_pubkey
-			client_pubkey
-			arbitrator_pubkey
-			ref_commitment_txid
-			deposit
-			status (open, closed, disputed, arbitrated, etc.)
-			closing_txid OR dispute_txid
-			proposals: [
-			]
-			subcontracts: [
-			]
-			settlements: [
-			]
-			revision_number
-			latest_info
-			latest_hash
-			
+				// TODO: add revision numbers here (version numbers should be reset after contract acceptance)
+				
+				// TODO: add updateable data support
+				result.push_back(Pair("arbitrator_fee",arbitratorfee));
+				result.push_back(Pair("latest_info",info));
+				result.push_back(Pair("latest_data_hash",datahash));
+				break;
+				/*
+				TODO: 
+					proposals: [
+					]
+					subcontracts: [
+					]
+					settlements: [
+					]
+				*/
+			case 'u':
+				result.push_back(Pair("type","contract update"));
+				break;
+			case 's':
+				result.push_back(Pair("type","contract close"));
+				break;
+			case 'd':
+				result.push_back(Pair("type","dispute"));
+				break;
+			case 'r':
+				result.push_back(Pair("type","dispute resolution"));
+				break;
+		}
+		return(result);
+	}
+	CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid Commitments transaction id");
+}
+/*	
 		for 'u' show:
 			commitment_txid
 			source_pubkey
@@ -1504,119 +1573,6 @@ UniValue CommitmentInfo(uint256 txid)
 			source_pubkey
 			rewarded_pubkey
 	}
-
-/*
-UniValue CommitmentInfo(uint256 txid)
-{
-    UniValue result(UniValue::VOBJ);
-    uint256 hashBlock, latesttxid, datahash;
-    CTransaction tokenbaseTx, latestUpdateTx;
-	CScript batonopret;
-    std::vector<uint8_t> origpubkey;
-    std::vector<std::pair<uint8_t, vscript_t>> oprets;
-    vscript_t vopretNonfungible;
-    std::string info, description, ccode;
-    double ownerPerc;
-    struct CCcontract_info *cpTokens, tokensCCinfo;
-    int64_t supply = 0, value;
-    int32_t numblocks, licensetype;
-
-    cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
-
-	if( !myGetTransaction(tokenid, tokenbaseTx, hashBlock) ) {
-		//fprintf(stderr, "TokenInfo() cant find tokenid\n");
-		result.push_back(Pair("result", "error"));
-		result.push_back(Pair("error", "cant find tokenid"));
-		return(result);
-	}
-    if ( KOMODO_NSPV_FULLNODE && hashBlock.IsNull()) {
-        result.push_back(Pair("result", "error"));
-        result.push_back(Pair("error", "the transaction is still in mempool"));
-        return (result);
-    }
-
-    if (tokenbaseTx.vout.size() > 0 && DecodeTokenCreateOpRet(tokenbaseTx.vout[tokenbaseTx.vout.size() - 1].scriptPubKey, origpubkey, info, description, ownerPerc, oprets) != 'c') {
-        LOGSTREAM((char*)"cctokens", CCLOG_INFO, stream << "TokenInfo() passed tokenid isnt token creation txid" << std::endl);
-        result.push_back(Pair("result", "error"));
-        result.push_back(Pair("error", "tokenid isnt token creation txid"));
-        return result;
-    }
-
-    result.push_back(Pair("result", "success"));
-    result.push_back(Pair("tokenid", tokenid.GetHex()));
-    result.push_back(Pair("owner", HexStr(origpubkey)));
-    result.push_back(Pair("info", info));
-
-    supply = CCfullsupply(tokenid);
-
-    result.push_back(Pair("supply", supply));
-    result.push_back(Pair("description", description));
-    result.push_back(Pair("ownerpercentage", ownerPerc));
-	
-	if (GetLatestTokenUpdate(tokenid, latesttxid)) {
-		if (tokenid == latesttxid) {
-			if (tokenbaseTx.vout[2].nValue == 10000 &&
-			getCCopret(tokenbaseTx.vout[2].scriptPubKey, batonopret) &&
-			DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u') {
-				result.push_back(Pair("latesthash", datahash.GetHex()));
-				result.push_back(Pair("latestvalue", (double)value/COIN));
-				result.push_back(Pair("latestccode", ccode));
-				result.push_back(Pair("license", licensetype));
-			}
-		}
-		else {
-			if (myGetTransaction(latesttxid, latestUpdateTx, hashBlock) &&
-			latestUpdateTx.vout.size() > 0 &&
-			latestUpdateTx.vout[0].nValue == 10000 &&
-			getCCopret(latestUpdateTx.vout[0].scriptPubKey, batonopret) &&
-			DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u')
-				result.push_back(Pair("latesthash", datahash.GetHex()));
-				result.push_back(Pair("latestvalue", (double)value/COIN));
-				result.push_back(Pair("latestccode", ccode));
-				result.push_back(Pair("license", licensetype));
-		}
-	}
-
-    GetOpretBlob(oprets, OPRETID_NONFUNGIBLEDATA, vopretNonfungible);
-    if (!vopretNonfungible.empty())
-        result.push_back(Pair("data", HexStr(vopretNonfungible)));
-    
-    if (tokenbaseTx.IsCoinImport()) { // if imported token
-        ImportProof proof;
-        CTransaction burnTx;
-        std::vector<CTxOut> payouts;
-        CTxDestination importaddress;
-
-        std::string sourceSymbol = "can't decode";
-        std::string sourceTokenId = "can't decode";
-
-        if (UnmarshalImportTx(tokenbaseTx, proof, burnTx, payouts)) {
-            // extract op_return to get burn source chain.
-            std::vector<uint8_t> burnOpret;
-            std::string targetSymbol;
-            uint32_t targetCCid;
-            uint256 payoutsHash;
-            std::vector<uint8_t> rawproof;
-            if (UnmarshalBurnTx(burnTx, targetSymbol, &targetCCid, payoutsHash, rawproof)) {
-                if (rawproof.size() > 0) {
-                    CTransaction tokenbasetx;
-                    E_UNMARSHAL(rawproof, ss >> sourceSymbol;
-                                if (!ss.eof())
-                                    ss >>
-                                tokenbasetx);
-
-                    if (!tokenbasetx.IsNull())
-                        sourceTokenId = tokenbasetx.GetHash().GetHex();
-                }
-            }
-        }
-        result.push_back(Pair("IsImported", "yes"));
-        result.push_back(Pair("sourceChain", sourceSymbol));
-        result.push_back(Pair("sourceTokenId", sourceTokenId));
-    }
-
-    return result;
-}
 */
 
 // commitmentviewupdates [list]
