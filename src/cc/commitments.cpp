@@ -16,6 +16,10 @@
 #include "CCcommitments.h"
 
 /*
+Things to potentially descope:
+"Draft" proposals (no receiver)
+Proposal amending
+Dynamic arbitrator fees
 
 Commitments RPCs:
 
@@ -223,8 +227,8 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 	CTransaction proposaltx;
 	CScript proposalopret;
 	int32_t numvins, numvouts;
-	uint256 hashBlock, datahash, commitmenttxid, proposaltxid, prevproposaltxid, spendingtxid;
-	std::vector<uint8_t> srcpub, destpub, arbitratorpk, origpubkey;
+	uint256 hashBlock, datahash, originaltxid, commitmenttxid, proposaltxid, prevproposaltxid, spendingtxid;
+	std::vector<uint8_t> srcpub, destpub, sellerpk, clientpk, arbitratorpk, origpubkey;
 	int64_t payment, arbitratorfee, depositval;
 	std::string info, CCerror;
 	bool retval, bHasReceiver, bHasArbitrator;
@@ -350,18 +354,14 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 						else if (!bHasReceiver && CPK_src != CPK_origpubkey)
 							return eval->Invalid("srcpub is not the source of specified proposal!");
 						break;
-				// TODO: these two below
 					case 'u':
 					case 't':
-						return eval->Invalid("not supported yet!");
-					/*
-					else if proposaltype = 'u' or 't'
-							if receiver doesn't exist, invalidate.
-							check if refcommitmenttxid is defined. If not, invalidate
-							CheckIfInitiatorValid(initiator, commitmenttxid)
-						else
-							invalidate
-					*/
+						if (commitmenttxid == zeroid)
+							return eval->Invalid("proposal has no defined commitment, unable to verify membership!");
+						if (!GetCommitmentInitialData(commitmenttxid, originaltxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, deposit, datahash, refcommitmenttxid, info))
+							return eval->Invalid("couldn't get proposal's commitment info successfully!");
+						if (CPK_src != CPK_origpubkey && CPK_src != CPK_dest && CPK_src != pubkey2pk(sellerpk) && CPK_src != pubkey2pk(clientpk))
+							return eval->Invalid("srcpub is not the source or receiver of specified proposal!");
 					default:
 						return eval->Invalid("invalid proposaltype!");
 				}
@@ -1309,11 +1309,11 @@ UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 {
 	CPubKey mypk, CPK_src, CPK_dest;
 	CTransaction proposaltx;
-	uint256 hashBlock, datahash, prevproposaltxid, spendingtxid;
-	std::vector<uint8_t> srcpub, destpub, arbitrator;
+	uint256 hashBlock, datahash, firstdatahash, originaltxid, refcommitmenttxid, prevproposaltxid, spendingtxid;
+	std::vector<uint8_t> srcpub, destpub, sellerpk, clientpk, arbitrator;
 	int32_t numvouts;
 	int64_t payment, arbitratorfee, deposit;
-	std::string info;
+	std::string info, firstinfo;
 	bool bHasReceiver, bHasArbitrator;
 	uint8_t proposaltype, version, spendingfuncid, mypriv[32];
 	char mutualaddr[65];
@@ -1326,7 +1326,7 @@ UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 	if (myGetTransaction(proposaltxid, proposaltx, hashBlock) == 0 || (numvouts = proposaltx.vout.size()) <= 0)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "cant find specified proposal txid " << proposaltxid.GetHex());
 	
-	if (DecodeCommitmentProposalOpRet(proposaltx.vout[numvouts-1].scriptPubKey,version,proposaltype,srcpub,destpub,arbitrator,payment,arbitratorfee,deposit,datahash,prevproposaltxid,prevproposaltxid,info) != 'p')
+	if (DecodeCommitmentProposalOpRet(proposaltx.vout[numvouts-1].scriptPubKey,version,proposaltype,srcpub,destpub,arbitrator,payment,arbitratorfee,deposit,datahash,refcommitmenttxid,prevproposaltxid,info) != 'p')
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified txid has incorrect proposal opret");
 	
 	if (IsProposalSpent(proposaltxid, spendingtxid, spendingfuncid)) {
@@ -1349,22 +1349,18 @@ UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 	switch (proposaltype) {
 		case 'p':
 			if (bHasReceiver && mypk != CPK_src && mypk != CPK_dest)
-				CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "-pubkey is not the source or receiver of specified proposal");
+				CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "you are not the source or receiver of specified proposal");
 			else if (!bHasReceiver && mypk != CPK_src)
-				CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "-pubkey is not the source of specified proposal");
+				CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "you are not the source of specified proposal");
 			break;
-		// TODO: these two below
 		case 'u':
 		case 't':
-			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "'u' and 't' txes not supported yet");
-			/*
-			else if proposaltype = 'u' or 't'
-				if receiver doesn't exist, invalidate.
-				check if refcommitmenttxid is defined. If not, invalidate
-				CheckIfInitiatorValid(initiator, commitmenttxid)
-			else
-				invalidate
-			*/
+			if (refcommitmenttxid == zeroid)
+				CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "proposal has no defined commitment, unable to verify membership");
+			if (!GetCommitmentInitialData(commitmenttxid, originaltxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, deposit, firstdatahash, refcommitmenttxid, firstinfo))
+				CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "couldn't get proposal's commitment info successfully");
+			if (mypk != CPK_src && mypk != CPK_dest && mypk != pubkey2pk(sellerpk) && mypk != pubkey2pk(clientpk))
+				CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "you are not the source or receiver of specified proposal");
 		default:
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid proposaltype in proposal tx opret");
 	}
@@ -1431,13 +1427,13 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 	bHasReceiver = CPK_dest.IsFullyValid();
 	bHasArbitrator = CPK_arbitrator.IsFullyValid();
 	
+	if (!bHasReceiver)
+		CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "specified proposal has no receiver, can't accept");
+	else if (mypk != CPK_dest)
+		CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "you are not the receiver of specified proposal");
+
 	switch (proposaltype) {
 		case 'p':
-			if (!bHasReceiver)
-				CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "specified proposal has no receiver, can't accept");
-			else if (mypk != CPK_dest)
-				CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "-pubkey is not the receiver of specified proposal");
-			
 			// constructing a 'c' transaction
 			if (AddNormalinputs2(mtx, txfee + payment + deposit, 64) >= txfee + payment + deposit) {
 				mtx.vin.push_back(CTxIn(proposaltxid,0,CScript())); // vin.1 previous proposal CC marker
