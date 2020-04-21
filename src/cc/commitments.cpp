@@ -1481,6 +1481,8 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 	uint8_t proposaltype, version, spendingfuncid, mypriv[32];
 	char mutualaddr[65];
 	
+	int64_t funds;
+	
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
 	if (txfee == 0) txfee = CC_TXFEE;
@@ -1520,7 +1522,7 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 				CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "-pubkey is not the receiver of specified proposal");
 			
 			// constructing a 'c' transaction
-			if ((int64_t funds = AddNormalinputs2(mtx, txfee + payment + deposit, 64)) >= txfee + payment + deposit) {
+			if ((funds = AddNormalinputs2(mtx, txfee + payment + deposit, 64)) >= txfee + payment + deposit) {
 				mtx.vin.push_back(CTxIn(proposaltxid,0,CScript())); // vin.1 previous proposal CC marker
 				GetCCaddress1of2(cp, mutualaddr, CPK_src, CPK_dest);
 				mtx.vin.push_back(CTxIn(proposaltxid,1,CScript())); // vin.2 previous proposal CC response hook (must have designated receiver!)
