@@ -866,11 +866,11 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 				return false;
 			}
 			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking if srcpub and destpub are members of the commitment" << std::endl);
-			if (proposaltype == 'u' && CPK_src != pubkey2pk(sellerpk) && CPK_src != pubkey2pk(clientpk) || CPK_dest != pubkey2pk(sellerpk) && CPK_dest != pubkey2pk(clientpk)) {
+			if (proposaltype == 'u' && (CPK_src != pubkey2pk(sellerpk) && CPK_src != pubkey2pk(clientpk) || CPK_dest != pubkey2pk(sellerpk) && CPK_dest != pubkey2pk(clientpk))) {
 				CCerror = "proposal srcpub or destpub is not a member of the specified commitment!";
 				return false;
 			}
-			else if (proposaltype == 't' && CPK_src != pubkey2pk(sellerpk) || CPK_dest != pubkey2pk(clientpk)) {
+			else if (proposaltype == 't' && (CPK_src != pubkey2pk(sellerpk) || CPK_dest != pubkey2pk(clientpk))) {
 				CCerror = "proposal srcpub or destpub is invalid for close tx!";
 				return false;
 			}
