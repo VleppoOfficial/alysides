@@ -1177,7 +1177,7 @@ UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmentt
 	if (txfee == 0) txfee = CC_TXFEE;
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 	
-	if (GetCommitmentInitialData(commitmenttxid, originaltxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, deposit, firstdatahash, refcommitmenttxid, firstinfo))
+	if (!GetCommitmentInitialData(commitmenttxid, originaltxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, deposit, firstdatahash, refcommitmenttxid, firstinfo))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "couldn't get specified commitment info successfully");
 
 	// TODO: latest arbitrator fee check here
