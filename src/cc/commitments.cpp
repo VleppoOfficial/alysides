@@ -1164,7 +1164,7 @@ UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmentt
 {
 	CPubKey mypk, CPK_src, CPK_dest, CPK_arbitrator;
 	CTransaction prevproposaltx;
-	uint256 hashBlock, ref_datahash, ref_prevproposaltxid, spendingtxid, firstdatahash, refcommitmenttxid;
+	uint256 hashBlock, originaltxid, ref_datahash, ref_prevproposaltxid, spendingtxid, firstdatahash, refcommitmenttxid;
 	std::vector<uint8_t> srcpub, destpub, sellerpk, clientpk, arbitratorpk, ref_srcpub, ref_destpub, ref_arbitrator;
 	int32_t numvouts;
 	int64_t arbitratorfee, deposit, ref_payment, ref_arbitratorfee, ref_deposit;
