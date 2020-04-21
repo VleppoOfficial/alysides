@@ -43,6 +43,8 @@ CScript EncodeCommitmentDisputeOpRet(uint8_t version, uint256 commitmenttxid, ui
 uint8_t DecodeCommitmentDisputeOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputehash);
 CScript EncodeCommitmentDisputeResolveOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputetxid, bool rewardsender);
 uint8_t DecodeCommitmentDisputeResolveOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputetxid, bool &rewardsender);
+CScript EncodeCommitmentUnlockOpRet(uint8_t version, uint256 commitmenttxid, uint256 exchangetxid);
+uint8_t DecodeCommitmentUnlockOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &exchangetxid);
 
 bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
 
@@ -55,7 +57,7 @@ bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint
 
 
 UniValue CommitmentCreate(const CPubKey& pk, uint64_t txfee, std::string info, uint256 datahash, std::vector<uint8_t> destpub, std::vector<uint8_t> arbitrator, int64_t payment, int64_t arbitratorfee, int64_t deposit, uint256 prevproposaltxid, uint256 refcommitmenttxid);
-UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, std::string info, uint256 datahash, int64_t payment, uint256 prevproposaltxid, std::vector<uint8_t> newarbitrator, int64_t newarbitratorfee);
+UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, std::string info, uint256 datahash, int64_t payment, uint256 prevproposaltxid, int64_t newarbitratorfee);
 UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 datahash, uint64_t prepaymentcut, uint256 prevproposaltxid);
 UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid);
 UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid);

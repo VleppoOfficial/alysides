@@ -8151,10 +8151,9 @@ UniValue commitmentupdate(const UniValue& params, bool fHelp, const CPubKey& myp
     UniValue result(UniValue::VOBJ);
 	uint256 datahash, prevproposaltxid, commitmenttxid;
 	std::string info;
-	std::vector<unsigned char> arbitrator;
 	int64_t payment, arbitratorfee;
-    if (fHelp || params.size() < 3 || params.size() > 7)
-        throw runtime_error("commitmentupdate commitmenttxid info datahash [payment][prevproposaltxid][arbitrator][arbitratorfee]\n");
+    if (fHelp || params.size() < 3 || params.size() > 6)
+        throw runtime_error("commitmentupdate commitmenttxid info datahash [payment][prevproposaltxid][arbitratorfee]\n");
     if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
@@ -8186,19 +8185,15 @@ UniValue commitmentupdate(const UniValue& params, bool fHelp, const CPubKey& myp
 	if (params.size() >= 5) {
         prevproposaltxid = Parseuint256((char *)params[4].get_str().c_str());
     }
-	arbitrator.clear();
-	if (params.size() >= 6) {
-		arbitrator = ParseHex(params[5].get_str().c_str());
-	}
 	arbitratorfee = 0;
-	if (params.size() == 7)     {
-        arbitratorfee = atof((char *)params[6].get_str().c_str()) * COIN + 0.00000000499999;
+	if (params.size() == 6)     {
+        arbitratorfee = atof((char *)params[5].get_str().c_str()) * COIN + 0.00000000499999;
         if (arbitratorfee < 0)    {
 			Unlock2NSPV(mypk);
 			throw runtime_error("Arbitrator fee must be positive\n");
 		}
     }
-	result = CommitmentUpdate(mypk, 0, commitmenttxid, info, datahash, payment, prevproposaltxid, arbitrator, arbitratorfee);
+	result = CommitmentUpdate(mypk, 0, commitmenttxid, info, datahash, payment, prevproposaltxid, arbitratorfee);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
