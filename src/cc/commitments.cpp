@@ -1218,7 +1218,7 @@ UniValue CommitmentCreate(const CPubKey& pk, uint64_t txfee, std::string info, u
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror << " txid: " << prevproposaltxid.GetHex());
 	}
 	
-	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 64) >= txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE) {
+	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 8) >= txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE) {
 		if (prevproposaltxid != zeroid) {
 			mtx.vin.push_back(CTxIn(prevproposaltxid,0,CScript())); // vin.n-2 previous proposal marker (optional, will trigger validation)
 			GetCCaddress1of2(cp, mutualaddr, pubkey2pk(ref_srcpub), pubkey2pk(ref_destpub));
@@ -1450,7 +1450,7 @@ UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid proposaltype in proposal tx opret");
 	}
 
-	if (AddNormalinputs2(mtx, txfee, 64) >= txfee) {
+	if (AddNormalinputs2(mtx, txfee, 5) >= txfee) {
 		if (bHasReceiver) {
 			GetCCaddress1of2(cp, mutualaddr, CPK_src, CPK_dest);
 			mtx.vin.push_back(CTxIn(proposaltxid,1,CScript())); // vin.1 previous proposal CC response hook (1of2 addr version)
