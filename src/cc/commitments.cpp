@@ -1481,8 +1481,6 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 	uint8_t proposaltype, version, spendingfuncid, mypriv[32];
 	char mutualaddr[65];
 	
-	int64_t funds;
-	
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
 	if (txfee == 0) txfee = CC_TXFEE;
@@ -1522,7 +1520,7 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 				CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "-pubkey is not the receiver of specified proposal");
 			
 			// constructing a 'c' transaction
-			if ((funds = AddNormalinputs2(mtx, txfee + payment + deposit, 64)) >= txfee + payment + deposit) {
+			if (AddNormalinputs2(mtx, txfee + payment + deposit, 64) >= txfee + payment + deposit) {
 				mtx.vin.push_back(CTxIn(proposaltxid,0,CScript())); // vin.1 previous proposal CC marker
 				GetCCaddress1of2(cp, mutualaddr, CPK_src, CPK_dest);
 				mtx.vin.push_back(CTxIn(proposaltxid,1,CScript())); // vin.2 previous proposal CC response hook (must have designated receiver!)
@@ -1539,8 +1537,6 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.4 payment (optional)
 				return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentSigningOpRet(COMMITMENTCC_VERSION, proposaltxid));
 			}
-			std::cerr << "funds required: " << txfee + payment + deposit << std::endl;
-			std::cerr << "funds acquired: " << funds << std::endl;
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
 			
 		// TODO: these two below
@@ -1604,7 +1600,7 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				if (bHasReceiver)
 					members.push_back(Pair("receiver",HexStr(destpub)));
 				if (payment > 0)
-					data.push_back(Pair("required_payment",payment));
+					data.push_back(Pair("required_payment",(payment / COIN)));
 				data.push_back(Pair("info",info));
 				data.push_back(Pair("data_hash",datahash.GetHex()));
 				switch (proposaltype) {
