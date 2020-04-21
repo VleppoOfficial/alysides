@@ -358,7 +358,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 					case 't':
 						if (commitmenttxid == zeroid)
 							return eval->Invalid("proposal has no defined commitment, unable to verify membership!");
-						if (!GetCommitmentInitialData(commitmenttxid, originaltxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, deposit, datahash, refcommitmenttxid, info))
+						if (!GetCommitmentInitialData(commitmenttxid, originaltxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, depositval, datahash, refcommitmenttxid, info))
 							return eval->Invalid("couldn't get proposal's commitment info successfully!");
 						if (CPK_src != CPK_origpubkey && CPK_src != CPK_dest && CPK_src != pubkey2pk(sellerpk) && CPK_src != pubkey2pk(clientpk))
 							return eval->Invalid("srcpub is not the source or receiver of specified proposal!");
