@@ -227,7 +227,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 	CTransaction proposaltx;
 	CScript proposalopret;
 	int32_t numvins, numvouts;
-	uint256 hashBlock, datahash, originaltxid, commitmenttxid, proposaltxid, prevproposaltxid, spendingtxid;
+	uint256 hashBlock, datahash, originaltxid, commitmenttxid, proposaltxid, prevproposaltxid, refcommitmenttxid, spendingtxid;
 	std::vector<uint8_t> srcpub, destpub, sellerpk, clientpk, arbitratorpk, origpubkey;
 	int64_t payment, arbitratorfee, depositval;
 	std::string info, CCerror;
@@ -1309,7 +1309,7 @@ UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 {
 	CPubKey mypk, CPK_src, CPK_dest;
 	CTransaction proposaltx;
-	uint256 hashBlock, datahash, firstdatahash, originaltxid, refcommitmenttxid, prevproposaltxid, spendingtxid;
+	uint256 hashBlock, datahash, firstdatahash, originaltxid, refcommitmenttxid, origcommitmenttxid, prevproposaltxid, spendingtxid;
 	std::vector<uint8_t> srcpub, destpub, sellerpk, clientpk, arbitrator;
 	int32_t numvouts;
 	int64_t payment, arbitratorfee, deposit;
@@ -1357,7 +1357,7 @@ UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 		case 't':
 			if (refcommitmenttxid == zeroid)
 				CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "proposal has no defined commitment, unable to verify membership");
-			if (!GetCommitmentInitialData(commitmenttxid, originaltxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, deposit, firstdatahash, refcommitmenttxid, firstinfo))
+			if (!GetCommitmentInitialData(refcommitmenttxid, originaltxid, sellerpk, clientpk, arbitrator, arbitratorfee, deposit, firstdatahash, origcommitmenttxid, firstinfo))
 				CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "couldn't get proposal's commitment info successfully");
 			if (mypk != CPK_src && mypk != CPK_dest && mypk != pubkey2pk(sellerpk) && mypk != pubkey2pk(clientpk))
 				CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "you are not the source or receiver of specified proposal");
