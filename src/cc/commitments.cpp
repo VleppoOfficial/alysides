@@ -1159,7 +1159,7 @@ UniValue CommitmentCreate(const CPubKey& pk, uint64_t txfee, std::string info, u
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror << " txid: " << prevproposaltxid.GetHex());
 	}
 	
-	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 8) >= txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE) {
+	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 8) > 0) {
 		if (prevproposaltxid != zeroid) {
 			mtx.vin.push_back(CTxIn(prevproposaltxid,0,CScript())); // vin.n-2 previous proposal marker (optional, will trigger validation)
 			GetCCaddress1of2(cp, mutualaddr, pubkey2pk(ref_srcpub), pubkey2pk(ref_destpub));
@@ -1237,7 +1237,7 @@ UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmentt
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror << " txid: " << prevproposaltxid.GetHex());
 	}
 	
-	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 8) >= txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE) {
+	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 8) > 0) {
 		if (prevproposaltxid != zeroid) {
 			mtx.vin.push_back(CTxIn(prevproposaltxid,0,CScript())); // vin.n-2 previous proposal marker (optional, will trigger validation)
 			GetCCaddress1of2(cp, mutualaddr, pubkey2pk(ref_srcpub), pubkey2pk(ref_destpub));
@@ -1385,7 +1385,7 @@ UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid proposaltype in proposal tx opret");
 	}
 
-	if (AddNormalinputs2(mtx, txfee, 5) >= txfee) {
+	if (AddNormalinputs2(mtx, txfee, 5) > 0) {
 		if (bHasReceiver) {
 			GetCCaddress1of2(cp, mutualaddr, CPK_src, CPK_dest);
 			mtx.vin.push_back(CTxIn(proposaltxid,1,CScript())); // vin.1 previous proposal CC response hook (1of2 addr version)
@@ -1455,7 +1455,7 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 	switch (proposaltype) {
 		case 'p':
 			// constructing a 'c' transaction
-			if (AddNormalinputs2(mtx, txfee + payment + deposit, 64) >= txfee + payment + deposit) {
+			if (AddNormalinputs2(mtx, txfee + payment + deposit, 64) > 0) {
 				mtx.vin.push_back(CTxIn(proposaltxid,0,CScript())); // vin.1 previous proposal CC marker
 				GetCCaddress1of2(cp, mutualaddr, CPK_src, CPK_dest);
 				mtx.vin.push_back(CTxIn(proposaltxid,1,CScript())); // vin.2 previous proposal CC response hook (must have designated receiver!)
@@ -1477,7 +1477,7 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 		case 'u':
 			GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
 			// constructing a 'u' transaction
-			if (AddNormalinputs2(mtx, txfee + payment, 64) >= txfee + payment) {
+			if (AddNormalinputs2(mtx, txfee + payment, 64) > 0) {
 				mtx.vin.push_back(CTxIn(proposaltxid,0,CScript())); // vin.1 previous proposal CC marker
 				GetCCaddress1of2(cp, mutualaddr, CPK_src, CPK_dest);
 				mtx.vin.push_back(CTxIn(proposaltxid,1,CScript())); // vin.2 previous proposal CC response hook
@@ -1578,6 +1578,8 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 							result.push_back(Pair("status","updated"));
 							break;
 						case 'c':
+						case 'u':
+						case 's':
 							result.push_back(Pair("status","accepted"));
 							break;
 						case 't':
