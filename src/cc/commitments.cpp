@@ -1023,7 +1023,7 @@ bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint
     int32_t vini, height, retcode;
     std::vector<std::pair<uint8_t, vscript_t>> oprets;
 	std::vector<CPubKey> voutPubkeysDummy;
-    uint256 batontxid, sourcetxid = commitmenttxid, hashBlock;
+    uint256 batontxid, sourcetxid, hashBlock;
     CTransaction commitmenttx, batontx;
     uint8_t evalcode;
 
@@ -1036,14 +1036,14 @@ bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint
 		std::cerr << "GetLatestCommitmentUpdate: commitment tx is not a contract signing tx" << std::endl;
 		return false;	
 	}
-	if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 1)) != 0) {
+	if ((retcode = CCgetspenttxid(batontxid, vini, height, commitmenttxid, 1)) != 0) {
 		latesttxid = commitmenttxid; // no updates, return commitmenttxid
 		funcid = 'c';
 		return true;	
 	}
 	else if (!(myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 && 
-	(funcid = DecodeCommitmentOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey) == 'u') || funcid == 's' || funcid == 'd' || funcid == 'r') &&
-	batontx.vout[2].nValue == CC_MARKER_VALUE) {
+	(funcid = DecodeCommitmentOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey) == 'u') || funcid == 's' || funcid == 'd') &&
+	batontx.vout[1].nValue == CC_MARKER_VALUE) {
 		std::cerr << "GetLatestCommitmentUpdate: found first update, but it has incorrect funcid" << std::endl;
 		return false;	
 	}
@@ -1420,7 +1420,7 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
 	if (txfee == 0) txfee = CC_TXFEE;
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
-	
+
 	if (myGetTransaction(proposaltxid, proposaltx, hashBlock) == 0 || (numvouts = proposaltx.vout.size()) <= 0)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "cant find specified proposal txid " << proposaltxid.GetHex());
 	if (!ValidateProposalOpRet(proposaltx.vout[numvouts-1].scriptPubKey, CCerror))
@@ -1515,13 +1515,13 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 	UniValue result(UniValue::VOBJ), members(UniValue::VOBJ), data(UniValue::VOBJ);
 	CPubKey mypk, CPK_src, CPK_dest, CPK_arbitrator;
 	CTransaction tx, proposaltx;
-	uint256 hashBlock, datahash, proposaltxid, prevproposaltxid, commitmenttxid, spendingtxid;
+	uint256 hashBlock, datahash, proposaltxid, prevproposaltxid, commitmenttxid, latesttxid, spendingtxid;
 	std::vector<uint8_t> srcpub, destpub, arbitrator, initiator;
 	int32_t numvouts;
 	int64_t payment, arbitratorfee, deposit;
 	std::string info, CCerror;
 	bool bHasReceiver, bHasArbitrator;
-	uint8_t funcid, version, proposaltype, spendingfuncid, mypriv[32];
+	uint8_t funcid, version, proposaltype, updatefuncid, spendingfuncid, mypriv[32];
 	char mutualaddr[65];
 	
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
@@ -1620,6 +1620,13 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 					data.push_back(Pair("master_contract_txid",commitmenttxid.GetHex()));
 				
 				// TODO: status (open, closed, disputed, arbitrated, etc.); last_txid
+				GetLatestCommitmentUpdate(txid, latesttxid, updatefuncid);
+				if (latesttxid != txid) {
+					result.push_back(Pair("status",updatefuncid));
+					result.push_back(Pair("last_txid",latesttxid.GetHex()));
+				}
+				else
+					result.push_back(Pair("status","active"));
 				/*
 				Contract status:
 					'c' or 'u' - active
