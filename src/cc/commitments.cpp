@@ -362,6 +362,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 							return eval->Invalid("couldn't get proposal's commitment info successfully!");
 						if (CPK_src != CPK_origpubkey && CPK_src != CPK_dest && CPK_src != pubkey2pk(sellerpk) && CPK_src != pubkey2pk(clientpk))
 							return eval->Invalid("srcpub is not the source or receiver of specified proposal!");
+						break;
 					default:
 						return eval->Invalid("invalid proposaltype!");
 				}
