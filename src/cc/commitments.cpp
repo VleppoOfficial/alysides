@@ -1624,6 +1624,7 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 					data.push_back(Pair("master_contract_txid",commitmenttxid.GetHex()));
 				GetLatestCommitmentUpdate(txid, latesttxid, updatefuncid);
 				if (latesttxid != txid) {
+					switch (updatefuncid) {
 						case 'u':
 							result.push_back(Pair("status","updated"));
 							break;
