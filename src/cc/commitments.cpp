@@ -1225,7 +1225,7 @@ UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmentt
 			switch (spendingfuncid) {
 				case 'p':
 					CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified proposal has been amended by txid " << spendingtxid.GetHex());
-				case 'c':
+				case 'u':
 					CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified proposal has been accepted by txid " << spendingtxid.GetHex());
 				case 't':
 					CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified proposal has been closed by txid " << spendingtxid.GetHex());
@@ -1353,6 +1353,8 @@ UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 			case 'p':
 				CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified proposal has been amended by txid " << spendingtxid.GetHex());
 			case 'c':
+			case 'u':
+			case 's':
 				CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified proposal has been accepted by txid " << spendingtxid.GetHex());
 			case 't':
 				CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified proposal has been closed by txid " << spendingtxid.GetHex());
@@ -1433,6 +1435,8 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 			case 'p':
 				CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified proposal has been amended by txid " << spendingtxid.GetHex());
 			case 'c':
+			case 'u':
+			case 's':
 				CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified proposal has been accepted by txid " << spendingtxid.GetHex());
 			case 't':
 				CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified proposal has been closed by txid " << spendingtxid.GetHex());
@@ -1618,25 +1622,30 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				result.push_back(Pair("members",members));
 				if (commitmenttxid != zeroid)
 					data.push_back(Pair("master_contract_txid",commitmenttxid.GetHex()));
-				
-				// TODO: status (open, closed, disputed, arbitrated, etc.); last_txid
 				GetLatestCommitmentUpdate(txid, latesttxid, updatefuncid);
 				if (latesttxid != txid) {
-					result.push_back(Pair("status",updatefuncid));
+						case 'u':
+							result.push_back(Pair("status","updated"));
+							break;
+						case 's':
+							result.push_back(Pair("status","closed"));
+							break;
+						case 'd':
+							result.push_back(Pair("status","suspended"));
+							break;
+						case 'r':
+							result.push_back(Pair("status","arbitrated"));
+							break;
+						case 'n':
+							result.push_back(Pair("status","in exchange mode"));
+							break;
+					}
 					result.push_back(Pair("last_txid",latesttxid.GetHex()));
 				}
 				else
 					result.push_back(Pair("status","active"));
-				/*
-				Contract status:
-					'c' or 'u' - active
-					's' - closed
-					'd' - suspended
-					'r' - arbitrated
-					'f' - track exchange status
-				*/
-			
-				// TODO: add revision numbers here (version numbers should be reset after contract acceptance)
+
+				// TODO: add latest revision numbers here (version numbers should be reset after contract acceptance)
 				
 				// TODO: add updateable data support for the stuff below
 				data.push_back(Pair("arbitrator_fee",arbitratorfee));
@@ -1655,6 +1664,10 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				break;	
 			case 'u':
 				result.push_back(Pair("type","contract update"));
+				DecodeCommitmentUpdateOpRet(tx.vout[numvouts-1].scriptPubKey, version, commitmenttxid, proposaltxid);
+				result.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
+				result.push_back(Pair("proposal_txid",proposaltxid.GetHex()));
+				// TODO: revision number
 				break;
 			case 's':
 				result.push_back(Pair("type","contract close"));
