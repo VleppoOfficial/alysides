@@ -227,12 +227,12 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 	CTransaction proposaltx;
 	CScript proposalopret;
 	int32_t numvins, numvouts;
-	uint256 hashBlock, datahash, originaltxid, commitmenttxid, proposaltxid, prevproposaltxid, refcommitmenttxid, spendingtxid;
+	uint256 hashBlock, datahash, originaltxid, commitmenttxid, proposaltxid, prevproposaltxid, refcommitmenttxid, spendingtxid, latesttxid;
 	std::vector<uint8_t> srcpub, destpub, signpub, sellerpk, clientpk, arbitratorpk;
 	int64_t payment, arbitratorfee, depositval;
 	std::string info, CCerror;
 	bool bHasReceiver, bHasArbitrator;
-	uint8_t proposaltype, version, spendingfuncid, funcid;
+	uint8_t proposaltype, version, spendingfuncid, funcid, updatefuncid;
 	char markeraddr[65], srcaddr[65], destaddr[65], depositaddr[65];
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator, CPK_signer;
 
