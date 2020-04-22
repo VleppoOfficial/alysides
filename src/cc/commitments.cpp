@@ -58,7 +58,7 @@ uint8_t DecodeCommitmentOpRet(const CScript scriptPubKey)
 	std::vector<uint8_t> vopret, dummypk;
 	int64_t dummyamount;
 	uint256 dummyhash;
-	std::string dummyinfo;
+	std::string dummystr;
 	uint8_t evalcode, funcid, *script, dummytype;
 	bool dummybool;
 	GetOpReturnData(scriptPubKey, vopret);
@@ -73,7 +73,7 @@ uint8_t DecodeCommitmentOpRet(const CScript scriptPubKey)
 		LOGSTREAM((char *)"commitmentscc", CCLOG_DEBUG2, stream << "DecodeCommitmentOpRet() decoded funcId=" << (char)(funcid ? funcid : ' ') << std::endl);
 		switch (funcid) {
 		case 'p':
-			return DecodeCommitmentProposalOpRet(scriptPubKey, dummytype, dummytype, dummypk, dummypk, dummypk, dummyamount, dummyamount, dummyamount, dummyhash, dummyhash, dummyhash, dummyinfo);
+			return DecodeCommitmentProposalOpRet(scriptPubKey, dummytype, dummytype, dummypk, dummypk, dummypk, dummyamount, dummyamount, dummyamount, dummyhash, dummyhash, dummyhash, dummystr);
 		case 't':
 			return DecodeCommitmentProposalCloseOpRet(scriptPubKey, dummytype, dummyhash, dummypk);
 		case 'c':
@@ -1361,6 +1361,7 @@ UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 				CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "couldn't get proposal's commitment info successfully");
 			if (mypk != CPK_src && mypk != CPK_dest && mypk != pubkey2pk(sellerpk) && mypk != pubkey2pk(clientpk))
 				CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "you are not the source or receiver of specified proposal");
+			break;
 		default:
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid proposaltype in proposal tx opret");
 	}
