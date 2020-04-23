@@ -1027,9 +1027,9 @@ bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint
 void GetCommitmentUpdateData(uint256 updatetxid, std::string &info, uint256 &datahash, int64_t &arbitratorfee)
 {
 	CScript proposalopret;
-	CTransaction updatetx, disputetx;
+	CTransaction updatetx;
 	std::vector<uint8_t> dummypk;
-	uint256 proposaltxid, disputetxid, dummytxid, hashBlock;
+	uint256 proposaltxid, dummytxid, hashBlock;
 	uint8_t version, funcid, dummychar;
 	int64_t dummyamount;
 
