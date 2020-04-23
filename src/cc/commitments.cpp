@@ -1476,7 +1476,7 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 	UniValue result(UniValue::VOBJ), members(UniValue::VOBJ), data(UniValue::VOBJ);
 	CPubKey mypk, CPK_src, CPK_dest, CPK_arbitrator;
 	CTransaction tx, proposaltx;
-	uint256 hashBlock, datahash, proposaltxid, prevproposaltxid, commitmenttxid, latesttxid, spendingtxid;
+	uint256 hashBlock, datahash, proposaltxid, prevproposaltxid, commitmenttxid, latesttxid, spendingtxid, dummytxid;
 	std::vector<uint8_t> srcpub, destpub, arbitrator, initiator;
 	int32_t numvouts;
 	int64_t payment, arbitratorfee, deposit;
@@ -1521,9 +1521,13 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 					case 'u':
 						result.push_back(Pair("proposal_type","contract_update"));
 						result.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
-						if (bHasArbitrator)
+						if (bHasArbitrator) {
 							data.push_back(Pair("new_arbitrator_fee", arbitratorfee));
-						// TODO: also compare if new fee == old fee
+							GetCommitmentInitialData(commitmenttxid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, deposit, datahash, dummytxid, info);
+							GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
+							GetCommitmentUpdateData(latesttxid, info, datahash, arbitratorfee);
+							data.push_back(Pair("current_arbitrator_fee", arbitratorfee));
+						}
 						break;
 					case 't':
 						result.push_back(Pair("proposal_type","contract_close"));
