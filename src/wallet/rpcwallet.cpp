@@ -8065,7 +8065,7 @@ UniValue commitmentcreate(const UniValue& params, bool fHelp, const CPubKey& myp
 	prepayment = 0;
 	if (params.size() >= 5) {
 		prepayment = atoll(params[4].get_str().c_str());
-		if (prepayment < 10000) {
+		if (prepayment != 0 && prepayment < 10000) {
 			Unlock2NSPV(mypk);
 			throw runtime_error("Prepayment too low\n");
 		}
@@ -8073,7 +8073,7 @@ UniValue commitmentcreate(const UniValue& params, bool fHelp, const CPubKey& myp
 	arbitratorfee = 0;
 	if (params.size() >= 6) {
 		arbitratorfee = atoll(params[5].get_str().c_str());
-        if (arbitratorfee < 10000)    {
+        if (arbitratorfee != 0 && arbitratorfee < 10000)    {
 			Unlock2NSPV(mypk);
 			throw runtime_error("Arbitrator fee too low\n");
 		}
@@ -8081,7 +8081,7 @@ UniValue commitmentcreate(const UniValue& params, bool fHelp, const CPubKey& myp
 	deposit = 0;
 	if (params.size() >= 7) {
 		deposit = atoll(params[6].get_str().c_str());
-        if (deposit < 10000)    {
+        if (deposit != 0 && deposit < 10000)    {
 			Unlock2NSPV(mypk);
 			throw runtime_error("Deposit too low\n");
 		}
@@ -8176,7 +8176,7 @@ UniValue commitmentupdate(const UniValue& params, bool fHelp, const CPubKey& myp
 	payment = 0;
 	if (params.size() >= 4) {
 		payment = atoll(params[3].get_str().c_str());
-		if (payment < 10000) {
+		if (payment != 0 && payment < 10000) {
 			Unlock2NSPV(mypk);
 			throw runtime_error("Payment too low\n");
 		}
@@ -8188,7 +8188,7 @@ UniValue commitmentupdate(const UniValue& params, bool fHelp, const CPubKey& myp
 	arbitratorfee = 0;
 	if (params.size() == 6) {
 		arbitratorfee = atoll(params[5].get_str().c_str());
-        if (arbitratorfee < 10000) {
+        if (arbitratorfee != 0 && arbitratorfee < 10000) {
 			Unlock2NSPV(mypk);
 			throw runtime_error("Arbitrator fee too low\n");
 		}
