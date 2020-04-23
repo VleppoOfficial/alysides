@@ -1178,8 +1178,6 @@ UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmentt
 	GetCommitmentUpdateData(latesttxid, dummystr, dummytxid, arbitratorfee);
 	if (newarbitratorfee == 0)
 		newarbitratorfee = arbitratorfee;
-	CPK_dest = pubkey2pk(destpub);
-	bHasReceiver = CPK_dest.IsFullyValid();
 	// setting destination pubkey
 	if (mypk == pubkey2pk(sellerpk))
 		destpub = clientpk;
