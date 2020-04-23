@@ -1504,7 +1504,7 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				if (bHasReceiver)
 					members.push_back(Pair("receiver",HexStr(destpub)));
 				if (payment > 0)
-					data.push_back(Pair("required_payment",(payment / COIN)));
+					data.push_back(Pair("required_payment", payment));
 				data.push_back(Pair("info",info));
 				data.push_back(Pair("data_hash",datahash.GetHex()));
 				switch (proposaltype) {

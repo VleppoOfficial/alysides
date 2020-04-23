@@ -8051,36 +8051,39 @@ UniValue commitmentcreate(const UniValue& params, bool fHelp, const CPubKey& myp
     Lock2NSPV(mypk);
 	
 	info = params[0].get_str();
-    if (info.size() == 0 || info.size() > 2048)   {
+    if (info.size() == 0 || info.size() > 2048) {
 		Unlock2NSPV(mypk);
         throw runtime_error("Commitment info must not be empty and up to 2048 characters\n");
     }
     datahash = Parseuint256((char *)params[1].get_str().c_str());
-	if (datahash == zeroid)   {
+	if (datahash == zeroid) {
 		Unlock2NSPV(mypk);
         throw runtime_error("Data hash empty or invalid\n");
     }
 	std::vector<unsigned char> buyer(ParseHex(params[2].get_str().c_str()));
 	std::vector<unsigned char> arbitrator(ParseHex(params[3].get_str().c_str()));
 	prepayment = 0;
-	if (params.size() >= 5)     {
-		prepayment = atof((char *)params[4].get_str().c_str()) * COIN + 0.00000000499999;
+	if (params.size() >= 5) {
+		prepayment = atoll(params[4].get_str().c_str());
+		//prepayment = atof((char *)params[4].get_str().c_str()) * COIN + 0.00000000499999;
 		if (prepayment < 0) {
 			Unlock2NSPV(mypk);
 			throw runtime_error("Prepayment must be positive\n");
 		}
     }
 	arbitratorfee = 0;
-	if (params.size() >= 6)     {
-        arbitratorfee = atof((char *)params[5].get_str().c_str()) * COIN + 0.00000000499999;
+	if (params.size() >= 6) {
+		arbitratorfee = atoll(params[5].get_str().c_str());
+        //arbitratorfee = atof((char *)params[5].get_str().c_str()) * COIN + 0.00000000499999;
         if (arbitratorfee < 0)    {
 			Unlock2NSPV(mypk);
 			throw runtime_error("Arbitrator fee must be positive\n");
 		}
     }
 	deposit = 0;
-	if (params.size() >= 7)     {
-        deposit = atof((char *)params[6].get_str().c_str()) * COIN + 0.00000000499999;
+	if (params.size() >= 7) {
+		deposit = atoll(params[6].get_str().c_str());
+        //deposit = atof((char *)params[6].get_str().c_str()) * COIN + 0.00000000499999;
         if (deposit < 0)    {
 			Unlock2NSPV(mypk);
 			throw runtime_error("deposit must be positive\n");
@@ -8175,7 +8178,8 @@ UniValue commitmentupdate(const UniValue& params, bool fHelp, const CPubKey& myp
     }
 	payment = 0;
 	if (params.size() >= 4) {
-		payment = atof((char *)params[3].get_str().c_str()) * COIN + 0.00000000499999;
+		payment = atoll(params[3].get_str().c_str());
+		//payment = atof((char *)params[3].get_str().c_str()) * COIN + 0.00000000499999;
 		if (payment < 0) {
 			Unlock2NSPV(mypk);
 			throw runtime_error("Payment must be positive\n");
@@ -8186,9 +8190,10 @@ UniValue commitmentupdate(const UniValue& params, bool fHelp, const CPubKey& myp
         prevproposaltxid = Parseuint256((char *)params[4].get_str().c_str());
     }
 	arbitratorfee = 0;
-	if (params.size() == 6)     {
-        arbitratorfee = atof((char *)params[5].get_str().c_str()) * COIN + 0.00000000499999;
-        if (arbitratorfee < 0)    {
+	if (params.size() == 6) {
+		arbitratorfee = atoll(params[5].get_str().c_str());
+        //arbitratorfee = atof((char *)params[5].get_str().c_str()) * COIN + 0.00000000499999;
+        if (arbitratorfee < 0) {
 			Unlock2NSPV(mypk);
 			throw runtime_error("Arbitrator fee must be positive\n");
 		}
