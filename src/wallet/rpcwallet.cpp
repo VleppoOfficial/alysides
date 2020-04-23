@@ -8065,28 +8065,25 @@ UniValue commitmentcreate(const UniValue& params, bool fHelp, const CPubKey& myp
 	prepayment = 0;
 	if (params.size() >= 5) {
 		prepayment = atoll(params[4].get_str().c_str());
-		//prepayment = atof((char *)params[4].get_str().c_str()) * COIN + 0.00000000499999;
-		if (prepayment < 0) {
+		if (prepayment < 10000) {
 			Unlock2NSPV(mypk);
-			throw runtime_error("Prepayment must be positive\n");
+			throw runtime_error("Prepayment too low\n");
 		}
     }
 	arbitratorfee = 0;
 	if (params.size() >= 6) {
 		arbitratorfee = atoll(params[5].get_str().c_str());
-        //arbitratorfee = atof((char *)params[5].get_str().c_str()) * COIN + 0.00000000499999;
-        if (arbitratorfee < 0)    {
+        if (arbitratorfee < 10000)    {
 			Unlock2NSPV(mypk);
-			throw runtime_error("Arbitrator fee must be positive\n");
+			throw runtime_error("Arbitrator fee too low\n");
 		}
     }
 	deposit = 0;
 	if (params.size() >= 7) {
 		deposit = atoll(params[6].get_str().c_str());
-        //deposit = atof((char *)params[6].get_str().c_str()) * COIN + 0.00000000499999;
-        if (deposit < 0)    {
+        if (deposit < 10000)    {
 			Unlock2NSPV(mypk);
-			throw runtime_error("deposit must be positive\n");
+			throw runtime_error("Deposit too low\n");
 		}
     }
 	prevproposaltxid = zeroid;
@@ -8179,10 +8176,9 @@ UniValue commitmentupdate(const UniValue& params, bool fHelp, const CPubKey& myp
 	payment = 0;
 	if (params.size() >= 4) {
 		payment = atoll(params[3].get_str().c_str());
-		//payment = atof((char *)params[3].get_str().c_str()) * COIN + 0.00000000499999;
-		if (payment < 0) {
+		if (payment < 10000) {
 			Unlock2NSPV(mypk);
-			throw runtime_error("Payment must be positive\n");
+			throw runtime_error("Payment too low\n");
 		}
     }
 	prevproposaltxid = zeroid;
@@ -8192,10 +8188,9 @@ UniValue commitmentupdate(const UniValue& params, bool fHelp, const CPubKey& myp
 	arbitratorfee = 0;
 	if (params.size() == 6) {
 		arbitratorfee = atoll(params[5].get_str().c_str());
-        //arbitratorfee = atof((char *)params[5].get_str().c_str()) * COIN + 0.00000000499999;
-        if (arbitratorfee < 0) {
+        if (arbitratorfee < 10000) {
 			Unlock2NSPV(mypk);
-			throw runtime_error("Arbitrator fee must be positive\n");
+			throw runtime_error("Arbitrator fee too low\n");
 		}
     }
 	result = CommitmentUpdate(mypk, 0, commitmenttxid, info, datahash, payment, prevproposaltxid, arbitratorfee);
