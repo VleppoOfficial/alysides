@@ -1053,34 +1053,6 @@ bool GetCommitmentUpdateData(uint256 updatetxid, std::string &info, uint256 &dat
 		}
 		break;
     }
-	
-	if ( == 0 || updatetx.vout.size() <= 0) {
-		std::cerr << "GetCommitmentUpdateData: couldn't find update tx" << std::endl;
-		return false;
-	}
-	funcid = DecodeCommitmentOpRet(updatetx.vout[updatetx.vout.size() - 1].scriptPubKey);
-	switch (funcid) {
-		case 'c':
-		case 'u':
-		case 's':
-			return true;
-		case 'n':
-		case 'd':
-		case 'r':
-			return false;
-		default:
-			std::cerr << "GetCommitmentUpdateData: invalid update tx funcid" << std::endl;
-			return false;
-	}
-
-	if (!GetAcceptedProposalOpRet(updatetx, proposaltxid, proposalopret)) {
-		std::cerr << "GetCommitmentUpdateData: couldn't get accepted proposal tx opret" << std::endl;
-		return false;	
-	}
-	if (DecodeCommitmentProposalOpRet(proposalopret, version, proposaltype, sellerpk, clientpk, arbitratorpk, payment, firstarbitratorfee, deposit, firstdatahash, refcommitmenttxid, prevproposaltxid, firstinfo) != 'p' || proposaltype != 'p') {
-		std::cerr << "GetCommitmentUpdateData: commitment accepted proposal tx opret invalid" << std::endl;
-		return false;	
-	}
 	return true;
 }
 
