@@ -18,7 +18,6 @@
 /*
 Things to potentially descope:
 "Draft" proposals (no receiver)
-Proposal amending
 Dynamic arbitrator fees
 the 'info' field
 
@@ -701,7 +700,6 @@ bool GetAcceptedProposalOpRet(CTransaction tx, uint256 &proposaltxid, CScript &o
 			DecodeCommitmentCloseOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, version, commitmenttxid, proposaltxid, deposit_send, deposit_keep);
 			break;
 	}
-	
 	if (myGetTransaction(proposaltxid, proposaltx, hashBlock) == 0 || proposaltx.vout.size() <= 0) {
 		std::cerr << "GetAcceptedProposalOpRet: couldn't find commitment accepted proposal tx" << std::endl;
 		return false;
@@ -744,13 +742,11 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 		CCerror = "proposal has payment < 0!";
 		return false;
 	}
-	
 	CPK_src = pubkey2pk(srcpub);
 	CPK_dest = pubkey2pk(destpub);
 	CPK_arbitrator = pubkey2pk(arbitratorpk);
 	bHasReceiver = CPK_dest.IsValid();
 	bHasArbitrator = CPK_arbitrator.IsValid();
-
 	LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: making sure srcpub != destpub != arbitratorpk" << std::endl);
 	if (bHasReceiver && CPK_src == CPK_dest) {
 		CCerror = "proposal srcpub cannot be the same as destpub!";
@@ -1003,9 +999,7 @@ bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint
 		std::cerr << "GetLatestCommitmentUpdate: found first update, but it has incorrect funcid" << std::endl;
 		return false;	
 	}
-	
 	sourcetxid = batontxid;
-
     // baton vout should be vout0 from now on
     while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0) {
         if (myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 &&             
@@ -1069,18 +1063,15 @@ UniValue CommitmentCreate(const CPubKey& pk, uint64_t txfee, std::string info, u
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
 	if (txfee == 0) txfee = CC_TXFEE;
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
-	
 	CPK_dest = pubkey2pk(destpub);
 	CPK_arbitrator = pubkey2pk(arbitrator);
 	bHasReceiver = CPK_dest.IsFullyValid();
 	bHasArbitrator = CPK_arbitrator.IsFullyValid();
-	
 	// check if destpub & arbitrator pubkeys exist and are valid
 	if (!destpub.empty() && !bHasReceiver)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Buyer pubkey invalid");
 	if (!arbitrator.empty() && !bHasArbitrator)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Arbitrator pubkey invalid");
-	
 	// if arbitrator exists, check if arbitrator fee & deposit are sufficient
 	if (bHasArbitrator) {
 		if (arbitratorfee == 0)
@@ -1096,12 +1087,10 @@ UniValue CommitmentCreate(const CPubKey& pk, uint64_t txfee, std::string info, u
 		arbitratorfee = 0;
 		deposit = CC_MARKER_VALUE;
 	}
-	
 	// additional checks are done using ValidateProposalOpRet
 	CScript opret = EncodeCommitmentProposalOpRet(COMMITMENTCC_VERSION,'p',std::vector<uint8_t>(mypk.begin(),mypk.end()),destpub,arbitrator,payment,arbitratorfee,deposit,datahash,refcommitmenttxid,prevproposaltxid,info);
 	if (!ValidateProposalOpRet(opret, CCerror))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror);
-	
 	// check prevproposaltxid if specified
 	if (prevproposaltxid != zeroid) {
 		if (myGetTransaction(prevproposaltxid,prevproposaltx,hashBlock)==0 || (numvouts=prevproposaltx.vout.size())<=0)
@@ -1122,7 +1111,6 @@ UniValue CommitmentCreate(const CPubKey& pk, uint64_t txfee, std::string info, u
 		if (!CompareProposals(opret, prevproposaltxid, CCerror))
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror << " txid: " << prevproposaltxid.GetHex());
 	}
-	
 	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 8) > 0) {
 		if (prevproposaltxid != zeroid) {
 			mtx.vin.push_back(CTxIn(prevproposaltxid,0,CScript())); // vin.n-2 previous proposal marker (optional, will trigger validation)
@@ -1159,9 +1147,8 @@ UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmentt
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
 	if (txfee == 0) txfee = CC_TXFEE;
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
-	
 	if (!GetCommitmentInitialData(commitmenttxid, dummytxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, dummyamount, dummytxid, dummytxid, dummystr))
-		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "couldn't get specified commitment info successfully");
+		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "couldn't get specified commitment info successfully, probably invalid commitment txid");
 
 	// TODO: latest arbitrator fee check here
 	
@@ -1172,14 +1159,11 @@ UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmentt
 		destpub = sellerpk;
 	else
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "you are not a valid member of this commitment");
-	
 	CPK_dest = pubkey2pk(destpub);
-	
 	// additional checks are done using ValidateProposalOpRet
 	CScript opret = EncodeCommitmentProposalOpRet(COMMITMENTCC_VERSION,'u',std::vector<uint8_t>(mypk.begin(),mypk.end()),destpub,arbitratorpk,payment,newarbitratorfee,0,datahash,commitmenttxid,prevproposaltxid,info);
 	if (!ValidateProposalOpRet(opret, CCerror))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror);
-	
 	// check prevproposaltxid if specified
 	if (prevproposaltxid != zeroid) {
 		if (myGetTransaction(prevproposaltxid,prevproposaltx,hashBlock)==0 || (numvouts=prevproposaltx.vout.size())<=0)
@@ -1200,7 +1184,6 @@ UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmentt
 		if (!CompareProposals(opret, prevproposaltxid, CCerror))
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror << " txid: " << prevproposaltxid.GetHex());
 	}
-	
 	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 8) > 0) {
 		if (prevproposaltxid != zeroid) {
 			mtx.vin.push_back(CTxIn(prevproposaltxid,0,CScript())); // vin.n-2 previous proposal marker (optional, will trigger validation)
@@ -1225,11 +1208,10 @@ UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttx
 	uint256 hashBlock, spendingtxid, dummytxid;
 	std::vector<uint8_t> destpub, sellerpk, clientpk, arbitratorpk, ref_srcpub, ref_destpub, dummypk;
 	int32_t numvouts;
-	int64_t arbitratorfee, dummyamount;
+	int64_t deposit, dummyamount;
 	std::string dummystr, CCerror;
 	uint8_t version, spendingfuncid, dummychar, mypriv[32];
 	char mutualaddr[65];
-	
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
 	if (txfee == 0) txfee = CC_TXFEE;
@@ -1304,13 +1286,10 @@ UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
 	if (txfee == 0) txfee = CC_TXFEE;
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
-	
 	if (myGetTransaction(proposaltxid, proposaltx, hashBlock) == 0 || (numvouts = proposaltx.vout.size()) <= 0)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "cant find specified proposal txid " << proposaltxid.GetHex());
-	
 	if (DecodeCommitmentProposalOpRet(proposaltx.vout[numvouts-1].scriptPubKey,version,proposaltype,srcpub,destpub,dummypk,dummyamount,dummyamount,dummyamount,dummytxid,refcommitmenttxid,dummytxid,dummystr) != 'p')
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified txid has incorrect proposal opret");
-	
 	if (IsProposalSpent(proposaltxid, spendingtxid, spendingfuncid)) {
 		switch (spendingfuncid) {
 			case 'p':
@@ -1325,11 +1304,9 @@ UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 				CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified proposal has been spent by txid " << spendingtxid.GetHex());
 		}
 	}
-	
 	CPK_src = pubkey2pk(srcpub);
 	CPK_dest = pubkey2pk(destpub);
 	bHasReceiver = CPK_dest.IsFullyValid();
-	
 	switch (proposaltype) {
 		case 'p':
 			if (bHasReceiver && mypk != CPK_src && mypk != CPK_dest)
@@ -1349,7 +1326,6 @@ UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 		default:
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid proposaltype in proposal tx opret");
 	}
-
 	if (AddNormalinputs2(mtx, txfee, 5) > 0) {
 		if (bHasReceiver) {
 			GetCCaddress1of2(cp, mutualaddr, CPK_src, CPK_dest);
@@ -1385,14 +1361,12 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
 	if (txfee == 0) txfee = CC_TXFEE;
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
-
 	if (myGetTransaction(proposaltxid, proposaltx, hashBlock) == 0 || (numvouts = proposaltx.vout.size()) <= 0)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "cant find specified proposal txid " << proposaltxid.GetHex());
 	if (!ValidateProposalOpRet(proposaltx.vout[numvouts-1].scriptPubKey, CCerror))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror);
 	if (DecodeCommitmentProposalOpRet(proposaltx.vout[numvouts-1].scriptPubKey,version,proposaltype,srcpub,destpub,arbitrator,payment,arbitratorfee,deposit,datahash,commitmenttxid,prevproposaltxid,info) != 'p')
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified txid has incorrect proposal opret");
-	
 	if (IsProposalSpent(proposaltxid, spendingtxid, spendingfuncid)) {
 		switch (spendingfuncid) {
 			case 'p':
@@ -1407,18 +1381,15 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 				CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "specified proposal has been spent by txid " << spendingtxid.GetHex());
 		}
 	}
-	
 	CPK_src = pubkey2pk(srcpub);
 	CPK_dest = pubkey2pk(destpub);
 	CPK_arbitrator = pubkey2pk(arbitrator);
 	bHasReceiver = CPK_dest.IsFullyValid();
 	bHasArbitrator = CPK_arbitrator.IsFullyValid();
-	
 	if (!bHasReceiver)
 		CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "specified proposal has no receiver, can't accept");
 	else if (mypk != CPK_dest)
 		CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "you are not the receiver of specified proposal");
-
 	switch (proposaltype) {
 		case 'p':
 			// constructing a 'c' transaction
@@ -1440,7 +1411,6 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 				return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentSigningOpRet(COMMITMENTCC_VERSION, proposaltxid));
 			}
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
-
 		case 'u':
 			GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
 			// constructing a 'u' transaction
@@ -1460,11 +1430,9 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 				return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentUpdateOpRet(COMMITMENTCC_VERSION, commitmenttxid, proposaltxid)); 
 			}
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
-			
 		// TODO: this
 		case 't':
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "termination of contract not supported yet");
-		
 		default:
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid proposal type for proposal txid " << proposaltxid.GetHex());
 	}
@@ -1493,7 +1461,6 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 	
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
-	
 	if (myGetTransaction(txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
     (funcid = DecodeCommitmentOpRet(tx.vout[numvouts-1].scriptPubKey)) != 0) {
 		result.push_back(Pair("result", "success"));
@@ -1631,6 +1598,7 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				DecodeCommitmentUpdateOpRet(tx.vout[numvouts-1].scriptPubKey, version, commitmenttxid, proposaltxid);
 				result.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
 				result.push_back(Pair("proposal_txid",proposaltxid.GetHex()));
+				// TODO, maybe: srcpub, destpub, info, datahash and arbitrator fee?
 				// TODO: revision number
 				break;
 			case 's':
@@ -1647,28 +1615,23 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 	}
 	CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid Commitments transaction id");
 }
-/*	
-		for 'u' show:
-			commitment_txid
-			source_pubkey
-			proposal_txid
-		for 's' show:
-			commitment_txid
-			source_pubkey
-			proposal_txid
-			deposit_for_seller
-			deposit_for_client
-		for 'd' show:
-			commitment_txid
-			source_pubkey
-			arbitrator_pubkey
-			data_hash
-		for 'r' show:
-			commitment_txid
-			dispute_txid
-			source_pubkey
-			rewarded_pubkey
-	}
+/*
+for 's' show:
+	commitment_txid
+	source_pubkey
+	proposal_txid
+	deposit_for_seller
+	deposit_for_client
+for 'd' show:
+	commitment_txid
+	source_pubkey
+	arbitrator_pubkey
+	data_hash
+for 'r' show:
+	commitment_txid
+	dispute_txid
+	source_pubkey
+	rewarded_pubkey
 */
 
 // commitmentviewupdates [list]
@@ -1679,7 +1642,6 @@ UniValue CommitmentList()
 	UniValue result(UniValue::VARR);
 	std::vector<uint256> txids, foundtxids;
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > addressIndexCCMarker;
-
 	struct CCcontract_info *cp, C; uint256 txid, hashBlock;
 	CTransaction vintx; std::vector<uint8_t> origpubkey;
 	std::string info, description;
@@ -1697,11 +1659,9 @@ UniValue CommitmentList()
 			}
 		}
 	};
-
 	SetCCunspents(addressIndexCCMarker,cp->unspendableCCaddr,true);
 	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++) {
 		addCommitmentTxid(it->first.txhash);
 	}
-
 	return(result);
 }
