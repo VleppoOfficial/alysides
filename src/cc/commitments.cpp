@@ -1160,7 +1160,7 @@ UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmentt
 {
 	CPubKey mypk, CPK_src, CPK_dest;
 	CTransaction prevproposaltx;
-	uint256 hashBlock, spendingtxid, dummytxid;
+	uint256 hashBlock, spendingtxid, latesttxid, dummytxid;
 	std::vector<uint8_t> destpub, sellerpk, clientpk, arbitratorpk, ref_srcpub, ref_destpub, dummypk;
 	int32_t numvouts;
 	int64_t arbitratorfee, dummyamount;
@@ -1174,9 +1174,12 @@ UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmentt
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 	if (!GetCommitmentInitialData(commitmenttxid, dummytxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, dummyamount, dummytxid, dummytxid, dummystr))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "couldn't get specified commitment info successfully, probably invalid commitment txid");
-
-	// TODO: latest arbitrator fee check here
-	
+	GetLatestCommitmentUpdate(commitmenttxid, latesttxid, dummychar);
+	GetCommitmentUpdateData(latesttxid, dummystr, dummytxid, arbitratorfee);
+	if (newarbitratorfee == 0)
+		newarbitratorfee = arbitratorfee;
+	CPK_dest = pubkey2pk(destpub);
+	bHasReceiver = CPK_dest.IsFullyValid();
 	// setting destination pubkey
 	if (mypk == pubkey2pk(sellerpk))
 		destpub = clientpk;
