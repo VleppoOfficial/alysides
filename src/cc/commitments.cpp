@@ -1024,36 +1024,35 @@ bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint
 
 // gets the data from the accepted proposal for the specified update txid
 // this is for "updateable" data like info, arbitrator fee etc.
-bool GetCommitmentUpdateData(uint256 updatetxid, std::string &info, uint256 &datahash, int64_t &arbitratorfee)
+void GetCommitmentUpdateData(uint256 updatetxid, std::string &info, uint256 &datahash, int64_t &arbitratorfee)
 {
 	CScript proposalopret;
 	CTransaction updatetx, disputetx;
-	uint256 proposaltxid, disputetxid, hashBlock;
-	uint8_t version, funcid, proposaltype;
-	int64_t payment;
-	
-	// TODO: if update funcid is 'n', 'd' or 'r' jump back one revision, then repeat
-	// if funcid is 'u'
-	// if funcid is 'c', do not modify params
-	
+	std::vector<uint8_t> dummypk;
+	uint256 proposaltxid, disputetxid, dummytxid, hashBlock;
+	uint8_t version, funcid, dummychar;
+	int64_t dummyamount;
+
 	while (myGetTransaction(updatetxid, updatetx, hashBlock) && updatetx.vout.size() > 0 &&
 	(funcid = DecodeCommitmentOpRet(updatetx.vout[updatetx.vout.size() - 1].scriptPubKey)) != 0) {
 		switch (funcid) {
 			case 'u':
 			case 's':
-				// get data, modify the passed params
+				GetAcceptedProposalOpRet(updatetx, proposaltxid, proposalopret);
+				DecodeCommitmentProposalOpRet(proposalopret,version,dummychar,dummypk,dummypk,dummypk,dummyamount,arbitratorfee,dummyamount,datahash,dummytxid,dummytxid,info);
 				break;
 			case 'd':
 			case 'n':
 			case 'r':
 				// get previous baton
+				updatetxid = updatetx.vin[1].prevout.hash;
 				continue;
 			default:
 				break;
 		}
 		break;
     }
-	return true;
+	return;
 }
 
 /*
@@ -1604,7 +1603,7 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 
 				// TODO: add latest revision numbers here (version numbers should be reset after contract acceptance)
 				
-				// TODO: add updateable data support for the stuff below
+				GetCommitmentUpdateData(latesttxid, info, datahash, arbitratorfee);
 				data.push_back(Pair("arbitrator_fee",arbitratorfee));
 				data.push_back(Pair("latest_info",info));
 				data.push_back(Pair("latest_data_hash",datahash.GetHex()));
