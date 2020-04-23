@@ -1176,8 +1176,10 @@ UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmentt
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "couldn't get specified commitment info successfully, probably invalid commitment txid");
 	GetLatestCommitmentUpdate(commitmenttxid, latesttxid, dummychar);
 	GetCommitmentUpdateData(latesttxid, dummystr, dummytxid, arbitratorfee);
-	if (newarbitratorfee == 0)
+	if (pubkey2pk(arbitratorpk).IsFullyValid() && newarbitratorfee == 0)
 		newarbitratorfee = arbitratorfee;
+	else if (!(pubkey2pk(arbitratorpk).IsFullyValid()))
+		newarbitratorfee = 0;
 	// setting destination pubkey
 	if (mypk == pubkey2pk(sellerpk))
 		destpub = clientpk;
