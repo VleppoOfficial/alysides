@@ -221,13 +221,12 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 	uint256 hashBlock, datahash, originaltxid, commitmenttxid, proposaltxid, prevproposaltxid, refcommitmenttxid, spendingtxid, latesttxid;
 	std::vector<uint8_t> srcpub, destpub, signpub, sellerpk, clientpk, arbitratorpk;
 	int64_t payment, arbitratorfee, depositval;
-	std::string info, CCerror;
+	std::string info, CCerror = "";
 	bool bHasReceiver, bHasArbitrator;
 	uint8_t proposaltype, version, spendingfuncid, funcid, updatefuncid;
 	char markeraddr[65], srcaddr[65], destaddr[65], depositaddr[65];
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator, CPK_signer;
 
-	CCerror = "";
 	numvins = tx.vin.size();
     numvouts = tx.vout.size();
     if (numvouts < 1)
@@ -473,26 +472,27 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 					return eval->Invalid("not enough vins for 'u' tx!");
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
 					return eval->Invalid("vin.0 must be normal for 'u' tx!");
+				// does vin1 point to latesttxid baton?
 				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
 					return eval->Invalid("vin.1 must be CC for 'u' tx!");
-				// does vin1 and vin2 point to the proposal's vout0 and vout1?
-				else if (tx.vin[1].prevout.hash != proposaltxid || tx.vin[1].prevout.n != 0)
-					return eval->Invalid("vin.1 tx hash doesn't match proposaltxid!");
-				else if (IsCCInput(tx.vin[2].scriptSig) == 0)
-					return eval->Invalid("vin.2 must be CC for 'u' tx!");
-				else if (tx.vin[2].prevout.hash != proposaltxid || tx.vin[2].prevout.n != 1)
-					return eval->Invalid("vin.2 tx hash doesn't match proposaltxid!");
-				// does vin3 point to latesttxid baton?
-				else if (IsCCInput(tx.vin[3].scriptSig) == 0)
-					return eval->Invalid("vin.3 must be CC for 'u' tx!");
 				else if (latesttxid == commitmenttxid) {
-					if (tx.vin[3].prevout.hash != commitmenttxid || tx.vin[3].prevout.n != 1)
-						return eval->Invalid("vin.3 tx hash doesn't match latesttxid!");
+					if (tx.vin[1].prevout.hash != commitmenttxid || tx.vin[1].prevout.n != 1)
+						return eval->Invalid("vin.1 tx hash doesn't match latesttxid!");
 				}
 				else if (latesttxid != commitmenttxid) {
-					if (tx.vin[3].prevout.hash != latesttxid || tx.vin[3].prevout.n != 0)
-						return eval->Invalid("vin.3 tx hash doesn't match latesttxid!");
+					if (tx.vin[1].prevout.hash != latesttxid || tx.vin[1].prevout.n != 0)
+						return eval->Invalid("vin.1 tx hash doesn't match latesttxid!");
 				}
+				else if (IsCCInput(tx.vin[2].scriptSig) == 0)
+					return eval->Invalid("vin.2 must be CC for 'u' tx!");
+				// does vin2 and vin3 point to the proposal's vout0 and vout1?
+				else if (tx.vin[2].prevout.hash != proposaltxid || tx.vin[2].prevout.n != 0)
+					return eval->Invalid("vin.2 tx hash doesn't match proposaltxid!");
+				else if (IsCCInput(tx.vin[3].scriptSig) == 0)
+					return eval->Invalid("vin.3 must be CC for 'u' tx!");
+				else if (tx.vin[3].prevout.hash != proposaltxid || tx.vin[3].prevout.n != 1)
+					return eval->Invalid("vin.3 tx hash doesn't match proposaltxid!");
+				
 				// Do not allow any additional CC vins.
 				for (int32_t i = 4; i > numvins; i++) {
 					if (IsCCInput(tx.vin[i].scriptSig) != 0)
@@ -997,37 +997,91 @@ bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint
 	((funcid = DecodeCommitmentOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey)) == 'u' || funcid == 's' || funcid == 'd')) &&
 	batontx.vout[1].nValue == CC_MARKER_VALUE) {
 		std::cerr << "GetLatestCommitmentUpdate: found first update, but it has incorrect funcid" << std::endl;
-		return false;	
+		return false;
 	}
 	sourcetxid = batontxid;
     // baton vout should be vout0 from now on
-    while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0) {
-        if (myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 &&             
-        batontx.vout[0].nValue == CC_MARKER_VALUE &&
-        ((funcid = DecodeCommitmentOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey)) == 'u' || funcid == 's' || funcid == 'd' || funcid == 'r')) {
-            sourcetxid = batontxid;
-        }
-        else {
-			std::cerr << "GetLatestCommitmentUpdate: found an update, but it has incorrect funcid" << std::endl;
-			return false;	
+	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0 && myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0) {
+		funcid = DecodeCommitmentOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey);
+		switch (funcid) {
+			case 'u':
+			case 'd':
+				sourcetxid = batontxid;
+				continue;
+			case 'n':
+			case 's':
+			case 'r':
+				break;
+			default:
+				std::cerr << "GetLatestCommitmentUpdate: found an update, but it has incorrect funcid" << std::endl;
+				return false;
 		}
+		break;
     }
 	latesttxid = sourcetxid;
     return true;
 }
 
-bool GetCommitmentUpdateData(uint256 updatetxid, uint256 &datahash, int64_t &arbitratorfee)
+// gets the data from the accepted proposal for the specified update txid
+// this is for "updateable" data like info, arbitrator fee etc.
+bool GetCommitmentUpdateData(uint256 updatetxid, std::string &info, uint256 &datahash, int64_t &arbitratorfee)
 {
-	return false;
-	/*
-	takes a 'u' transaction, finds its 'p' transaction and gets the data from there:
-		info
-		datahash
-		arbitrator fee
-	if updatetxid is 's' or 'd' or 'n' tx, move back 1 revision to get 'u' tx
-	if updatetxid is 'r' tx, move back 2 revisions
-	if resulting revision is not 'u' tx, return false
-	*/
+	CScript proposalopret;
+	CTransaction updatetx, disputetx;
+	uint256 proposaltxid, disputetxid, hashBlock;
+	uint8_t version, funcid, proposaltype;
+	int64_t payment;
+	
+	// TODO: if update funcid is 'n', 'd' or 'r' jump back one revision, then repeat
+	// if funcid is 'u'
+	// if funcid is 'c', do not modify params
+	
+	while (myGetTransaction(updatetxid, updatetx, hashBlock) && updatetx.vout.size() > 0 &&
+	(funcid = DecodeCommitmentOpRet(updatetx.vout[updatetx.vout.size() - 1].scriptPubKey)) != 0) {
+		switch (funcid) {
+			case 'u':
+			case 's':
+				// get data, modify the passed params
+				break;
+			case 'd':
+			case 'n':
+			case 'r':
+				// get previous baton
+				continue;
+			default:
+				break;
+		}
+		break;
+    }
+	
+	if ( == 0 || updatetx.vout.size() <= 0) {
+		std::cerr << "GetCommitmentUpdateData: couldn't find update tx" << std::endl;
+		return false;
+	}
+	funcid = DecodeCommitmentOpRet(updatetx.vout[updatetx.vout.size() - 1].scriptPubKey);
+	switch (funcid) {
+		case 'c':
+		case 'u':
+		case 's':
+			return true;
+		case 'n':
+		case 'd':
+		case 'r':
+			return false;
+		default:
+			std::cerr << "GetCommitmentUpdateData: invalid update tx funcid" << std::endl;
+			return false;
+	}
+
+	if (!GetAcceptedProposalOpRet(updatetx, proposaltxid, proposalopret)) {
+		std::cerr << "GetCommitmentUpdateData: couldn't get accepted proposal tx opret" << std::endl;
+		return false;	
+	}
+	if (DecodeCommitmentProposalOpRet(proposalopret, version, proposaltype, sellerpk, clientpk, arbitratorpk, payment, firstarbitratorfee, deposit, firstdatahash, refcommitmenttxid, prevproposaltxid, firstinfo) != 'p' || proposaltype != 'p') {
+		std::cerr << "GetCommitmentUpdateData: commitment accepted proposal tx opret invalid" << std::endl;
+		return false;	
+	}
+	return true;
 }
 
 /*
@@ -1414,14 +1468,14 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 		case 'u':
 			GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
 			// constructing a 'u' transaction
-			if (AddNormalinputs2(mtx, txfee + payment, 64) > 0) {
-				mtx.vin.push_back(CTxIn(proposaltxid,0,CScript())); // vin.1 previous proposal CC marker
+			if (AddNormalinputs2(mtx, txfee + payment, 64) > 0) {	
 				GetCCaddress1of2(cp, mutualaddr, CPK_src, CPK_dest);
-				mtx.vin.push_back(CTxIn(proposaltxid,1,CScript())); // vin.2 previous proposal CC response hook
 				if (latesttxid == commitmenttxid)
-					mtx.vin.push_back(CTxIn(commitmenttxid,1,CScript())); // vin.3 last update baton (no previous updates)
+					mtx.vin.push_back(CTxIn(commitmenttxid,1,CScript())); // vin.1 last update baton (no previous updates)
 				else
-					mtx.vin.push_back(CTxIn(latesttxid,0,CScript())); // vin.3 last update baton (with previous updates)
+					mtx.vin.push_back(CTxIn(latesttxid,0,CScript())); // vin.1 last update baton (with previous updates)
+				mtx.vin.push_back(CTxIn(proposaltxid,0,CScript())); // vin.2 previous proposal CC marker
+				mtx.vin.push_back(CTxIn(proposaltxid,1,CScript())); // vin.3 previous proposal CC response hook
 				Myprivkey(mypriv);
 				CCaddr1of2set(cp, CPK_src, CPK_dest, mypriv, mutualaddr);
 				mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, CPK_src, mypk)); // vout.0 next update baton
