@@ -58,7 +58,7 @@ void GetCommitmentUpdateData(uint256 updatetxid, std::string &info, uint256 &dat
 
 UniValue CommitmentCreate(const CPubKey& pk, uint64_t txfee, std::string info, uint256 datahash, std::vector<uint8_t> destpub, std::vector<uint8_t> arbitrator, int64_t payment, int64_t arbitratorfee, int64_t deposit, uint256 prevproposaltxid, uint256 refcommitmenttxid);
 UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, std::string info, uint256 datahash, int64_t payment, uint256 prevproposaltxid, int64_t newarbitratorfee);
-UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 datahash, uint64_t prepaymentcut, uint256 prevproposaltxid);
+UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, std::string info, uint256 datahash, int64_t depositcut, int64_t payment, uint256 prevproposaltxid);
 UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid);
 UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid);
 
