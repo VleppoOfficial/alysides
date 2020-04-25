@@ -1024,22 +1024,23 @@ bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint
 
 // gets the data from the accepted proposal for the specified update txid
 // this is for "updateable" data like info, arbitrator fee etc.
-void GetCommitmentUpdateData(uint256 updatetxid, std::string &info, uint256 &datahash, int64_t &arbitratorfee)
+void GetCommitmentUpdateData(uint256 updatetxid, std::string &info, uint256 &datahash, int64_t &arbitratorfee, int64_t &revision)
 {
 	CScript proposalopret;
-	CTransaction updatetx;
+	CTransaction updatetx, commitmenttx, batontx;
 	std::vector<uint8_t> dummypk;
-	uint256 proposaltxid, dummytxid, hashBlock;
+	uint256 proposaltxid, commitmenttxid, sourcetxid, batontxid, dummytxid, hashBlock;
 	uint8_t version, funcid, dummychar;
 	int64_t dummyamount;
-
+	int32_t vini, height, retcode;
+	
 	while (myGetTransaction(updatetxid, updatetx, hashBlock) && updatetx.vout.size() > 0 &&
 	(funcid = DecodeCommitmentOpRet(updatetx.vout[updatetx.vout.size() - 1].scriptPubKey)) != 0) {
 		switch (funcid) {
 			case 'u':
 			case 's':
 				GetAcceptedProposalOpRet(updatetx, proposaltxid, proposalopret);
-				DecodeCommitmentProposalOpRet(proposalopret,version,dummychar,dummypk,dummypk,dummypk,dummyamount,arbitratorfee,dummyamount,datahash,dummytxid,dummytxid,info);
+				DecodeCommitmentProposalOpRet(proposalopret,version,dummychar,dummypk,dummypk,dummypk,dummyamount,arbitratorfee,dummyamount,datahash,commitmenttxid,dummytxid,info);
 				break;
 			case 'd':
 			case 'n':
@@ -1052,14 +1053,52 @@ void GetCommitmentUpdateData(uint256 updatetxid, std::string &info, uint256 &dat
 		}
 		break;
     }
+	
+	else if (!(myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 && 
+	((funcid = DecodeCommitmentOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey)) == 'u' || funcid == 's' || funcid == 'd')) &&
+	batontx.vout[1].nValue == CC_MARKER_VALUE) {
+		std::cerr << "GetLatestCommitmentUpdate: found first update, but it has incorrect funcid" << std::endl;
+		return false;
+	}
+	sourcetxid = batontxid;
+    // baton vout should be vout0 from now on
+	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0 && myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0) {
+		funcid = DecodeCommitmentOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey);
+		switch (funcid) {
+			case 'u':
+			case 'd':
+				sourcetxid = batontxid;
+				continue;
+			case 'n':
+			case 's':
+			case 'r':
+				break;
+			default:
+				std::cerr << "GetLatestCommitmentUpdate: found an update, but it has incorrect funcid" << std::endl;
+				return false;
+		}
+		break;
+    }
+	
+	revision = 1;
+	if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) && commitmenttx.vout.size() > 0 &&
+	(funcid = DecodeCommitmentOpRet(commitmenttx.vout[commitmenttx.vout.size() - 1].scriptPubKey)) == 'c' &&
+	(retcode = CCgetspenttxid(sourcetxid, vini, height, commitmenttxid, 1)) != 0 &&
+	myGetTransaction(sourcetxid, batontx, hashBlock) && batontx.vout.size() > 0) {
+		revision++;
+		while (sourcetxid != updatetxid && (retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) != 0 &&
+		myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 &&
+		DecodeCommitmentOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey) != 0)) {
+			revision++;
+			sourcetxid = batontxid;
+		}
+	}
 	return;
 }
 
 /*
 dynamic data (non-user):
 	GetProposalRevision(proposaltxid) gives revision number for proposal
-	GetUpdateRevision(updatetxid) gives revision number for contract update
-	
 		
 how tf to get these???
 	update/termination proposal list (?)
@@ -1175,7 +1214,7 @@ UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmentt
 	if (!GetCommitmentInitialData(commitmenttxid, dummytxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, dummyamount, dummytxid, dummytxid, dummystr))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "couldn't get specified commitment info successfully, probably invalid commitment txid");
 	GetLatestCommitmentUpdate(commitmenttxid, latesttxid, dummychar);
-	GetCommitmentUpdateData(latesttxid, dummystr, dummytxid, arbitratorfee);
+	GetCommitmentUpdateData(latesttxid, dummystr, dummytxid, arbitratorfee, dummyamount);
 	if (pubkey2pk(arbitratorpk).IsFullyValid() && newarbitratorfee == 0)
 		newarbitratorfee = arbitratorfee;
 	else if (!(pubkey2pk(arbitratorpk).IsFullyValid()))
@@ -1479,9 +1518,9 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 	CPubKey mypk, CPK_src, CPK_dest, CPK_arbitrator;
 	CTransaction tx, proposaltx;
 	uint256 hashBlock, datahash, proposaltxid, prevproposaltxid, commitmenttxid, latesttxid, spendingtxid, dummytxid;
-	std::vector<uint8_t> srcpub, destpub, arbitrator, initiator;
+	std::vector<uint8_t> srcpub, destpub, arbitrator;
 	int32_t numvouts;
-	int64_t payment, arbitratorfee, deposit;
+	int64_t payment, arbitratorfee, deposit, revision;
 	std::string info, CCerror;
 	bool bHasReceiver, bHasArbitrator;
 	uint8_t funcid, version, proposaltype, updatefuncid, spendingfuncid, mypriv[32];
@@ -1527,7 +1566,7 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 							data.push_back(Pair("new_arbitrator_fee", arbitratorfee));
 							GetCommitmentInitialData(commitmenttxid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, deposit, datahash, dummytxid, info);
 							GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
-							GetCommitmentUpdateData(latesttxid, info, datahash, arbitratorfee);
+							GetCommitmentUpdateData(latesttxid, info, datahash, arbitratorfee, revision);
 							data.push_back(Pair("current_arbitrator_fee", arbitratorfee));
 						}
 						break;
@@ -1566,8 +1605,8 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				break;
 			case 't':
 				result.push_back(Pair("type","proposal cancel"));
-				DecodeCommitmentProposalCloseOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltxid, initiator);
-				result.push_back(Pair("source_pubkey",HexStr(initiator)));
+				DecodeCommitmentProposalCloseOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltxid, srcpub);
+				result.push_back(Pair("source_pubkey",HexStr(srcpub)));
 				result.push_back(Pair("proposal_txid",proposaltxid.GetHex()));
 				break;
 			case 'c':
@@ -1610,7 +1649,8 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 
 				// TODO: add latest revision numbers here (version numbers should be reset after contract acceptance)
 				
-				GetCommitmentUpdateData(latesttxid, info, datahash, arbitratorfee);
+				GetCommitmentUpdateData(latesttxid, info, datahash, arbitratorfee, revision);
+				data.push_back(Pair("revisions",revision));
 				data.push_back(Pair("arbitrator_fee",arbitratorfee));
 				data.push_back(Pair("latest_info",info));
 				data.push_back(Pair("latest_data_hash",datahash.GetHex()));
@@ -1630,8 +1670,12 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				DecodeCommitmentUpdateOpRet(tx.vout[numvouts-1].scriptPubKey, version, commitmenttxid, proposaltxid);
 				result.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
 				result.push_back(Pair("proposal_txid",proposaltxid.GetHex()));
-				// TODO, maybe: srcpub, destpub, info, datahash and arbitrator fee?
-				// TODO: revision number
+				GetCommitmentUpdateData(txid, info, datahash, arbitratorfee, revision);
+				data.push_back(Pair("revision",revision));
+				data.push_back(Pair("arbitrator_fee",arbitratorfee));
+				data.push_back(Pair("info",info));
+				data.push_back(Pair("data_hash",datahash.GetHex()));
+				result.push_back(Pair("data",data));
 				break;
 			case 's':
 				result.push_back(Pair("type","contract close"));
