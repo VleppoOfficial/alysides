@@ -1211,7 +1211,6 @@ UniValue report_ccerror(const char *category, int level, T print_to_stream)
     std::ostringstream stream;
 
     print_to_stream(stream);
-    stream << std::endl;
 
     err.push_back(Pair("result", "error"));
     err.push_back(Pair("error", stream.str()));
