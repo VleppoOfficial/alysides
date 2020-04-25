@@ -1266,7 +1266,9 @@ UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttx
 	if (pubkey2pk(arbitratorpk).IsFullyValid()) {
 		if (depositcut != 0 && depositcut < CC_MARKER_VALUE)
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Deposit cut is too low");
-		if ((deposit - depositcut) != 0 && (deposit - depositcut) < CC_MARKER_VALUE)
+		if (depositcut > deposit)
+			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Deposit cut exceeds total deposit value");
+		else if ((deposit - depositcut) != 0 && (deposit - depositcut) < CC_MARKER_VALUE)
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Remainder of deposit is too low");
 	}
 	else
