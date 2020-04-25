@@ -1053,33 +1053,6 @@ void GetCommitmentUpdateData(uint256 updatetxid, std::string &info, uint256 &dat
 		}
 		break;
     }
-	
-	else if (!(myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 && 
-	((funcid = DecodeCommitmentOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey)) == 'u' || funcid == 's' || funcid == 'd')) &&
-	batontx.vout[1].nValue == CC_MARKER_VALUE) {
-		std::cerr << "GetLatestCommitmentUpdate: found first update, but it has incorrect funcid" << std::endl;
-		return false;
-	}
-	sourcetxid = batontxid;
-    // baton vout should be vout0 from now on
-	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0 && myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0) {
-		funcid = DecodeCommitmentOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey);
-		switch (funcid) {
-			case 'u':
-			case 'd':
-				sourcetxid = batontxid;
-				continue;
-			case 'n':
-			case 's':
-			case 'r':
-				break;
-			default:
-				std::cerr << "GetLatestCommitmentUpdate: found an update, but it has incorrect funcid" << std::endl;
-				return false;
-		}
-		break;
-    }
-	
 	revision = 1;
 	if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) && commitmenttx.vout.size() > 0 &&
 	(funcid = DecodeCommitmentOpRet(commitmenttx.vout[commitmenttx.vout.size() - 1].scriptPubKey)) == 'c' &&
