@@ -1257,7 +1257,7 @@ UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttx
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
 	if (txfee == 0) txfee = CC_TXFEE;
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
-	if (!GetCommitmentInitialData(commitmenttxid, dummytxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, deposit, dummytxid, dummytxid, dummystr))
+	if (!GetCommitmentInitialData(commitmenttxid, dummytxid, sellerpk, clientpk, arbitratorpk, dummyamount, deposit, dummytxid, dummytxid, dummystr))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "couldn't get specified commitment info successfully, probably invalid commitment txid");
 	// only sellers can create this proposal type
 	if (mypk != pubkey2pk(sellerpk))
@@ -1308,53 +1308,6 @@ UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttx
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
 	CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
-	
-	///		- Getting the transaction data.
-	/*
-			use DecodeCommitmentCloseOpRet, get proposaltxid, commitmenttxid
-			use GetLatestCommitmentUpdateType(commitmenttxid)
-			if updatefuncid != 'c' or 'u' or 'r', invalidate
-			use GetLatestCommitmentUpdate(commitmenttxid) to get the latest update txid
-			totaldeposit = GetDepositValue(commitmenttxid)
-	*/
-	///		- Proposal data validation.
-	/*	
-			get proposal tx
-			use CheckProposalData(proposaltx)
-			use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, payment, deposit amount
-			if proposaltype != 't', invalidate
-			use TotalPubkeyNormalInputs to verify that receiver == pubkey that submitted tx
-			CheckIfInitiatorValid(initiator, commitmenttxid)
-			CheckIfInitiatorValid(receiver, commitmenttxid)
-	*/
-	///		- Checking if selected proposal was already spent.
-	/*
-			CheckIfProposalSpent(proposaltxid)
-	*/
-	///		- Checking if our inputs/outputs are correct.
-	/*
-			do the values of vout0+vout1 equal the deposit amount?
-			check vout0:
-				does vout0 point to the initiator's pubkey and is normal input?
-					is it equal to depositcut?
-			check vout1:
-				does vout1 point to the receiver's pubkey and is normal input?
-					is it equal to totaldeposit - depositcut?
-			check vout2:
-				is it a normal output?
-				does vout2 point to the initiator's address?
-				is the vout2 value equal to the payment specified in the proposal opret?
-			check vin1:
-				does it point to the previous update baton?
-			check vin2:
-				does it point to the proposal's marker?
-			check vin3:
-				does it point to the proposal's response?
-			check vin4:
-				does it point to the commitment deposit?
-			Do not allow any additional CC vins.
-			break;
-	*/
 }
 
 // commitmentstopproposal - constructs a 't' transaction and spends the specified 'p' transaction
