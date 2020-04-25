@@ -1056,12 +1056,12 @@ void GetCommitmentUpdateData(uint256 updatetxid, std::string &info, uint256 &dat
 	revision = 1;
 	if (myGetTransaction(commitmenttxid, commitmenttx, hashBlock) && commitmenttx.vout.size() > 0 &&
 	(funcid = DecodeCommitmentOpRet(commitmenttx.vout[commitmenttx.vout.size() - 1].scriptPubKey)) == 'c' &&
-	(retcode = CCgetspenttxid(sourcetxid, vini, height, commitmenttxid, 1)) != 0 &&
+	(retcode = CCgetspenttxid(sourcetxid, vini, height, commitmenttxid, 1)) == 0 &&
 	myGetTransaction(sourcetxid, batontx, hashBlock) && batontx.vout.size() > 0) {
 		revision++;
-		while (sourcetxid != updatetxid && (retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) != 0 &&
+		while (sourcetxid != updatetxid && (retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0 &&
 		myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 &&
-		DecodeCommitmentOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey) != 0)) {
+		DecodeCommitmentOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey) != 0) {
 			revision++;
 			sourcetxid = batontxid;
 		}
