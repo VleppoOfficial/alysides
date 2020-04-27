@@ -1498,7 +1498,7 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
 		case 't':
 			GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
-			// constructing a 't' transaction
+			// constructing a 's' transaction
 			if (AddNormalinputs2(mtx, txfee + payment, 64) > 0) {
 				GetCCaddress1of2(cp, mutualaddr, CPK_src, CPK_dest);
 				if (latesttxid == commitmenttxid)
