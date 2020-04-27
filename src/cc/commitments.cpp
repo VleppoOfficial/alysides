@@ -430,9 +430,9 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				/*
 				contract update:
 				vin.0 normal input
-				vin.1 update proposal marker
-				vin.2 update proposal response
-				vin.3 last update baton
+				vin.1 last update baton
+				vin.2 update proposal marker
+				vin.3 update proposal response
 				vout.0 next update baton
 				vout.1 payment (optional)
 				vout.n-2 change
@@ -492,7 +492,6 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 					return eval->Invalid("vin.3 must be CC for 'u' tx!");
 				else if (tx.vin[3].prevout.hash != proposaltxid || tx.vin[3].prevout.n != 1)
 					return eval->Invalid("vin.3 tx hash doesn't match proposaltxid!");
-				
 				// Do not allow any additional CC vins.
 				for (int32_t i = 4; i > numvins; i++) {
 					if (IsCCInput(tx.vin[i].scriptSig) != 0)
@@ -504,8 +503,9 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				contract close:
 				vin.0 normal input
 				vin.1 last update baton
-				vin.2 latest termination proposal by other party
-				vin.3 deposit
+				vin.2 update proposal marker
+				vin.3 update proposal response
+				vin.4 deposit
 				vout.0 deposit split to party 1
 				vout.1 deposit split to party 2
 				vout.2 payment
@@ -1024,7 +1024,7 @@ bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint
 
 // gets the data from the accepted proposal for the specified update txid
 // this is for "updateable" data like info, arbitrator fee etc.
-void GetCommitmentUpdateData(uint256 updatetxid, std::string &info, uint256 &datahash, int64_t &arbitratorfee, int64_t &revision)
+void GetCommitmentUpdateData(uint256 updatetxid, std::string &info, uint256 &datahash, int64_t &arbitratorfee, int64_t &depositsplit, int64_t &revision)
 {
 	CScript proposalopret;
 	CTransaction updatetx, commitmenttx, batontx;
@@ -1040,7 +1040,7 @@ void GetCommitmentUpdateData(uint256 updatetxid, std::string &info, uint256 &dat
 			case 'u':
 			case 's':
 				GetAcceptedProposalOpRet(updatetx, proposaltxid, proposalopret);
-				DecodeCommitmentProposalOpRet(proposalopret,version,dummychar,dummypk,dummypk,dummypk,dummyamount,arbitratorfee,dummyamount,datahash,commitmenttxid,dummytxid,info);
+				DecodeCommitmentProposalOpRet(proposalopret,version,dummychar,dummypk,dummypk,dummypk,dummyamount,arbitratorfee,depositsplit,datahash,commitmenttxid,dummytxid,info);
 				break;
 			case 'd':
 			case 'n':
@@ -1187,7 +1187,7 @@ UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmentt
 	if (!GetCommitmentInitialData(commitmenttxid, dummytxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, dummyamount, dummytxid, dummytxid, dummystr))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "couldn't get specified commitment info successfully, probably invalid commitment txid");
 	GetLatestCommitmentUpdate(commitmenttxid, latesttxid, dummychar);
-	GetCommitmentUpdateData(latesttxid, dummystr, dummytxid, arbitratorfee, dummyamount);
+	GetCommitmentUpdateData(latesttxid, dummystr, dummytxid, arbitratorfee, dummyamount, dummyamount);
 	if (pubkey2pk(arbitratorpk).IsFullyValid() && newarbitratorfee == 0)
 		newarbitratorfee = arbitratorfee;
 	else if (!(pubkey2pk(arbitratorpk).IsFullyValid()))
@@ -1393,14 +1393,14 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 {
 	CPubKey mypk, CPK_src, CPK_dest, CPK_arbitrator;
 	CTransaction proposaltx;
-	uint256 hashBlock, datahash, commitmenttxid, prevproposaltxid, spendingtxid, latesttxid;
-	std::vector<uint8_t> srcpub, destpub, arbitrator;
+	uint256 hashBlock, datahash, commitmenttxid, prevproposaltxid, spendingtxid, latesttxid, dummytxid;
+	std::vector<uint8_t> srcpub, destpub, arbitrator, dummypk;
 	int32_t numvouts;
-	int64_t payment, arbitratorfee, deposit;
-	std::string info, CCerror;
+	int64_t payment, arbitratorfee, deposit, totaldeposit, dummyamount;
+	std::string info, CCerror, dummystr;
 	bool bHasReceiver, bHasArbitrator;
 	uint8_t proposaltype, version, spendingfuncid, updatefuncid, mypriv[32];
-	char mutualaddr[65];
+	char mutualaddr[65], depositaddr[65];
 	
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
@@ -1459,7 +1459,7 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 		case 'u':
 			GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
 			// constructing a 'u' transaction
-			if (AddNormalinputs2(mtx, txfee + payment, 64) > 0) {	
+			if (AddNormalinputs2(mtx, txfee + payment, 64) > 0) {
 				GetCCaddress1of2(cp, mutualaddr, CPK_src, CPK_dest);
 				if (latesttxid == commitmenttxid)
 					mtx.vin.push_back(CTxIn(commitmenttxid,1,CScript())); // vin.1 last update baton (no previous updates)
@@ -1475,9 +1475,85 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 				return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentUpdateOpRet(COMMITMENTCC_VERSION, commitmenttxid, proposaltxid)); 
 			}
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
-		// TODO: this
 		case 't':
-			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "termination of contract not supported yet");
+			GetCommitmentInitialData(commitmenttxid, dummytxid, dummypk, dummypk, dummypk, dummyamount, totaldeposit, dummytxid, dummytxid, dummystr)
+			GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
+			// constructing a 'u' transaction
+			if (AddNormalinputs2(mtx, txfee + payment, 64) > 0) {
+				GetCCaddress1of2(cp, mutualaddr, CPK_src, CPK_dest);
+				if (latesttxid == commitmenttxid)
+					mtx.vin.push_back(CTxIn(commitmenttxid,1,CScript())); // vin.1 last update baton (no previous updates)
+				else
+					mtx.vin.push_back(CTxIn(latesttxid,0,CScript())); // vin.1 last update baton (with previous updates)
+				mtx.vin.push_back(CTxIn(proposaltxid,0,CScript())); // vin.2 previous proposal CC marker
+				mtx.vin.push_back(CTxIn(proposaltxid,1,CScript())); // vin.3 previous proposal CC response hook
+				Myprivkey(mypriv);
+				CCaddr1of2set(cp, CPK_src, CPK_dest, mypriv, mutualaddr);
+				if (bHasArbitrator) {
+					GetCCaddress1of2(cp, depositaddr, CPK_dest, CPK_arbitrator);
+					mtx.vin.push_back(CTxIn(commitmenttxid,2,CScript())); // vin.4 deposit (with arbitrator)
+					CCaddr1of2set(cp, CPK_dest, CPK_arbitrator, mypriv, depositaddr);
+				}
+				else
+					mtx.vin.push_back(CTxIn(commitmenttxid,2,CScript())); // vin.4 deposit (no arbitrator)
+				
+				if (depositcut > 0)
+					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.1 payment (optional)
+				
+				mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, CPK_src, mypk)); // vout.0 next update baton
+				if (payment > 0)
+					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.1 payment (optional)
+				
+				return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentUpdateOpRet(COMMITMENTCC_VERSION, commitmenttxid, proposaltxid)); 
+				
+			}
+			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
+			///		- Getting the transaction data.
+			/*
+					use DecodeCommitmentCloseOpRet, get proposaltxid, commitmenttxid
+					use GetLatestCommitmentUpdateType(commitmenttxid)
+					if updatefuncid != 'c' or 'u' or 'r', invalidate
+					use GetLatestCommitmentUpdate(commitmenttxid) to get the latest update txid
+					totaldeposit = GetDepositValue(commitmenttxid)
+			*/
+			///		- Proposal data validation.
+			/*	
+					get proposal tx
+					use CheckProposalData(proposaltx)
+					use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, payment, deposit amount
+					if proposaltype != 't', invalidate
+					use TotalPubkeyNormalInputs to verify that receiver == pubkey that submitted tx
+					CheckIfInitiatorValid(initiator, commitmenttxid)
+					CheckIfInitiatorValid(receiver, commitmenttxid)
+			*/
+			///		- Checking if selected proposal was already spent.
+			/*
+					CheckIfProposalSpent(proposaltxid)
+			*/
+			///		- Checking if our inputs/outputs are correct.
+			/*
+					do the values of vout0+vout1 equal the deposit amount?
+					check vout0:
+						does vout0 point to the initiator's pubkey and is normal input?
+							is it equal to depositcut?
+					check vout1:
+						does vout1 point to the receiver's pubkey and is normal input?
+							is it equal to totaldeposit - depositcut?
+					check vout2:
+						is it a normal output?
+						does vout2 point to the initiator's address?
+						is the vout2 value equal to the payment specified in the proposal opret?
+					check vin1:
+						does it point to the previous update baton?
+					check vin2:
+						does it point to the proposal's marker?
+					check vin3:
+						does it point to the proposal's response?
+					check vin4:
+						does it point to the commitment deposit?
+					Do not allow any additional CC vins.
+					break;
+			*/
 		default:
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid proposal type for proposal txid " << proposaltxid.GetHex());
 	}
@@ -1547,13 +1623,20 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 							data.push_back(Pair("new_arbitrator_fee", arbitratorfee));
 							GetCommitmentInitialData(commitmenttxid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, deposit, datahash, dummytxid, info);
 							GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
-							GetCommitmentUpdateData(latesttxid, info, datahash, arbitratorfee, revision);
+							GetCommitmentUpdateData(latesttxid, info, datahash, arbitratorfee, deposit, revision);
 							data.push_back(Pair("current_arbitrator_fee", arbitratorfee));
 						}
 						break;
 					case 't':
 						result.push_back(Pair("proposal_type","contract_close"));
 						result.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
+						if (bHasArbitrator) {
+							data.push_back(Pair("new_arbitrator_fee", arbitratorfee));
+							GetCommitmentInitialData(commitmenttxid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, deposit, datahash, dummytxid, info);
+							GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
+							GetCommitmentUpdateData(latesttxid, info, datahash, arbitratorfee, deposit, revision);
+							data.push_back(Pair("current_arbitrator_fee", arbitratorfee));
+						}
 						// TODO: deposit_for_seller, deposit_for_client, total_deposit
 						break;
 				}
@@ -1627,7 +1710,7 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				}
 				else
 					result.push_back(Pair("status","active"));
-				GetCommitmentUpdateData(latesttxid, info, datahash, arbitratorfee, revision);
+				GetCommitmentUpdateData(latesttxid, info, datahash, arbitratorfee, deposit, revision);
 				data.push_back(Pair("revisions",revision));
 				data.push_back(Pair("arbitrator_fee",arbitratorfee));
 				data.push_back(Pair("latest_info",info));
@@ -1648,7 +1731,7 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				DecodeCommitmentUpdateOpRet(tx.vout[numvouts-1].scriptPubKey, version, commitmenttxid, proposaltxid);
 				result.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
 				result.push_back(Pair("proposal_txid",proposaltxid.GetHex()));
-				GetCommitmentUpdateData(txid, info, datahash, arbitratorfee, revision);
+				GetCommitmentUpdateData(txid, info, datahash, arbitratorfee, deposit, revision);
 				data.push_back(Pair("revision",revision));
 				data.push_back(Pair("arbitrator_fee",arbitratorfee));
 				data.push_back(Pair("info",info));
