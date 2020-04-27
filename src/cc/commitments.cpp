@@ -1524,13 +1524,15 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 					
 					std::cerr << "CCaddr1of2set 2" << std::endl;
 					
-					CCaddr1of2set(cp, CPK_dest, CPK_arbitrator, mypriv, depositaddr);
+					//CCaddr1of2set(cp, CPK_dest, CPK_arbitrator, mypriv, depositaddr);
 				}
 				else
 					mtx.vin.push_back(CTxIn(commitmenttxid,2,CScript())); // vin.4 deposit (no arbitrator)
 				mtx.vout.push_back(CTxOut(deposit, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.0 deposit cut to proposal creator
 				if (payment > 0)
 					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.1 payment (optional)
+				
+				std::cerr << "FinalizeCCTxExt" << std::endl;
 				
 				return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentCloseOpRet(COMMITMENTCC_VERSION, commitmenttxid, proposaltxid)); 
 			}
