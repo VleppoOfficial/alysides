@@ -152,17 +152,17 @@ uint8_t DecodeCommitmentUpdateOpRet(CScript scriptPubKey, uint8_t &version, uint
 		return(funcid);
 	return(0);
 }
-CScript EncodeCommitmentCloseOpRet(uint8_t version, uint256 commitmenttxid, uint256 proposaltxid, int64_t deposit_send, int64_t deposit_keep)
+CScript EncodeCommitmentCloseOpRet(uint8_t version, uint256 commitmenttxid, uint256 proposaltxid)
 {
 	CScript opret; uint8_t evalcode = EVAL_COMMITMENTS, funcid = 's';
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << proposaltxid << deposit_send << deposit_keep);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << proposaltxid);
 	return(opret);
 }
-uint8_t DecodeCommitmentCloseOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &proposaltxid, int64_t &deposit_send, int64_t &deposit_keep)
+uint8_t DecodeCommitmentCloseOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &proposaltxid)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> proposaltxid; ss >> deposit_send; ss >> deposit_keep) != 0 && evalcode == EVAL_COMMITMENTS)
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> proposaltxid) != 0 && evalcode == EVAL_COMMITMENTS)
 		return(funcid);
 	return(0);
 }
@@ -218,9 +218,9 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 	CTransaction proposaltx;
 	CScript proposalopret;
 	int32_t numvins, numvouts;
-	uint256 hashBlock, datahash, originaltxid, commitmenttxid, proposaltxid, prevproposaltxid, refcommitmenttxid, spendingtxid, latesttxid;
+	uint256 hashBlock, commitmenttxid, proposaltxid, prevproposaltxid, dummytxid, spendingtxid, latesttxid;
 	std::vector<uint8_t> srcpub, destpub, signpub, sellerpk, clientpk, arbitratorpk;
-	int64_t payment, arbitratorfee, depositval;
+	int64_t payment, arbitratorfee, depositval, totaldeposit;
 	std::string info, CCerror = "";
 	bool bHasReceiver, bHasArbitrator;
 	uint8_t proposaltype, version, spendingfuncid, funcid, updatefuncid;
@@ -251,7 +251,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				// Proposal data validation.
 				if (!ValidateProposalOpRet(tx.vout[numvouts-1].scriptPubKey, CCerror))
 					return eval->Invalid(CCerror);
-				DecodeCommitmentProposalOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info);
+				DecodeCommitmentProposalOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, depositval, dummytxid, commitmenttxid, prevproposaltxid, info);
 				CPK_src = pubkey2pk(srcpub);
 				CPK_dest = pubkey2pk(destpub);
 				bHasReceiver = CPK_dest.IsValid();
@@ -312,7 +312,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				if (IsProposalSpent(proposaltxid, spendingtxid, spendingfuncid))
 					return eval->Invalid("prevproposal has already been spent!");
 				// Retrieving the proposal data tied to this transaction.
-				DecodeCommitmentProposalOpRet(proposaltx.vout[proposaltx.vout.size()-1].scriptPubKey, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info);
+				DecodeCommitmentProposalOpRet(proposaltx.vout[proposaltx.vout.size()-1].scriptPubKey, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, depositval, dummytxid, commitmenttxid, prevproposaltxid, info);
 				CPK_src = pubkey2pk(srcpub);
 				CPK_signer = pubkey2pk(signpub);
 				CPK_dest = pubkey2pk(destpub);
@@ -332,7 +332,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 					case 't':
 						if (commitmenttxid == zeroid)
 							return eval->Invalid("proposal has no defined commitment, unable to verify membership!");
-						if (!GetCommitmentInitialData(commitmenttxid, originaltxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, depositval, datahash, refcommitmenttxid, info))
+						if (!GetCommitmentInitialData(commitmenttxid, dummytxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, depositval, dummytxid, dummytxid, info))
 							return eval->Invalid("couldn't get proposal's commitment info successfully!");
 						if (CPK_signer != CPK_src && CPK_signer != CPK_dest && CPK_signer != pubkey2pk(sellerpk) && CPK_signer != pubkey2pk(clientpk))
 							return eval->Invalid("signpub is not the source or receiver of specified proposal!");
@@ -373,7 +373,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				if (!GetAcceptedProposalOpRet(tx, proposaltxid, proposalopret))
 					return eval->Invalid("couldn't find proposal tx opret for 'c' tx!");
 				// Retrieving the proposal data tied to this transaction.
-				DecodeCommitmentProposalOpRet(proposalopret, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info);
+				DecodeCommitmentProposalOpRet(proposalopret, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, depositval, dummytxid, commitmenttxid, prevproposaltxid, info);
 				CPK_src = pubkey2pk(srcpub);
 				CPK_dest = pubkey2pk(destpub);
 				CPK_arbitrator = pubkey2pk(arbitratorpk);
@@ -440,9 +440,9 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				*/
 				// Getting the transaction data.
 				if (!GetAcceptedProposalOpRet(tx, proposaltxid, proposalopret))
-					return eval->Invalid("couldn't find proposal tx opret for 'c' tx!");
+					return eval->Invalid("couldn't find proposal tx opret for 'u' tx!");
 				// Retrieving the proposal data tied to this transaction.
-				DecodeCommitmentProposalOpRet(proposalopret, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, depositval, datahash, commitmenttxid, prevproposaltxid, info);
+				DecodeCommitmentProposalOpRet(proposalopret, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, depositval, dummytxid, commitmenttxid, prevproposaltxid, info);
 				CPK_src = pubkey2pk(srcpub);
 				CPK_dest = pubkey2pk(destpub);
 				bHasReceiver = CPK_dest.IsValid();
@@ -506,59 +506,81 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				vin.2 update proposal marker
 				vin.3 update proposal response
 				vin.4 deposit
-				vout.0 deposit split to party 1
-				vout.1 deposit split to party 2
-				vout.2 payment
+				vout.0 deposit cut to proposal creator
+				vout.1 payment (optional)
 				vout.n-2 change
 				vout.n-1 OP_RETURN EVAL_COMMITMENTS 's' commitmenttxid proposaltxid
 				*/
-				return eval->Invalid("funcid - 's'");
-				///		- Getting the transaction data.
-				/*
-						use DecodeCommitmentCloseOpRet, get proposaltxid, commitmenttxid
-						use GetLatestCommitmentUpdateType(commitmenttxid)
-						if updatefuncid != 'c' or 'u' or 'r', invalidate
-						use GetLatestCommitmentUpdate(commitmenttxid) to get the latest update txid
-						totaldeposit = GetDepositValue(commitmenttxid)
-				*/
-				///		- Proposal data validation.
-				/*	
-						get proposal tx
-						use CheckProposalData(proposaltx)
-						use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, payment, deposit amount
-						if proposaltype != 't', invalidate
-						use TotalPubkeyNormalInputs to verify that receiver == pubkey that submitted tx
-						CheckIfInitiatorValid(initiator, commitmenttxid)
-						CheckIfInitiatorValid(receiver, commitmenttxid)
-				*/
-				///		- Checking if selected proposal was already spent.
-				/*
-						CheckIfProposalSpent(proposaltxid)
-				*/
-				///		- Checking if our inputs/outputs are correct.
-				/*
-						do the values of vout0+vout1 equal the deposit amount?
-						check vout0:
-							does vout0 point to the initiator's pubkey and is normal input?
-								is it equal to depositcut?
-						check vout1:
-							does vout1 point to the receiver's pubkey and is normal input?
-								is it equal to totaldeposit - depositcut?
-						check vout2:
-							is it a normal output?
-							does vout2 point to the initiator's address?
-							is the vout2 value equal to the payment specified in the proposal opret?
-						check vin1:
-							does it point to the previous update baton?
-						check vin2:
-							does it point to the proposal's marker?
-						check vin3:
-							does it point to the proposal's response?
-						check vin4:
-							does it point to the commitment deposit?
-						Do not allow any additional CC vins.
-						break;
-				*/
+				// Getting the transaction data.
+				if (!GetAcceptedProposalOpRet(tx, proposaltxid, proposalopret))
+					return eval->Invalid("couldn't find proposal tx opret for 's' tx!");
+				// Retrieving the proposal data tied to this transaction.
+				DecodeCommitmentProposalOpRet(proposalopret, version, proposaltype, srcpub, destpub, arbitratorpk, payment, arbitratorfee, depositval, dummytxid, commitmenttxid, prevproposaltxid, info);
+				GetCommitmentInitialData(commitmenttxid, dummytxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, totaldeposit, dummytxid, dummytxid, info);
+				CPK_src = pubkey2pk(srcpub);
+				CPK_dest = pubkey2pk(destpub);
+				CPK_arbitrator = pubkey2pk(arbitratorpk);
+				bHasReceiver = CPK_dest.IsValid();
+				bHasArbitrator = CPK_arbitrator.IsValid();
+				// Proposal data validation.
+				if (!ValidateProposalOpRet(proposalopret, CCerror))
+					return eval->Invalid(CCerror);
+				if (proposaltype != 't')
+					return eval->Invalid("attempting to create 's' tx for non-'t' proposal type!");
+				if (!bHasReceiver)
+					return eval->Invalid("proposal doesn't have valid destpub!");
+				if (IsProposalSpent(proposaltxid, spendingtxid, spendingfuncid))
+					return eval->Invalid("prevproposal has already been spent!");
+				if (TotalPubkeyNormalInputs(tx, CPK_dest) == 0 && TotalPubkeyCCInputs(tx, CPK_dest) == 0)
+					return eval->Invalid("found no normal or cc inputs signed by proposal receiver pubkey!");
+				// Getting the latest update txid.
+				GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
+				Getscriptaddress(srcaddr, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG);
+				/*if (bHasArbitrator)
+					GetCCaddress1of2(cp, depositaddr, CPK_dest, CPK_arbitrator);
+				else
+					GetCCaddress(cp, depositaddr, CPK_dest);*/
+				// Checking if vins/vouts are correct.
+				if (numvouts < 3)
+					return eval->Invalid("not enough vouts for 's' tx!");
+				else if (ConstrainVout(tx.vout[0], 0, srcaddr, depositval) == 0)
+					return eval->Invalid("vout.0 must be normal deposit cut to srcaddr!");
+				else if (payment > 0 && ConstrainVout(tx.vout[1], 0, srcaddr, payment) == 0)
+					return eval->Invalid("vout.1 must be normal payment to srcaddr when payment defined!");
+				
+				if (numvins < 5)
+					return eval->Invalid("not enough vins for 's' tx!");
+				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
+					return eval->Invalid("vin.0 must be normal for 's' tx!");
+				// does vin1 point to latesttxid baton?
+				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
+					return eval->Invalid("vin.1 must be CC for 's' tx!");
+				else if (latesttxid == commitmenttxid) {
+					if (tx.vin[1].prevout.hash != commitmenttxid || tx.vin[1].prevout.n != 1)
+						return eval->Invalid("vin.1 tx hash doesn't match latesttxid!");
+				}
+				else if (latesttxid != commitmenttxid) {
+					if (tx.vin[1].prevout.hash != latesttxid || tx.vin[1].prevout.n != 0)
+						return eval->Invalid("vin.1 tx hash doesn't match latesttxid!");
+				}
+				else if (IsCCInput(tx.vin[2].scriptSig) == 0)
+					return eval->Invalid("vin.2 must be CC for 's' tx!");
+				// does vin2 and vin3 point to the proposal's vout0 and vout1?
+				else if (tx.vin[2].prevout.hash != proposaltxid || tx.vin[2].prevout.n != 0)
+					return eval->Invalid("vin.2 tx hash doesn't match proposaltxid!");
+				else if (IsCCInput(tx.vin[3].scriptSig) == 0)
+					return eval->Invalid("vin.3 must be CC for 's' tx!");
+				else if (tx.vin[3].prevout.hash != proposaltxid || tx.vin[3].prevout.n != 1)
+					return eval->Invalid("vin.3 tx hash doesn't match proposaltxid!");
+				else if (IsCCInput(tx.vin[4].scriptSig) == 0)
+					return eval->Invalid("vin.4 must be CC for 's' tx!");
+				else if (tx.vin[4].prevout.hash != commitmenttxid || tx.vin[4].prevout.n != 2)
+					return eval->Invalid("vin.4 tx hash doesn't match commitmenttxid!");
+				// Do not allow any additional CC vins.
+				for (int32_t i = 5; i > numvins; i++) {
+					if (IsCCInput(tx.vin[i].scriptSig) != 0)
+						return eval->Invalid("tx exceeds allowed amount of CC vins!");
+				}
 				break;
 			case 'd':
 				/*
@@ -973,8 +995,6 @@ bool GetCommitmentInitialData(uint256 commitmenttxid, uint256 &proposaltxid, std
 bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint8_t &funcid)
 {
     int32_t vini, height, retcode;
-    std::vector<std::pair<uint8_t, vscript_t>> oprets;
-	std::vector<CPubKey> voutPubkeysDummy;
     uint256 batontxid, sourcetxid, hashBlock;
     CTransaction commitmenttx, batontx;
     uint8_t evalcode;
@@ -1272,7 +1292,7 @@ UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttx
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Remainder of deposit is too low");
 	}
 	else
-		depositcut = 0;
+	if (depositcut == 0) depositcut = CC_MARKER_VALUE;
 	// additional checks are done using ValidateProposalOpRet
 	CScript opret = EncodeCommitmentProposalOpRet(COMMITMENTCC_VERSION,'t',std::vector<uint8_t>(mypk.begin(),mypk.end()),clientpk,arbitratorpk,payment,CC_MARKER_VALUE,depositcut,datahash,commitmenttxid,prevproposaltxid,info);
 	if (!ValidateProposalOpRet(opret, CCerror))
@@ -1393,11 +1413,11 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 {
 	CPubKey mypk, CPK_src, CPK_dest, CPK_arbitrator;
 	CTransaction proposaltx;
-	uint256 hashBlock, datahash, commitmenttxid, prevproposaltxid, spendingtxid, latesttxid, dummytxid;
-	std::vector<uint8_t> srcpub, destpub, arbitrator, dummypk;
+	uint256 hashBlock, datahash, commitmenttxid, prevproposaltxid, spendingtxid, latesttxid;
+	std::vector<uint8_t> srcpub, destpub, arbitrator;
 	int32_t numvouts;
-	int64_t payment, arbitratorfee, deposit, totaldeposit, dummyamount;
-	std::string info, CCerror, dummystr;
+	int64_t payment, arbitratorfee, deposit;
+	std::string info, CCerror;
 	bool bHasReceiver, bHasArbitrator;
 	uint8_t proposaltype, version, spendingfuncid, updatefuncid, mypriv[32];
 	char mutualaddr[65], depositaddr[65];
@@ -1476,9 +1496,8 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 			}
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
 		case 't':
-			GetCommitmentInitialData(commitmenttxid, dummytxid, dummypk, dummypk, dummypk, dummyamount, totaldeposit, dummytxid, dummytxid, dummystr)
 			GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
-			// constructing a 'u' transaction
+			// constructing a 't' transaction
 			if (AddNormalinputs2(mtx, txfee + payment, 64) > 0) {
 				GetCCaddress1of2(cp, mutualaddr, CPK_src, CPK_dest);
 				if (latesttxid == commitmenttxid)
@@ -1496,64 +1515,13 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 				}
 				else
 					mtx.vin.push_back(CTxIn(commitmenttxid,2,CScript())); // vin.4 deposit (no arbitrator)
-				
-				if (depositcut > 0)
-					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.1 payment (optional)
-				
-				mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, CPK_src, mypk)); // vout.0 next update baton
+				mtx.vout.push_back(CTxOut(deposit, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.0 deposit cut to proposal creator
 				if (payment > 0)
 					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.1 payment (optional)
 				
-				return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentUpdateOpRet(COMMITMENTCC_VERSION, commitmenttxid, proposaltxid)); 
-				
+				return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentCloseOpRet(COMMITMENTCC_VERSION, commitmenttxid, proposaltxid)); 
 			}
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
-			///		- Getting the transaction data.
-			/*
-					use DecodeCommitmentCloseOpRet, get proposaltxid, commitmenttxid
-					use GetLatestCommitmentUpdateType(commitmenttxid)
-					if updatefuncid != 'c' or 'u' or 'r', invalidate
-					use GetLatestCommitmentUpdate(commitmenttxid) to get the latest update txid
-					totaldeposit = GetDepositValue(commitmenttxid)
-			*/
-			///		- Proposal data validation.
-			/*	
-					get proposal tx
-					use CheckProposalData(proposaltx)
-					use DecodeCommitmentProposalOpRet, get proposaltype, initiator, receiver, payment, deposit amount
-					if proposaltype != 't', invalidate
-					use TotalPubkeyNormalInputs to verify that receiver == pubkey that submitted tx
-					CheckIfInitiatorValid(initiator, commitmenttxid)
-					CheckIfInitiatorValid(receiver, commitmenttxid)
-			*/
-			///		- Checking if selected proposal was already spent.
-			/*
-					CheckIfProposalSpent(proposaltxid)
-			*/
-			///		- Checking if our inputs/outputs are correct.
-			/*
-					do the values of vout0+vout1 equal the deposit amount?
-					check vout0:
-						does vout0 point to the initiator's pubkey and is normal input?
-							is it equal to depositcut?
-					check vout1:
-						does vout1 point to the receiver's pubkey and is normal input?
-							is it equal to totaldeposit - depositcut?
-					check vout2:
-						is it a normal output?
-						does vout2 point to the initiator's address?
-						is the vout2 value equal to the payment specified in the proposal opret?
-					check vin1:
-						does it point to the previous update baton?
-					check vin2:
-						does it point to the proposal's marker?
-					check vin3:
-						does it point to the proposal's response?
-					check vin4:
-						does it point to the commitment deposit?
-					Do not allow any additional CC vins.
-					break;
-			*/
 		default:
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid proposal type for proposal txid " << proposaltxid.GetHex());
 	}
