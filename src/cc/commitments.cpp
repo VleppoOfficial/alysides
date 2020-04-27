@@ -667,16 +667,17 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 						break;
 				*/
 				break;
-			//case 'n':
+			case 'n':
 				/*
 				unlock contract deposit:
 				vin.0 normal input
 				vin.1 deposit
 				vout.0 payout to exchange CC 1of2 address
 				vout.n-2 change
-				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'u' commitmenttxid exchangetxid
+				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'n' commitmenttxid exchangetxid
 				*/
-			// this part will be needed to validate Exchanges that withdraw the deposit. 
+				// this part will be needed to validate Exchanges that withdraw the deposit. 
+				return eval->Invalid("no validation for 'n' tx yet!");
 			default:
                 fprintf(stderr,"unexpected commitments funcid (%c)\n",funcid);
                 return eval->Invalid("unexpected commitments funcid!");
