@@ -80,7 +80,7 @@ uint8_t DecodeCommitmentOpRet(const CScript scriptPubKey)
 		case 'u':
 			return DecodeCommitmentUpdateOpRet(scriptPubKey, dummytype, dummyhash, dummyhash);
 		case 's':
-			return DecodeCommitmentCloseOpRet(scriptPubKey, dummytype, dummyhash, dummyhash, dummyamount, dummyamount);
+			return DecodeCommitmentCloseOpRet(scriptPubKey, dummytype, dummyhash, dummyhash);
 		case 'd':
 			return DecodeCommitmentDisputeOpRet(scriptPubKey, dummytype, dummyhash, dummyhash);
 		case 'r':
@@ -720,7 +720,7 @@ bool GetAcceptedProposalOpRet(CTransaction tx, uint256 &proposaltxid, CScript &o
 			DecodeCommitmentUpdateOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, version, commitmenttxid, proposaltxid);
 			break;
 		case 's':
-			DecodeCommitmentCloseOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, version, commitmenttxid, proposaltxid, deposit_send, deposit_keep);
+			DecodeCommitmentCloseOpRet(tx.vout[tx.vout.size() - 1].scriptPubKey, version, commitmenttxid, proposaltxid);
 			break;
 	}
 	if (myGetTransaction(proposaltxid, proposaltx, hashBlock) == 0 || proposaltx.vout.size() <= 0) {
