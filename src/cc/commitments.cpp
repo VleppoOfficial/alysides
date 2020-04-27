@@ -1543,7 +1543,7 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 	uint256 hashBlock, datahash, proposaltxid, prevproposaltxid, commitmenttxid, latesttxid, spendingtxid, dummytxid;
 	std::vector<uint8_t> srcpub, destpub, arbitrator;
 	int32_t numvouts;
-	int64_t payment, arbitratorfee, deposit, depositcut, revision;
+	int64_t payment, arbitratorfee, deposit, totaldeposit, revision;
 	std::string info, CCerror;
 	bool bHasReceiver, bHasArbitrator;
 	uint8_t funcid, version, proposaltype, updatefuncid, spendingfuncid, mypriv[32];
@@ -1600,12 +1600,12 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 						result.push_back(Pair("proposal_type","contract_close"));
 						result.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
 						if (bHasArbitrator) {
-							GetCommitmentInitialData(commitmenttxid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, deposit, datahash, dummytxid, info);
+							GetCommitmentInitialData(commitmenttxid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, totaldeposit, datahash, dummytxid, info);
 							GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
-							GetCommitmentUpdateData(latesttxid, info, datahash, arbitratorfee, depositcut, revision);
-							data.push_back(Pair("deposit_for_seller", depositcut));
-							data.push_back(Pair("deposit_for_client", deposit-depositcut));
-							data.push_back(Pair("total_deposit", deposit));
+							GetCommitmentUpdateData(latesttxid, info, datahash, arbitratorfee, deposit, revision);
+							data.push_back(Pair("deposit_for_seller", deposit));
+							data.push_back(Pair("deposit_for_client", totaldeposit-deposit));
+							data.push_back(Pair("total_deposit", totaldeposit));
 						}
 						break;
 				}
