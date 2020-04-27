@@ -1490,9 +1490,6 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 				mtx.vin.push_back(CTxIn(proposaltxid,1,CScript())); // vin.3 previous proposal CC response hook
 				Myprivkey(mypriv);
 				CCaddr1of2set(cp, CPK_src, CPK_dest, mypriv, mutualaddr);
-				
-				std::cerr << "mutualaddr: " << mutualaddr << std::endl;
-				
 				mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, CPK_src, mypk)); // vout.0 next update baton
 				if (payment > 0)
 					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.1 payment (optional)
@@ -1514,10 +1511,19 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 				mtx.vin.push_back(CTxIn(proposaltxid,0,CScript())); // vin.2 previous proposal CC marker
 				mtx.vin.push_back(CTxIn(proposaltxid,1,CScript())); // vin.3 previous proposal CC response hook
 				Myprivkey(mypriv);
+				
+				std::cerr << "CCaddr1of2set 1" << std::endl;
+				
 				CCaddr1of2set(cp, CPK_src, CPK_dest, mypriv, mutualaddr);
 				if (bHasArbitrator) {
 					GetCCaddress1of2(cp, depositaddr, CPK_dest, CPK_arbitrator);
+					
+					std::cerr << "depositaddr: " << depositaddr << std::endl;
+					
 					mtx.vin.push_back(CTxIn(commitmenttxid,2,CScript())); // vin.4 deposit (with arbitrator)
+					
+					std::cerr << "CCaddr1of2set 2" << std::endl;
+					
 					CCaddr1of2set(cp, CPK_dest, CPK_arbitrator, mypriv, depositaddr);
 				}
 				else
