@@ -224,7 +224,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 	std::string info, CCerror = "";
 	bool bHasReceiver, bHasArbitrator;
 	uint8_t proposaltype, version, spendingfuncid, funcid, updatefuncid;
-	char markeraddr[65], srcaddr[65], destaddr[65], depositaddr[65];
+	char globaladdr[65], srcaddr[65], destaddr[65];
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator, CPK_signer;
 
 	numvins = tx.vin.size();
@@ -234,7 +234,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 	CCOpretCheck(eval,tx,true,true,true);
     CCExactAmounts(eval,tx,CC_TXFEE);
 	if ((funcid = DecodeCommitmentOpRet(tx.vout[numvouts-1].scriptPubKey)) != 0) {
-		GetCCaddress(cp, markeraddr, GetUnspendable(cp, NULL));
+		GetCCaddress(cp, globaladdr, GetUnspendable(cp, NULL));
 		switch (funcid)
         {
 			case 'p':
@@ -274,7 +274,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				// Checking if vins/vouts are correct.
 				if (numvouts < 3)
 					return eval->Invalid("not enough vouts for 'p' tx!");
-				else if (ConstrainVout(tx.vout[0], 1, markeraddr, CC_MARKER_VALUE) == 0)
+				else if (ConstrainVout(tx.vout[0], 1, globaladdr, CC_MARKER_VALUE) == 0)
 					return eval->Invalid("vout.0 must be CC marker to commitments global address!");
 				else if (ConstrainVout(tx.vout[1], 1, destaddr, CC_RESPONSE_VALUE) == 0)
 					return eval->Invalid("vout.1 must be CC baton to mutual or srcpub CC address!");
@@ -392,19 +392,19 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 					return eval->Invalid("found no normal or cc inputs signed by proposal receiver pubkey!");
 				Getscriptaddress(srcaddr, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG);
 				GetCCaddress1of2(cp, destaddr, CPK_src, CPK_dest);
-				if (bHasArbitrator)
+				/*if (bHasArbitrator)
 					GetCCaddress1of2(cp, depositaddr, CPK_dest, CPK_arbitrator);
 				else
-					GetCCaddress(cp, depositaddr, CPK_dest);
+					GetCCaddress(cp, depositaddr, CPK_dest);*/
 				// Checking if vins/vouts are correct.
 				if (numvouts < 4)
 					return eval->Invalid("not enough vouts for 'c' tx!");
-				else if (ConstrainVout(tx.vout[0], 1, markeraddr, CC_MARKER_VALUE) == 0)
+				else if (ConstrainVout(tx.vout[0], 1, globaladdr, CC_MARKER_VALUE) == 0)
 					return eval->Invalid("vout.0 must be CC marker to commitments global address!");
 				else if (ConstrainVout(tx.vout[1], 1, destaddr, CC_MARKER_VALUE) == 0)
 					return eval->Invalid("vout.1 must be CC baton to mutual CC address!");
-				else if (ConstrainVout(tx.vout[2], 1, depositaddr, depositval) == 0)
-					return eval->Invalid("vout.2 must be deposit to CC address!");
+				else if (ConstrainVout(tx.vout[2], 1, globaladdr, depositval) == 0)
+					return eval->Invalid("vout.2 must be deposit to global CC address!");
 				else if (payment > 0 && ConstrainVout(tx.vout[3], 0, srcaddr, payment) == 0)
 					return eval->Invalid("vout.3 must be normal payment to srcaddr when payment defined!");
 				if (numvins < 3)
@@ -1467,16 +1467,19 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 				CCaddr1of2set(cp, CPK_src, CPK_dest, mypriv, mutualaddr);
 				mtx.vout.push_back(MakeCC1vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, GetUnspendable(cp, NULL))); // vout.0 marker
 				mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, CPK_src, mypk)); // vout.1 baton / update log
+				/*
 				if (bHasArbitrator) {
 					mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, deposit, mypk, CPK_arbitrator)); // vout.2 deposit (can be spent by client & arbitrator)
 				}
 				else
 					mtx.vout.push_back(MakeCC1vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, mypk)); // vout.2 contract completion marker (no arbitrator)
+				*/
+				mtx.vout.push_back(MakeCC1vout(EVAL_COMMITMENTS, deposit, GetUnspendable(cp, NULL))); // vout.2 deposit / contract completion marker
 				if (payment > 0)
 					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.4 payment (optional)
 				return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentSigningOpRet(COMMITMENTCC_VERSION, proposaltxid));
 			}
-			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
+			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "error adding normal inputs");
 		case 'u':
 			GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
 			// constructing a 'u' transaction
@@ -1501,33 +1504,23 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 			// constructing a 's' transaction
 			if (AddNormalinputs2(mtx, txfee + payment, 64) > 0) {
 				GetCCaddress1of2(cp, mutualaddr, CPK_src, CPK_dest);
-				
-				std::cerr << "mutualaddr: " << mutualaddr << std::endl;
-				
-				if (latesttxid == commitmenttxid)
+				if (latesttxid == commitmenttxid)s
 					mtx.vin.push_back(CTxIn(commitmenttxid,1,CScript())); // vin.1 last update baton (no previous updates)
 				else
 					mtx.vin.push_back(CTxIn(latesttxid,0,CScript())); // vin.1 last update baton (with previous updates)
 				mtx.vin.push_back(CTxIn(proposaltxid,0,CScript())); // vin.2 previous proposal CC marker
 				mtx.vin.push_back(CTxIn(proposaltxid,1,CScript())); // vin.3 previous proposal CC response hook
 				Myprivkey(mypriv);
-				
-				std::cerr << "CCaddr1of2set 1" << std::endl;
-				
 				CCaddr1of2set(cp, CPK_src, CPK_dest, mypriv, mutualaddr);
+				
 				if (bHasArbitrator) {
 					GetCCaddress1of2(cp, depositaddr, CPK_dest, CPK_arbitrator);
-					
-					std::cerr << "depositaddr: " << depositaddr << std::endl;
-					
 					mtx.vin.push_back(CTxIn(commitmenttxid,2,CScript())); // vin.4 deposit (with arbitrator)
-					
-					std::cerr << "CCaddr1of2set 2" << std::endl;
-					
 					//CCaddr1of2set(cp, CPK_dest, CPK_arbitrator, mypriv, depositaddr);
 				}
 				else
 					mtx.vin.push_back(CTxIn(commitmenttxid,2,CScript())); // vin.4 deposit (no arbitrator)
+				
 				mtx.vout.push_back(CTxOut(deposit, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.0 deposit cut to proposal creator
 				if (payment > 0)
 					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.1 payment (optional)
