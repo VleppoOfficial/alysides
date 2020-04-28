@@ -1032,6 +1032,7 @@ bool GetLatestCommitmentUpdate(uint256 commitmenttxid, uint256 &latesttxid, uint
 			case 'n':
 			case 's':
 			case 'r':
+				sourcetxid = batontxid;
 				break;
 			default:
 				std::cerr << "GetLatestCommitmentUpdate: found an update, but it has incorrect funcid" << std::endl;
