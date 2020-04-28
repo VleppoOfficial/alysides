@@ -1504,7 +1504,7 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 			// constructing a 's' transaction
 			if (AddNormalinputs2(mtx, txfee + payment, 64) > 0) {
 				GetCCaddress1of2(cp, mutualaddr, CPK_src, CPK_dest);
-				if (latesttxid == commitmenttxid)s
+				if (latesttxid == commitmenttxid)
 					mtx.vin.push_back(CTxIn(commitmenttxid,1,CScript())); // vin.1 last update baton (no previous updates)
 				else
 					mtx.vin.push_back(CTxIn(latesttxid,0,CScript())); // vin.1 last update baton (with previous updates)
