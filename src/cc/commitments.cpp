@@ -1290,7 +1290,7 @@ UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttx
 		depositcut = CC_MARKER_VALUE;
 	if (depositcut == 0) depositcut = CC_MARKER_VALUE;
 	// additional checks are done using ValidateProposalOpRet
-	CScript opret = EncodeCommitmentProposalOpRet(COMMITMENTCC_VERSION,'t',std::vector<uint8_t>(mypk.begin(),mypk.end()),clientpk,arbitratorpk,payment,CC_MARKER_VALUE,depositcut,datahash,commitmenttxid,prevproposaltxid,info);
+	CScript opret = EncodeCommitmentProposalOpRet(COMMITMENTCC_VERSION,'t',std::vector<uint8_t>(mypk.begin(),mypk.end()),destpub,arbitratorpk,payment,CC_MARKER_VALUE,depositcut,datahash,commitmenttxid,prevproposaltxid,info);
 	if (!ValidateProposalOpRet(opret, CCerror))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << CCerror);
 	// check prevproposaltxid if specified
