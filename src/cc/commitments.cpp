@@ -852,12 +852,8 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 				return false;
 			}
 			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking if srcpub and destpub are members of the commitment" << std::endl);
-			if (proposaltype == 'u' && (CPK_src != pubkey2pk(sellerpk) && CPK_src != pubkey2pk(clientpk) || CPK_dest != pubkey2pk(sellerpk) && CPK_dest != pubkey2pk(clientpk))) {
+			if (CPK_src != pubkey2pk(sellerpk) && CPK_src != pubkey2pk(clientpk) || CPK_dest != pubkey2pk(sellerpk) && CPK_dest != pubkey2pk(clientpk)) {
 				CCerror = "proposal srcpub or destpub is not a member of the specified commitment!";
-				return false;
-			}
-			else if (proposaltype == 't' && (CPK_src != pubkey2pk(sellerpk) || CPK_dest != pubkey2pk(clientpk))) {
-				CCerror = "proposal srcpub or destpub is invalid for close tx!";
 				return false;
 			}
 			LOGSTREAM("commitments", CCLOG_INFO, stream << "ValidateProposalOpRet: checking arbitrator" << std::endl);
@@ -1273,9 +1269,14 @@ UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttx
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 	if (!GetCommitmentInitialData(commitmenttxid, dummytxid, sellerpk, clientpk, arbitratorpk, dummyamount, deposit, dummytxid, dummytxid, dummystr))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "couldn't get specified commitment info successfully, probably invalid commitment txid");
-	// only sellers can create this proposal type
-	if (mypk != pubkey2pk(sellerpk))
-		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "you are not the seller of this commitment");
+	// setting destination pubkey
+	if (mypk == pubkey2pk(sellerpk))
+		destpub = clientpk;
+	else if (mypk == pubkey2pk(clientpk))
+		destpub = sellerpk;
+	else
+		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "you are not a valid member of this commitment");
+	CPK_dest = pubkey2pk(destpub);
 	// checking deposit cut to prevent vouts with dust value
 	if (pubkey2pk(arbitratorpk).IsFullyValid()) {
 		if (depositcut != 0 && depositcut < CC_MARKER_VALUE)
@@ -1321,7 +1322,7 @@ UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttx
 			CCaddr1of2set(cp, pubkey2pk(ref_srcpub), pubkey2pk(ref_destpub), mypriv, mutualaddr);
 		}
 		mtx.vout.push_back(MakeCC1vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, GetUnspendable(cp, NULL))); // vout.0 marker
-		mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, CC_RESPONSE_VALUE, mypk, pubkey2pk(clientpk))); // vout.1 response hook
+		mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, CC_RESPONSE_VALUE, mypk, pubkey2pk(destpub))); // vout.1 response hook
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
 	CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
@@ -1584,8 +1585,8 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 						result.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
 						if (bHasArbitrator) {
 							GetCommitmentInitialData(commitmenttxid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, totaldeposit, datahash, dummytxid, info);
-							data.push_back(Pair("deposit_for_seller", deposit));
-							data.push_back(Pair("deposit_for_client", totaldeposit-deposit));
+							data.push_back(Pair("deposit_for_sender", deposit));
+							data.push_back(Pair("deposit_for_receiver", totaldeposit-deposit));
 							data.push_back(Pair("total_deposit", totaldeposit));
 						}
 						break;
