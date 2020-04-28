@@ -1587,7 +1587,7 @@ UniValue CommitmentDispute(const CPubKey& pk, uint64_t txfee, uint256 commitment
 		else
 			mtx.vin.push_back(CTxIn(latesttxid,0,CScript())); // vin.1 last update baton (with previous updates)
 		Myprivkey(mypriv);
-		CCaddr1of2set(cp, CPK_seller, CPK_seller, mypriv, mutualaddr);
+		CCaddr1of2set(cp, CPK_seller, CPK_client, mypriv, mutualaddr);
 
 		mtx.vout.push_back(MakeCC1vout(EVAL_COMMITMENTS, arbitratorfee, CPK_arbitrator)); // vout.0 arbitrator fee
 
