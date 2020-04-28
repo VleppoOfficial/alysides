@@ -1789,6 +1789,10 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				break;
 			case 'd':
 				result.push_back(Pair("type","dispute"));
+				DecodeCommitmentDisputeOpRet(tx.vout[numvouts-1].scriptPubKey, version, commitmenttxid, srcpub, datahash);
+				result.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
+				result.push_back(Pair("source_pubkey",HexStr(srcpub)));
+				result.push_back(Pair("data_hash",datahash.GetHex()));
 				break;
 			case 'r':
 				result.push_back(Pair("type","dispute resolution"));
