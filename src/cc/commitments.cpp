@@ -221,7 +221,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 	CTransaction proposaltx;
 	CScript proposalopret;
 	int32_t numvins, numvouts;
-	uint256 hashBlock, commitmenttxid, proposaltxid, prevproposaltxid, dummytxid, spendingtxid, latesttxid;
+	uint256 hashBlock, datahash, commitmenttxid, proposaltxid, prevproposaltxid, dummytxid, spendingtxid, latesttxid;
 	std::vector<uint8_t> srcpub, destpub, signpub, sellerpk, clientpk, arbitratorpk;
 	int64_t payment, arbitratorfee, depositval, totaldeposit, dummyamount;
 	std::string info, CCerror = "";
@@ -1548,7 +1548,7 @@ UniValue CommitmentDispute(const CPubKey& pk, uint64_t txfee, uint256 commitment
 	std::vector<uint8_t> destpub, sellerpk, clientpk, arbitratorpk, ref_srcpub, ref_destpub, dummypk;
 	int64_t arbitratorfee, dummyamount;
 	std::string dummystr;
-	uint8_t version, mypriv[32];
+	uint8_t version, updatefuncid, mypriv[32];
 	char mutualaddr[65];
 	
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
