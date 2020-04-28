@@ -1293,6 +1293,7 @@ UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttx
 			CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Remainder of deposit is too low");
 	}
 	else
+		depositcut = CC_MARKER_VALUE;
 	if (depositcut == 0) depositcut = CC_MARKER_VALUE;
 	// additional checks are done using ValidateProposalOpRet
 	CScript opret = EncodeCommitmentProposalOpRet(COMMITMENTCC_VERSION,'t',std::vector<uint8_t>(mypk.begin(),mypk.end()),clientpk,arbitratorpk,payment,CC_MARKER_VALUE,depositcut,datahash,commitmenttxid,prevproposaltxid,info);
@@ -1512,20 +1513,11 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 				mtx.vin.push_back(CTxIn(proposaltxid,1,CScript())); // vin.3 previous proposal CC response hook
 				Myprivkey(mypriv);
 				CCaddr1of2set(cp, CPK_src, CPK_dest, mypriv, mutualaddr);
-				
-				if (bHasArbitrator) {
-					GetCCaddress1of2(cp, depositaddr, CPK_dest, CPK_arbitrator);
-					mtx.vin.push_back(CTxIn(commitmenttxid,2,CScript())); // vin.4 deposit (with arbitrator)
-					//CCaddr1of2set(cp, CPK_dest, CPK_arbitrator, mypriv, depositaddr);
-				}
-				else
-					mtx.vin.push_back(CTxIn(commitmenttxid,2,CScript())); // vin.4 deposit (no arbitrator)
+				mtx.vin.push_back(CTxIn(commitmenttxid,2,CScript())); // vin.4 deposit
 				
 				mtx.vout.push_back(CTxOut(deposit, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.0 deposit cut to proposal creator
 				if (payment > 0)
 					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.1 payment (optional)
-				
-				std::cerr << "FinalizeCCTxExt" << std::endl;
 				
 				return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentCloseOpRet(COMMITMENTCC_VERSION, commitmenttxid, proposaltxid)); 
 			}
