@@ -16,10 +16,13 @@
 #include "CCcommitments.h"
 
 /*
-Things to potentially descope:
-"Draft" proposals (no receiver)
-Dynamic arbitrator fees
-the 'info' field
+TODO: 
+	check srcpub in proposal validation
+	disputes
+	commitmentviewupdates
+	commitmentinventory
+	look into response value fees
+	getting proposal and settlement lists
 
 Commitments RPCs:
 
@@ -51,7 +54,7 @@ Commitments RPCs:
 //===========================================================================
 
 //uint8_t DecodeCommitmentOpRet()
-// just returns funcid of whatever commitment tx opret is fed into it
+// just returns funcid of whatever commitment tx opret is given to it
 uint8_t DecodeCommitmentOpRet(const CScript scriptPubKey)
 {
 	std::vector<uint8_t> vopret, dummypk;
@@ -82,7 +85,7 @@ uint8_t DecodeCommitmentOpRet(const CScript scriptPubKey)
 		case 's':
 			return DecodeCommitmentCloseOpRet(scriptPubKey, dummytype, dummyhash, dummyhash);
 		case 'd':
-			return DecodeCommitmentDisputeOpRet(scriptPubKey, dummytype, dummyhash, dummyhash);
+			return DecodeCommitmentDisputeOpRet(scriptPubKey, dummytype, dummyhash, dummypk, dummyhash);
 		case 'r':
 			return DecodeCommitmentDisputeResolveOpRet(scriptPubKey, dummytype, dummyhash, dummyhash, dummybool);
 		case 'n':
@@ -166,17 +169,17 @@ uint8_t DecodeCommitmentCloseOpRet(CScript scriptPubKey, uint8_t &version, uint2
 		return(funcid);
 	return(0);
 }
-CScript EncodeCommitmentDisputeOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputehash)
+CScript EncodeCommitmentDisputeOpRet(uint8_t version, uint256 commitmenttxid, std::vector<uint8_t> srcpub, uint256 datahash)
 {
 	CScript opret; uint8_t evalcode = EVAL_COMMITMENTS, funcid = 'd';
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << disputehash);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << srcpub << datahash);
 	return(opret);
 }
-uint8_t DecodeCommitmentDisputeOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputehash)
+uint8_t DecodeCommitmentDisputeOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, std::vector<uint8_t> &srcpub, uint256 &datahash)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> disputehash) != 0 && evalcode == EVAL_COMMITMENTS)
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> srcpub; ss >> datahash) != 0 && evalcode == EVAL_COMMITMENTS)
 		return(funcid);
 	return(0);
 }
@@ -220,11 +223,11 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 	int32_t numvins, numvouts;
 	uint256 hashBlock, commitmenttxid, proposaltxid, prevproposaltxid, dummytxid, spendingtxid, latesttxid;
 	std::vector<uint8_t> srcpub, destpub, signpub, sellerpk, clientpk, arbitratorpk;
-	int64_t payment, arbitratorfee, depositval, totaldeposit;
+	int64_t payment, arbitratorfee, depositval, totaldeposit, dummyamount;
 	std::string info, CCerror = "";
 	bool bHasReceiver, bHasArbitrator;
 	uint8_t proposaltype, version, spendingfuncid, funcid, updatefuncid;
-	char globaladdr[65], srcaddr[65], destaddr[65];
+	char globaladdr[65], srcaddr[65], destaddr[65], arbitratoraddr[65];
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator, CPK_signer;
 
 	numvins = tx.vin.size();
@@ -319,8 +322,8 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				bHasReceiver = CPK_dest.IsValid();
 				if (TotalPubkeyNormalInputs(tx, CPK_signer) == 0 && TotalPubkeyCCInputs(tx, CPK_signer) == 0)
 					return eval->Invalid("found no normal or cc inputs signed by signer pubkey!");
-				// We won't be using ValidateProposalOpRet here, since we only care about initiator and receiver, and even if the other data in the proposal is invalid the proposal will be closed anyway
-				// Instead we'll just check if the initiator of this tx is allowed to close the proposal.
+				// We won't be using ValidateProposalOpRet here, since we only care about sender and receiver, and even if the other data in the proposal is invalid the proposal will be closed anyway
+				// Instead we'll just check if the source pubkey of this tx is allowed to close the proposal.
 				switch (proposaltype) {
 					case 'p':
 						if (bHasReceiver && CPK_signer != CPK_src && CPK_signer != CPK_dest)
@@ -388,6 +391,9 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 					return eval->Invalid("proposal doesn't have valid destpub!");
 				if (IsProposalSpent(proposaltxid, spendingtxid, spendingfuncid))
 					return eval->Invalid("prevproposal has already been spent!");
+				
+				// TODO: check if srcpub actually matches signing pubkey in accepted proposal
+				
 				if (TotalPubkeyNormalInputs(tx, CPK_dest) == 0 && TotalPubkeyCCInputs(tx, CPK_dest) == 0)
 					return eval->Invalid("found no normal or cc inputs signed by proposal receiver pubkey!");
 				Getscriptaddress(srcaddr, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG);
@@ -451,6 +457,9 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 					return eval->Invalid("proposal doesn't have valid destpub!");
 				if (IsProposalSpent(proposaltxid, spendingtxid, spendingfuncid))
 					return eval->Invalid("prevproposal has already been spent!");
+				
+				// TODO: check if srcpub actually matches signing pubkey in accepted proposal
+				
 				if (TotalPubkeyNormalInputs(tx, CPK_dest) == 0 && TotalPubkeyCCInputs(tx, CPK_dest) == 0)
 					return eval->Invalid("found no normal or cc inputs signed by proposal receiver pubkey!");
 				// Getting the latest update txid.
@@ -527,6 +536,9 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 					return eval->Invalid("proposal doesn't have valid destpub!");
 				if (IsProposalSpent(proposaltxid, spendingtxid, spendingfuncid))
 					return eval->Invalid("prevproposal has already been spent!");
+				
+				// TODO: check if srcpub actually matches signing pubkey in accepted proposal
+				
 				if (TotalPubkeyNormalInputs(tx, CPK_dest) == 0 && TotalPubkeyCCInputs(tx, CPK_dest) == 0)
 					return eval->Invalid("found no normal or cc inputs signed by proposal receiver pubkey!");
 				// Getting the latest update txid.
@@ -581,36 +593,55 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				vin.1 last update baton
 				vout.0 response hook / arbitrator fee
 				vout.n-2 change
-				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'd' commitmenttxid initiator disputehash
+				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'd' commitmenttxid srcpub datahash
 				*/
-				return eval->Invalid("funcid - 'd'");
-				///		- Getting and verifying the transaction data.
-				/*
-						use DecodeCommitmentDisputeOpRet, get initiator, commitmenttxid, disputehash
-						use GetLatestCommitmentUpdateType(commitmenttxid)
-						if updatefuncid != 'c' or 'u' or 'r', invalidate
-						use GetLatestCommitmentUpdate(commitmenttxid) to get the latest update txid
-						check if disputehash is empty. Invalidate if it is.
-						use TotalPubkeyNormalInputs to verify that initiator == pubkey that submitted tx
-						CheckIfInitiatorValid(initiator, commitmenttxid)
-				*/
-				///		- Some arbitrator shenanigans.
-				/*
-						use GetCommitmentArbitrator(commitmenttxid) to get the current arbitrator
-						if one doesn't exist, invalidate (disputes are disabled when there are no arbitrators)
-						arbitratorfee = GetArbitratorFee(commitmenttxid)
-				*/
-				///		- Checking if our inputs/outputs are correct.
-				/*
-						check vout0:
-							does it point to the arbitrator's address?
-								does arbitratorpubkey point to the same privkey as the arbitrator's address?
-							is the value == arbitratorfee?
-						check vin1:
-							does it point to the previous update baton?
-						Do not allow any additional CC vins.
-						break;
-				*/
+				// Getting the transaction data.
+				DecodeCommitmentDisputeOpRet(tx.vout[numvouts-1].scriptPubKey, version, commitmenttxid, signpub, datahash);
+				if (datahash == zeroid)
+					return eval->Invalid("datahash empty or invalid for 'd' tx!");
+				if (!GetCommitmentInitialData(commitmenttxid, dummytxid, srcpub, destpub, arbitratorpk, arbitratorfee, totaldeposit, dummytxid, dummytxid, info))
+					return eval->Invalid("couldn't find commitment tx for 'd' tx!");
+				GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
+				if (updatefuncid != 'c' && updatefuncid != 'u')
+					return eval->Invalid("commitment inactive or already in dispute!");
+				CPK_src = pubkey2pk(srcpub);
+				CPK_dest = pubkey2pk(destpub);
+				CPK_signer = pubkey2pk(signpub);
+				if (TotalPubkeyCCInputs(tx, CPK_signer) == 0)
+					return eval->Invalid("found no cc inputs signed by signer pubkey!");
+				if (CPK_signer != CPK_src && CPK_signer != CPK_dest)
+					return eval->Invalid("signer pubkey is not a member of the commitment!");
+				// Some arbitrator shenanigans.
+				CPK_arbitrator = pubkey2pk(arbitratorpk);
+				if (!(CPK_arbitrator.IsValid()))
+					return eval->Invalid("no valid arbitrator found in commitment!");
+				GetCommitmentUpdateData(latesttxid, info, dummytxid, arbitratorfee, depositval, dummyamount);
+				GetCCaddress(cp, arbitratoraddr, CPK_arbitrator);
+				// Checking if vins/vouts are correct.
+				if (numvouts < 2)
+					return eval->Invalid("not enough vouts for 'd' tx!");
+				else if (ConstrainVout(tx.vout[0], 1, arbitratoraddr, arbitratorfee) == 0)
+					return eval->Invalid("vout.0 must be CC fee to commitments arbitrator's address!");
+				if (numvins < 2)
+					return eval->Invalid("not enough vins for 'd' tx!");
+				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
+					return eval->Invalid("vin.0 must be normal for commitmentdispute!");
+				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
+					return eval->Invalid("vin.1 must be CC for commitmentdispute!");
+				// does vin1 point to latesttxid baton?
+				else if (latesttxid == commitmenttxid) {
+					if (tx.vin[1].prevout.hash != commitmenttxid || tx.vin[1].prevout.n != 1)
+						return eval->Invalid("vin.1 tx hash doesn't match latesttxid!");
+				}
+				else if (latesttxid != commitmenttxid) {
+					if (tx.vin[1].prevout.hash != latesttxid || tx.vin[1].prevout.n != 0)
+						return eval->Invalid("vin.1 tx hash doesn't match latesttxid!");
+				}
+				// Do not allow any additional CC vins.
+				for (int32_t i = 2; i > numvins; i++) {
+					if (IsCCInput(tx.vin[i].scriptSig) != 0)
+						return eval->Invalid("tx exceeds allowed amount of CC vins!");
+				}
 				break;
 			case 'r':
 				/*
@@ -627,28 +658,26 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				///		- Getting and verifying the transaction data.
 				/*
 						use DecodeCommitmentDisputeResolveOpRet, get disputetxid, rewardedpubkey
-						use DecodeCommitmentDisputeOpRet, get commitmenttxid, initiator
-						use GetLatestCommitmentUpdateType(commitmenttxid)
+						use DecodeCommitmentDisputeOpRet, get commitmenttxid, srcpub
+						use GetLatestCommitmentUpdate(commitmenttxid, updatefuncid) to get the latest update txid
 						if updatefuncid != 'd', invalidate
-						use GetLatestCommitmentUpdate(commitmenttxid) to get the latest update txid
 				*/
 				///		- Depending on what rewardedpubkey is set to, the dispute may or not be cancelled by the arbitrator
 				/*
 						CheckIfInitiatorValid(rewardedpubkey, commitmenttxid)
-						deposit = GetDepositValue(commitmenttxid)
+						GetCommitmentInitialData to get members and arbitrator
+						check if rewardedpubkey is a member
 				*/
 				///		- Some arbitrator shenanigans.
 				/*	
-						use GetCommitmentArbitrator(commitmenttxid) to get the current arbitrator
 						if one doesn't exist, invalidate (disputes are disabled when there are no arbitrators)
-						arbitratorfee = GetArbitratorFee(commitmenttxid)
+						GetCommitmentUpdateData to get arbitrator fee
 						use TotalPubkeyNormalInputs to verify that arbitrator == pubkey that submitted tx
 				*/
 				///		- Checking if our inputs/outputs are correct.
 				/*
 						check vout0:
 							does it point to the rewardedpubkey's address?
-								does rewardedpubkey point to the same privkey as the rewardedpubkey's address?
 							is the value == deposit?
 						check vin1:
 							does it point to the disputetxid / marker?
@@ -1080,9 +1109,6 @@ void GetCommitmentUpdateData(uint256 updatetxid, std::string &info, uint256 &dat
 }
 
 /*
-dynamic data (non-user):
-	GetProposalRevision(proposaltxid) gives revision number for proposal
-		
 how tf to get these???
 	update/termination proposal list (?)
 	settlement list (?)
@@ -1404,7 +1430,8 @@ UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 propo
 // commitmentaccept - spend a 'p' transaction that was submitted by the other party.
 // this function is context aware and does different things dependent on the proposal type:
 // if txid opret has the 'p' proposal type, will create a 'c' transaction (create contract)
-// if txid opret has the 'u' or 't' proposal type, will create a 'u' transaction (update contract)
+// if txid opret has the 'u' proposal type, will create a 'u' transaction (update contract)
+// if txid opret has the 't' proposal type, will create a 's' transaction (close contract)
 UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid)
 {
 	CPubKey mypk, CPK_src, CPK_dest, CPK_arbitrator;
@@ -1512,7 +1539,63 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 	}
 }
 
-// commitmentdispute
+// commitmentdispute - constructs a 'd' transaction and spends the latest update baton of commitmenttxid
+// only allowed/validated if commitment has an arbitrator
+UniValue CommitmentDispute(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, uint256 datahash)
+{
+	CPubKey mypk, CPK_seller, CPK_client, CPK_arbitrator;
+	uint256 latesttxid, dummytxid;
+	std::vector<uint8_t> destpub, sellerpk, clientpk, arbitratorpk, ref_srcpub, ref_destpub, dummypk;
+	int64_t arbitratorfee, dummyamount;
+	std::string dummystr;
+	uint8_t version, mypriv[32];
+	char mutualaddr[65];
+	
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
+	if (txfee == 0) txfee = CC_TXFEE;
+	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
+	
+	if (datahash == zeroid)
+		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Data hash must not be empty");
+	
+	if (!GetCommitmentInitialData(commitmenttxid, dummytxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, dummyamount, dummytxid, dummytxid, dummystr))
+		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "couldn't get specified commitment info successfully, probably invalid commitment txid");
+	CPK_seller = pubkey2pk(sellerpk);
+	CPK_client = pubkey2pk(clientpk);
+	CPK_arbitrator = pubkey2pk(arbitratorpk);
+	
+	// check sender pubkey
+	if (mypk != CPK_seller && mypk != CPK_client)
+		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "you are not a valid member of this commitment");
+	
+	// check if arbitrator exists
+	if (!(CPK_arbitrator.IsFullyValid()))
+		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "commitment has no arbitrator, disputes are disabled");
+	
+	// check if commitment is active
+	GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
+	if (updatefuncid != 'c' && updatefuncid != 'u')
+		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "commitment is no longer active or is already suspended");
+
+	GetCommitmentUpdateData(latesttxid, dummystr, dummytxid, arbitratorfee, dummyamount, dummyamount);
+
+	if (AddNormalinputs2(mtx, txfee + arbitratorfee, 64) > 0) {
+		GetCCaddress1of2(cp, mutualaddr, CPK_seller, CPK_client);
+		if (latesttxid == commitmenttxid)
+			mtx.vin.push_back(CTxIn(commitmenttxid,1,CScript())); // vin.1 last update baton (no previous updates)
+		else
+			mtx.vin.push_back(CTxIn(latesttxid,0,CScript())); // vin.1 last update baton (with previous updates)
+		Myprivkey(mypriv);
+		CCaddr1of2set(cp, CPK_seller, CPK_seller, mypriv, mutualaddr);
+
+		mtx.vout.push_back(MakeCC1vout(EVAL_COMMITMENTS, arbitratorfee, CPK_arbitrator)); // vout.0 arbitrator fee
+
+		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentDisputeOpRet(COMMITMENTCC_VERSION,commitmenttxid,std::vector<uint8_t>(mypk.begin(),mypk.end()),datahash)); 
+	}
+	CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
+}
+
 // commitmentresolve
 
 //===========================================================================
@@ -1553,9 +1636,6 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 					members.push_back(Pair("receiver",HexStr(destpub)));
 				if (payment > 0)
 					data.push_back(Pair("required_payment", payment));
-				
-				// TODO: add revision numbers here (version numbers should be reset after contract acceptance)
-				
 				data.push_back(Pair("info",info));
 				data.push_back(Pair("data_hash",datahash.GetHex()));
 				switch (proposaltype) {
@@ -1691,6 +1771,21 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				break;
 			case 's':
 				result.push_back(Pair("type","contract close"));
+				DecodeCommitmentCloseOpRet(tx.vout[numvouts-1].scriptPubKey, version, commitmenttxid, proposaltxid);
+				result.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
+				result.push_back(Pair("proposal_txid",proposaltxid.GetHex()));
+				GetCommitmentInitialData(commitmenttxid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, totaldeposit, datahash, dummytxid, info);
+				CPK_arbitrator = pubkey2pk(arbitrator);
+				GetCommitmentUpdateData(txid, info, datahash, arbitratorfee, deposit, revision);
+				data.push_back(Pair("revision",revision));
+				data.push_back(Pair("info",info));
+				data.push_back(Pair("data_hash",datahash.GetHex()));
+				if (CPK_arbitrator.IsFullyValid()) {
+					data.push_back(Pair("deposit_for_sender", deposit));
+					data.push_back(Pair("deposit_for_receiver", totaldeposit-deposit));
+					data.push_back(Pair("total_deposit", totaldeposit));
+				}
+				result.push_back(Pair("data",data));
 				break;
 			case 'd':
 				result.push_back(Pair("type","dispute"));

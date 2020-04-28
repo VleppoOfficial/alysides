@@ -39,8 +39,8 @@ CScript EncodeCommitmentUpdateOpRet(uint8_t version, uint256 commitmenttxid, uin
 uint8_t DecodeCommitmentUpdateOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &proposaltxid);
 CScript EncodeCommitmentCloseOpRet(uint8_t version, uint256 commitmenttxid, uint256 proposaltxid);
 uint8_t DecodeCommitmentCloseOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &proposaltxid);
-CScript EncodeCommitmentDisputeOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputehash);
-uint8_t DecodeCommitmentDisputeOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputehash);
+CScript EncodeCommitmentDisputeOpRet(uint8_t version, uint256 commitmenttxid, std::vector<uint8_t> srcpub, uint256 datahash);
+uint8_t DecodeCommitmentDisputeOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, std::vector<uint8_t> &srcpub, uint256 &datahash);
 CScript EncodeCommitmentDisputeResolveOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputetxid, bool rewardsender);
 uint8_t DecodeCommitmentDisputeResolveOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputetxid, bool &rewardsender);
 CScript EncodeCommitmentUnlockOpRet(uint8_t version, uint256 commitmenttxid, uint256 exchangetxid);
@@ -61,6 +61,7 @@ UniValue CommitmentUpdate(const CPubKey& pk, uint64_t txfee, uint256 commitmentt
 UniValue CommitmentClose(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, std::string info, uint256 datahash, int64_t depositcut, int64_t payment, uint256 prevproposaltxid);
 UniValue CommitmentStopProposal(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid);
 UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid);
+UniValue CommitmentDispute(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, uint256 datahash);
 
 UniValue CommitmentInfo(const CPubKey& pk, uint256 txid);
 UniValue CommitmentList();

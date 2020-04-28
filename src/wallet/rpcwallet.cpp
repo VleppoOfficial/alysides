@@ -8254,6 +8254,33 @@ UniValue commitmentclose(const UniValue& params, bool fHelp, const CPubKey& mypk
     return(result);
 }
 
+UniValue commitmentdispute(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    UniValue result(UniValue::VOBJ);
+	uint256 datahash, commitmenttxid;
+    if (fHelp || params.size() != 2)
+        throw runtime_error("commitmentdispute commitmenttxid datahash\n");
+    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    Lock2NSPV(mypk);
+	
+	commitmenttxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (commitmenttxid == zeroid) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Commitment id invalid\n");
+    }
+    datahash = Parseuint256((char *)params[1].get_str().c_str());
+	if (datahash == zeroid) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Data hash empty or invalid\n");
+    }
+	result = CommitmentDispute(mypk, 0, commitmenttxid, datahash);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    Unlock2NSPV(mypk);
+    return(result);
+}
+
 UniValue commitmentinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     uint256 txid;
