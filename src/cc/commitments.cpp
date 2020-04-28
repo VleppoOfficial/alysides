@@ -392,10 +392,6 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 					return eval->Invalid("found no normal or cc inputs signed by proposal receiver pubkey!");
 				Getscriptaddress(srcaddr, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG);
 				GetCCaddress1of2(cp, destaddr, CPK_src, CPK_dest);
-				/*if (bHasArbitrator)
-					GetCCaddress1of2(cp, depositaddr, CPK_dest, CPK_arbitrator);
-				else
-					GetCCaddress(cp, depositaddr, CPK_dest);*/
 				// Checking if vins/vouts are correct.
 				if (numvouts < 4)
 					return eval->Invalid("not enough vouts for 'c' tx!");
@@ -536,10 +532,6 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				// Getting the latest update txid.
 				GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
 				Getscriptaddress(srcaddr, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG);
-				/*if (bHasArbitrator)
-					GetCCaddress1of2(cp, depositaddr, CPK_dest, CPK_arbitrator);
-				else
-					GetCCaddress(cp, depositaddr, CPK_dest);*/
 				// Checking if vins/vouts are correct.
 				if (numvouts < 3)
 					return eval->Invalid("not enough vouts for 's' tx!");
@@ -1469,13 +1461,6 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 				CCaddr1of2set(cp, CPK_src, CPK_dest, mypriv, mutualaddr);
 				mtx.vout.push_back(MakeCC1vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, GetUnspendable(cp, NULL))); // vout.0 marker
 				mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, CPK_src, mypk)); // vout.1 baton / update log
-				/*
-				if (bHasArbitrator) {
-					mtx.vout.push_back(MakeCC1of2vout(EVAL_COMMITMENTS, deposit, mypk, CPK_arbitrator)); // vout.2 deposit (can be spent by client & arbitrator)
-				}
-				else
-					mtx.vout.push_back(MakeCC1vout(EVAL_COMMITMENTS, CC_MARKER_VALUE, mypk)); // vout.2 contract completion marker (no arbitrator)
-				*/
 				mtx.vout.push_back(MakeCC1vout(EVAL_COMMITMENTS, deposit, GetUnspendable(cp, NULL))); // vout.2 deposit / contract completion marker
 				if (payment > 0)
 					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.4 payment (optional)
@@ -1515,11 +1500,9 @@ UniValue CommitmentAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxi
 				Myprivkey(mypriv);
 				CCaddr1of2set(cp, CPK_src, CPK_dest, mypriv, mutualaddr);
 				mtx.vin.push_back(CTxIn(commitmenttxid,2,CScript())); // vin.4 deposit
-				
 				mtx.vout.push_back(CTxOut(deposit, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.0 deposit cut to proposal creator
 				if (payment > 0)
 					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.1 payment (optional)
-				
 				return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentCloseOpRet(COMMITMENTCC_VERSION, commitmenttxid, proposaltxid)); 
 			}
 			CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
@@ -1601,8 +1584,6 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 						result.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
 						if (bHasArbitrator) {
 							GetCommitmentInitialData(commitmenttxid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, totaldeposit, datahash, dummytxid, info);
-							GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
-							GetCommitmentUpdateData(latesttxid, info, datahash, arbitratorfee, deposit, revision);
 							data.push_back(Pair("deposit_for_seller", deposit));
 							data.push_back(Pair("deposit_for_client", totaldeposit-deposit));
 							data.push_back(Pair("total_deposit", totaldeposit));
