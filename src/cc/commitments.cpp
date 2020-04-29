@@ -660,7 +660,11 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
 				if (updatefuncid != 'd')
 					return eval->Invalid("commitment not in dispute!");
+				CPK_src = pubkey2pk(srcpub);
+				CPK_dest = pubkey2pk(destpub);
 				CPK_rewarded = pubkey2pk(rewardedpubkey);
+				if (CPK_rewarded != CPK_src && CPK_rewarded != CPK_dest)
+					return eval->Invalid("rewarded pubkey is not a member of the commitment!");
 				// Some arbitrator shenanigans.
 				CPK_arbitrator = pubkey2pk(arbitratorpk);
 				if (!(CPK_arbitrator.IsValid()))
@@ -1602,7 +1606,7 @@ UniValue CommitmentDispute(const CPubKey& pk, uint64_t txfee, uint256 commitment
 // only available to arbitrators
 UniValue CommitmentResolve(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, std::vector<uint8_t> rewardedpubkey)
 {
-	CPubKey mypk, CPK_seller, CPK_client, CPK_arbitrator;
+	CPubKey mypk, CPK_seller, CPK_client, CPK_rewarded, CPK_arbitrator;
 	uint256 latesttxid, dummytxid;
 	std::vector<uint8_t> destpub, sellerpk, clientpk, arbitratorpk, ref_srcpub, ref_destpub, dummypk;
 	int64_t deposit, dummyamount;
