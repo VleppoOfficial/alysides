@@ -23,6 +23,7 @@ TODO:
 	commitmentinventory
 	look into response value fees
 	getting proposal and settlement lists
+	preparing commitmentunlock
 
 Commitments RPCs:
 
@@ -62,7 +63,6 @@ uint8_t DecodeCommitmentOpRet(const CScript scriptPubKey)
 	uint256 dummyhash;
 	std::string dummystr;
 	uint8_t evalcode, funcid, *script, dummytype;
-	bool dummybool;
 	GetOpReturnData(scriptPubKey, vopret);
 	script = (uint8_t *)vopret.data();
 	if(script != NULL && vopret.size() > 2) {
@@ -87,7 +87,7 @@ uint8_t DecodeCommitmentOpRet(const CScript scriptPubKey)
 		case 'd':
 			return DecodeCommitmentDisputeOpRet(scriptPubKey, dummytype, dummyhash, dummypk, dummyhash);
 		case 'r':
-			return DecodeCommitmentDisputeResolveOpRet(scriptPubKey, dummytype, dummyhash, dummyhash, dummybool);
+			return DecodeCommitmentDisputeResolveOpRet(scriptPubKey, dummytype, dummyhash, dummypk);
 		case 'n':
 			return DecodeCommitmentUnlockOpRet(scriptPubKey, dummytype, dummyhash, dummyhash);
 		default:
@@ -183,17 +183,17 @@ uint8_t DecodeCommitmentDisputeOpRet(CScript scriptPubKey, uint8_t &version, uin
 		return(funcid);
 	return(0);
 }
-CScript EncodeCommitmentDisputeResolveOpRet(uint8_t version, uint256 commitmenttxid, uint256 disputetxid, bool rewardsender)
+CScript EncodeCommitmentDisputeResolveOpRet(uint8_t version, uint256 commitmenttxid, std::vector<uint8_t> rewardedpubkey)
 {
 	CScript opret; uint8_t evalcode = EVAL_COMMITMENTS, funcid = 'r';
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << disputetxid << rewardsender);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << commitmenttxid << rewardedpubkey);
 	return(opret);
 }
-uint8_t DecodeCommitmentDisputeResolveOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, uint256 &disputetxid, bool &rewardsender)
+uint8_t DecodeCommitmentDisputeResolveOpRet(CScript scriptPubKey, uint8_t &version, uint256 &commitmenttxid, std::vector<uint8_t> &rewardedpubkey)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> disputetxid; ss >> rewardsender) != 0 && evalcode == EVAL_COMMITMENTS)
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> commitmenttxid; ss >> rewardedpubkey) != 0 && evalcode == EVAL_COMMITMENTS)
 		return(funcid);
 	return(0);
 }
@@ -222,7 +222,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 	CScript proposalopret;
 	int32_t numvins, numvouts;
 	uint256 hashBlock, datahash, commitmenttxid, proposaltxid, prevproposaltxid, dummytxid, spendingtxid, latesttxid;
-	std::vector<uint8_t> srcpub, destpub, signpub, sellerpk, clientpk, arbitratorpk;
+	std::vector<uint8_t> srcpub, destpub, signpub, sellerpk, clientpk, arbitratorpk, rewardedpubkey;
 	int64_t payment, arbitratorfee, depositval, totaldeposit, dummyamount;
 	std::string info, CCerror = "";
 	bool bHasReceiver, bHasArbitrator;
@@ -306,7 +306,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				vin.0 normal input
 				vin.1 previous proposal baton
 				vout.n-2 change
-				vout.n-1 OP_RETURN EVAL_COMMITMENTS 't' proposaltxid signpub
+				vout.n-1 OP_RETURN EVAL_COMMITMENTS 't' version proposaltxid signpub
 				*/
 				// Getting the transaction data.
 				DecodeCommitmentProposalCloseOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltxid, signpub);
@@ -370,7 +370,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				vout.2 deposit / commitment completion baton
 				vout.3 payment (optional)
 				vout.n-2 change
-				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'c' proposaltxid
+				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'c' version proposaltxid
 				*/
 				// Getting the transaction data.
 				if (!GetAcceptedProposalOpRet(tx, proposaltxid, proposalopret))
@@ -438,7 +438,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				vout.0 next update baton
 				vout.1 payment (optional)
 				vout.n-2 change
-				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'u' commitmenttxid proposaltxid
+				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'u' version commitmenttxid proposaltxid
 				*/
 				// Getting the transaction data.
 				if (!GetAcceptedProposalOpRet(tx, proposaltxid, proposalopret))
@@ -514,7 +514,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				vout.0 deposit cut to proposal creator
 				vout.1 payment (optional)
 				vout.n-2 change
-				vout.n-1 OP_RETURN EVAL_COMMITMENTS 's' commitmenttxid proposaltxid
+				vout.n-1 OP_RETURN EVAL_COMMITMENTS 's' version commitmenttxid proposaltxid
 				*/
 				// Getting the transaction data.
 				if (!GetAcceptedProposalOpRet(tx, proposaltxid, proposalopret))
@@ -551,7 +551,6 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 					return eval->Invalid("vout.0 must be normal deposit cut to srcaddr!");
 				else if (payment > 0 && ConstrainVout(tx.vout[1], 0, srcaddr, payment) == 0)
 					return eval->Invalid("vout.1 must be normal payment to srcaddr when payment defined!");
-				
 				if (numvins < 5)
 					return eval->Invalid("not enough vins for 's' tx!");
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
@@ -593,7 +592,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				vin.1 last update baton
 				vout.0 response hook / arbitrator fee
 				vout.n-2 change
-				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'd' commitmenttxid srcpub datahash
+				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'd' version commitmenttxid srcpub datahash
 				*/
 				// Getting the transaction data.
 				DecodeCommitmentDisputeOpRet(tx.vout[numvouts-1].scriptPubKey, version, commitmenttxid, signpub, datahash);
@@ -652,41 +651,53 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 				vout.0 next update baton
 				vout.1 deposit redeem
 				vout.n-2 change
-				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'r' disputetxid rewardedpubkey
+				vout.n-1 OP_RETURN EVAL_COMMITMENTS 'r' version commitmenttxid rewardedpubkey
 				*/
-				return eval->Invalid("funcid - 'r'");
-				///		- Getting and verifying the transaction data.
-				/*
-						use DecodeCommitmentDisputeResolveOpRet, get disputetxid, rewardedpubkey
-						use DecodeCommitmentDisputeOpRet, get commitmenttxid, srcpub
-						use GetLatestCommitmentUpdate(commitmenttxid, updatefuncid) to get the latest update txid
-						if updatefuncid != 'd', invalidate
-				*/
-				///		- Depending on what rewardedpubkey is set to, the dispute may or not be cancelled by the arbitrator
-				/*
-						CheckIfInitiatorValid(rewardedpubkey, commitmenttxid)
-						GetCommitmentInitialData to get members and arbitrator
-						check if rewardedpubkey is a member
-				*/
-				///		- Some arbitrator shenanigans.
-				/*	
-						if one doesn't exist, invalidate (disputes are disabled when there are no arbitrators)
-						GetCommitmentUpdateData to get arbitrator fee
-						use TotalPubkeyNormalInputs to verify that arbitrator == pubkey that submitted tx
-				*/
-				///		- Checking if our inputs/outputs are correct.
-				/*
-						check vout0:
-							does it point to the rewardedpubkey's address?
-							is the value == deposit?
-						check vin1:
-							does it point to the disputetxid / marker?
-							is the value == arbitratorfee?
-						check vin2:
-							does it point to the commitment deposit?
-						Do not allow any additional CC vins.
-						break;
-				*/
+				// Getting the transaction data.
+				DecodeCommitmentDisputeResolveOpRet(tx.vout[numvouts-1].scriptPubKey, version, commitmenttxid, rewardedpubkey);
+				if (!GetCommitmentInitialData(commitmenttxid, dummytxid, srcpub, destpub, arbitratorpk, arbitratorfee, depositval, dummytxid, dummytxid, info))
+					return eval->Invalid("couldn't find commitment tx for 'r' tx!");
+				GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
+				if (updatefuncid != 'd')
+					return eval->Invalid("commitment not in dispute!");
+				CPK_rewarded = pubkey2pk(rewardedpubkey);
+				// Some arbitrator shenanigans.
+				CPK_arbitrator = pubkey2pk(arbitratorpk);
+				if (!(CPK_arbitrator.IsValid()))
+					return eval->Invalid("no valid arbitrator found in commitment!");
+				if (TotalPubkeyCCInputs(tx, CPK_arbitrator) == 0)
+					return eval->Invalid("found no cc inputs signed by arbitrator pubkey!");
+				GetCCaddress(cp, destaddr, CPK_rewarded);
+				// Checking if vins/vouts are correct.
+				if (numvouts < 2)
+					return eval->Invalid("not enough vouts for 'r' tx!");
+				else if (ConstrainVout(tx.vout[0], 0, destaddr, depositval) == 0)
+					return eval->Invalid("vout.0 must be normal deposit payout to rewarded pubkey address!");
+				if (numvins < 3)
+					return eval->Invalid("not enough vins for 'r' tx!");
+				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
+					return eval->Invalid("vin.0 must be normal for commitmentresolve!");
+				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
+					return eval->Invalid("vin.1 must be CC for commitmentresolve!");
+				// does vin1 point to latesttxid baton?
+				else if (latesttxid == commitmenttxid) {
+					if (tx.vin[1].prevout.hash != commitmenttxid || tx.vin[1].prevout.n != 1)
+						return eval->Invalid("vin.1 tx hash doesn't match latesttxid!");
+				}
+				else if (latesttxid != commitmenttxid) {
+					if (tx.vin[1].prevout.hash != latesttxid || tx.vin[1].prevout.n != 0)
+						return eval->Invalid("vin.1 tx hash doesn't match latesttxid!");
+				}
+				// does vin2 point to deposit?
+				else if (IsCCInput(tx.vin[2].scriptSig) == 0)
+					return eval->Invalid("vin.2 must be CC for commitmentresolve!");
+				else if (tx.vin[2].prevout.hash != commitmenttxid || tx.vin[2].prevout.n != 2)
+					return eval->Invalid("vin.2 tx hash doesn't match commitmenttxid!");
+				// Do not allow any additional CC vins.
+				for (int32_t i = 3; i > numvins; i++) {
+					if (IsCCInput(tx.vin[i].scriptSig) != 0)
+						return eval->Invalid("tx exceeds allowed amount of CC vins!");
+				}
 				break;
 			case 'n':
 				/*
@@ -1555,31 +1566,24 @@ UniValue CommitmentDispute(const CPubKey& pk, uint64_t txfee, uint256 commitment
 	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
 	if (txfee == 0) txfee = CC_TXFEE;
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
-	
 	if (datahash == zeroid)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Data hash must not be empty");
-	
 	if (!GetCommitmentInitialData(commitmenttxid, dummytxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, dummyamount, dummytxid, dummytxid, dummystr))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "couldn't get specified commitment info successfully, probably invalid commitment txid");
 	CPK_seller = pubkey2pk(sellerpk);
 	CPK_client = pubkey2pk(clientpk);
 	CPK_arbitrator = pubkey2pk(arbitratorpk);
-	
 	// check sender pubkey
 	if (mypk != CPK_seller && mypk != CPK_client)
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "you are not a valid member of this commitment");
-	
 	// check if arbitrator exists
 	if (!(CPK_arbitrator.IsFullyValid()))
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "commitment has no arbitrator, disputes are disabled");
-	
 	// check if commitment is active
 	GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
 	if (updatefuncid != 'c' && updatefuncid != 'u')
 		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "commitment is no longer active or is already suspended");
-
 	GetCommitmentUpdateData(latesttxid, dummystr, dummytxid, arbitratorfee, dummyamount, dummyamount);
-
 	if (AddNormalinputs2(mtx, txfee + arbitratorfee, 64) > 0) {
 		GetCCaddress1of2(cp, mutualaddr, CPK_seller, CPK_client);
 		if (latesttxid == commitmenttxid)
@@ -1588,15 +1592,60 @@ UniValue CommitmentDispute(const CPubKey& pk, uint64_t txfee, uint256 commitment
 			mtx.vin.push_back(CTxIn(latesttxid,0,CScript())); // vin.1 last update baton (with previous updates)
 		Myprivkey(mypriv);
 		CCaddr1of2set(cp, CPK_seller, CPK_client, mypriv, mutualaddr);
-
 		mtx.vout.push_back(MakeCC1vout(EVAL_COMMITMENTS, arbitratorfee, CPK_arbitrator)); // vout.0 arbitrator fee
-
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentDisputeOpRet(COMMITMENTCC_VERSION,commitmenttxid,std::vector<uint8_t>(mypk.begin(),mypk.end()),datahash)); 
 	}
 	CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
 }
 
-// commitmentresolve
+// commitmentresolve - constructs a 'r' transaction and spends the latest update baton of commitmenttxid
+// only available to arbitrators
+UniValue CommitmentResolve(const CPubKey& pk, uint64_t txfee, uint256 commitmenttxid, std::vector<uint8_t> rewardedpubkey)
+{
+	CPubKey mypk, CPK_seller, CPK_client, CPK_arbitrator;
+	uint256 latesttxid, dummytxid;
+	std::vector<uint8_t> destpub, sellerpk, clientpk, arbitratorpk, ref_srcpub, ref_destpub, dummypk;
+	int64_t deposit, dummyamount;
+	std::string dummystr;
+	uint8_t version, updatefuncid, mypriv[32];
+	char mutualaddr[65];
+	
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_COMMITMENTS);
+	if (txfee == 0) txfee = CC_TXFEE;
+	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
+	if (!GetCommitmentInitialData(commitmenttxid, dummytxid, sellerpk, clientpk, arbitratorpk, dummyamount, deposit, dummytxid, dummytxid, dummystr))
+		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "couldn't get specified commitment info successfully, probably invalid commitment txid");
+	CPK_seller = pubkey2pk(sellerpk);
+	CPK_client = pubkey2pk(clientpk);
+	CPK_arbitrator = pubkey2pk(arbitratorpk);
+	CPK_rewarded = pubkey2pk(rewardedpubkey);
+	// check if arbitrator exists
+	if (!(CPK_arbitrator.IsFullyValid()))
+		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "commitment has no arbitrator, disputes are disabled");
+	// check sender pubkey
+	if (mypk != CPK_arbitrator)
+		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "you are not the arbitrator of this commitment");
+	// check rewarded pubkey
+	if (!(CPK_rewarded.IsFullyValid()))
+		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "Invalid rewarded pubkey");
+	else if (CPK_rewarded != CPK_seller && CPK_rewarded != CPK_client)
+		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "rewarded pubkey is not a valid member of this commitment");
+	// check if commitment is suspended
+	GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
+	if (updatefuncid != 'd')
+		CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "commitment is not in dispute");
+	if (AddNormalinputs2(mtx, txfee, 5) > 0) {
+		if (latesttxid == commitmenttxid)
+			mtx.vin.push_back(CTxIn(commitmenttxid,1,CScript())); // vin.1 last update baton (no previous updates)
+		else
+			mtx.vin.push_back(CTxIn(latesttxid,0,CScript())); // vin.1 last update baton (with previous updates)
+		mtx.vin.push_back(CTxIn(commitmenttxid,2,CScript())); // vin.2 deposit
+		mtx.vout.push_back(CTxOut(deposit, CScript() << ParseHex(HexStr(CPK_rewarded)) << OP_CHECKSIG)); // vout.0 deposit payout
+		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeCommitmentDisputeResolveOpRet(COMMITMENTCC_VERSION,commitmenttxid,rewardedpubkey)); 
+	}
+	CCERR_RESULT("commitmentscc",CCLOG_INFO, stream << "error adding normal inputs");
+}
 
 //===========================================================================
 // RPCs - informational
@@ -1797,27 +1846,18 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 			case 'r':
 				result.push_back(Pair("type","dispute resolution"));
 				break;
+			case 'n':
+				result.push_back(Pair("type","commitment unlock"));
+				break;
 		}
 		return(result);
 	}
 	CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid Commitments transaction id");
 }
 /*
-for 's' show:
-	commitment_txid
-	source_pubkey
-	proposal_txid
-	deposit_for_seller
-	deposit_for_client
-for 'd' show:
-	commitment_txid
-	source_pubkey
-	arbitrator_pubkey
-	data_hash
 for 'r' show:
 	commitment_txid
 	dispute_txid
-	source_pubkey
 	rewarded_pubkey
 */
 
@@ -1827,15 +1867,11 @@ for 'r' show:
 UniValue CommitmentList()
 {
 	UniValue result(UniValue::VARR);
-	std::vector<uint256> txids, foundtxids;
+	std::vector<uint256> foundtxids;
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > addressIndexCCMarker;
 	struct CCcontract_info *cp, C; uint256 txid, hashBlock;
-	CTransaction vintx; std::vector<uint8_t> origpubkey;
-	std::string info, description;
-	uint8_t proposaltype;
-
+	CTransaction vintx;
 	cp = CCinit(&C, EVAL_COMMITMENTS);
-
 	auto addCommitmentTxid = [&](uint256 txid) {
 		if (myGetTransaction(txid, vintx, hashBlock) != 0) {
 			if (vintx.vout.size() > 0 && DecodeCommitmentOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey) != 0) {
@@ -1847,8 +1883,7 @@ UniValue CommitmentList()
 		}
 	};
 	SetCCunspents(addressIndexCCMarker,cp->unspendableCCaddr,true);
-	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++) {
+	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++)
 		addCommitmentTxid(it->first.txhash);
-	}
 	return(result);
 }

@@ -326,6 +326,7 @@ extern UniValue commitmentaccept(const UniValue& params, bool fHelp, const CPubK
 extern UniValue commitmentupdate(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue commitmentclose(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue commitmentdispute(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue commitmentresolve(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue commitmentinfo(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue commitmentlist(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue exchangeaddress(const UniValue& params, bool fHelp, const CPubKey& mypk);
