@@ -671,7 +671,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 					return eval->Invalid("no valid arbitrator found in commitment!");
 				if (TotalPubkeyCCInputs(tx, CPK_arbitrator) == 0)
 					return eval->Invalid("found no cc inputs signed by arbitrator pubkey!");
-				GetCCaddress(cp, destaddr, CPK_rewarded);
+				Getscriptaddress(destaddr, CScript() << ParseHex(HexStr(CPK_rewarded)) << OP_CHECKSIG);
 				// Checking if vins/vouts are correct.
 				if (numvouts < 2)
 					return eval->Invalid("not enough vouts for 'r' tx!");
