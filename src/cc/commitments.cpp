@@ -228,7 +228,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 	bool bHasReceiver, bHasArbitrator;
 	uint8_t proposaltype, version, spendingfuncid, funcid, updatefuncid;
 	char globaladdr[65], srcaddr[65], destaddr[65], arbitratoraddr[65];
-	CPubKey CPK_src, CPK_dest, CPK_arbitrator, CPK_signer;
+	CPubKey CPK_src, CPK_dest, CPK_arbitrator, CPK_signer, CPK_rewarded;
 
 	numvins = tx.vin.size();
     numvouts = tx.vout.size();
