@@ -1761,10 +1761,12 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				result.push_back(Pair("type","contract"));
 				DecodeCommitmentSigningOpRet(tx.vout[numvouts-1].scriptPubKey, version, proposaltxid);
 				GetCommitmentInitialData(txid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, deposit, datahash, commitmenttxid, info);
+				CPK_arbitrator = pubkey2pk(arbitrator);
+				bHasArbitrator = CPK_arbitrator.IsFullyValid();
 				result.push_back(Pair("accepted_txid",proposaltxid.GetHex()));
 				members.push_back(Pair("seller",HexStr(srcpub)));
 				members.push_back(Pair("client",HexStr(destpub)));
-				if (pubkey2pk(arbitrator).IsFullyValid()) {
+				if (bHasArbitrator) {
 					members.push_back(Pair("arbitrator",HexStr(arbitrator)));
 					result.push_back(Pair("deposit",deposit));
 				}
@@ -1796,7 +1798,8 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 					result.push_back(Pair("status","active"));
 				GetCommitmentUpdateData(latesttxid, info, datahash, arbitratorfee, deposit, revision);
 				data.push_back(Pair("revisions",revision));
-				data.push_back(Pair("arbitrator_fee",arbitratorfee));
+				if (bHasArbitrator)
+					data.push_back(Pair("arbitrator_fee",arbitratorfee));
 				data.push_back(Pair("latest_info",info));
 				data.push_back(Pair("latest_data_hash",datahash.GetHex()));
 				result.push_back(Pair("data",data));
