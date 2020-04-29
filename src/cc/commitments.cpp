@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright © 2014-2019 The SuperNET Developers.							  *
+ * Copyright © 2014-2020 The SuperNET Developers.							  *
  *																			  *
  * See the AUTHORS, DEVELOPER-AGREEMENT and LICENSE files at				  *
  * the top-level directory of this distribution for the individual copyright  *
@@ -16,17 +16,12 @@
 #include "CCcommitments.h"
 
 /*
-TODO: 
-	check srcpub in proposal validation
+TODO:
 	look into response value fees
 	getting proposal and settlement lists
-	preparing commitmentunlock
-
-Commitments RPCs:
-	commitmentunlock(commitmenttxid exchangetxid) (case 'n')
 	commitmentviewupdates(commitmenttxid [samplenum][recursive])
 	commitmentinventory([pubkey])
-
+	commitmentunlock(commitmenttxid exchangetxid) (case 'n')
 */
 
 //===========================================================================
@@ -704,7 +699,7 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 	else 
 		return eval->Invalid("must be valid commitments funcid!"); 
 	LOGSTREAM("commitments", CCLOG_INFO, stream << "Commitments tx validated" << std::endl);
-	std::cerr << "Commitments tx validated" << std::endl;
+	///std::cerr << "Commitments tx validated" << std::endl;
     return true;
 }
 
