@@ -1661,7 +1661,7 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 	CPubKey mypk, CPK_src, CPK_dest, CPK_arbitrator;
 	CTransaction tx, proposaltx;
 	uint256 hashBlock, datahash, proposaltxid, prevproposaltxid, commitmenttxid, latesttxid, spendingtxid, dummytxid;
-	std::vector<uint8_t> srcpub, destpub, arbitrator;
+	std::vector<uint8_t> srcpub, destpub, arbitrator, rewardedpubkey;
 	int32_t numvouts;
 	int64_t payment, arbitratorfee, deposit, totaldeposit, revision;
 	std::string info, CCerror;
@@ -1849,6 +1849,9 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 				break;
 			case 'r':
 				result.push_back(Pair("type","dispute resolution"));
+				DecodeCommitmentDisputeResolveOpRet(tx.vout[numvouts-1].scriptPubKey, version, commitmenttxid, rewardedpubkey);
+				result.push_back(Pair("contract_txid",commitmenttxid.GetHex()));
+				result.push_back(Pair("rewarded_pubkey",HexStr(rewardedpubkey)));
 				break;
 			case 'n':
 				result.push_back(Pair("type","commitment unlock"));
@@ -1858,12 +1861,6 @@ UniValue CommitmentInfo(const CPubKey& pk, uint256 txid)
 	}
 	CCERR_RESULT("commitmentscc", CCLOG_INFO, stream << "invalid Commitments transaction id");
 }
-/*
-for 'r' show:
-	commitment_txid
-	dispute_txid
-	rewarded_pubkey
-*/
 
 // commitmentviewupdates [list]
 // commitmentinventory([pubkey])
