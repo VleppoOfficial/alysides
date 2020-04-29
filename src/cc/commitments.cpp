@@ -18,33 +18,12 @@
 /*
 TODO: 
 	check srcpub in proposal validation
-	disputes
-	commitmentviewupdates
-	commitmentinventory
 	look into response value fees
 	getting proposal and settlement lists
 	preparing commitmentunlock
 
 Commitments RPCs:
-
-	commitmentcreate (info datahash destpub arbitrator [arbitratorfee][deposit][prevproposaltxid][refcommitmenttxid])
-	commitmentupdate(commitmenttxid info datahash [newarbitrator][prevproposaltxid])
-	commitmentclose(commitmenttxid info datahash [depositsplit][prevproposaltxid])
-	Proposal creation
-	
-	commitmentaccept(proposaltxid)
-	commitmentstopproposal(proposaltxid message)
-	Proposal response
-	
-	commitmentdispute(commitmenttxid disputetype [disputehash])
-	commitmentresolve(commitmenttxid disputetxid verdict [rewardedpubkey])
-	Disputes
-	
-	commitmentunlock(commitmenttxid exchangetxid)
-		case 'n'
-	commitmentaddress
-	commitmentlist
-	commitmentinfo(txid)
+	commitmentunlock(commitmenttxid exchangetxid) (case 'n')
 	commitmentviewupdates(commitmenttxid [samplenum][recursive])
 	commitmentinventory([pubkey])
 
@@ -391,11 +370,12 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 					return eval->Invalid("proposal doesn't have valid destpub!");
 				if (IsProposalSpent(proposaltxid, spendingtxid, spendingfuncid))
 					return eval->Invalid("prevproposal has already been spent!");
-				
-				// TODO: check if srcpub actually matches signing pubkey in accepted proposal
-				
-				if (TotalPubkeyNormalInputs(tx, CPK_dest) == 0 && TotalPubkeyCCInputs(tx, CPK_dest) == 0)
-					return eval->Invalid("found no normal or cc inputs signed by proposal receiver pubkey!");
+				// Check pubkeys.
+				myGetTransaction(proposaltxid, proposaltx, hashBlock);
+				if (TotalPubkeyNormalInputs(proposaltx, CPK_src) == 0 && TotalPubkeyCCInputs(proposaltx, CPK_src) == 0)
+					return eval->Invalid("found no normal or cc inputs signed by proposal source pubkey!");
+				if (TotalPubkeyCCInputs(tx, CPK_dest) == 0)
+					return eval->Invalid("found no cc inputs signed by proposal receiver pubkey!");
 				Getscriptaddress(srcaddr, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG);
 				GetCCaddress1of2(cp, destaddr, CPK_src, CPK_dest);
 				// Checking if vins/vouts are correct.
@@ -457,11 +437,12 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 					return eval->Invalid("proposal doesn't have valid destpub!");
 				if (IsProposalSpent(proposaltxid, spendingtxid, spendingfuncid))
 					return eval->Invalid("prevproposal has already been spent!");
-				
-				// TODO: check if srcpub actually matches signing pubkey in accepted proposal
-				
-				if (TotalPubkeyNormalInputs(tx, CPK_dest) == 0 && TotalPubkeyCCInputs(tx, CPK_dest) == 0)
-					return eval->Invalid("found no normal or cc inputs signed by proposal receiver pubkey!");
+				// Check pubkeys.
+				myGetTransaction(proposaltxid, proposaltx, hashBlock);
+				if (TotalPubkeyNormalInputs(proposaltx, CPK_src) == 0 && TotalPubkeyCCInputs(proposaltx, CPK_src) == 0)
+					return eval->Invalid("found no normal or cc inputs signed by proposal source pubkey!");
+				if (TotalPubkeyCCInputs(tx, CPK_dest) == 0)
+					return eval->Invalid("found no cc inputs signed by proposal receiver pubkey!");
 				// Getting the latest update txid.
 				GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
 				Getscriptaddress(srcaddr, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG);
@@ -536,11 +517,12 @@ bool CommitmentsValidate(struct CCcontract_info *cp, Eval* eval, const CTransact
 					return eval->Invalid("proposal doesn't have valid destpub!");
 				if (IsProposalSpent(proposaltxid, spendingtxid, spendingfuncid))
 					return eval->Invalid("prevproposal has already been spent!");
-				
-				// TODO: check if srcpub actually matches signing pubkey in accepted proposal
-				
-				if (TotalPubkeyNormalInputs(tx, CPK_dest) == 0 && TotalPubkeyCCInputs(tx, CPK_dest) == 0)
-					return eval->Invalid("found no normal or cc inputs signed by proposal receiver pubkey!");
+				// Check pubkeys.
+				myGetTransaction(proposaltxid, proposaltx, hashBlock);
+				if (TotalPubkeyNormalInputs(proposaltx, CPK_src) == 0 && TotalPubkeyCCInputs(proposaltx, CPK_src) == 0)
+					return eval->Invalid("found no normal or cc inputs signed by proposal source pubkey!");
+				if (TotalPubkeyCCInputs(tx, CPK_dest) == 0)
+					return eval->Invalid("found no cc inputs signed by proposal receiver pubkey!");
 				// Getting the latest update txid.
 				GetLatestCommitmentUpdate(commitmenttxid, latesttxid, updatefuncid);
 				Getscriptaddress(srcaddr, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG);
