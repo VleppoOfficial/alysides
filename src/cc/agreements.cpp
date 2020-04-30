@@ -1938,7 +1938,6 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
 	(funcid = DecodeAgreementOpRet(agreementtx.vout[numvouts-1].scriptPubKey)) == 'c')
 	{
 		GetLatestAgreementUpdate(agreementtxid, latesttxid, funcid);
-		//result.push_back(agreementtxid.GetHex());
 		if (latesttxid != agreementtxid)
 		{
 			if (backwards)
@@ -1961,11 +1960,11 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
 					myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0)
 				{
 					funcid = DecodeAgreementOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey);
+					std::cerr << "samplenum " << samplenum << std::endl;
 					switch (funcid)
 					{
 						case 'u':
 						case 'd':
-							std::cerr << "samplenum " << samplenum << std::endl;
 							total++;
 							result.push_back(batontxid.GetHex());
 							if (batontxid == latesttxid)
