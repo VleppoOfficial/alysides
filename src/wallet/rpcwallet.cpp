@@ -5611,7 +5611,7 @@ int32_t verus_staked(CBlock *pBlock, CMutableTransaction &txNew, uint32_t &nBits
 #include "../cc/CCMarmara.h"
 #include "../cc/CCPayments.h"
 #include "../cc/CCPegs.h"
-#include "../cc/CCcommitments.h"
+#include "../cc/CCagreements.h"
 #include "../cc/CCexchanges.h"
 
 int32_t ensure_CCrequirements(uint8_t evalcode)
@@ -8025,35 +8025,35 @@ UniValue tokenfillswap(const UniValue& params, bool fHelp, const CPubKey& mypk)
     return(result);
 }
 
-UniValue commitmentaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     struct CCcontract_info *cp,C; std::vector<unsigned char> pubkey;
-    cp = CCinit(&C,EVAL_COMMITMENTS);
+    cp = CCinit(&C,EVAL_AGREEMENTS);
     if ( fHelp || params.size() > 1 )
-        throw runtime_error("commitmentaddress [pubkey]\n");
+        throw runtime_error("agreementaddress [pubkey]\n");
     if ( ensure_CCrequirements(0) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     if ( params.size() == 1 )
         pubkey = ParseHex(params[0].get_str().c_str());
-    return(CCaddress(cp,(char *)"Commitments",pubkey));
+    return(CCaddress(cp,(char *)"Agreements",pubkey));
 }
 
-UniValue commitmentcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-	uint256 datahash, prevproposaltxid, refcommitmenttxid;
+	uint256 datahash, prevproposaltxid, refagreementtxid;
 	std::string info;
 	int64_t prepayment, arbitratorfee, deposit;
     if (fHelp || params.size() < 4 || params.size() > 9)
-        throw runtime_error("commitmentcreate info datahash buyer arbitrator [prepayment][arbitratorfee][deposit][prevproposaltxid][refcommitmenttxid]\n");
-    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
+        throw runtime_error("agreementcreate info datahash buyer arbitrator [prepayment][arbitratorfee][deposit][prevproposaltxid][refagreementtxid]\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
 	
 	info = params[0].get_str();
     if (info.size() == 0 || info.size() > 2048) {
 		Unlock2NSPV(mypk);
-        throw runtime_error("Commitment info must not be empty and up to 2048 characters\n");
+        throw runtime_error("Agreement info must not be empty and up to 2048 characters\n");
     }
     datahash = Parseuint256((char *)params[1].get_str().c_str());
 	if (datahash == zeroid) {
@@ -8091,22 +8091,22 @@ UniValue commitmentcreate(const UniValue& params, bool fHelp, const CPubKey& myp
         prevproposaltxid = Parseuint256((char *)params[7].get_str().c_str());
     }
 	if (params.size() == 9)     {
-        refcommitmenttxid = Parseuint256((char *)params[8].get_str().c_str());
+        refagreementtxid = Parseuint256((char *)params[8].get_str().c_str());
     }
-	result = CommitmentCreate(mypk, 0, info, datahash, buyer, arbitrator, prepayment, arbitratorfee, deposit, prevproposaltxid, refcommitmenttxid);
+	result = AgreementCreate(mypk, 0, info, datahash, buyer, arbitrator, prepayment, arbitratorfee, deposit, prevproposaltxid, refagreementtxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
     return(result);
 }
 
-UniValue commitmentstopproposal(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementstopproposal(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 	uint256 proposaltxid;
     if (fHelp || params.size() != 1)
-        throw runtime_error("commitmentstopproposal proposaltxid\n");
-    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
+        throw runtime_error("agreementstopproposal proposaltxid\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
 	
@@ -8116,20 +8116,20 @@ UniValue commitmentstopproposal(const UniValue& params, bool fHelp, const CPubKe
         throw runtime_error("Proposal transaction id invalid\n");
     }
 	
-	result = CommitmentStopProposal(mypk, 0, proposaltxid);
+	result = AgreementStopProposal(mypk, 0, proposaltxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
     return(result);
 }
 
-UniValue commitmentaccept(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementaccept(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 	uint256 proposaltxid;
     if (fHelp || params.size() != 1)
-        throw runtime_error("commitmentaccept proposaltxid\n");
-    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
+        throw runtime_error("agreementaccept proposaltxid\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
 	
@@ -8139,29 +8139,29 @@ UniValue commitmentaccept(const UniValue& params, bool fHelp, const CPubKey& myp
         throw runtime_error("Proposal transaction id invalid\n");
     }
 	
-	result = CommitmentAccept(mypk, 0, proposaltxid);
+	result = AgreementAccept(mypk, 0, proposaltxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
     return(result);
 }
 
-UniValue commitmentupdate(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementupdate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-	uint256 datahash, prevproposaltxid, commitmenttxid;
+	uint256 datahash, prevproposaltxid, agreementtxid;
 	std::string info;
 	int64_t payment, arbitratorfee;
     if (fHelp || params.size() < 3 || params.size() > 6)
-        throw runtime_error("commitmentupdate commitmenttxid info datahash [payment][prevproposaltxid][arbitratorfee]\n");
-    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
+        throw runtime_error("agreementupdate agreementtxid info datahash [payment][prevproposaltxid][arbitratorfee]\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
 	
-	commitmenttxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (commitmenttxid == zeroid) {
+	agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (agreementtxid == zeroid) {
 		Unlock2NSPV(mypk);
-        throw runtime_error("Commitment id invalid\n");
+        throw runtime_error("Agreement id invalid\n");
     }
 	info = params[1].get_str();
     if (info.size() == 0 || info.size() > 2048) {
@@ -8193,29 +8193,29 @@ UniValue commitmentupdate(const UniValue& params, bool fHelp, const CPubKey& myp
 			throw runtime_error("Arbitrator fee too low\n");
 		}
     }
-	result = CommitmentUpdate(mypk, 0, commitmenttxid, info, datahash, payment, prevproposaltxid, arbitratorfee);
+	result = AgreementUpdate(mypk, 0, agreementtxid, info, datahash, payment, prevproposaltxid, arbitratorfee);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
     return(result);
 }
 
-UniValue commitmentclose(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementclose(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-	uint256 datahash, prevproposaltxid, commitmenttxid;
+	uint256 datahash, prevproposaltxid, agreementtxid;
 	std::string info;
 	int64_t payment, depositcut;
     if (fHelp || params.size() < 3 || params.size() > 6)
-        throw runtime_error("commitmentclose commitmenttxid info datahash [depositcut][payment][prevproposaltxid]\n");
-    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
+        throw runtime_error("agreementclose agreementtxid info datahash [depositcut][payment][prevproposaltxid]\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
 	
-	commitmenttxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (commitmenttxid == zeroid) {
+	agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (agreementtxid == zeroid) {
 		Unlock2NSPV(mypk);
-        throw runtime_error("Commitment id invalid\n");
+        throw runtime_error("Agreement id invalid\n");
     }
 	info = params[1].get_str();
     if (info.size() == 0 || info.size() > 2048) {
@@ -8247,81 +8247,81 @@ UniValue commitmentclose(const UniValue& params, bool fHelp, const CPubKey& mypk
 	if (params.size() >= 6) {
         prevproposaltxid = Parseuint256((char *)params[5].get_str().c_str());
     }
-	result = CommitmentClose(mypk, 0, commitmenttxid, info, datahash, depositcut, payment, prevproposaltxid);
+	result = AgreementClose(mypk, 0, agreementtxid, info, datahash, depositcut, payment, prevproposaltxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
     return(result);
 }
 
-UniValue commitmentdispute(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementdispute(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-	uint256 datahash, commitmenttxid;
+	uint256 datahash, agreementtxid;
     if (fHelp || params.size() != 2)
-        throw runtime_error("commitmentdispute commitmenttxid datahash\n");
-    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
+        throw runtime_error("agreementdispute agreementtxid datahash\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
 	
-	commitmenttxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (commitmenttxid == zeroid) {
+	agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (agreementtxid == zeroid) {
 		Unlock2NSPV(mypk);
-        throw runtime_error("Commitment id invalid\n");
+        throw runtime_error("Agreement id invalid\n");
     }
     datahash = Parseuint256((char *)params[1].get_str().c_str());
 	if (datahash == zeroid) {
 		Unlock2NSPV(mypk);
         throw runtime_error("Data hash empty or invalid\n");
     }
-	result = CommitmentDispute(mypk, 0, commitmenttxid, datahash);
+	result = AgreementDispute(mypk, 0, agreementtxid, datahash);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
     return(result);
 }
 
-UniValue commitmentresolve(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementresolve(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-	uint256 commitmenttxid;
+	uint256 agreementtxid;
     if (fHelp || params.size() != 2)
-        throw runtime_error("commitmentresolve commitmenttxid rewardedpubkey\n");
-    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
+        throw runtime_error("agreementresolve agreementtxid rewardedpubkey\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
 	
-	commitmenttxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (commitmenttxid == zeroid) {
+	agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (agreementtxid == zeroid) {
 		Unlock2NSPV(mypk);
-        throw runtime_error("Commitment id invalid\n");
+        throw runtime_error("Agreement id invalid\n");
     }
 	std::vector<unsigned char> rewardedpubkey(ParseHex(params[1].get_str().c_str()));
-	result = CommitmentResolve(mypk, 0, commitmenttxid, rewardedpubkey);
+	result = AgreementResolve(mypk, 0, agreementtxid, rewardedpubkey);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
     return(result);
 }
 
-UniValue commitmentinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     uint256 txid;
     if ( fHelp || params.size() != 1 )
-        throw runtime_error("commitmentinfo txid\n");
-    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
+        throw runtime_error("agreementinfo txid\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     txid = Parseuint256((char *)params[0].get_str().c_str());
-    return(CommitmentInfo(mypk, txid));
+    return(AgreementInfo(mypk, txid));
 }
 
-UniValue commitmentlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     if ( fHelp || params.size() > 0 )
-        throw runtime_error("commitmentlist\n");
-    if ( ensure_CCrequirements(EVAL_COMMITMENTS) < 0 )
+        throw runtime_error("agreementlist\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
-    return(CommitmentList());
+    return(AgreementList());
 }
 
 UniValue exchangeaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)

@@ -39,7 +39,7 @@
  * Verus EVAL_STAKEGUARD is 0x01
  */
 #define FOREACH_EVAL(EVAL)             \
-		EVAL(EVAL_COMMITMENTS, 0xa7) \
+		EVAL(EVAL_AGREEMENTS, 0xa7) \
 		EVAL(EVAL_EXCHANGES, 0xa8) \
         EVAL(EVAL_IMPORTPAYOUT, 0xe1)  \
         EVAL(EVAL_IMPORTCOIN,   0xe2)  \
