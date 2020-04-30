@@ -8315,6 +8315,31 @@ UniValue agreementinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
     return(AgreementInfo(mypk, txid));
 }
 
+UniValue agreementupdatelog(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    uint256 agreementtxid;
+	int32_t samplenum;
+	std::string typestr;
+	bool start_backwards;
+    if ( fHelp || params.size() < 2 || params.size() > 3)
+        throw runtime_error("agreementupdatelog agreementtxid start_backwards [num_samples]\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	typestr = params[1].get_str();
+    if (STR_TOLOWER(typestr) == "1" || STR_TOLOWER(typestr) == "true")
+        start_backwards = true;
+    else if (STR_TOLOWER(typestr) == "0" || STR_TOLOWER(typestr) == "false")
+        start_backwards = false;
+    else 
+        throw runtime_error("Incorrect sort type\n");
+    if (params.size() >= 3)
+        samplenum = atoi((char *)params[1].get_str().c_str());
+    else
+        samplenum = 0;
+    return(AgreementUpdateLog(agreementupdatelog, samplenum, start_backwards));
+}
+
 UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     if ( fHelp || params.size() > 0 )

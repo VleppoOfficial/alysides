@@ -17,7 +17,6 @@
 
 /*
 TODO:
-	agreement -> agreement
 	agreementupdatelog(agreementtxid [samplenum][recursive])
 	nice blurb about what this module is and does
 	look into response value fees
@@ -1060,7 +1059,6 @@ bool GetLatestAgreementUpdate(uint256 agreementtxid, uint256 &latesttxid, uint8_
 	int32_t vini, height, retcode;
 	uint256 batontxid, sourcetxid, hashBlock;
 	CTransaction agreementtx, batontx;
-	uint8_t evalcode;
 	// special handling for agreement tx - baton vout is vout1
 	if (myGetTransaction(agreementtxid, agreementtx, hashBlock) == 0 || agreementtx.vout.size() <= 0)
 	{
@@ -1249,7 +1247,7 @@ UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::string info, ui
 			mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_RESPONSE_VALUE, mypk)); // vout.1 response hook (no destpub)
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
-	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "error adding normal inputs");
+	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "error adding normal inputs");
 }
 // agreementupdate - constructs a 'p' transaction, with the 'u' proposal type
 // This transaction will only be validated if agreementtxid is specified. prevproposaltxid can be used to amend previous update requests.
@@ -1325,7 +1323,7 @@ UniValue AgreementUpdate(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 		mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_RESPONSE_VALUE, mypk, pubkey2pk(destpub))); // vout.1 response hook
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
-	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "error adding normal inputs");
+	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "error adding normal inputs");
 }
 // agreementclose - constructs a 'p' transaction, with the 't' proposal type
 // This transaction will only be validated if agreementtxid is specified. prevproposaltxid can be used to amend previous cancel requests.
@@ -1408,7 +1406,7 @@ UniValue AgreementClose(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid
 		mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_RESPONSE_VALUE, mypk, pubkey2pk(destpub))); // vout.1 response hook
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
-	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "error adding normal inputs");
+	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "error adding normal inputs");
 }
 // agreementstopproposal - constructs a 't' transaction and spends the specified 'p' transaction
 // can be done by the proposal initiator, as well as the receiver if they are able to accept the proposal.
@@ -1706,7 +1704,7 @@ UniValue AgreementResolve(const CPubKey& pk, uint64_t txfee, uint256 agreementtx
 UniValue AgreementInfo(const CPubKey& pk, uint256 txid)
 {
 	UniValue result(UniValue::VOBJ), members(UniValue::VOBJ), data(UniValue::VOBJ);
-	CPubKey mypk, CPK_src, CPK_dest, CPK_arbitrator;
+	CPubKey CPK_src, CPK_dest, CPK_arbitrator;
 	CTransaction tx, proposaltx;
 	uint256 hashBlock, datahash, proposaltxid, prevproposaltxid, agreementtxid, latesttxid, spendingtxid, dummytxid;
 	std::vector<uint8_t> srcpub, destpub, arbitrator, rewardedpubkey;
@@ -1716,8 +1714,6 @@ UniValue AgreementInfo(const CPubKey& pk, uint256 txid)
 	bool bHasReceiver, bHasArbitrator;
 	uint8_t funcid, version, proposaltype, updatefuncid, spendingfuncid, mypriv[32];
 	char mutualaddr[65];
-	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_AGREEMENTS);
-	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 	if (myGetTransaction(txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
 	(funcid = DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey)) != 0)
 	{
@@ -1928,189 +1924,72 @@ UniValue AgreementInfo(const CPubKey& pk, uint256 txid)
 	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid Agreements transaction id");
 }
 
-// agreementupdatelog(agreementtxid [samplenum][backwards])
-/*
 UniValue AgreementUpdateLog(uint256 agreementtxid, int32_t samplenum, bool backwards)
 {
     UniValue result(UniValue::VARR);
-    int64_t total = 0LL, amount, value;
-    int32_t vini, height, retcode, licensetype;
-    std::vector<std::pair<uint8_t, vscript_t>> oprets;
-    std::vector<uint8_t> updaterPubkey;
-    uint256 batontxid, sourcetxid, latesttxid, datahash, hashBlock, tokenIdInOpret;
-    CTransaction txBaton, refTxBaton;
-    CScript batonopret;
-    std::string ccode, dummyName, origdescription;
-
-	if (!GetLatestTokenUpdate(tokenid, latesttxid)) {
-		if(!myGetTransaction(tokenid, txBaton, hashBlock))
-			std::cerr << "tokenid isnt token creation txid" << std::endl;
-		else
-			std::cerr << "couldn't get latest token update, possibly still in mempool" << std::endl;
-		return (result);
-    }
-	//from earliest to latest
-    if (recursive == 0) {
-		sourcetxid = tokenid;
-        // special handling for token creation tx - in this tx, baton vout is vout2
-        if (myGetTransaction(tokenid, txBaton, hashBlock) &&
-        (KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull()) &&
-        txBaton.vout.size() > 2 &&
-        DecodeTokenCreateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription) == 'c' &&
-        txBaton.vout[2].nValue == 10000 &&
-        getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
-        DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u') {
-			total++;
-			UniValue data(UniValue::VOBJ);
-			data.push_back(Pair("txid", tokenid.GetHex()));
-			data.push_back(Pair("author", HexStr(updaterPubkey))); 
-			data.push_back(Pair("hash", datahash.GetHex())); 
-			data.push_back(Pair("value", (double)value/COIN));
-			data.push_back(Pair("ccode", ccode));
-			data.push_back(Pair("licensetype", licensetype));
-			result.push_back(data);
-        }
-        else {
-			if( !myGetTransaction(tokenid, txBaton, hashBlock) )
-				std::cerr << "tokenid isnt token creation txid" << std::endl;
+	
+    int64_t total = 0LL;
+	CTransaction agreementtx, batontx;
+    int32_t numvouts, vini, height, retcode;
+    uint256 batontxid, sourcetxid, hashBlock, latesttxid;
+    uint8_t funcid;
+	
+	if (myGetTransaction(agreementtxid,agreementtx,hashBlock) != 0 && (numvouts = agreementtx.vout.size()) > 0 &&
+	(funcid = DecodeAgreementOpRet(agreementtx.vout[numvouts-1].scriptPubKey)) == 'c')
+	{
+		GetLatestAgreementUpdate(agreementtxid, latesttxid, funcid);
+		//result.push_back(agreementtxid.GetHex());
+		if (latesttxid != agreementtxid)
+		{
+			if (backwards)
+			{
+				std::cerr << "backwards" << std::endl;
+			}
 			else
-				std::cerr << "couldn't get latest token update, possibly still in mempool" << std::endl;
-            return (result);
-        }
-        
-        if (!(total < samplenum || samplenum == 0))
-            return (result);
-
-        // find an update tx which spent the token create baton vout, if it exists
-        if ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 2)) == 0 &&
-        myGetTransaction(batontxid, txBaton, hashBlock) &&
-        (KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull()) &&
-        txBaton.vout.size() > 0 &&
-        txBaton.vout[0].nValue == 10000 &&
-        DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u' &&
-        getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
-        DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u')
-        {
-            total++;
-            UniValue data(UniValue::VOBJ);
-			data.push_back(Pair("txid", batontxid.GetHex()));
-            data.push_back(Pair("author", HexStr(updaterPubkey))); 
-            data.push_back(Pair("hash", datahash.GetHex()));
-            data.push_back(Pair("value", (double)value/COIN));
-            data.push_back(Pair("ccode", ccode));
-            data.push_back(Pair("licensetype", licensetype));
-            result.push_back(data);
-            sourcetxid = batontxid;
-        }
-        else {
-            return (result);
-        }
-    
-        if (!(total < samplenum || samplenum == 0))
-            return (result);
-        
-        // baton vout should be vout0 from now on
-        while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0) {
-            if (myGetTransaction(batontxid, txBaton, hashBlock) &&
-            (KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull()) &&
-            txBaton.vout.size() > 0 &&             
-            txBaton.vout[0].nValue == 10000 &&
-            DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u' &&
-            getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
-            DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u')
-            {
-                total++;
-                UniValue data(UniValue::VOBJ);
-				data.push_back(Pair("txid", batontxid.GetHex()));
-                data.push_back(Pair("author", HexStr(updaterPubkey))); 
-                data.push_back(Pair("hash", datahash.GetHex()));
-                data.push_back(Pair("value", (double)value/COIN));
-                data.push_back(Pair("ccode", ccode));
-                data.push_back(Pair("licensetype", licensetype));
-                result.push_back(data);
-                sourcetxid = batontxid;
-            }
-            else {
-                std::cerr << "error, couldn't decode" << std::endl;
-                return (result);
-            }
-        if (!(total < samplenum || samplenum == 0))
-            break;
-        }
-        return (result);
-    }
-	//from latest to earliest
-    else {
-        sourcetxid = latesttxid;
-        while (sourcetxid != tokenid) {
-            if (myGetTransaction(sourcetxid, txBaton, hashBlock) &&
-            (KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull()) &&
-            txBaton.vout.size() > 0 &&             
-            txBaton.vout[0].nValue == 10000 &&
-            DecodeTokenUpdateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u' &&
-            getCCopret(txBaton.vout[0].scriptPubKey, batonopret) &&
-            DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u') {
-                total++;
-                UniValue data(UniValue::VOBJ);
-				data.push_back(Pair("txid", sourcetxid.GetHex()));
-                data.push_back(Pair("author", HexStr(updaterPubkey))); 
-                data.push_back(Pair("hash", datahash.GetHex()));
-                data.push_back(Pair("value", (double)value/COIN));
-                data.push_back(Pair("ccode", ccode));
-                data.push_back(Pair("licensetype", licensetype));
-                result.push_back(data);
-            }
-            else {
-				std::cerr << "error, couldn't decode" << std::endl;
-                return (result);
-            }
-            if (!(total < samplenum || samplenum == 0))
-                break;
-			// looking for the previous update baton
-			if (myGetTransaction((batontxid = txBaton.vin[1].prevout.hash), refTxBaton, hashBlock) &&
-			(DecodeTokenUpdateOpRet(refTxBaton.vout.back().scriptPubKey, updaterPubkey, tokenIdInOpret) == 'u' ||
-			DecodeTokenCreateOpRet(refTxBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription) == 'c'))
-				sourcetxid = batontxid;
-			else {
-				std::cerr << txBaton.vin[1].prevout.hash.GetHex() << std::endl;
-				std::cerr << "error, previous baton for txid " << sourcetxid.GetHex() << " comes from non-update transaction" << std::endl;
-                return (result);
-            }
-        }
-        if (!(total < samplenum || samplenum == 0))
-            return (result);
-        // special handling for token creation tx - in this tx, baton vout is vout2
-        if (sourcetxid == tokenid) {
-            if (myGetTransaction(sourcetxid, txBaton, hashBlock) &&
-            ( KOMODO_NSPV_SUPERLITE || KOMODO_NSPV_FULLNODE && !hashBlock.IsNull() ) &&
-            txBaton.vout.size() > 2 &&
-            DecodeTokenCreateOpRet(txBaton.vout.back().scriptPubKey, updaterPubkey, dummyName, origdescription) == 'c' &&
-            txBaton.vout[2].nValue == 10000 &&
-            getCCopret(txBaton.vout[2].scriptPubKey, batonopret) &&
-            DecodeTokenUpdateCCOpRet(batonopret, datahash, value, ccode, licensetype) == 'u')
-            {
-                total++;
-                UniValue data(UniValue::VOBJ);
-				data.push_back(Pair("txid", tokenid.GetHex()));
-                data.push_back(Pair("author", HexStr(updaterPubkey))); 
-                data.push_back(Pair("hash", datahash.GetHex()));
-                data.push_back(Pair("value", (double)value/COIN));
-                data.push_back(Pair("ccode", ccode));
-                data.push_back(Pair("licensetype", licensetype));
-                result.push_back(data);
-            }
-            else {
-                std::cerr << "error, couldn't decode" << std::endl;
-                return (result);
-            }
-        }
-        else
-			std::cerr << "initial sample txid isnt token creation txid" << std::endl;
-        return (result);
-    }
+			{
+				std::cerr << "not backwards!" << std::endl;
+				if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && 
+					myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 &&
+					((funcid = DecodeAgreementOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey)) == 'u' || funcid == 's' || funcid == 'd') &&
+					batontx.vout[1].nValue == CC_MARKER_VALUE)
+				{
+					total++;
+					result.push_back(batontxid.GetHex());
+					sourcetxid = batontxid;
+				}
+				while ((total < samplenum || samplenum == 0) &&
+					(retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0 && 
+					myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0)
+				{
+					funcid = DecodeAgreementOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey);
+					switch (funcid)
+					{
+						case 'u':
+						case 'd':
+							total++;
+							result.push_back(batontxid.GetHex());
+							if (batontxid == latesttxid)
+								break;
+							else {
+								sourcetxid = batontxid;
+								continue;
+							}
+						case 'n':
+						case 's':
+						case 'r':
+							result.push_back(batontxid.GetHex());
+							break;
+						default:
+							break;
+					}
+					break;
+				}
+			}
+		}
+		return(result);
+	}
+	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid Agreements transaction id");
 }
-*/
-
 
 // agreementproposals([agreementtxid])
 // agreementinventory([pubkey])
