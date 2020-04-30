@@ -1942,7 +1942,27 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
 		{
 			if (backwards)
 			{
-				std::cerr << "backwards" << std::endl;
+				total++;
+				result.push_back(latesttxid.GetHex());
+				batontxid = latesttxid.vin[1].prevout.hash;
+				while ((total < samplenum || samplenum == 0) && 
+				myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 &&
+				(funcid = DecodeAgreementOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey)) != 0)
+				{
+					switch (funcid)
+					{
+						case 'u':
+						case 'd':
+							// get previous baton
+							total++;
+							result.push_back(batontxid.GetHex());
+							batontxid = batontx.vin[1].prevout.hash;
+							continue;
+						default:
+							break;
+					}
+					break;
+				}
 			}
 			else
 			{
@@ -1987,6 +2007,57 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
 		return(result);
 	}
 	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid Agreements transaction id");
+}
+
+
+// gets the data from the accepted proposal for the specified update txid
+// this is for "updateable" data like info, arbitrator fee etc.
+void GetAgreementUpdateData(uint256 updatetxid, std::string &info, uint256 &datahash, int64_t &arbitratorfee, int64_t &depositsplit, int64_t &revision)
+{
+	CScript proposalopret;
+	CTransaction updatetx, agreementtx, batontx;
+	std::vector<uint8_t> dummypk;
+	uint256 proposaltxid, agreementtxid, sourcetxid, batontxid, dummytxid, hashBlock;
+	uint8_t version, funcid, dummychar;
+	int64_t dummyamount;
+	int32_t vini, height, retcode;
+	while (myGetTransaction(updatetxid, updatetx, hashBlock) && updatetx.vout.size() > 0 &&
+	(funcid = DecodeAgreementOpRet(updatetx.vout[updatetx.vout.size() - 1].scriptPubKey)) != 0)
+	{
+		switch (funcid)
+		{
+			case 'u':
+			case 's':
+				GetAcceptedProposalOpRet(updatetx, proposaltxid, proposalopret);
+				DecodeAgreementProposalOpRet(proposalopret,version,dummychar,dummypk,dummypk,dummypk,dummyamount,arbitratorfee,depositsplit,datahash,agreementtxid,dummytxid,info);
+				break;
+			case 'd':
+			case 'n':
+			case 'r':
+				// get previous baton
+				updatetxid = updatetx.vin[1].prevout.hash;
+				continue;
+			default:
+				break;
+		}
+		break;
+	}
+	revision = 1;
+	if (myGetTransaction(agreementtxid, agreementtx, hashBlock) && agreementtx.vout.size() > 0 &&
+	(funcid = DecodeAgreementOpRet(agreementtx.vout[agreementtx.vout.size() - 1].scriptPubKey)) == 'c' &&
+	(retcode = CCgetspenttxid(sourcetxid, vini, height, agreementtxid, 1)) == 0 &&
+	myGetTransaction(sourcetxid, batontx, hashBlock) && batontx.vout.size() > 0)
+	{
+		revision++;
+		while (sourcetxid != updatetxid && (retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0 &&
+		myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 &&
+		DecodeAgreementOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey) != 0)
+		{
+			revision++;
+			sourcetxid = batontxid;
+		}
+	}
+	return;
 }
 
 // agreementproposals([agreementtxid])
