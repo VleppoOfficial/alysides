@@ -329,6 +329,7 @@ extern UniValue agreementdispute(const UniValue& params, bool fHelp, const CPubK
 extern UniValue agreementresolve(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue agreementinfo(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue agreementupdatelog(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue agreementinventory(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue exchangeaddress(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue faucetfund(const UniValue& params, bool fHelp, const CPubKey& mypk);

@@ -18,7 +18,7 @@
 /*
 The Agreements Antara Module enables anyone to create a blockchain representation of a legally binding bilateral agreement.
 
-An agreement created using this module features, among other things, the ability to store the checksum of off-chain contract documents to prevent tampering, 
+An agreement created using this module features, among other things, the ability to store the checksum of off-chain contract documents (or an oracletxid) to prevent tampering, 
 a two party approval protocol for actions such as updates, terminations, and a dispute resolution system which utilizes an arbitrator, a mutually agreed upon third party.
 
 To create an active contract between two parties, the seller must first use the agreementcreate RPC to create a proposal and designate a buyer pubkey, 
@@ -1949,7 +1949,6 @@ UniValue AgreementInfo(const CPubKey& pk, uint256 txid)
 	}
 	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid Agreements transaction id");
 }
-
 UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backwards)
 {
     UniValue result(UniValue::VARR);
@@ -2011,7 +2010,8 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
 							result.push_back(batontxid.GetHex());
 							if (batontxid == latesttxid)
 								break;
-							else {
+							else
+							{
 								sourcetxid = batontxid;
 								continue;
 							}
@@ -2027,17 +2027,73 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
 				}
 			}
 		}
-		return(result);
+		return (result);
 	}
 	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid Agreements transaction id");
 }
-
-// agreementsubcontracts(agreementtxid)
-// agreementproposals(agreementtxid)
-// agreementinventory([pubkey])
-
-// agreementsettlements(agreementtxid)
-
+// TODO: agreementproposals
+UniValue AgreementProposals(uint256 agreementtxid)
+{
+	UniValue result(UniValue::VARR);
+	return (result);
+}
+// TODO: agreementsubcontracts
+UniValue AgreementSubcontracts(uint256 agreementtxid)
+{
+	UniValue result(UniValue::VARR);
+	return (result);
+}
+// TODO: agreementinventory
+UniValue AgreementInventory(CPubKey pk)
+{
+	UniValue result(UniValue::VOBJ), sellerlist(UniValue::VARR), clientlist(UniValue::VARR), arbitratorlist(UniValue::VARR);
+	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > addressIndexCCMarker;
+	std::vector<uint256> foundtxids;
+	struct CCcontract_info *cp, C;
+	uint256 txid, hashBlock, dummytxid;
+	std::vector<uint8_t> seller, client, arbitrator;
+	int64_t dummyamount;
+	std::string dummystr;
+	CTransaction vintx;
+	cp = CCinit(&C, EVAL_AGREEMENTS);
+	auto AddAgreementWithPk = [&](uint256 txid)
+	{
+		if (myGetTransaction(txid, vintx, hashBlock) != 0 && vintx.vout.size() > 0 && 
+		DecodeAgreementOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey) == 'c' &&
+		GetAgreementInitialData(txid, dummytxid, seller, client, arbitrator, dummyamount, dummyamount, dummytxid, dummytxid, dummystr) &&
+		std::find(foundtxids.begin(), foundtxids.end(), txid) == foundtxids.end())
+		{
+			if (pk == pubkey2pk(seller))
+			{
+				sellerlist.push_back(txid.GetHex());
+				foundtxids.push_back(txid);
+			}
+			if (pk == pubkey2pk(client))
+			{
+				clientlist.push_back(txid.GetHex());
+				foundtxids.push_back(txid);
+			}
+			if (pk == pubkey2pk(arbitrator))
+			{
+				arbitratorlist.push_back(txid.GetHex());
+				foundtxids.push_back(txid);
+			}
+		}
+	};
+	SetCCunspents(addressIndexCCMarker,cp->unspendableCCaddr,true);
+	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++)
+		AddAgreementWithPk(it->first.txhash);
+	result.push_back(Pair("seller",sellerlist));
+	result.push_back(Pair("client",clientlist));
+	result.push_back(Pair("arbitrator",arbitratorlist));
+	return (result);
+}
+// TODO: agreementsettlements
+UniValue AgreementSettlements(uint256 agreementtxid)
+{
+	UniValue result(UniValue::VARR);
+	return (result);
+}
 UniValue AgreementList()
 {
 	UniValue result(UniValue::VARR);

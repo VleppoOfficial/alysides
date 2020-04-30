@@ -60,6 +60,10 @@ UniValue AgreementResolve(const CPubKey& pk, uint64_t txfee, uint256 agreementtx
 
 UniValue AgreementInfo(const CPubKey& pk, uint256 txid);
 UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backwards);
+UniValue AgreementProposals(uint256 agreementtxid);
+UniValue AgreementSubcontracts(uint256 agreementtxid);
+UniValue AgreementInventory(CPubKey pk);
+UniValue AgreementSettlements(uint256 agreementtxid);
 UniValue AgreementList();
 
 #endif
