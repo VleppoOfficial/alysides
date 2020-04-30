@@ -8334,7 +8334,7 @@ UniValue agreementupdatelog(const UniValue& params, bool fHelp, const CPubKey& m
     else 
         throw runtime_error("Incorrect sort type\n");
     if (params.size() >= 3)
-		samplenum = atoll(params[1].get_str().c_str());
+		samplenum = atoll(params[2].get_str().c_str());
     else
         samplenum = 0;
     return(AgreementUpdateLog(agreementtxid, samplenum, start_backwards));
