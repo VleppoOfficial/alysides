@@ -13,11 +13,6 @@
  *                                                                            *
  ******************************************************************************/
 
-
-/*
- Agreements stuff
- */
-
 #ifndef CC_COMMITMENTS_H
 #define CC_COMMITMENTS_H
 
@@ -68,4 +63,3 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
 UniValue AgreementList();
 
 #endif
-

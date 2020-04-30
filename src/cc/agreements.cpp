@@ -16,15 +16,51 @@
 #include "CCagreements.h"
 
 /*
-TODO:
-	nice blurb about what this module is and does
-	look into response value fees
-	optimization (removing useless variables etc.)
-	subcontracts
-	agreementproposals([agreementtxid])
-	agreementinventory([pubkey])
-	getting settlement lists
-	agreementunlock
+The Agreements Antara Module enables anyone to create a blockchain representation of a legally binding bilateral agreement.
+
+An agreement created using this module features, among other things, the ability to store the checksum of off-chain contract documents to prevent tampering, 
+a two party approval protocol for actions such as updates, terminations, and a dispute resolution system which utilizes an arbitrator, a mutually agreed upon third party.
+
+To create an active contract between two parties, the seller must first use the agreementcreate RPC to create a proposal and designate a buyer pubkey, 
+which will need to execute the agreementaccept RPC and sign the proposal.
+
+RPC list:
+	agreementcreate
+	Creates or updates an agreement proposal, with an optional prepayment that will be required for its acceptance by the other party.
+	The pubkey that executes this RPC will always be the seller in the resulting contract. 
+	The buyer pubkey may or may not be specified, but the resulting proposal must have a designated buyer to be able to be accepted.
+	The arbitrator pubkey may or may not be specified. If a arbitrator is included, a arbitrator fee must also be specified, 
+	and the deposit will be controlled by the arbitrator when a dispute occurs.
+
+	agreementstopproposal
+	Closes the specified agreement proposal/request. The proposal txid specified must be of an active proposal – 
+	if the txid has been updated or closed by another txid down the proposal's update chain, the RPC will not work.
+	This RPC can be executed by the proposal's initiator or, if they exist, the receiver.
+
+	agreementaccept
+	Accepts and signs the specified agreement proposal/request. The proposal txid specified must be of an active proposal – 
+	if the txid has been updated or closed by another txid down the proposal's update chain, the RPC will not work.
+	This RPC can only be executed by the proposal's receiver.
+
+	agreementupdate
+	Opens a request to update an existing contract. This RPC must be executed by one of the parties related to the contract, not including the arbitrator.
+
+	agreementclose
+	Opens a request to permanently terminate an existing contract. This RPC must be executed by one of the parties related to the contract, not including the arbitrator.
+	If the contract has a deposit locked in, the acceptance of this request will split it between the two parties. 
+	The deposit split can be adjusted by using a parameter in this RPC.
+
+	agreementdispute
+	Opens a new contract dispute. This RPC must be executed by one of the parties related to the contract, not including the arbitrator. 
+	In addition, this transaction will require paying the arbitrator fee that was specified at the agreement's proposal stage.
+	Only available if the contract has an arbitrator pubkey specified.
+
+	agreementresolve
+	Resolves an existing contract dispute. This RPC can be executed by the arbitrator. The dispute creator is only allowed to close the dispute. 
+	The arbitrator can pay out the deposit to either party as they see fit.
+
+	agreementlist
+	The agreementlist method lists all marked agreement transactions (active proposals and contracts) on the asset chain.
 */
 
 //===========================================================================
@@ -1857,15 +1893,6 @@ UniValue AgreementInfo(const CPubKey& pk, uint256 txid)
 				data.push_back(Pair("latest_info",info));
 				data.push_back(Pair("latest_data_hash",datahash.GetHex()));
 				result.push_back(Pair("data",data));
-				/*
-				TODO:
-					proposals: [
-					]
-					subcontracts: [
-					]
-					settlements: [
-					]
-				*/
 				break;
 			case 'u':
 				result.push_back(Pair("type","contract update"));
@@ -2005,8 +2032,11 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
 	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid Agreements transaction id");
 }
 
-// agreementproposals([agreementtxid])
+// agreementsubcontracts(agreementtxid)
+// agreementproposals(agreementtxid)
 // agreementinventory([pubkey])
+
+// agreementsettlements(agreementtxid)
 
 UniValue AgreementList()
 {
