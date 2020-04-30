@@ -1965,8 +1965,7 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
 			{
 				if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && 
 					myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 &&
-					((funcid = DecodeAgreementOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey)) == 'u' || funcid == 's' || funcid == 'd') &&
-					batontx.vout[1].nValue == CC_MARKER_VALUE)
+					((funcid = DecodeAgreementOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey)) == 'u' || funcid == 's' || funcid == 'd'))
 				{
 					total++;
 					result.push_back(batontxid.GetHex());
