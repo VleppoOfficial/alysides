@@ -8348,7 +8348,7 @@ UniValue agreementinventory(const UniValue& params, bool fHelp, const CPubKey& m
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     if ( params.size() == 1 )
-        pubkey = ParseHex(params[0].get_str().c_str());
+        pubkey = pubkey2pk(ParseHex(params[0].get_str().c_str()));
     else
 		pubkey = mypk.IsValid() ? mypk : pubkey2pk(Mypubkey());
 	return(AgreementInventory(pubkey));
