@@ -1924,7 +1924,7 @@ UniValue AgreementInfo(const CPubKey& pk, uint256 txid)
 	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid Agreements transaction id");
 }
 
-UniValue AgreementUpdateLog(uint256 agreementtxid, int32_t samplenum, bool backwards)
+UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backwards)
 {
     UniValue result(UniValue::VARR);
 	
@@ -1947,7 +1947,6 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int32_t samplenum, bool backw
 			}
 			else
 			{
-				std::cerr << "not backwards!" << std::endl;
 				if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && 
 					myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 &&
 					((funcid = DecodeAgreementOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey)) == 'u' || funcid == 's' || funcid == 'd') &&
@@ -1966,6 +1965,7 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int32_t samplenum, bool backw
 					{
 						case 'u':
 						case 'd':
+							std::cerr << "samplenum " << samplenum << std::endl;
 							total++;
 							result.push_back(batontxid.GetHex());
 							if (batontxid == latesttxid)

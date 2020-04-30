@@ -65,7 +65,7 @@ UniValue AgreementDispute(const CPubKey& pk, uint64_t txfee, uint256 agreementtx
 UniValue AgreementResolve(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, std::vector<uint8_t> rewardedpubkey);
 
 UniValue AgreementInfo(const CPubKey& pk, uint256 txid);
-UniValue AgreementUpdateLog(uint256 agreementtxid, int32_t samplenum, bool backwards);
+UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backwards);
 UniValue AgreementList();
 
 #endif

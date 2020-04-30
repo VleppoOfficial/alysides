@@ -8318,7 +8318,7 @@ UniValue agreementinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
 UniValue agreementupdatelog(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     uint256 agreementtxid;
-	int32_t samplenum;
+	int64_t samplenum;
 	std::string typestr;
 	bool start_backwards;
     if ( fHelp || params.size() < 2 || params.size() > 3)
@@ -8334,7 +8334,7 @@ UniValue agreementupdatelog(const UniValue& params, bool fHelp, const CPubKey& m
     else 
         throw runtime_error("Incorrect sort type\n");
     if (params.size() >= 3)
-        samplenum = atoi((char *)params[1].get_str().c_str());
+		samplenum = atoll(params[1].get_str().c_str());
     else
         samplenum = 0;
     return(AgreementUpdateLog(agreementtxid, samplenum, start_backwards));
