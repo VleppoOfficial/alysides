@@ -2043,7 +2043,6 @@ UniValue AgreementSubcontracts(uint256 agreementtxid)
 	UniValue result(UniValue::VARR);
 	return (result);
 }
-// TODO: agreementinventory
 UniValue AgreementInventory(CPubKey pk)
 {
 	UniValue result(UniValue::VOBJ), sellerlist(UniValue::VARR), clientlist(UniValue::VARR), arbitratorlist(UniValue::VARR);
