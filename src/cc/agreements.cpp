@@ -1929,7 +1929,7 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
     UniValue result(UniValue::VARR);
 	
     int64_t total = 0LL;
-	CTransaction agreementtx, batontx;
+	CTransaction agreementtx, latesttx, batontx;
     int32_t numvouts, vini, height, retcode;
     uint256 batontxid, sourcetxid, hashBlock, latesttxid;
     uint8_t funcid;
@@ -1944,7 +1944,8 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
 			{
 				total++;
 				result.push_back(latesttxid.GetHex());
-				batontxid = latesttxid.vin[1].prevout.hash;
+				myGetTransaction(latesttxid, latesttx, hashBlock);
+				batontxid = latesttx.vin[1].prevout.hash;
 				while ((total < samplenum || samplenum == 0) && 
 				myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 &&
 				(funcid = DecodeAgreementOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey)) != 0)
