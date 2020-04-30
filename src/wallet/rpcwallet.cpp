@@ -8342,7 +8342,7 @@ UniValue agreementupdatelog(const UniValue& params, bool fHelp, const CPubKey& m
 
 UniValue agreementinventory(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
-    std::vector<unsigned char> pubkey;
+    CPubKey pubkey;
     if ( fHelp || params.size() > 1 )
         throw runtime_error("agreementinventory [pubkey]\n");
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
