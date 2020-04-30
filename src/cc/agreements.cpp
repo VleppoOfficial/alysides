@@ -1960,7 +1960,6 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
 					myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0)
 				{
 					funcid = DecodeAgreementOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey);
-					std::cerr << "samplenum " << samplenum << std::endl;
 					switch (funcid)
 					{
 						case 'u':
