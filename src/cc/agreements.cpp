@@ -17,7 +17,6 @@
 
 /*
 TODO:
-	agreementupdatelog(agreementtxid [samplenum][recursive])
 	nice blurb about what this module is and does
 	look into response value fees
 	optimization (removing useless variables etc.)
@@ -258,7 +257,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("not enough vouts for 'p' tx!");
 				else if (ConstrainVout(tx.vout[0], 1, globaladdr, CC_MARKER_VALUE) == 0)
 					return eval->Invalid("vout.0 must be CC marker to agreements global address!");
-				else if (ConstrainVout(tx.vout[1], 1, destaddr, CC_RESPONSE_VALUE) == 0)
+				else if (ConstrainVout(tx.vout[1], 1, destaddr, CC_MARKER_VALUE) == 0)
 					return eval->Invalid("vout.1 must be CC baton to mutual or srcpub CC address!");
 				if (numvins < 3)
 					return eval->Invalid("not enough vins for 'p' tx in AgreementsValidate!");
@@ -1230,7 +1229,7 @@ UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::string info, ui
 		if (!CompareProposals(opret, prevproposaltxid, CCerror))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << CCerror << " txid: " << prevproposaltxid.GetHex());
 	}
-	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 8) > 0)
+	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE * 2, 8) > 0)
 	{
 		if (prevproposaltxid != zeroid)
 		{
@@ -1242,9 +1241,9 @@ UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::string info, ui
 		}
 		mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, GetUnspendable(cp, NULL))); // vout.0 marker
 		if (bHasReceiver)
-			mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_RESPONSE_VALUE, mypk, CPK_dest)); // vout.1 response hook (with destpub)
+			mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, mypk, CPK_dest)); // vout.1 response hook (with destpub)
 		else
-			mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_RESPONSE_VALUE, mypk)); // vout.1 response hook (no destpub)
+			mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, mypk)); // vout.1 response hook (no destpub)
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
 	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "error adding normal inputs");
@@ -1309,7 +1308,7 @@ UniValue AgreementUpdate(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 		if (!CompareProposals(opret, prevproposaltxid, CCerror))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << CCerror << " txid: " << prevproposaltxid.GetHex());
 	}
-	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 8) > 0)
+	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE * 2, 8) > 0)
 	{
 		if (prevproposaltxid != zeroid)
 		{
@@ -1320,7 +1319,7 @@ UniValue AgreementUpdate(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 			CCaddr1of2set(cp, pubkey2pk(ref_srcpub), pubkey2pk(ref_destpub), mypriv, mutualaddr);
 		}
 		mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, GetUnspendable(cp, NULL))); // vout.0 marker
-		mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_RESPONSE_VALUE, mypk, pubkey2pk(destpub))); // vout.1 response hook
+		mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, mypk, pubkey2pk(destpub))); // vout.1 response hook
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
 	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "error adding normal inputs");
@@ -1392,7 +1391,7 @@ UniValue AgreementClose(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid
 		if (!CompareProposals(opret, prevproposaltxid, CCerror))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << CCerror << " txid: " << prevproposaltxid.GetHex());
 	}
-	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE + CC_RESPONSE_VALUE, 8) > 0)
+	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE * 2, 8) > 0)
 	{
 		if (prevproposaltxid != zeroid)
 		{
@@ -1403,7 +1402,7 @@ UniValue AgreementClose(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid
 			CCaddr1of2set(cp, pubkey2pk(ref_srcpub), pubkey2pk(ref_destpub), mypriv, mutualaddr);
 		}
 		mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, GetUnspendable(cp, NULL))); // vout.0 marker
-		mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_RESPONSE_VALUE, mypk, pubkey2pk(destpub))); // vout.1 response hook
+		mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, mypk, pubkey2pk(destpub))); // vout.1 response hook
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
 	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "error adding normal inputs");
@@ -1551,7 +1550,7 @@ UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid
 				mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, CPK_src, mypk)); // vout.1 baton / update log
 				mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, deposit, GetUnspendable(cp, NULL))); // vout.2 deposit / contract completion marker
 				if (payment > 0)
-					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.4 payment (optional)
+					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CPK_src)) << OP_CHECKSIG)); // vout.3 payment (optional)
 				return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementSigningOpRet(AGREEMENTCC_VERSION, proposaltxid));
 			}
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "error adding normal inputs");
@@ -1927,13 +1926,11 @@ UniValue AgreementInfo(const CPubKey& pk, uint256 txid)
 UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backwards)
 {
     UniValue result(UniValue::VARR);
-	
     int64_t total = 0LL;
 	CTransaction agreementtx, latesttx, batontx;
     int32_t numvouts, vini, height, retcode;
     uint256 batontxid, sourcetxid, hashBlock, latesttxid;
     uint8_t funcid;
-	
 	if (myGetTransaction(agreementtxid,agreementtx,hashBlock) != 0 && (numvouts = agreementtx.vout.size()) > 0 &&
 	(funcid = DecodeAgreementOpRet(agreementtx.vout[numvouts-1].scriptPubKey)) == 'c')
 	{
@@ -1954,7 +1951,6 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
 					{
 						case 'u':
 						case 'd':
-							// get previous baton
 							total++;
 							result.push_back(batontxid.GetHex());
 							batontxid = batontx.vin[1].prevout.hash;

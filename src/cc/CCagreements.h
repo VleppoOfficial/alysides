@@ -26,7 +26,6 @@
 #define AGREEMENTCC_VERSION 1
 #define CC_TXFEE 10000
 #define CC_MARKER_VALUE 10000
-#define CC_RESPONSE_VALUE 20000
 
 uint8_t DecodeAgreementOpRet(const CScript scriptPubKey);
 CScript EncodeAgreementProposalOpRet(uint8_t version, uint8_t proposaltype, std::vector<uint8_t> srcpub, std::vector<uint8_t> destpub, std::vector<uint8_t> arbitratorpk, int64_t payment, int64_t arbitratorfee, int64_t depositval, uint256 datahash, uint256 agreementtxid, uint256 prevproposaltxid, std::string info);
