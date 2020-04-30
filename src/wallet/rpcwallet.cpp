@@ -8337,7 +8337,7 @@ UniValue agreementupdatelog(const UniValue& params, bool fHelp, const CPubKey& m
         samplenum = atoi((char *)params[1].get_str().c_str());
     else
         samplenum = 0;
-    return(AgreementUpdateLog(agreementupdatelog, samplenum, start_backwards));
+    return(AgreementUpdateLog(agreementtxid, samplenum, start_backwards));
 }
 
 UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
