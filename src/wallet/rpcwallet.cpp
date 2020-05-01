@@ -8362,7 +8362,7 @@ UniValue agreementproposals(const UniValue& params, bool fHelp, const CPubKey& m
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
-    return(AgreementProposals(mypk, agreementtxid));
+    return(AgreementProposals(agreementtxid));
 }
 
 UniValue agreementsubcontracts(const UniValue& params, bool fHelp, const CPubKey& mypk)
@@ -8373,7 +8373,7 @@ UniValue agreementsubcontracts(const UniValue& params, bool fHelp, const CPubKey
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
-    return(AgreementSubcontracts(mypk, agreementtxid));
+    return(AgreementSubcontracts(agreementtxid));
 }
 
 UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
