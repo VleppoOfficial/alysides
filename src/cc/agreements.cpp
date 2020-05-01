@@ -2055,12 +2055,12 @@ UniValue AgreementProposals(CPubKey pk, uint256 agreementtxid)
 				senderlist.push_back(txid.GetHex());
 				foundtxids.push_back(txid);
 			}
-			if (pk == pubkey2pk(destpub))
+			if (pubkey2pk(destpub).IsValid() && pk == pubkey2pk(destpub))
 			{
 				receiverlist.push_back(txid.GetHex());
 				foundtxids.push_back(txid);
 			}
-			if (pk == pubkey2pk(arbitrator))
+			if (pubkey2pk(arbitrator).IsValid() && pk == pubkey2pk(arbitrator))
 			{
 				arbitratorlist.push_back(txid.GetHex());
 				foundtxids.push_back(txid);
