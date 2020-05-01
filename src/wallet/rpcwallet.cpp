@@ -8358,17 +8358,16 @@ UniValue agreementproposals(const UniValue& params, bool fHelp, const CPubKey& m
 {
     uint256 agreementtxid = zeroid;
 	CPubKey pubkey;
+	std::vector<unsigned char> pubkey;
     if ( fHelp || params.size() > 2 )
-        throw runtime_error("agreementproposals [pubkey][agreementtxid]\n");
+        throw runtime_error("agreementproposals [agreementtxid][pubkey]\n");
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	if ( params.size() >= 1 )
-        pubkey = pubkey2pk(ParseHex(params[0].get_str().c_str()));
-    else
-		pubkey = mypk.IsValid() ? mypk : pubkey2pk(Mypubkey());
+        agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
 	if ( params.size() == 2 )
-		agreementtxid = Parseuint256((char *)params[1].get_str().c_str());
-    return(AgreementProposals(pubkey, agreementtxid));
+		pubkey = ParseHex(params[1].get_str().c_str());
+    return(AgreementProposals(pubkey2pk(pubkey), agreementtxid));
 }
 
 UniValue agreementsubcontracts(const UniValue& params, bool fHelp, const CPubKey& mypk)
