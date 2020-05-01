@@ -575,6 +575,32 @@ static const CRPCCommand vRPCCommands[] =
     //{ "tokens",       "tokenfillswap",    &tokenfillswap,     true },
     { "tokens",       "tokenconvert", &tokenconvert, true },
 
+	{ "tokens",       "tokenupdate",      &tokenupdate,       true },
+	{ "tokens",       "tokenviewupdates", &tokenviewupdates,  true },
+	{ "tokens",       "tokenowners", 	  &tokenowners,       true },
+	{ "tokens",       "tokeninventory",   &tokeninventory,    true },
+
+	// agreements
+	{ "agreements",  "agreementcreate",  &agreementcreate,  true },
+	{ "agreements",  "agreementstopproposal", &agreementstopproposal, true },
+	{ "agreements",  "agreementaccept",  &agreementaccept,  true },
+	{ "agreements",  "agreementupdate",  &agreementupdate,  true }, 
+	{ "agreements",  "agreementclose",   &agreementclose,   true }, 
+	{ "agreements",  "agreementdispute", &agreementdispute, true }, 
+	{ "agreements",  "agreementresolve", &agreementresolve, true }, 
+	{ "agreements",  "agreementunlock",  &agreementunlock,  true }, 
+	{ "agreements",  "agreementaddress", &agreementaddress, true },
+	{ "agreements",  "agreementinfo",	 &agreementinfo,	true },
+	{ "agreements",  "agreementupdatelog",	  &agreementupdatelog,    true },
+	{ "agreements",  "agreementinventory",	  &agreementinventory,    true },
+	{ "agreements",  "agreementproposals",	  &agreementproposals,    true },
+	{ "agreements",  "agreementsubcontracts", &agreementsubcontracts, true },
+	{ "agreements",  "agreementsettlements",  &agreementsettlements,  true },
+	{ "agreements",  "agreementlist",    &agreementlist,    true },
+	
+	// exchanges
+	{ "exchanges",  "exchangeaddress",&exchangeaddress, true },
+	
     // pegs
     { "pegs",       "pegscreate",     &pegscreate,      true },
     { "pegs",       "pegsfund",         &pegsfund,      true },

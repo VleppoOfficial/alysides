@@ -5611,6 +5611,8 @@ int32_t verus_staked(CBlock *pBlock, CMutableTransaction &txNew, uint32_t &nBits
 #include "../cc/CCMarmara.h"
 #include "../cc/CCPayments.h"
 #include "../cc/CCPegs.h"
+#include "../cc/CCagreements.h"
+#include "../cc/CCexchanges.h"
 
 int32_t ensure_CCrequirements(uint8_t evalcode)
 {
@@ -7470,14 +7472,17 @@ UniValue tokenbalance(const UniValue& params, bool fHelp, const CPubKey& mypk)
 UniValue tokencreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-    std::string name, description, hextx; 
+    std::string name, description, ccode = "USD", hextx; 
     std::vector<uint8_t> nonfungibleData;
-    int64_t supply; // changed from uin64_t to int64_t for this 'if ( supply <= 0 )' to work as expected
+    int64_t value = 0, supply; // changed from uin64_t to int64_t for this 'if ( supply <= 0 )' to work as expected
+	int32_t licensetype = 0;
+    double ownerperc = 100.0;
+	uint256 datahash = zeroid;
 
     CCerror.clear();
 
-    if ( fHelp || params.size() > 4 || params.size() < 2 )
-        throw runtime_error("tokencreate name supply [description][data]\n");
+    if ( fHelp || params.size() > 9 || params.size() < 2 )
+        throw runtime_error("tokencreate name supply [description][licensetype][datahash][value][ccode][ownerperc][data]\n");
     if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     
@@ -7504,8 +7509,46 @@ UniValue tokencreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
         }
     }
     
-    if (params.size() == 4)    {
-        nonfungibleData = ParseHex(params[3].get_str());
+	if (params.size() >= 4)     {
+        licensetype = atof(params[3].get_str().c_str());
+        if (licensetype > 127 || licensetype < 0)   {
+            ERR_RESULT("Invalid license flag, must be between 0 and 127");
+            return(result);
+        }
+    }
+	
+    if (params.size() >= 5)     {
+        datahash = Parseuint256((char *)params[4].get_str().c_str()); //returns zeroid if empty or wrong length
+    }
+    
+    if (params.size() >= 6)     {
+        value = atof(params[5].get_str().c_str()) * COIN;
+        if (value < 1 && value != 0)
+        {
+            ERR_RESULT("Value cannot be less than 1 satoshi if it is not zero");
+            return(result);
+        }
+    }
+    
+    if (params.size() >= 7)     {
+        ccode = params[6].get_str();
+        if (ccode.size() == 0 || ccode.size() != 3)
+        {
+            ERR_RESULT("Currency code must be 3 characters");
+            return(result);
+        }
+    }
+    
+    if (params.size() >= 8)     {
+        ownerperc = atof(params[7].get_str().c_str());
+        if (ownerperc <= 0)    {
+			ERR_RESULT("Minimum ownership percentage must be positive");
+			return(result);
+        }
+    }
+
+    if (params.size() == 9)    {
+        nonfungibleData = ParseHex(params[8].get_str());
         if (nonfungibleData.size() > IGUANA_MAXSCRIPTSIZE) // opret limit
         {
             ERR_RESULT("Non-fungible data size must be <= " + std::to_string(IGUANA_MAXSCRIPTSIZE));
@@ -7517,11 +7560,11 @@ UniValue tokencreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
         }
     }
 
-    hextx = CreateToken(0, supply, name, description, nonfungibleData);
+	hextx = CreateToken(0, supply, name, description, ownerperc, licensetype, datahash, value, ccode, nonfungibleData);
     if( hextx.size() > 0 )     {
         result.push_back(Pair("result", "success"));
         result.push_back(Pair("hex", hextx));
-    } 
+    }
     else 
         ERR_RESULT(CCerror);
     return(result);
@@ -7608,6 +7651,126 @@ UniValue tokenconvert(const UniValue& params, bool fHelp, const CPubKey& mypk)
         ERR_RESULT("amount must be positive");
     }
     return(result); */
+}
+
+UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    uint256 tokenid; int currentonly = 0;
+    if ( fHelp || params.size() < 1 || params.size() > 2)
+        throw runtime_error("tokenowners tokenid [currentonly]\n");
+    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
+        throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
+    const CKeyStore& keystore = *pwalletMain;
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+    tokenid = Parseuint256((char *)params[0].get_str().c_str());
+    if (params.size() == 2)
+    {
+        currentonly = atoi((char *)params[1].get_str().c_str());
+        if (currentonly < 0)
+            currentonly = 0;
+    }
+    return(TokenOwners(tokenid, currentonly));
+}
+
+UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    int currentonly = 1; std::vector<unsigned char> pubkey; struct CCcontract_info *cp,C;
+	CCerror.clear();
+
+    if ( fHelp || params.size() > 2 )
+        throw runtime_error("tokeninventory [currentonly][pubkey]\n");
+    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    
+	const CKeyStore& keystore = *pwalletMain;
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+
+    if (params.size() >= 1)
+    {
+        currentonly = atoi((char *)params[0].get_str().c_str());
+        if (currentonly < 0)
+            currentonly = 0;
+    }
+    if ( params.size() == 2 )
+        pubkey = ParseHex(params[1].get_str().c_str());
+    else 
+		pubkey = Mypubkey();
+
+	return(TokenInventory(pubkey, currentonly));
+}
+
+UniValue tokenviewupdates(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    uint256 tokenid; int32_t samplenum; int recursive = 0;
+    if ( fHelp || params.size() < 1 || params.size() > 3)
+        throw runtime_error("tokenviewupdates tokenid [samplenum][recursive]\n");
+    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
+        throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
+    const CKeyStore& keystore = *pwalletMain;
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+    tokenid = Parseuint256((char *)params[0].get_str().c_str());
+    if (params.size() >= 2)
+        samplenum = atoi((char *)params[1].get_str().c_str());
+    else
+        samplenum = 0;
+    if (params.size() == 3)
+    {
+        recursive = atoi((char *)params[2].get_str().c_str());
+        if (recursive < 0)
+            recursive = 0;
+    }
+    return(TokenViewUpdates(tokenid, samplenum, recursive));
+}
+
+UniValue tokenupdate(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    UniValue result(UniValue::VOBJ);
+    std::string ccode, message, hextx; 
+    int64_t value;
+	int32_t licensetype = 0;
+    uint256 tokenid = zeroid, datahash = zeroid;
+    CCerror.clear();
+    if ( fHelp || params.size() != 5)
+        throw runtime_error("tokenupdate tokenid datahash value ccode licensetype\n");
+    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
+        throw runtime_error("to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n");
+    const CKeyStore& keystore = *pwalletMain;
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+    
+    tokenid = Parseuint256((char *)params[0].get_str().c_str()); //returns zeroid if empty or wrong length
+    if (tokenid == zeroid)
+    {
+        ERR_RESULT("invalid tokenid");
+        return(result);
+    }
+    datahash = Parseuint256((char *)params[1].get_str().c_str()); //returns zeroid if empty or wrong length
+    value = atof(params[2].get_str().c_str()) * COIN;
+    if (value < 1 && value != 0 )
+    {
+        ERR_RESULT("Value cannot be less than 1 satoshi if it is not zero");
+        return(result);
+    }
+    ccode = params[3].get_str();
+    if (ccode.size() == 0 || ccode.size() != 3)
+    {
+        ERR_RESULT("Currency code must be 3 characters");
+        return(result);
+    }
+    licensetype = atof(params[4].get_str().c_str());
+    if (licensetype > 127 || licensetype < 0)   {
+        ERR_RESULT("Invalid license flag, must be between 0 and 127");
+        return(result);
+    }
+
+    hextx = UpdateToken(0, tokenid, datahash, value, ccode, licensetype);
+    if( hextx.size() > 0 )
+    {
+        result.push_back(Pair("result", "success"));
+        result.push_back(Pair("hex", hextx));
+    } 
+    else 
+        ERR_RESULT(CCerror);
+    return(result);
 }
 
 UniValue tokenbid(const UniValue& params, bool fHelp, const CPubKey& mypk)
@@ -7860,6 +8023,427 @@ UniValue tokenfillswap(const UniValue& params, bool fHelp, const CPubKey& mypk)
         ERR_RESULT("fillunits must be positive");
     }
     return(result);
+}
+
+UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    struct CCcontract_info *cp,C; std::vector<unsigned char> pubkey;
+    cp = CCinit(&C,EVAL_AGREEMENTS);
+    if ( fHelp || params.size() > 1 )
+        throw runtime_error("agreementaddress [pubkey]\n");
+    if ( ensure_CCrequirements(0) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    if ( params.size() == 1 )
+        pubkey = ParseHex(params[0].get_str().c_str());
+    return(CCaddress(cp,(char *)"Agreements",pubkey));
+}
+
+UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    UniValue result(UniValue::VOBJ);
+	uint256 datahash, prevproposaltxid, refagreementtxid;
+	std::string info;
+	int64_t prepayment, arbitratorfee, deposit;
+    if (fHelp || params.size() < 4 || params.size() > 9)
+        throw runtime_error("agreementcreate info datahash buyer arbitrator [prepayment][arbitratorfee][deposit][prevproposaltxid][refagreementtxid]\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    Lock2NSPV(mypk);
+	
+	info = params[0].get_str();
+    if (info.size() == 0 || info.size() > 2048) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Agreement info must not be empty and up to 2048 characters\n");
+    }
+    datahash = Parseuint256((char *)params[1].get_str().c_str());
+	if (datahash == zeroid) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Data hash empty or invalid\n");
+    }
+	std::vector<unsigned char> buyer(ParseHex(params[2].get_str().c_str()));
+	std::vector<unsigned char> arbitrator(ParseHex(params[3].get_str().c_str()));
+	prepayment = 0;
+	if (params.size() >= 5) {
+		prepayment = atoll(params[4].get_str().c_str());
+		if (prepayment != 0 && prepayment < 10000) {
+			Unlock2NSPV(mypk);
+			throw runtime_error("Prepayment too low\n");
+		}
+    }
+	arbitratorfee = 0;
+	if (params.size() >= 6) {
+		arbitratorfee = atoll(params[5].get_str().c_str());
+        if (arbitratorfee != 0 && arbitratorfee < 10000)    {
+			Unlock2NSPV(mypk);
+			throw runtime_error("Arbitrator fee too low\n");
+		}
+    }
+	deposit = 0;
+	if (params.size() >= 7) {
+		deposit = atoll(params[6].get_str().c_str());
+        if (deposit != 0 && deposit < 10000)    {
+			Unlock2NSPV(mypk);
+			throw runtime_error("Deposit too low\n");
+		}
+    }
+	prevproposaltxid = zeroid;
+	if (params.size() >= 8)     {
+        prevproposaltxid = Parseuint256((char *)params[7].get_str().c_str());
+    }
+	if (params.size() == 9)     {
+        refagreementtxid = Parseuint256((char *)params[8].get_str().c_str());
+    }
+	result = AgreementCreate(mypk, 0, info, datahash, buyer, arbitrator, prepayment, arbitratorfee, deposit, prevproposaltxid, refagreementtxid);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    Unlock2NSPV(mypk);
+    return(result);
+}
+
+UniValue agreementstopproposal(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    UniValue result(UniValue::VOBJ);
+	uint256 proposaltxid;
+    if (fHelp || params.size() != 1)
+        throw runtime_error("agreementstopproposal proposaltxid\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    Lock2NSPV(mypk);
+	
+	proposaltxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (proposaltxid == zeroid)   {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Proposal transaction id invalid\n");
+    }
+	
+	result = AgreementStopProposal(mypk, 0, proposaltxid);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    Unlock2NSPV(mypk);
+    return(result);
+}
+
+UniValue agreementaccept(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    UniValue result(UniValue::VOBJ);
+	uint256 proposaltxid;
+    if (fHelp || params.size() != 1)
+        throw runtime_error("agreementaccept proposaltxid\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    Lock2NSPV(mypk);
+	
+	proposaltxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (proposaltxid == zeroid)   {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Proposal transaction id invalid\n");
+    }
+	
+	result = AgreementAccept(mypk, 0, proposaltxid);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    Unlock2NSPV(mypk);
+    return(result);
+}
+
+UniValue agreementupdate(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    UniValue result(UniValue::VOBJ);
+	uint256 datahash, prevproposaltxid, agreementtxid;
+	std::string info;
+	int64_t payment, arbitratorfee;
+    if (fHelp || params.size() < 3 || params.size() > 6)
+        throw runtime_error("agreementupdate agreementtxid info datahash [payment][prevproposaltxid][arbitratorfee]\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    Lock2NSPV(mypk);
+	
+	agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (agreementtxid == zeroid) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Agreement id invalid\n");
+    }
+	info = params[1].get_str();
+    if (info.size() == 0 || info.size() > 2048) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Update request info must not be empty and up to 2048 characters\n");
+    }
+    datahash = Parseuint256((char *)params[2].get_str().c_str());
+	if (datahash == zeroid) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Data hash empty or invalid\n");
+    }
+	payment = 0;
+	if (params.size() >= 4) {
+		payment = atoll(params[3].get_str().c_str());
+		if (payment != 0 && payment < 10000) {
+			Unlock2NSPV(mypk);
+			throw runtime_error("Payment too low\n");
+		}
+    }
+	prevproposaltxid = zeroid;
+	if (params.size() >= 5) {
+        prevproposaltxid = Parseuint256((char *)params[4].get_str().c_str());
+    }
+	arbitratorfee = 0;
+	if (params.size() == 6) {
+		arbitratorfee = atoll(params[5].get_str().c_str());
+        if (arbitratorfee != 0 && arbitratorfee < 10000) {
+			Unlock2NSPV(mypk);
+			throw runtime_error("Arbitrator fee too low\n");
+		}
+    }
+	result = AgreementUpdate(mypk, 0, agreementtxid, info, datahash, payment, prevproposaltxid, arbitratorfee);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    Unlock2NSPV(mypk);
+    return(result);
+}
+
+UniValue agreementclose(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    UniValue result(UniValue::VOBJ);
+	uint256 datahash, prevproposaltxid, agreementtxid;
+	std::string info;
+	int64_t payment, depositcut;
+    if (fHelp || params.size() < 3 || params.size() > 6)
+        throw runtime_error("agreementclose agreementtxid info datahash [depositcut][payment][prevproposaltxid]\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    Lock2NSPV(mypk);
+	
+	agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (agreementtxid == zeroid) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Agreement id invalid\n");
+    }
+	info = params[1].get_str();
+    if (info.size() == 0 || info.size() > 2048) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Close request info must not be empty and up to 2048 characters\n");
+    }
+    datahash = Parseuint256((char *)params[2].get_str().c_str());
+	if (datahash == zeroid) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Data hash empty or invalid\n");
+    }
+	depositcut = 0;
+	if (params.size() >= 4) {
+		depositcut = atoll(params[3].get_str().c_str());
+		if (depositcut != 0 && depositcut < 10000) {
+			Unlock2NSPV(mypk);
+			throw runtime_error("Deposit cut too low\n");
+		}
+    }
+	payment = 0;
+	if (params.size() >= 5) {
+		payment = atoll(params[4].get_str().c_str());
+		if (payment != 0 && payment < 10000) {
+			Unlock2NSPV(mypk);
+			throw runtime_error("Payment too low\n");
+		}
+    }
+	prevproposaltxid = zeroid;
+	if (params.size() >= 6) {
+        prevproposaltxid = Parseuint256((char *)params[5].get_str().c_str());
+    }
+	result = AgreementClose(mypk, 0, agreementtxid, info, datahash, depositcut, payment, prevproposaltxid);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    Unlock2NSPV(mypk);
+    return(result);
+}
+
+UniValue agreementdispute(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    UniValue result(UniValue::VOBJ);
+	uint256 datahash, agreementtxid;
+    if (fHelp || params.size() != 2)
+        throw runtime_error("agreementdispute agreementtxid datahash\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    Lock2NSPV(mypk);
+	
+	agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (agreementtxid == zeroid) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Agreement id invalid\n");
+    }
+    datahash = Parseuint256((char *)params[1].get_str().c_str());
+	if (datahash == zeroid) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Data hash empty or invalid\n");
+    }
+	result = AgreementDispute(mypk, 0, agreementtxid, datahash);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    Unlock2NSPV(mypk);
+    return(result);
+}
+
+UniValue agreementresolve(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    UniValue result(UniValue::VOBJ);
+	uint256 agreementtxid;
+    if (fHelp || params.size() != 2)
+        throw runtime_error("agreementresolve agreementtxid rewardedpubkey\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    Lock2NSPV(mypk);
+	
+	agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (agreementtxid == zeroid) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Agreement id invalid\n");
+    }
+	std::vector<unsigned char> rewardedpubkey(ParseHex(params[1].get_str().c_str()));
+	result = AgreementResolve(mypk, 0, agreementtxid, rewardedpubkey);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    Unlock2NSPV(mypk);
+    return(result);
+}
+
+UniValue agreementunlock(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    UniValue result(UniValue::VOBJ);
+	uint256 exchangetxid, agreementtxid;
+    if (fHelp || params.size() != 2)
+        throw runtime_error("agreementunlock agreementtxid exchangetxid\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 || ensure_CCrequirements(EVAL_EXCHANGES) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+	
+	throw runtime_error("not implemented yet\n");
+	
+    Lock2NSPV(mypk);
+	
+	agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (agreementtxid == zeroid) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Agreement id invalid\n");
+    }
+    exchangetxid = Parseuint256((char *)params[1].get_str().c_str());
+	if (exchangetxid == zeroid) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Exchange id invalid\n");
+    }
+	result = AgreementUnlock(mypk, 0, agreementtxid, exchangetxid);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    Unlock2NSPV(mypk);
+    return(result);
+}
+
+UniValue agreementinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    uint256 txid;
+    if ( fHelp || params.size() != 1 )
+        throw runtime_error("agreementinfo txid\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    txid = Parseuint256((char *)params[0].get_str().c_str());
+    return(AgreementInfo(txid));
+}
+
+UniValue agreementupdatelog(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    uint256 agreementtxid;
+	int64_t samplenum;
+	std::string typestr;
+	bool start_backwards;
+    if ( fHelp || params.size() < 2 || params.size() > 3)
+        throw runtime_error("agreementupdatelog agreementtxid start_backwards [num_samples]\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	typestr = params[1].get_str();
+    if (STR_TOLOWER(typestr) == "1" || STR_TOLOWER(typestr) == "true")
+        start_backwards = true;
+    else if (STR_TOLOWER(typestr) == "0" || STR_TOLOWER(typestr) == "false")
+        start_backwards = false;
+    else 
+        throw runtime_error("Incorrect sort type\n");
+    if (params.size() >= 3)
+		samplenum = atoll(params[2].get_str().c_str());
+    else
+        samplenum = 0;
+    return(AgreementUpdateLog(agreementtxid, samplenum, start_backwards));
+}
+
+UniValue agreementinventory(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    CPubKey pubkey;
+    if ( fHelp || params.size() > 1 )
+        throw runtime_error("agreementinventory [pubkey]\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    if ( params.size() == 1 )
+        pubkey = pubkey2pk(ParseHex(params[0].get_str().c_str()));
+    else
+		pubkey = mypk.IsValid() ? mypk : pubkey2pk(Mypubkey());
+	return(AgreementInventory(pubkey));
+}
+
+UniValue agreementproposals(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    uint256 agreementtxid = zeroid;
+	std::vector<unsigned char> pubkey;
+    if ( fHelp || params.size() > 2 )
+        throw runtime_error("agreementproposals [agreementtxid][pubkey]\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+	if ( params.size() >= 1 )
+        agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if ( params.size() == 2 )
+		pubkey = ParseHex(params[1].get_str().c_str());
+    return(AgreementProposals(pubkey2pk(pubkey), agreementtxid));
+}
+
+UniValue agreementsubcontracts(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    uint256 agreementtxid;
+    if ( fHelp || params.size() != 1 )
+        throw runtime_error("agreementsubcontracts agreementtxid\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+    return(AgreementSubcontracts(agreementtxid));
+}
+
+UniValue agreementsettlements(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    uint256 agreementtxid;
+    if ( fHelp || params.size() != 1 )
+        throw runtime_error("agreementsettlements agreementtxid\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 || ensure_CCrequirements(EVAL_EXCHANGES) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+	
+	throw runtime_error("not implemented yet\n");
+	
+    agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+    return(AgreementSettlements(agreementtxid));
+}
+
+UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    if ( fHelp || params.size() > 0 )
+        throw runtime_error("agreementlist\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    return(AgreementList());
+}
+
+UniValue exchangeaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    struct CCcontract_info *cp,C; std::vector<unsigned char> pubkey;
+    cp = CCinit(&C,EVAL_EXCHANGES);
+    if ( fHelp || params.size() > 1 )
+        throw runtime_error("exchangeaddress [pubkey]\n");
+    if ( ensure_CCrequirements(0) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    if ( params.size() == 1 )
+        pubkey = ParseHex(params[0].get_str().c_str());
+    return(CCaddress(cp,(char *)"Exchanges",pubkey));
 }
 
 UniValue getbalance64(const UniValue& params, bool fHelp, const CPubKey& mypk)
