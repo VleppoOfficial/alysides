@@ -2037,7 +2037,7 @@ UniValue AgreementProposals(CPubKey pk, uint256 agreementtxid)
 	struct CCcontract_info *cp, C;
 	uint256 txid, hashBlock, dummytxid, refagreementtxid;
 	std::vector<uint8_t> srcpub, destpub, arbitrator;
-	uint8_t version, proposaltype;
+	uint8_t version, proposaltype, dummychar;
 	int64_t dummyamount;
 	std::string dummystr;
 	CTransaction vintx;
@@ -2046,8 +2046,9 @@ UniValue AgreementProposals(CPubKey pk, uint256 agreementtxid)
 	{
 		if (myGetTransaction(txid, vintx, hashBlock) != 0 && vintx.vout.size() > 0 && 
 		DecodeAgreementProposalOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey,version,proposaltype,srcpub,destpub,arbitrator,dummyamount,dummyamount,dummyamount,dummytxid,refagreementtxid,dummytxid,dummystr) == 'p' &&
-		std::find(foundtxids.begin(), foundtxids.end(), txid) == foundtxids.end() &&
-		(agreementtxid == zeroid || (proposaltype != 'p' && agreementtxid == refagreementtxid)))
+		!IsProposalSpent(txid, dummytxid, dummychar) &&
+		(agreementtxid == zeroid || (proposaltype != 'p' && agreementtxid == refagreementtxid)) &&
+		std::find(foundtxids.begin(), foundtxids.end(), txid) == foundtxids.end())
 		{
 			if (pk == pubkey2pk(srcpub))
 			{
@@ -2069,6 +2070,9 @@ UniValue AgreementProposals(CPubKey pk, uint256 agreementtxid)
 	SetCCunspents(addressIndexCCMarker,cp->unspendableCCaddr,true);
 	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++)
 		AddProposalWithPk(it->first.txhash, agreementtxid);
+	result.push_back(Pair("sender",senderlist));
+	result.push_back(Pair("receiver",receiverlist));
+	result.push_back(Pair("arbitrator",arbitratorlist));
 	return (result);
 }
 // agreementsubcontracts - returns every contract that has agreementtxid defined as its master contract
