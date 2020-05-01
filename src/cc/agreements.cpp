@@ -58,9 +58,6 @@ RPC list:
 	agreementresolve
 	Resolves an existing contract dispute. This RPC can be executed by the arbitrator. The dispute creator is only allowed to close the dispute. 
 	The arbitrator can pay out the deposit to either party as they see fit.
-
-	agreementlist
-	The agreementlist method lists all marked agreement transactions (active proposals and contracts) on the asset chain.
 */
 
 //===========================================================================
@@ -1736,7 +1733,7 @@ UniValue AgreementResolve(const CPubKey& pk, uint64_t txfee, uint256 agreementtx
 //===========================================================================
 // RPCs - informational
 //===========================================================================
-UniValue AgreementInfo(const CPubKey& pk, uint256 txid)
+UniValue AgreementInfo(uint256 txid)
 {
 	UniValue result(UniValue::VOBJ), members(UniValue::VOBJ), data(UniValue::VOBJ);
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator;
@@ -2031,14 +2028,50 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
 	}
 	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid Agreements transaction id");
 }
-// TODO: agreementproposals
-UniValue AgreementProposals(uint256 agreementtxid)
+// agreementproposals - returns every unspent proposal that pk is referenced in. agreementtxid can be specified to filter out proposals unrelated to this agreement
+UniValue AgreementProposals(CPubKey pk, uint256 agreementtxid)
 {
-	UniValue result(UniValue::VARR);
-	
+	UniValue result(UniValue::VOBJ), senderlist(UniValue::VARR), receiverlist(UniValue::VARR), arbitratorlist(UniValue::VARR);
+	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > addressIndexCCMarker;
+	std::vector<uint256> foundtxids;
+	struct CCcontract_info *cp, C;
+	uint256 txid, hashBlock, dummytxid, refagreementtxid;
+	std::vector<uint8_t> srcpub, destpub, arbitrator;
+	uint8_t version, proposaltype;
+	int64_t dummyamount;
+	std::string dummystr;
+	CTransaction vintx;
+	cp = CCinit(&C, EVAL_AGREEMENTS);
+	auto AddProposalWithPk = [&](uint256 txid, uint256 agreementtxid)
+	{
+		if (myGetTransaction(txid, vintx, hashBlock) != 0 && vintx.vout.size() > 0 && 
+		DecodeAgreementProposalOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey,version,proposaltype,srcpub,destpub,arbitrator,dummyamount,dummyamount,dummyamount,dummytxid,refagreementtxid,dummytxid,dummystr) == 'p' &&
+		std::find(foundtxids.begin(), foundtxids.end(), txid) == foundtxids.end() &&
+		(agreementtxid == zeroid || (proposaltype != 'p' && agreementtxid == refagreementtxid)))
+		{
+			if (pk == pubkey2pk(srcpub))
+			{
+				senderlist.push_back(txid.GetHex());
+				foundtxids.push_back(txid);
+			}
+			if (pk == pubkey2pk(destpub))
+			{
+				receiverlist.push_back(txid.GetHex());
+				foundtxids.push_back(txid);
+			}
+			if (pk == pubkey2pk(arbitrator))
+			{
+				arbitratorlist.push_back(txid.GetHex());
+				foundtxids.push_back(txid);
+			}
+		}
+	};
+	SetCCunspents(addressIndexCCMarker,cp->unspendableCCaddr,true);
+	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++)
+		AddProposalWithPk(it->first.txhash, agreementtxid);
 	return (result);
 }
-// TODO: agreementsubcontracts
+// agreementsubcontracts - returns every contract that has agreementtxid defined as its master contract
 UniValue AgreementSubcontracts(uint256 agreementtxid)
 {
 	UniValue result(UniValue::VARR);
@@ -2068,6 +2101,7 @@ UniValue AgreementSubcontracts(uint256 agreementtxid)
 		AddAgreementWithRef(it->first.txhash);
 	return (result);
 }
+// agreementinventory - returns every agreement pk is a member of
 UniValue AgreementInventory(CPubKey pk)
 {
 	UniValue result(UniValue::VOBJ), sellerlist(UniValue::VARR), clientlist(UniValue::VARR), arbitratorlist(UniValue::VARR);

@@ -58,9 +58,9 @@ UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid
 UniValue AgreementDispute(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 datahash);
 UniValue AgreementResolve(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, std::vector<uint8_t> rewardedpubkey);
 
-UniValue AgreementInfo(const CPubKey& pk, uint256 txid);
+UniValue AgreementInfo(uint256 txid);
 UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backwards);
-UniValue AgreementProposals(uint256 agreementtxid);
+UniValue AgreementProposals(CPubKey pk, uint256 agreementtxid);
 UniValue AgreementSubcontracts(uint256 agreementtxid);
 UniValue AgreementInventory(CPubKey pk);
 UniValue AgreementSettlements(uint256 agreementtxid);

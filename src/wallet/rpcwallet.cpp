@@ -8312,7 +8312,7 @@ UniValue agreementinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     txid = Parseuint256((char *)params[0].get_str().c_str());
-    return(AgreementInfo(mypk, txid));
+    return(AgreementInfo(txid));
 }
 
 UniValue agreementupdatelog(const UniValue& params, bool fHelp, const CPubKey& mypk)
@@ -8356,13 +8356,19 @@ UniValue agreementinventory(const UniValue& params, bool fHelp, const CPubKey& m
 
 UniValue agreementproposals(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
-    uint256 agreementtxid;
-    if ( fHelp || params.size() != 1 )
-        throw runtime_error("agreementproposals agreementtxid\n");
+    uint256 agreementtxid = zeroid;
+	CPubKey pubkey;
+    if ( fHelp || params.size() > 2 )
+        throw runtime_error("agreementproposals [pubkey][agreementtxid]\n");
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
-    agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
-    return(AgreementProposals(agreementtxid));
+	if ( params.size() >= 1 )
+        pubkey = pubkey2pk(ParseHex(params[0].get_str().c_str()));
+    else
+		pubkey = mypk.IsValid() ? mypk : pubkey2pk(Mypubkey());
+	if ( params.size() == 2 )
+		agreementtxid = Parseuint256((char *)params[1].get_str().c_str());
+    return(AgreementProposals(pubkey, agreementtxid););
 }
 
 UniValue agreementsubcontracts(const UniValue& params, bool fHelp, const CPubKey& mypk)
