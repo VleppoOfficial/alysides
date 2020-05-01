@@ -592,6 +592,8 @@ static const CRPCCommand vRPCCommands[] =
 	{ "agreements",  "agreementinfo",	 &agreementinfo,	true },
 	{ "agreements",  "agreementupdatelog",	  &agreementupdatelog,    true },
 	{ "agreements",  "agreementinventory",	  &agreementinventory,    true },
+	{ "agreements",  "agreementproposals",	  &agreementproposals,    true },
+	{ "agreements",  "agreementsubcontracts", &agreementsubcontracts, true },
 	{ "agreements",  "agreementlist",    &agreementlist,    true },
 	
 	// exchanges

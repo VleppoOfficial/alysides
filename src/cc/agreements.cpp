@@ -2035,12 +2035,37 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
 UniValue AgreementProposals(uint256 agreementtxid)
 {
 	UniValue result(UniValue::VARR);
+	
 	return (result);
 }
 // TODO: agreementsubcontracts
 UniValue AgreementSubcontracts(uint256 agreementtxid)
 {
 	UniValue result(UniValue::VARR);
+	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > addressIndexCCMarker;
+	std::vector<uint256> foundtxids;
+	struct CCcontract_info *cp, C;
+	std::vector<uint8_t> dummypk;
+	int64_t dummyamount;
+	std::string dummystr;
+	uint256 txid, hashBlock, dummytxid, refagreementtxid;
+	CTransaction vintx;
+	cp = CCinit(&C, EVAL_AGREEMENTS);
+	auto AddAgreementWithRef = [&](uint256 txid)
+	{
+		if (myGetTransaction(txid, vintx, hashBlock) != 0 && vintx.vout.size() > 0 && 
+		DecodeAgreementOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey) == 'c' &&
+		GetAgreementInitialData(txid, dummytxid, dummypk, dummypk, dummypk, dummyamount, dummyamount, dummytxid, refagreementtxid, dummystr) &&
+		agreementtxid == refagreementtxid &&
+		std::find(foundtxids.begin(), foundtxids.end(), txid) == foundtxids.end())
+		{
+			result.push_back(txid.GetHex());
+			foundtxids.push_back(txid);
+		}
+	};
+	SetCCunspents(addressIndexCCMarker,cp->unspendableCCaddr,true);
+	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++)
+		AddAgreementWithRef(it->first.txhash);
 	return (result);
 }
 UniValue AgreementInventory(CPubKey pk)

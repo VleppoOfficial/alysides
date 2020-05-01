@@ -8354,6 +8354,28 @@ UniValue agreementinventory(const UniValue& params, bool fHelp, const CPubKey& m
 	return(AgreementInventory(pubkey));
 }
 
+UniValue agreementproposals(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    uint256 agreementtxid;
+    if ( fHelp || params.size() != 1 )
+        throw runtime_error("agreementproposals agreementtxid\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+    return(AgreementProposals(mypk, agreementtxid));
+}
+
+UniValue agreementsubcontracts(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    uint256 agreementtxid;
+    if ( fHelp || params.size() != 1 )
+        throw runtime_error("agreementsubcontracts agreementtxid\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+    return(AgreementSubcontracts(mypk, agreementtxid));
+}
+
 UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     if ( fHelp || params.size() > 0 )
