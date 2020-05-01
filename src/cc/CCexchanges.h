@@ -15,15 +15,15 @@
 
 
 /*
- Settlements stuff
+ Exchanges stuff
  */
 
-#ifndef CC_SETTLEMENTS_H
-#define CC_SETTLEMENTS_H
+#ifndef CC_EXCHANGES_H
+#define CC_EXCHANGES_H
 
 #include "CCinclude.h"
 
-bool SettlementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
+bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
 
 #endif
 
