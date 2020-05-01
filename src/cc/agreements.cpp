@@ -2042,6 +2042,8 @@ UniValue AgreementProposals(CPubKey pk, uint256 agreementtxid)
 	std::string dummystr;
 	CTransaction vintx;
 	cp = CCinit(&C, EVAL_AGREEMENTS);
+	CPubKey mypk;
+	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 	auto AddProposalWithPk = [&](uint256 txid, uint256 agreementtxid)
 	{
 		if (myGetTransaction(txid, vintx, hashBlock) != 0 && vintx.vout.size() > 0 && 
@@ -2050,17 +2052,17 @@ UniValue AgreementProposals(CPubKey pk, uint256 agreementtxid)
 		(agreementtxid == zeroid || (proposaltype != 'p' && agreementtxid == refagreementtxid)) &&
 		std::find(foundtxids.begin(), foundtxids.end(), txid) == foundtxids.end())
 		{
-			if (pk == pubkey2pk(srcpub))
+			if (mypk == pubkey2pk(srcpub))
 			{
 				senderlist.push_back(txid.GetHex());
 				foundtxids.push_back(txid);
 			}
-			if (pubkey2pk(destpub).IsValid() && pk == pubkey2pk(destpub))
+			if (pubkey2pk(destpub).IsValid() && mypk == pubkey2pk(destpub))
 			{
 				receiverlist.push_back(txid.GetHex());
 				foundtxids.push_back(txid);
 			}
-			if (pubkey2pk(arbitrator).IsValid() && pk == pubkey2pk(arbitrator))
+			if (pubkey2pk(arbitrator).IsValid() && mypk == pubkey2pk(arbitrator))
 			{
 				arbitratorlist.push_back(txid.GetHex());
 				foundtxids.push_back(txid);
