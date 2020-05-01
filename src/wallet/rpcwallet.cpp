@@ -8368,7 +8368,7 @@ UniValue agreementproposals(const UniValue& params, bool fHelp, const CPubKey& m
 		pubkey = mypk.IsValid() ? mypk : pubkey2pk(Mypubkey());
 	if ( params.size() == 2 )
 		agreementtxid = Parseuint256((char *)params[1].get_str().c_str());
-    return(AgreementProposals(pubkey, agreementtxid););
+    return(AgreementProposals(pubkey, agreementtxid));
 }
 
 UniValue agreementsubcontracts(const UniValue& params, bool fHelp, const CPubKey& mypk)
