@@ -1727,9 +1727,11 @@ UniValue AgreementResolve(const CPubKey& pk, uint64_t txfee, uint256 agreementtx
 	}
 	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "error adding normal inputs");
 }
-
-// agreementunlock(agreementtxid exchangetxid)
-
+// TODO: agreementunlock(agreementtxid exchangetxid)
+UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 exchangetxid)
+{
+	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "not implemented yet");
+}
 //===========================================================================
 // RPCs - informational
 //===========================================================================

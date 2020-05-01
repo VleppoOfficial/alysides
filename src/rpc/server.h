@@ -327,11 +327,13 @@ extern UniValue agreementupdate(const UniValue& params, bool fHelp, const CPubKe
 extern UniValue agreementclose(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue agreementdispute(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue agreementresolve(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue agreementunlock(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue agreementinfo(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue agreementupdatelog(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue agreementinventory(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue agreementproposals(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue agreementsubcontracts(const UniValue& params, bool fHelp, const CPubKey& mypk);
+extern UniValue agreementsettlements(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue exchangeaddress(const UniValue& params, bool fHelp, const CPubKey& mypk);
 extern UniValue faucetfund(const UniValue& params, bool fHelp, const CPubKey& mypk);
