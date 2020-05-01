@@ -8357,7 +8357,6 @@ UniValue agreementinventory(const UniValue& params, bool fHelp, const CPubKey& m
 UniValue agreementproposals(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     uint256 agreementtxid = zeroid;
-	CPubKey pubkey;
 	std::vector<unsigned char> pubkey;
     if ( fHelp || params.size() > 2 )
         throw runtime_error("agreementproposals [agreementtxid][pubkey]\n");
