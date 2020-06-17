@@ -109,7 +109,8 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 	if (numvouts < 1)
 		return eval->Invalid("no vouts");
 	CCOpretCheck(eval,tx,true,true,true);
-	CCExactAmounts(eval,tx,CC_TXFEE);
+	//CCExactAmounts(eval,tx,CC_TXFEE);
+	ExactAmounts(eval,tx,ASSETCHAINS_CCZEROTXFEE[EVAL_AGREEMENTS]?0:CC_TXFEE);
 	
 	/*if (ExchangesExactAmounts(cp,eval,tx) == false)
 	{
