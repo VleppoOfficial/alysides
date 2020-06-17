@@ -30,6 +30,9 @@
 
 using namespace std;
 
+extern void Lock2NSPV(const CPubKey &pk);
+extern void Unlock2NSPV(const CPubKey &pk);
+
 UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     struct CCcontract_info *cp,C; std::vector<unsigned char> pubkey;
