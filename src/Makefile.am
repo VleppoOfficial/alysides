@@ -318,6 +318,7 @@ libbitcoin_server_a_SOURCES = \
   cc/gateways.cpp \
   cc/channels.cpp \
   cc/auction.cpp \
+  cc/agreements.cpp \
   cc/betprotocol.cpp \
   cc/pricesfeed.cpp \
   cc/priceslibs/cjsonpointer.cpp \
@@ -359,6 +360,7 @@ libbitcoin_server_a_SOURCES = \
   rpc/tokensrpc.cpp \
   rpc/pricesrpc.cpp \
   rpc/marmararpc.cpp \
+  rpc/agreementsrpc.cpp \
   script/serverchecker.cpp \
   script/sigcache.cpp \
   timedata.cpp \
