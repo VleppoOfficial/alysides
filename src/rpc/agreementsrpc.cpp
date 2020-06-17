@@ -463,7 +463,7 @@ static const CRPCCommand commands[] =
 	{ "agreements",  "agreementlist",    &agreementlist,    true },
 };
 
-void RegisterTokensRPCCommands(CRPCTable &tableRPC)
+void RegisterAgreementsRPCCommands(CRPCTable &tableRPC)
 {
     for (unsigned int vcidx = 0; vcidx < ARRAYLEN(commands); vcidx++)
         tableRPC.appendCommand(commands[vcidx].name, &commands[vcidx]);
