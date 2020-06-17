@@ -244,7 +244,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	if (numvouts < 1)
 		return eval->Invalid("no vouts");
 	CCOpretCheck(eval,tx,true,true,true);
-	CCExactAmounts(eval,tx,CC_TXFEE);
+	//CCExactAmounts(eval,tx,CC_TXFEE);
+	ExactAmounts(eval,tx,ASSETCHAINS_CCZEROTXFEE[EVAL_AGREEMENTS]?0:CC_TXFEE);
 	if ((funcid = DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey)) != 0)
 	{
 		GetCCaddress(cp, globaladdr, GetUnspendable(cp, NULL));
