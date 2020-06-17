@@ -70,12 +70,13 @@ CScript EncodeExchangeOpRet(uint8_t funcid,uint8_t version,uint256 exchangetxid,
 }
 uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 &exchangetxid,uint256 &tokenid)
 {
-	std::vector<std::pair<uint8_t, vscript_t>> oprets;
+	//std::vector<std::pair<uint8_t, vscript_t>> oprets;
+	std::vector<vscript_t> oprets;
 	std::vector<uint8_t> vopret, vOpretExtra; uint8_t *script, evalcode, funcid, tokenevalcode;
 	std::vector<CPubKey> pubkeys;
 	//if (DecodeTokenOpRet(scriptPubKey,tokenevalcode,tokenid,pubkeys,oprets) != 0 && GetOpretBlob(oprets,OPRETID_EXCHANGESDATA,vOpretExtra) && 
 	//tokenevalcode == EVAL_TOKENS && vOpretExtra.size() > 0)
-	if (DecodeTokenOpRetV1(scriptPubKey,tokenid,pubkeys,oprets)!=0 && GetOpReturnCCBlob(oprets, vOpretExtra) && vOpretExtra.size() > 0)
+	if (DecodeTokenOpRetV1(scriptPubKey,tokenid,pubkeys,oprets) != 0 && GetOpReturnCCBlob(oprets, vOpretExtra) && vOpretExtra.size() > 0)
     {
         vopret = vOpretExtra;
     }
