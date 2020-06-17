@@ -34,7 +34,7 @@
 #include "CCImportGateway.h"
 #include "CCKogs.h"
 #include "CCagreements.h"
-#include "CCexchanges.h"
+//#include "CCexchanges.h"
 
 /*
  CCcustom has most of the functions that need to be extended to create a new CC contract.
@@ -248,7 +248,7 @@ uint8_t AgreementsCCpriv[32] = { 0x0d, 0x88, 0x03, 0x42, 0x36, 0x25, 0xd5, 0xe3,
 #undef EVALCODE
 
 // Exchanges
-#define FUNCNAME IsExchangesInput
+/*#define FUNCNAME IsExchangesInput
 #define EVALCODE EVAL_EXCHANGES
 const char *ExchangesCCaddr = "RL1XCTBvAWqhoGFCyQ78LkWzAW55wApdde";
 const char *ExchangesNormaladdr = "RHnZ1ZkHFF44X364yDs85QYEhnzGyMRF8d";
@@ -256,7 +256,7 @@ char ExchangesCChexstr[67] = { "03644763bcfef81ac4532b59b8542abae30d32cfe4233494
 uint8_t ExchangesCCpriv[32] = { 0x3c, 0x07, 0xcd, 0xed, 0x77, 0xce, 0x83, 0x76, 0x68, 0xeb, 0x8c, 0x6d, 0xbb, 0x3e, 0x96, 0x50, 0xe1, 0xad, 0xb7, 0x09, 0x02, 0xcc, 0x8a, 0x38, 0x88, 0x16, 0x11, 0xf8, 0x98, 0xbc, 0x9f, 0xf3 };
 #include "CCcustom.inc"
 #undef FUNCNAME
-#undef EVALCODE
+#undef EVALCODE*/
 
 #define FUNCNAME IsCClibInput
 #define EVALCODE EVAL_FIRSTUSER
@@ -481,14 +481,14 @@ struct CCcontract_info *CCinit(struct CCcontract_info *cp, uint8_t evalcode)
 			cp->validate = AgreementsValidate;
 			cp->ismyvin = IsAgreementsInput;
 			break;
-		case EVAL_EXCHANGES:
+		/*case EVAL_EXCHANGES:
 			strcpy(cp->unspendableCCaddr, ExchangesCCaddr);
 			strcpy(cp->normaladdr, ExchangesNormaladdr);
 			strcpy(cp->CChexstr, ExchangesCChexstr);
 			memcpy(cp->CCpriv, ExchangesCCpriv, 32);
 			cp->validate = ExchangesValidate;
 			cp->ismyvin = IsExchangesInput;
-			break;
+			break;*/
         case EVAL_IMPORTGATEWAY:
 			strcpy(cp->unspendableCCaddr, ImportGatewayCCaddr);
 			strcpy(cp->normaladdr, ImportGatewayNormaladdr);
