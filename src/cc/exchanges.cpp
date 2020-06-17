@@ -62,7 +62,8 @@ CScript EncodeExchangeOpRet(uint8_t funcid,uint8_t version,uint256 exchangetxid,
 		std::vector<CPubKey> pks;
 		pks.push_back(tokensupplier);
 		pks.push_back(coinsupplier);
-		return (EncodeTokenOpRet(tokenid,pks,std::make_pair(OPRETID_EXCHANGESDATA,vopret)));
+		//return (EncodeTokenOpRet(tokenid,pks,std::make_pair(OPRETID_EXCHANGESDATA,vopret)));
+		return (EncodeTokenOpRetV1(tokenid,pks, { vopret }));
 	}
 	opret << OP_RETURN << vopret;
 	return(opret);
@@ -72,11 +73,12 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 	std::vector<std::pair<uint8_t, vscript_t>> oprets;
 	std::vector<uint8_t> vopret, vOpretExtra; uint8_t *script, evalcode, funcid, tokenevalcode;
 	std::vector<CPubKey> pubkeys;
-	if (DecodeTokenOpRet(scriptPubKey,tokenevalcode,tokenid,pubkeys,oprets) != 0 && GetOpretBlob(oprets,OPRETID_EXCHANGESDATA,vOpretExtra) && 
-	tokenevalcode == EVAL_TOKENS && vOpretExtra.size() > 0)
-	{
-		vopret = vOpretExtra;
-	}
+	//if (DecodeTokenOpRet(scriptPubKey,tokenevalcode,tokenid,pubkeys,oprets) != 0 && GetOpretBlob(oprets,OPRETID_EXCHANGESDATA,vOpretExtra) && 
+	//tokenevalcode == EVAL_TOKENS && vOpretExtra.size() > 0)
+	if (DecodeTokenOpRetV1(scriptPubKey,tokenid,pubkeys,oprets)!=0 && GetOpReturnCCBlob(oprets, vOpretExtra) && vOpretExtra.size() > 0)
+    {
+        vopret = vOpretExtra;
+    }
 	else
 	{
 		GetOpReturnData(scriptPubKey, vopret);
@@ -512,7 +514,7 @@ bool ValidateExchangeOpenTx(CTransaction opentx, std::string &CCerror)
 		return false;
 	}
 	if (!(myGetTransaction(tokenid,tokentx,hashBlock) != 0 && tokentx.vout.size() > 0 &&
-	(DecodeTokenCreateOpRet(tokentx.vout[tokentx.vout.size()-1].scriptPubKey,dummyPubkey,dummystr,dummystr) == 'c')))
+	(DecodeTokenCreateOpRetV1(tokentx.vout[tokentx.vout.size()-1].scriptPubKey,dummyPubkey,dummystr,dummystr) == 'c')))
 	{
 		CCerror = "tokenid in exchange open opret is not a valid token creation txid!";
 		return false;
@@ -714,7 +716,7 @@ UniValue ExchangeOpen(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,CPu
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "token supplier cannot be the same as coin supplier pubkey");
 	
 	if (!(myGetTransaction(tokenid,tokentx,hashBlock) != 0 && tokentx.vout.size() > 0 &&
-	(DecodeTokenCreateOpRet(tokentx.vout[tokentx.vout.size()-1].scriptPubKey,dummyPubkey,dummyName,dummyDescription) == 'c')))
+	(DecodeTokenCreateOpRetV1(tokentx.vout[tokentx.vout.size()-1].scriptPubKey,dummyPubkey,dummyName,dummyDescription) == 'c')))
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Tokenid is not a valid token creation txid");
 		
 	if (numtokens < 0)
@@ -1015,7 +1017,7 @@ UniValue ExchangeList(const CPubKey& pk)
 	mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
 	
 	GetCCaddress(cp,myCCaddr,mypk);
-	SetCCtxids(txids,myCCaddr,true,EVAL_EXCHANGES,zeroid,'o');
+	SetCCtxids(txids,myCCaddr,true,EVAL_EXCHANGES,CC_MARKER_VALUE,zeroid,'o');
 	
 	for (std::vector<uint256>::const_iterator it=txids.begin(); it!=txids.end(); it++)
 	{
