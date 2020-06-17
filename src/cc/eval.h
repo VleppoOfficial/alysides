@@ -39,6 +39,8 @@
  * Verus EVAL_STAKEGUARD is 0x01
  */
 #define FOREACH_EVAL(EVAL)             \
+		EVAL(EVAL_AGREEMENTS, 0xa7) \
+		EVAL(EVAL_EXCHANGES, 0xa8) \
         EVAL(EVAL_IMPORTPAYOUT, 0xe1)  \
         EVAL(EVAL_IMPORTCOIN,   0xe2)  \
         EVAL(EVAL_ASSETS,   0xe3)  \
@@ -59,8 +61,6 @@
 		EVAL(EVAL_TOKENS, 0xf2) \
         EVAL(EVAL_IMPORTGATEWAY, 0xf3)  \
         EVAL(EVAL_KOGS, 0xf4)  \
-		EVAL(EVAL_AGREEMENTS, 0xf7) \
-		EVAL(EVAL_EXCHANGES, 0xf8) \
 
 // evalcodes 0x10 to 0x7f are reserved for cclib dynamic CC
 #define EVAL_FIRSTUSER 0x10
