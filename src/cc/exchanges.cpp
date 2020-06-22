@@ -588,7 +588,7 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
         return 0;
     }
 
-	if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
+	if (!FindExchangeTxidType(exchangetx.GetHash(), 'b', borrowtxid))
 	{
         LOGSTREAM("exchangescc", CCLOG_INFO, stream << "exchange borrow transaction search failed" << std::endl);
         return 0;
