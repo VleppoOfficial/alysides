@@ -411,16 +411,6 @@ bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &f
 		funcid = 'o';
 		return true;
 	}
-	/*else if (!(myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 && batontx.vout[1].nValue == CC_BATON_VALUE))
-	{
-		std::cerr << "GetLatestExchangeTxid: can't find baton tx" << std::endl;
-		return false;
-	}
-	if ((funcid = DecodeExchangeOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey,version,exchangetxid,tokenid)) != 'l' && funcid != 'c' && funcid != 's')
-	{
-		std::cerr << "GetLatestExchangeTxid: found first update, but it has incorrect funcid" << std::endl;
-		return false;
-	}*/
 	sourcetxid = exchangetxid;
 	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0 && 
 	myGetTransaction(batontxid, batontx, hashBlock) && 
@@ -572,11 +562,12 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
 {
 	char exchangeaddr[65];
 	int64_t nValue, totalinputs = 0, numvouts, numtokens, numcoins;
-	uint256 txid = zeroid, hashBlock, exchangetxid, agreementtxid, tokenid, fundtokenid;
+	uint256 txid = zeroid, hashBlock, exchangetxid, agreementtxid, tokenid, fundtokenid, borrowtxid;
 	CTransaction vintx;
     std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	CPubKey tokensupplier, coinsupplier;
 	uint8_t myprivkey[32], version, funcid, exchangetype;
+	bool bHasBorrowed = false;
 	
     if ((numvouts = exchangetx.vout.size()) > 0 && 
 	DecodeExchangeOpenOpRet(exchangetx.vout[numvouts-1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,tokenid,numtokens,numcoins,agreementtxid) == 'o')
@@ -596,8 +587,16 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
         LOGSTREAM("exchangescc", CCLOG_INFO, stream << "invalid exchange create txid" << std::endl);
         return 0;
     }
-	
-	// TODO: check here if a borrow tx exists and set a flag for later use
+
+	if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
+	{
+        LOGSTREAM("exchangescc", CCLOG_INFO, stream << "exchange borrow transaction search failed" << std::endl);
+        return 0;
+    }
+	else if (borrowtxid != zeroid)
+	{
+		bHasBorrowed = true;
+	}
 	
 	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it=unspentOutputs.begin(); it!=unspentOutputs.end(); it++)
     {
@@ -623,7 +622,7 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
 			// if we're spending coins, are they provided by the coin supplier pubkey?
 			((mode == EIF_COINS && fundtokenid == zeroid && (TotalPubkeyNormalInputs(vintx,coinsupplier) + TotalPubkeyCCInputs(vintx,coinsupplier) > 0 || 
 			// if a borrow transaction exists in the exchange, the coins can also be provided by the token supplier pubkey
-			/*bHasBorrowed &&*/ TotalPubkeyNormalInputs(vintx,tokensupplier) + TotalPubkeyCCInputs(vintx,tokensupplier) > 0)) || 
+			bHasBorrowed && TotalPubkeyNormalInputs(vintx,tokensupplier) + TotalPubkeyCCInputs(vintx,tokensupplier) > 0)) || 
 			// if we're spending tokens, are they provided by the token supplier pubkey?
 			(mode == EIF_TOKENS && fundtokenid == tokenid && TotalPubkeyNormalInputs(vintx,tokensupplier) + TotalPubkeyCCInputs(vintx,tokensupplier) > 0)))
             {
