@@ -14,6 +14,7 @@
  ******************************************************************************/
 
 #include "CCagreements.h"
+#include "CCexchanges.h"
 
 /*
 The Agreements Antara Module enables anyone to create a blockchain representation of a legally binding bilateral agreement.
@@ -742,25 +743,23 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				vout.0 payout to exchange CC 1of2 address
 				vout.n-2 change
 				vout.n-1 OP_RETURN EVAL_AGREEMENTS 'n' agreementtxid exchangetxid
-				
+				*/
+				/*
 				"Deposit Unlock" constraints:
 				must be initiated by seller or client
 				exchange must have agreementtxid, and finalsettlement set to true
-				exchange mustn't be closed, needs to be in the "funding" phase
-				token escrow must be filled >= numtokens
-				totalvalue = deposit + addexchangesinputs(coins)
-				if (totalvalue < numcoins)
-					do not allow
-				else if (totalvalue = numcoins)
-					send vout to exchangeaddr
-				else if (totalvalue > numcoins)
-					refund = (numcoins - deposit >= 10000 sats) ? numcoins - deposit : 0
-					send (deposit - refund) vout to exchangeaddr
-					if (refund > 0)
-						send refund vout to agreement client
-
+				ValidateExchangeOpenTx(exchangetx)
+				exchange mustn't be closed, no borrow txes
+				if GetExchangesInputs(tokens) < numtokens, invalidate
+				coinbalance = GetExchangesInputs(coins)
+				if (coinbalance + deposit < numcoins), invalidate
+				refund = (coinbalance + deposit - numcoins) >= 10000 ? coinbalance + deposit - numcoins : 0
+				send vout to 1of2 exchangeaddr with value: deposit - refund
+				if refund > 0 send vout with refund to client
 				*/
+				
 				// this part will be needed to validate Exchanges that withdraw the deposit.
+				
 				return eval->Invalid("no validation for 'n' tx yet!");
 			default:
 				fprintf(stderr,"unexpected agreements funcid (%c)\n",funcid);
@@ -1753,7 +1752,77 @@ UniValue AgreementResolve(const CPubKey& pk, uint64_t txfee, uint256 agreementtx
 // TODO: agreementunlock(agreementtxid exchangetxid)
 UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 exchangetxid)
 {
-	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "not implemented yet");
+	/*CPubKey mypk, CPK_seller, CPK_client, CPK_arbitrator;
+	uint256 latesttxid, dummytxid;
+	std::vector<uint8_t> destpub, sellerpk, clientpk, arbitratorpk, ref_srcpub, ref_destpub, dummypk;
+	int64_t arbitratorfee, dummyamount;
+	std::string dummystr;
+	uint8_t version, updatefuncid, mypriv[32];
+	char mutualaddr[65];
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+	struct CCcontract_info *cp,C; cp = CCinit(&C,EVAL_AGREEMENTS);
+	
+	if (txfee == 0) txfee = CC_TXFEE;
+	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
+	
+	if (!GetAgreementInitialData(agreementtxid, dummytxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, dummyamount, dummytxid, dummytxid, dummystr))
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "couldn't get specified agreement info successfully, probably invalid agreement txid");
+	
+	CPK_seller = pubkey2pk(sellerpk);
+	CPK_client = pubkey2pk(clientpk);
+	//CPK_arbitrator = pubkey2pk(arbitratorpk);
+	
+	// check sender pubkey
+	if (mypk != CPK_seller && mypk != CPK_client)
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "you are not a valid member of this agreement");
+	
+	// check if agreement is active
+	GetLatestAgreementUpdate(agreementtxid, latesttxid, updatefuncid);
+	
+	if (updatefuncid != 'c' && updatefuncid != 'u' && updatefuncid != 'd')
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreement is no longer active");*/
+	
+	/*
+		unlock contract deposit:
+			vin.0 normal input
+			vin.1 deposit
+			vout.0 payout to exchange CC 1of2 address
+			vout.n-2 change
+			vout.n-1 OP_RETURN EVAL_AGREEMENTS 'n' agreementtxid exchangetxid
+			
+		"Deposit Unlock" constraints:
+		must be initiated by seller or client
+		exchange must have agreementtxid, and finalsettlement set to true
+		ValidateExchangeOpenTx(exchangetx)
+		exchange mustn't be closed, no borrow txes
+		if GetExchangesInputs(tokens) < numtokens, invalidate
+		coinbalance = GetExchangesInputs(coins)
+		if (coinbalance + deposit < numcoins), invalidate
+		refund = (coinbalance + deposit - numcoins) >= 10000 ? coinbalance + deposit - numcoins : 0
+		send vout to 1of2 exchangeaddr with value: deposit - refund
+		if refund > 0 send vout with refund to client
+	*/
+	
+	/*if (AddNormalinputs2(mtx, txfee + arbitratorfee, 64) > 0)
+	{
+		
+		
+		GetCCaddress1of2(cp, mutualaddr, CPK_seller, CPK_client);
+		
+		if (latesttxid == agreementtxid)
+			mtx.vin.push_back(CTxIn(agreementtxid,1,CScript())); // vin.1 last update baton (no previous updates)
+		else
+			mtx.vin.push_back(CTxIn(latesttxid,0,CScript())); // vin.1 last update baton (with previous updates)
+		
+		Myprivkey(mypriv);
+		
+		CCaddr1of2set(cp, CPK_seller, CPK_client, mypriv, mutualaddr);
+		
+		mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, arbitratorfee, CPK_arbitrator)); // vout.0 arbitrator fee
+		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementDisputeOpRet(AGREEMENTCC_VERSION,agreementtxid,std::vector<uint8_t>(mypk.begin(),mypk.end()),datahash));
+	}*/
+	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "error adding normal inputs");
+	
 }
 //===========================================================================
 // RPCs - informational

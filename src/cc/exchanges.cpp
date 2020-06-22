@@ -847,7 +847,7 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 	uint8_t version, exchangetype;
 	int64_t numtokens, numcoins, tokens = 0, coins = 0, inputs = 0;
 	struct CCcontract_info *cp, C, *cpTokens, CTokens;
-	char addr[65];
+	char exchangeaddr[65];
 	
 	cp = CCinit(&C, EVAL_EXCHANGES);
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
@@ -873,23 +873,26 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 	else
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Invalid exchangetxid");
 	
-	inputs = AddNormalinputs(mtx, mypk, txfee, 5, pk.IsValid());
-	coins = AddExchangesInputs(cp, mtx, exchangetx, EIF_COINS, 60);
-	tokens = AddExchangesInputs(cp, mtx, exchangetx, EIF_TOKENS, 60);
+	inputs = AddNormalinputs(mtx, mypk, txfee, 5, pk.IsValid()); // txfee
+	coins = AddExchangesInputs(cp, mtx, exchangetx, EIF_COINS, 60); // coin from CC 1of2 addr vins
+	tokens = AddExchangesInputs(cp, mtx, exchangetx, EIF_TOKENS, 60); // token from CC 1of2 addr vins
 	
 	std::cerr << "coins: " << coins << std::endl;
 	std::cerr << "tokens: " << tokens << std::endl;
 	
 	if (inputs >= txfee)
 	{
-		// baton vin should go here
+		GetCCaddress1of2(cp, exchangeaddr, tokensupplier, coinsupplier);
+		mtx.vin.push_back(CTxIn(exchangetxid,0,CScript())); // previous CC 1of2 baton vin
+		Myprivkey(mypriv);
+		CCaddr1of2set(cp, tokensupplier, coinsupplier, mypriv, exchangeaddr);
 		if (coins > 0)
 		{
-			mtx.vout.push_back(CTxOut(coins, CScript() << ParseHex(HexStr(tokensupplier)) << OP_CHECKSIG)); // vout
+			mtx.vout.push_back(CTxOut(coins, CScript() << ParseHex(HexStr(tokensupplier)) << OP_CHECKSIG)); // coins refund vout
 		}
 		if (tokens > 0)
 		{
-			mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, tokens, coinsupplier));
+			mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, tokens, coinsupplier)); // tokens refund vout
 		}
 		return (FinalizeCCTxExt(pk.IsValid(), 0, cp, mtx, mypk, txfee, EncodeExchangeOpRet('c', EXCHANGECC_VERSION, exchangetxid, tokenid, tokensupplier, coinsupplier))); 
 	}
