@@ -473,7 +473,8 @@ bool FindExchangeTxidType(uint256 exchangetxid, uint8_t type, uint256 &typetxid)
 	}
 
 	std::cerr << "GetExchangeBorrowTxid: didn't find txid of specified type, quitting" << std::endl;
-	return false;
+	typetxid = zeroid;
+	return true;
 }
 
 // Check if deposit is sent to this exchange's coin escrow
@@ -764,11 +765,13 @@ UniValue ExchangeFund(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid, i
 	CPubKey mypk, tokensupplier, coinsupplier;
 	CTransaction exchangetx;
 	int32_t numvouts;
-	uint256 hashBlock, tokenid, agreementtxid;
-	uint8_t version, exchangetype;
-	int64_t numtokens, numcoins, tokens = 0, inputs = 0;
+	uint256 hashBlock, tokenid, agreementtxid, borrowtxid = zeroid, latesttxid;
+	uint8_t version, exchangetype, lastfuncid;
+	int64_t numtokens, numcoins, coinbalance, tokenbalance, tokens = 0, inputs = 0;
 	struct CCcontract_info *cp, C, *cpTokens, CTokens;
 	char addr[65];
+	bool bHasBorrowed = false;
+	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	
 	cp = CCinit(&C, EVAL_EXCHANGES);
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
@@ -789,15 +792,34 @@ UniValue ExchangeFund(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid, i
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "cant find specified exchange txid " << exchangetxid.GetHex());
 		if (DecodeExchangeOpenOpRet(exchangetx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,tokenid,numtokens,numcoins,agreementtxid) == 0)
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "invalid exchange create opret " << exchangetxid.GetHex());
-		if (tokenid == zeroid)
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "tokenid null or invalid in exchange " << exchangetxid.GetHex());
-		// TODO: check exchange status, and whether it already has enough coins/tokens
+		
+		if (!ValidateExchangeOpenTx(exchangetx,CCerror))
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << CCerror);
+		
+		if (!GetLatestExchangeTxid(exchangetxid, latesttxid, lastfuncid) || lastfuncid == 'c' || lastfuncid == 's' || lastfuncid == 'p' || lastfuncid == 'r')
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange " << exchangetxid.GetHex() << " closed");
+		
+		if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange borrow transaction search failed, quitting");
+		else if (borrowtxid != zeroid)
+		{
+			bHasBorrowed = true;
+		}
+
+		if (useTokens && mypk != tokensupplier)
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "tokens can only be sent by token supplier pubkey");
+		if (!useTokens && (mypk != coinsupplier || (bHasBorrowed && mypk != tokensupplier)))
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "coins can only be sent by coin supplier pubkey, or token supplier if loan is in progress");
+		
+		coinbalance = GetExchangesInputs(cp,exchangetx,EIF_COINS,unspentOutputs);
+		if (coinbalance >= numcoins)
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange already has enough coins");
+		tokenbalance = GetExchangesInputs(cp,exchangetx,EIF_TOKENS,unspentOutputs);
+		if (tokenbalance >= numtokens)
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange already has enough tokens");
 	}
 	else
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Invalid exchangetxid");
-
-	if (!ValidateExchangeOpenTx(exchangetx,CCerror))
-		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << CCerror);
 	
 	if (useTokens)
 	{
@@ -857,6 +879,16 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 		txfee = CC_TXFEE;
 	}
 	
+	/*"Cancel" or "c":
+		Data constraints:
+			(FindExchangeTxidType) exchange must not contain a borrow transaction
+			(CheckDepositUnlockCond) If exchange has an assoc. agreement and finalsettlement = true, the deposit must NOT be sent to the exchange's coin escrow
+			(GetExchangesInputs) If exchange is trade type, token & coin escrow cannot be fully filled (tokens >= numtokens && coins >= numcoins).
+		TX constraints:
+			(Pubkey check) must be executed by token or coin provider pk
+			(Tokens dest addr) all tokens must be sent to token provider
+			(Coins dest addr) all coins must be sent to coin provider*/
+	
 	if (exchangetxid != zeroid)
 	{
 		if (myGetTransaction(exchangetxid, exchangetx, hashBlock) == 0 || (numvouts = exchangetx.vout.size()) <= 0)
@@ -903,14 +935,56 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 UniValue ExchangeBorrow(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid, uint256 loantermstxid)
 {
 	CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "incomplete");
+	/*"Borrow" or "b":
+		Data constraints:
+			(Type check) Exchange must be loan type
+			(FindExchangeTxidType) exchange must not contain a borrow transaction
+			(Signing check) at least one coin fund vin must be signed by coin provider pk
+			(CheckDepositUnlockCond) If exchange has an assoc. agreement and finalsettlement = true, the deposit must be sent to the exchange's coin escrow
+			(GetExchangesInputs) Token escrow must contain >= numtokens, and coin escrow must contain >= numcoins
+		TX constraints:
+			(Pubkey check) must be executed by token provider pk
+			(Tokens dest addr) no tokens should be moved anywhere
+			(Coins dest addr) all coins must be sent to token provider. if there are more coins than numcoins, return remaining coins to coin provider*/
 }
 UniValue ExchangeRepo(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 {
 	CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "incomplete");
+	/*"Repo" or "p":
+		Data constraints:
+			(Type check) Exchange must be loan type
+			(FindExchangeTxidType) exchange must contain a borrow transaction
+			(Duration) duration since borrow transaction must exceed due date from latest loan terms
+			(GetExchangesInputs) Token escrow must contain >= numtokens, coin escrow must not contain >= numcoins + interest from latest loan terms
+		TX constraints:
+			(Pubkey check) must be executed by coin provider pk
+			(Tokens dest addr) all tokens must be sent to coin provider. if (somehow) there are more tokens than numtokens, return remaining tokens to token provider
+			(Coins dest addr) all coins must be sent to token provider.*/
 }
 UniValue ExchangeClose(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 {
 	CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "incomplete");
+	/*"Swap" or "s" (part of exchangeclose rpc):
+		Data constraints:
+			(Type check) Exchange must be trade type
+			(GetExchangesInputs) Token escrow must contain >= numtokens, and coin escrow must contain >= numcoins
+			(Signing check) at least one coin fund vin must be signed by coin provider pk
+			(CheckDepositUnlockCond) If exchange has an assoc. agreement and finalsettlement = true, the deposit must be sent to the exchange's coin escrow
+		TX constraints:
+			(Pubkey check) must be executed by token or coin provider pk
+			(Tokens dest addr) all tokens must be sent to coin provider. if (somehow) there are more tokens than numtokens, return remaining tokens to token provider
+			(Coins dest addr) all coins must be sent to token provider. if there are more coins than numcoins, return remaining coins to coin provider*/
+			
+	/*"Release" or "r" (part of exchangeclose rpc):
+		Data constraints:
+			(Type check) Exchange must be loan type
+			(FindExchangeTxidType) exchange must contain a borrow transaction
+			(Signing check) at least one coin fund vin must be signed by token provider pk
+			(GetExchangesInputs) Token escrow must contain >= numtokens, coin escrow must contain >= numcoins + interest from latest loan terms
+		TX constraints:
+			(Pubkey check) must be executed by token or coin provider pk
+			(Tokens dest addr) all tokens must be sent to token provider
+			(Coins dest addr) all coins must be sent to coin provider. if there are more coins than numcoins, return remaining coins to token provider*/
 }
 
 //===========================================================================
