@@ -455,7 +455,7 @@ bool FindExchangeTxidType(uint256 exchangetxid, uint8_t type, uint256 &typetxid)
 	uint8_t version, funcid;
 	if (!GetLatestExchangeTxid(exchangetxid, batontxid, funcid))
 	{
-		std::cerr << "GetExchangeBorrowTxid: can't find latest update tx" << std::endl;
+		std::cerr << "FindExchangeTxidType: can't find latest update tx" << std::endl;
 		return false;
 	}
 	if (funcid == type)
@@ -475,7 +475,7 @@ bool FindExchangeTxidType(uint256 exchangetxid, uint8_t type, uint256 &typetxid)
 		batontxid = batontx.vin[1].prevout.hash;
 	}
 
-	std::cerr << "GetExchangeBorrowTxid: didn't find txid of specified type, quitting" << std::endl;
+	std::cerr << "FindExchangeTxidType: didn't find txid of specified type, quitting" << std::endl;
 	typetxid = zeroid;
 	return true;
 }
@@ -565,10 +565,6 @@ bool ValidateExchangeOpenTx(CTransaction opentx, std::string &CCerror)
 	// TODO: Check opentx structure
 	return true;
 }
-
-/*
-	CheckExchangeVinsForPubkey - if at least one exchangeaddr vin has been signed by specified pubkey
-*/
 
 int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bool mode,std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > &validUnspentOutputs)
 {
@@ -815,10 +811,10 @@ UniValue ExchangeFund(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid, i
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "coins can only be sent by coin supplier pubkey, or token supplier if loan is in progress");
 		
 		coinbalance = GetExchangesInputs(cp,exchangetx,EIF_COINS,unspentOutputs);
-		if (coinbalance >= numcoins)
+		if (!useTokens && coinbalance >= numcoins)
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange already has enough coins");
 		tokenbalance = GetExchangesInputs(cp,exchangetx,EIF_TOKENS,unspentOutputs);
-		if (tokenbalance >= numtokens)
+		if (useTokens && tokenbalance >= numtokens)
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange already has enough tokens");
 	}
 	else
