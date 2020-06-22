@@ -386,16 +386,19 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp,Eval* eval,const CTransact
 bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &funcid)
 {
 	int32_t vini, height, retcode;
-	uint256 tokenid, batontxid, sourcetxid, hashBlock;
+	int64_t dummyamount;
+	uint256 tokenid, batontxid, sourcetxid, hashBlock, dummytxid;
 	CTransaction exchangetx, batontx;
-	uint8_t version;
+	uint8_t version, dummychar;
+	CPubKey dummypk;
 	
 	if (myGetTransaction(exchangetxid, exchangetx, hashBlock) == 0 || exchangetx.vout.size() <= 0)
 	{
 		std::cerr << "GetLatestExchangeTxid: couldn't find exchange tx" << std::endl;
 		return false;
 	}
-	if (DecodeExchangeOpRet(exchangetx.vout[exchangetx.vout.size() - 1].scriptPubKey,version,exchangetxid,tokenid) != 'o')
+	
+	if (DecodeExchangeOpenOpRet(exchangetx.vout[exchangetx.vout.size() - 1].scriptPubKey,version,dummypk,dummypk,dummychar,dummytxid,dummyamount,dummyamount,dummytxid) != 'o')
 	{
 		std::cerr << "GetLatestExchangeTxid: exchange tx is not an opening tx" << std::endl;
 		return false;
