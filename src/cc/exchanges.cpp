@@ -866,9 +866,10 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 	int32_t numvouts;
 	uint256 hashBlock, tokenid, agreementtxid;
 	uint8_t version, exchangetype, mypriv[32];
-	int64_t numtokens, numcoins, tokens = 0, coins = 0, inputs = 0;
+	int64_t numtokens, numcoins, coinbalance, tokenbalance, tokens = 0, coins = 0, inputs = 0;
 	struct CCcontract_info *cp, C, *cpTokens, CTokens;
 	char exchangeaddr[65];
+	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	
 	cp = CCinit(&C, EVAL_EXCHANGES);
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
@@ -894,12 +895,27 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "cant find specified exchange txid " << exchangetxid.GetHex());
 		if (DecodeExchangeOpenOpRet(exchangetx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,tokenid,numtokens,numcoins,agreementtxid) == 0)
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "invalid exchange create opret " << exchangetxid.GetHex());
-		if (tokenid == zeroid)
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "tokenid null or invalid in exchange " << exchangetxid.GetHex());
+		
+		if (!ValidateExchangeOpenTx(exchangetx,CCerror))
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << CCerror);
+		
+		if (!GetLatestExchangeTxid(exchangetxid, latesttxid, lastfuncid) || lastfuncid == 'c' || lastfuncid == 's' || lastfuncid == 'p' || lastfuncid == 'r')
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange " << exchangetxid.GetHex() << " closed, last funcid: " << lastfuncid);
+		
+		if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange borrow transaction search failed, quitting");
+		else if (borrowtxid != zeroid)
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "cannot cancel when loan is in progress");
+
 		if (mypk != tokensupplier && mypk != coinsupplier)
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "you are not a valid party for exchange " << exchangetxid.GetHex());
-		// TODO: check exchange status, and whether it already has enough coins/tokens
-		// if there are enough coins & tokens withdrawing shouldn't be allowed
+		
+		// TODO: If exchange has an assoc. agreement and finalsettlement = true, the deposit must NOT be sent to the exchange's coin escrow
+		
+		coinbalance = GetExchangesInputs(cp,exchangetx,EIF_COINS,unspentOutputs);
+		tokenbalance = GetExchangesInputs(cp,exchangetx,EIF_TOKENS,unspentOutputs);
+		if (exchangetype & EXTF_TRADE && coinbalance >= numcoins && tokenbalance >= numtokens)
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "cannot cancel trade when escrow has enough coins and tokens");
 	}
 	else
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Invalid exchangetxid");
