@@ -424,7 +424,7 @@ bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &f
 	sourcetxid = exchangetxid;
 	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0 && 
 	myGetTransaction(batontxid, batontx, hashBlock) && 
-	batontx.vout.size() > 0 && batontx.vout[0].nValue == CC_BATON_VALUE)
+	batontx.vout.size() > 0/* && batontx.vout[0].nValue == CC_BATON_VALUE*/)
 	{
 		funcid = DecodeExchangeOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey,version,exchangetxid,tokenid);
 		switch (funcid)
