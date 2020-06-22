@@ -822,7 +822,7 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 	uint256 proposaltxid, datahash, agreementtxid, refagreementtxid, prevproposaltxid, spendingtxid, hashBlock;
 	uint8_t version, proposaltype, spendingfuncid;
 	std::vector<uint8_t> srcpub, destpub, sellerpk, clientpk, arbitratorpk, ref_arbitratorpk;
-	int64_t payment, arbitratorfee, depositval, ref_depositval;
+	int64_t payment, arbitratorfee, ref_arbitratorfee, depositval, ref_depositval;
 	std::string info;
 	bool bHasReceiver, bHasArbitrator;
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator;
@@ -901,7 +901,7 @@ bool ValidateProposalOpRet(CScript opret, std::string &CCerror)
 					return false;
 				}
 				LOGSTREAM("agreements", CCLOG_INFO, stream << "ValidateProposalOpRet: checking if subcontract's srcpub and destpub are members of the refagreement" << std::endl);
-				if (!GetAgreementInitialData(agreementtxid, proposaltxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, depositval, datahash, refagreementtxid, info))
+				if (!GetAgreementInitialData(agreementtxid, proposaltxid, sellerpk, clientpk, ref_arbitratorpk, ref_arbitratorfee, depositval, datahash, refagreementtxid, info))
 				{
 					CCerror = "refagreement tx has invalid agreement member pubkeys!";
 					return false;
