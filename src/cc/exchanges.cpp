@@ -844,7 +844,7 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 	CTransaction exchangetx;
 	int32_t numvouts;
 	uint256 hashBlock, tokenid, agreementtxid;
-	uint8_t version, exchangetype;
+	uint8_t version, exchangetype, mypriv[32];
 	int64_t numtokens, numcoins, tokens = 0, coins = 0, inputs = 0;
 	struct CCcontract_info *cp, C, *cpTokens, CTokens;
 	char exchangeaddr[65];
