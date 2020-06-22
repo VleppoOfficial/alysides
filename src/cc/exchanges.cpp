@@ -68,6 +68,7 @@ CScript EncodeExchangeOpRet(uint8_t funcid,uint8_t version,uint256 exchangetxid,
 	opret << OP_RETURN << vopret;
 	return(opret);
 }
+// TODO: update this to be able to decode 'o' and 'l' txes
 uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 &exchangetxid,uint256 &tokenid)
 {
 	//std::vector<std::pair<uint8_t, vscript_t>> oprets;
@@ -405,6 +406,7 @@ bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &f
 	}
 	if ((retcode = CCgetspenttxid(batontxid, vini, height, exchangetxid, 0)) != 0)
 	{
+		std::cerr << "GetLatestExchangeTxid: baton unspent" << std::endl;
 		latesttxid = exchangetxid; // no updates, return exchangetxid
 		funcid = 'o';
 		return true;
@@ -443,6 +445,7 @@ bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &f
 		}
 		break;
 	}
+	std::cerr << "GetLatestExchangeTxid: quitting" << std::endl;
 	latesttxid = sourcetxid;
 	return true;
 }
