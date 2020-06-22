@@ -424,7 +424,7 @@ bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &f
 	sourcetxid = exchangetxid;
 	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0 && 
 	myGetTransaction(batontxid, batontx, hashBlock) && 
-	batontx.vout.size() > 0/* && batontx.vout[0].nValue == CC_BATON_VALUE*/)
+	batontx.vout.size() > 0)
 	{
 		funcid = DecodeExchangeOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey,version,exchangetxid,tokenid);
 		switch (funcid)
@@ -445,7 +445,6 @@ bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &f
 		}
 		break;
 	}
-	std::cerr << "GetLatestExchangeTxid: quitting" << std::endl;
 	latesttxid = sourcetxid;
 	return true;
 }
@@ -903,7 +902,7 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << CCerror);
 		
 		if (!GetLatestExchangeTxid(exchangetxid, latesttxid, lastfuncid) || lastfuncid == 'c' || lastfuncid == 's' || lastfuncid == 'p' || lastfuncid == 'r')
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange " << exchangetxid.GetHex() << " closed, last funcid: " << lastfuncid);
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange " << exchangetxid.GetHex() << " closed");
 		
 		if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange borrow transaction search failed, quitting");
