@@ -77,6 +77,8 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 	CPubKey dummypk; 
 	uint256 dummytxid;
 	
+	exchangetxid = tokenid = zeroid;
+	
 	if (DecodeTokenOpRetV1(scriptPubKey,tokenid,pubkeys,oprets) != 0 && GetOpReturnCCBlob(oprets, vOpretExtra) && vOpretExtra.size() > 0)
     {
 		std::cerr << "token opret" << std::endl;
@@ -89,7 +91,6 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 	}
 	
 	script = (uint8_t *)vopret.data();
-    exchangetxid = tokenid = zeroid;
     if (script != NULL && vopret.size() > 2)
     {
 		if (script[0] != EVAL_EXCHANGES)
