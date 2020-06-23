@@ -485,7 +485,6 @@ bool FindExchangeTxidType(uint256 exchangetxid, uint8_t type, uint256 &typetxid)
 		batontxid = batontx.vin[1].prevout.hash;
 	}
 
-	std::cerr << "FindExchangeTxidType: didn't find txid of specified type, quitting" << std::endl;
 	typetxid = zeroid;
 	return true;
 }
@@ -619,7 +618,7 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
 	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it=unspentOutputs.begin(); it!=unspentOutputs.end(); it++)
     {
         txid = it->first.txhash;
-        if (mode == EIF_COINS && it->second.satoshis < 10000)
+        if (mode == EIF_COINS && it->second.satoshis < 1/*0000*/)
             continue;
         if (myGetTransaction(txid, vintx, hashBlock) != 0 && (numvouts = vintx.vout.size()) > 0)
         {
@@ -801,7 +800,7 @@ UniValue ExchangeFund(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid, i
 	
 	if (amount < 0)
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Funding amount must be positive");
-	if (!useTokens && amount < 10000)
+	if (!useTokens && amount < 1/*0000*/)
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Coin amount must be at least 10000 satoshis");
 	
 	if (exchangetxid != zeroid)
