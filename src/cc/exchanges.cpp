@@ -606,7 +606,7 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
         return 0;
     }
 
-	/*if (!FindExchangeTxidType(exchangetx.GetHash(), 'b', borrowtxid))
+	if (!FindExchangeTxidType(exchangetx.GetHash(), 'b', borrowtxid))
 	{
         LOGSTREAM("exchangescc", CCLOG_INFO, stream << "exchange borrow transaction search failed" << std::endl);
         return 0;
@@ -614,7 +614,7 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
 	else if (borrowtxid != zeroid)
 	{
 		bHasBorrowed = true;
-	}*/
+	}
 	
 	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it=unspentOutputs.begin(); it!=unspentOutputs.end(); it++)
     {
