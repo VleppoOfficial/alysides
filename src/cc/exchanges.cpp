@@ -62,7 +62,6 @@ CScript EncodeExchangeOpRet(uint8_t funcid,uint8_t version,uint256 exchangetxid,
 		std::vector<CPubKey> pks;
 		pks.push_back(tokensupplier);
 		pks.push_back(coinsupplier);
-		//return (EncodeTokenOpRet(tokenid,pks,std::make_pair(OPRETID_EXCHANGESDATA,vopret)));
 		return (EncodeTokenOpRetV1(tokenid,pks, { vopret }));
 	}
 	opret << OP_RETURN << vopret;
@@ -88,7 +87,7 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 	}
 	
 	script = (uint8_t *)vopret.data();
-    tokenid = zeroid;
+    exchangetxid = tokenid = zeroid;
     if (script != NULL && vopret.size() > 2)
     {
 		if (script[0] != EVAL_EXCHANGES)
@@ -406,19 +405,18 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp,Eval* eval,const CTransact
 bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &funcid)
 {
 	int32_t vini, height, retcode;
-	int64_t dummyamount;
-	uint256 tokenid, batontxid, sourcetxid, hashBlock, dummytxid;
+	uint256 batontxid, sourcetxid, hashBlock, dummytxid;
 	CTransaction exchangetx, batontx;
-	uint8_t version, dummychar;
-	CPubKey dummypk;
-	
+	uint8_t version;
+
 	if (myGetTransaction(exchangetxid, exchangetx, hashBlock) == 0 || exchangetx.vout.size() <= 0)
 	{
 		std::cerr << "GetLatestExchangeTxid: couldn't find exchange tx" << std::endl;
 		return false;
 	}
+	//DecodeExchangeOpenOpRet(exchangetx.vout[exchangetx.vout.size() - 1].scriptPubKey,version,dummypk,dummypk,dummychar,dummytxid,dummyamount,dummyamount,dummytxid)
 	
-	if (DecodeExchangeOpenOpRet(exchangetx.vout[exchangetx.vout.size() - 1].scriptPubKey,version,dummypk,dummypk,dummychar,dummytxid,dummyamount,dummyamount,dummytxid) != 'o')
+	if (DecodeExchangeOpRet(exchangetx.vout[exchangetx.vout.size() - 1].scriptPubKey,version,dummytxid,dummytxid) != 'o')
 	{
 		std::cerr << "GetLatestExchangeTxid: exchange tx is not an opening tx" << std::endl;
 		return false;
@@ -432,10 +430,9 @@ bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &f
 	}
 	sourcetxid = exchangetxid;
 	while ((retcode = CCgetspenttxid(batontxid, vini, height, sourcetxid, 0)) == 0 && 
-	myGetTransaction(batontxid, batontx, hashBlock) && 
-	batontx.vout.size() > 0)
+	myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0)
 	{
-		funcid = DecodeExchangeOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey,version,exchangetxid,tokenid);
+		funcid = DecodeExchangeOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey,version,dummytxid,dummytxid);
 		switch (funcid)
 		{
 			case 'l':
