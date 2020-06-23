@@ -79,10 +79,12 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 	
 	if (DecodeTokenOpRetV1(scriptPubKey,tokenid,pubkeys,oprets) != 0 && GetOpReturnCCBlob(oprets, vOpretExtra) && vOpretExtra.size() > 0)
     {
+		std::cerr << "token opret" << std::endl;
         vopret = vOpretExtra;
     }
 	else
 	{
+		std::cerr << "non-token opret" << std::endl;
 		GetOpReturnData(scriptPubKey, vopret);
 	}
 	
@@ -103,6 +105,7 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 			default:
 				if (E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> exchangetxid) != 0 && evalcode == EVAL_EXCHANGES)
 				{
+					std::cerr << "funcid: " << funcid << std::endl;
 					return(funcid);
 				}
 				return(0);
@@ -575,7 +578,7 @@ bool ValidateExchangeOpenTx(CTransaction opentx, std::string &CCerror)
 int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bool mode,std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > &validUnspentOutputs)
 {
 	char exchangeaddr[65];
-	int64_t nValue, totalinputs = 0, numvouts, numtokens, numcoins;
+	int64_t /*nValue, */totalinputs = 0, numvouts, numtokens, numcoins;
 	uint256 txid = zeroid, hashBlock, exchangetxid, agreementtxid, tokenid, fundtokenid, borrowtxid;
 	CTransaction vintx;
     std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
@@ -630,18 +633,19 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
 			// unlock tx data (correct exchangetxid)
 			
 			// is this an exchanges CC output?
-			if ((nValue = IsExchangesvout(cp, vintx, mode, tokensupplier, coinsupplier, (int32_t)it->first.index)) > 0 &&
+			if (IsExchangesvout(cp, vintx, mode, tokensupplier, coinsupplier, (int32_t)it->first.index) > 0 &&
 			// is the output from a funding transaction to this exchange txid?
 			DecodeExchangeOpRet(vintx.vout[numvouts-1].scriptPubKey, version, exchangetxid, fundtokenid) == 'f' && exchangetxid == exchangetx.GetHash() &&
 			// if we're spending coins, are they provided by the coin supplier pubkey?
 			((mode == EIF_COINS && fundtokenid == zeroid && (TotalPubkeyNormalInputs(vintx,coinsupplier) + TotalPubkeyCCInputs(vintx,coinsupplier) > 0 || 
 			// if a borrow transaction exists in the exchange, the coins can also be provided by the token supplier pubkey
-			/*bHasBorrowed && */TotalPubkeyNormalInputs(vintx,tokensupplier) + TotalPubkeyCCInputs(vintx,tokensupplier) > 0)) || 
+			bHasBorrowed && TotalPubkeyNormalInputs(vintx,tokensupplier) + TotalPubkeyCCInputs(vintx,tokensupplier) > 0)) || 
 			// if we're spending tokens, are they provided by the token supplier pubkey?
 			(mode == EIF_TOKENS && fundtokenid == tokenid && TotalPubkeyNormalInputs(vintx,tokensupplier) + TotalPubkeyCCInputs(vintx,tokensupplier) > 0)))
             {
-                nValue = it->second.satoshis;
-                totalinputs += nValue;
+                //nValue = it->second.satoshis;
+                //totalinputs += nValue;
+                totalinputs += it->second.satoshis;
 				validUnspentOutputs.push_back(*it);
             }
         }
@@ -1055,9 +1059,9 @@ UniValue ExchangeInfo(const CPubKey& pk, uint256 exchangetxid)
 
 		cp = CCinit(&C, EVAL_EXCHANGES);
 		
-		//std::cerr << "looking for tokens" << std::endl;
+		std::cerr << "looking for tokens" << std::endl;
 		result.push_back(Pair("token_balance", GetExchangesInputs(cp,tx,EIF_TOKENS,unspentTokenOutputs)));
-		//std::cerr << "looking for coins" << std::endl;
+		std::cerr << "looking for coins" << std::endl;
 		result.push_back(Pair("coin_balance", GetExchangesInputs(cp,tx,EIF_COINS,unspentOutputs)));
 
 		
