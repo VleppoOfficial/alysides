@@ -81,12 +81,10 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 	
 	if (DecodeTokenOpRetV1(scriptPubKey,tokenid,pubkeys,oprets) != 0 && GetOpReturnCCBlob(oprets, vOpretExtra) && vOpretExtra.size() > 0)
     {
-		std::cerr << "token opret" << std::endl;
         vopret = vOpretExtra;
     }
 	else
 	{
-		std::cerr << "non-token opret" << std::endl;
 		GetOpReturnData(scriptPubKey, vopret);
 	}
 	
@@ -106,7 +104,6 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 			default:
 				if (E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> exchangetxid) != 0 && evalcode == EVAL_EXCHANGES)
 				{
-					std::cerr << "funcid: " << funcid << std::endl;
 					return(funcid);
 				}
 				return(0);
@@ -579,7 +576,7 @@ bool ValidateExchangeOpenTx(CTransaction opentx, std::string &CCerror)
 int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bool mode,std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > &validUnspentOutputs)
 {
 	char exchangeaddr[65];
-	int64_t /*nValue, */totalinputs = 0, numvouts, numtokens, numcoins;
+	int64_t totalinputs = 0, numvouts, numtokens, numcoins;
 	uint256 txid = zeroid, hashBlock, exchangetxid, agreementtxid, tokenid, fundtokenid, borrowtxid;
 	CTransaction vintx;
     std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
@@ -619,7 +616,7 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
 	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it=unspentOutputs.begin(); it!=unspentOutputs.end(); it++)
     {
         txid = it->first.txhash;
-        if (/*mode == EIF_COINS && */it->second.satoshis < 1)
+        if (it->second.satoshis < 1)
             continue;
         if (myGetTransaction(txid, vintx, hashBlock) != 0 && (numvouts = vintx.vout.size()) > 0)
         {
@@ -644,9 +641,6 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
 			// if we're spending tokens, are they provided by the token supplier pubkey?
 			(mode == EIF_TOKENS && fundtokenid == tokenid && TotalPubkeyNormalInputs(vintx,tokensupplier) + TotalPubkeyCCInputs(vintx,tokensupplier) > 0)))
             {
-                //nValue = it->second.satoshis;
-                //totalinputs += nValue;
-				std::cerr << "found valid output" << std::endl;
                 totalinputs += it->second.satoshis;
 				validUnspentOutputs.push_back(*it);
             }
@@ -1061,9 +1055,9 @@ UniValue ExchangeInfo(const CPubKey& pk, uint256 exchangetxid)
 
 		cp = CCinit(&C, EVAL_EXCHANGES);
 		
-		std::cerr << "looking for tokens" << std::endl;
+		//std::cerr << "looking for tokens" << std::endl;
 		result.push_back(Pair("token_balance", GetExchangesInputs(cp,tx,EIF_TOKENS,unspentTokenOutputs)));
-		std::cerr << "looking for coins" << std::endl;
+		//std::cerr << "looking for coins" << std::endl;
 		result.push_back(Pair("coin_balance", GetExchangesInputs(cp,tx,EIF_COINS,unspentOutputs)));
 
 		
