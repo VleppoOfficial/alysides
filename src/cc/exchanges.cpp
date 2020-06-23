@@ -456,7 +456,7 @@ bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &f
 	return true;
 }
 
-// Gets latest exchange update txid of the specified type (note: doesn't work with 'o' type)
+// Gets latest exchange update txid of the specified type
 bool FindExchangeTxidType(uint256 exchangetxid, uint8_t type, uint256 &typetxid)
 {
 	CTransaction batontx;
@@ -467,13 +467,14 @@ bool FindExchangeTxidType(uint256 exchangetxid, uint8_t type, uint256 &typetxid)
 		std::cerr << "FindExchangeTxidType: can't find latest update tx" << std::endl;
 		return false;
 	}
-	if (funcid == type)
+	if (batontxid == exchangetxid && funcid == 'o')
 	{
-		typetxid == batontxid;
+		typetxid == exchangetxid;
 		return true;
 	}
 	
 	while (batontxid != exchangetxid && myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 &&
+	batontx.vin.size() > 1 && batontx.vin[1].prevout.n == 0 &&
 	(funcid = DecodeExchangeOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey,version,dummytxid,dummytxid)) != 0)
 	{
 		if (funcid == type)
@@ -605,7 +606,7 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
         return 0;
     }
 
-	if (!FindExchangeTxidType(exchangetx.GetHash(), 'b', borrowtxid))
+	/*if (!FindExchangeTxidType(exchangetx.GetHash(), 'b', borrowtxid))
 	{
         LOGSTREAM("exchangescc", CCLOG_INFO, stream << "exchange borrow transaction search failed" << std::endl);
         return 0;
@@ -613,7 +614,7 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
 	else if (borrowtxid != zeroid)
 	{
 		bHasBorrowed = true;
-	}
+	}*/
 	
 	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it=unspentOutputs.begin(); it!=unspentOutputs.end(); it++)
     {
