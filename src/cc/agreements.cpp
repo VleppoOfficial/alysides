@@ -753,7 +753,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				if GetExchangesInputs(tokens) < numtokens, invalidate
 				coinbalance = GetExchangesInputs(coins)
 				if (coinbalance + deposit < numcoins), invalidate
-				refund = (coinbalance + deposit - numcoins) >= 10000 ? coinbalance + deposit - numcoins : 0
+				refund = coinbalance + deposit - numcoins
+				//refund = (coinbalance + deposit - numcoins) >= 10000 ? coinbalance + deposit - numcoins : 0
 				send vout to 1of2 exchangeaddr with value: deposit - refund
 				if refund > 0 send vout with refund to client
 				*/

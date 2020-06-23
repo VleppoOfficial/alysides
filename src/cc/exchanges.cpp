@@ -415,8 +415,6 @@ bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &f
 		std::cerr << "GetLatestExchangeTxid: couldn't find exchange tx" << std::endl;
 		return false;
 	}
-	//DecodeExchangeOpenOpRet(exchangetx.vout[exchangetx.vout.size() - 1].scriptPubKey,version,dummypk,dummypk,dummychar,dummytxid,dummyamount,dummyamount,dummytxid)
-	
 	if (DecodeExchangeOpRet(exchangetx.vout[exchangetx.vout.size() - 1].scriptPubKey,version,dummytxid,dummytxid) != 'o')
 	{
 		std::cerr << "GetLatestExchangeTxid: exchange tx is not an opening tx" << std::endl;
@@ -424,7 +422,6 @@ bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &f
 	}
 	if ((retcode = CCgetspenttxid(batontxid, vini, height, exchangetxid, 0)) != 0)
 	{
-		std::cerr << "GetLatestExchangeTxid: baton unspent" << std::endl;
 		latesttxid = exchangetxid; // no updates, return exchangetxid
 		funcid = 'o';
 		return true;
@@ -618,7 +615,7 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
 	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it=unspentOutputs.begin(); it!=unspentOutputs.end(); it++)
     {
         txid = it->first.txhash;
-        if (mode == EIF_COINS && it->second.satoshis < 1/*0000*/)
+        if (/*mode == EIF_COINS && */it->second.satoshis < 1)
             continue;
         if (myGetTransaction(txid, vintx, hashBlock) != 0 && (numvouts = vintx.vout.size()) > 0)
         {
@@ -639,7 +636,7 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
 			// if we're spending coins, are they provided by the coin supplier pubkey?
 			((mode == EIF_COINS && fundtokenid == zeroid && (TotalPubkeyNormalInputs(vintx,coinsupplier) + TotalPubkeyCCInputs(vintx,coinsupplier) > 0 || 
 			// if a borrow transaction exists in the exchange, the coins can also be provided by the token supplier pubkey
-			bHasBorrowed && TotalPubkeyNormalInputs(vintx,tokensupplier) + TotalPubkeyCCInputs(vintx,tokensupplier) > 0)) || 
+			/*bHasBorrowed && */TotalPubkeyNormalInputs(vintx,tokensupplier) + TotalPubkeyCCInputs(vintx,tokensupplier) > 0)) || 
 			// if we're spending tokens, are they provided by the token supplier pubkey?
 			(mode == EIF_TOKENS && fundtokenid == tokenid && TotalPubkeyNormalInputs(vintx,tokensupplier) + TotalPubkeyCCInputs(vintx,tokensupplier) > 0)))
             {
@@ -800,7 +797,7 @@ UniValue ExchangeFund(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid, i
 	
 	if (amount < 0)
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Funding amount must be positive");
-	if (!useTokens && amount < 1/*0000*/)
+	if (!useTokens && amount < 1)
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Coin amount must be at least 10000 satoshis");
 	
 	if (exchangetxid != zeroid)
