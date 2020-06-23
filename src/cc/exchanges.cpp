@@ -68,15 +68,16 @@ CScript EncodeExchangeOpRet(uint8_t funcid,uint8_t version,uint256 exchangetxid,
 	opret << OP_RETURN << vopret;
 	return(opret);
 }
-// TODO: update this to be able to decode 'o' and 'l' txes
 uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 &exchangetxid,uint256 &tokenid)
 {
-	//std::vector<std::pair<uint8_t, vscript_t>> oprets;
 	std::vector<vscript_t> oprets;
-	std::vector<uint8_t> vopret, vOpretExtra; uint8_t *script, evalcode, funcid, tokenevalcode;
+	std::vector<uint8_t> vopret, vOpretExtra;
+	uint8_t *script, evalcode, funcid, version, exchangetype;
 	std::vector<CPubKey> pubkeys;
-	//if (DecodeTokenOpRet(scriptPubKey,tokenevalcode,tokenid,pubkeys,oprets) != 0 && GetOpretBlob(oprets,OPRETID_EXCHANGESDATA,vOpretExtra) && 
-	//tokenevalcode == EVAL_TOKENS && vOpretExtra.size() > 0)
+	int64_t dummyamount;
+	CPubKey dummypk; 
+	uint256 dummytxid;
+	
 	if (DecodeTokenOpRetV1(scriptPubKey,tokenid,pubkeys,oprets) != 0 && GetOpReturnCCBlob(oprets, vOpretExtra) && vOpretExtra.size() > 0)
     {
         vopret = vOpretExtra;
@@ -85,10 +86,28 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 	{
 		GetOpReturnData(scriptPubKey, vopret);
 	}
-	if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> exchangetxid) != 0 && evalcode == EVAL_EXCHANGES)
-	{
-		return(funcid);
-	}
+	
+	script = (uint8_t *)vopret.data();
+    tokenid = zeroid;
+    if (script != NULL && vopret.size() > 2)
+    {
+		if (script[0] != EVAL_EXCHANGES)
+			return(0);
+
+        funcid = script[1];
+        switch (funcid)
+        {
+			case 'o':
+				return DecodeExchangeOpenOpRet(scriptPubKey,version,dummypk,dummypk,exchangetype,dummytxid,dummyamount,dummyamount,dummytxid);
+			case 'l':
+				return DecodeExchangeLoanTermsOpRet(scriptPubKey,version,dummytxid,dummyamount,dummyamount);
+			default:
+				if (E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> exchangetxid) != 0 && evalcode == EVAL_EXCHANGES)
+				{
+					return(funcid);
+				}
+				return(0);
+		}
 	return(0);
 }
 
