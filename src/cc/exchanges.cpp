@@ -71,7 +71,7 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 {
 	std::vector<vscript_t> oprets;
 	std::vector<uint8_t> vopret, vOpretExtra;
-	uint8_t *script, evalcode, funcid, version, exchangetype;
+	uint8_t *script, evalcode, funcid, exchangetype;
 	std::vector<CPubKey> pubkeys;
 	int64_t dummyamount;
 	CPubKey dummypk; 
@@ -107,6 +107,7 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 				}
 				return(0);
 		}
+	}
 	return(0);
 }
 
