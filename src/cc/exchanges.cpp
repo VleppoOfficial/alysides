@@ -645,6 +645,7 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
             {
                 //nValue = it->second.satoshis;
                 //totalinputs += nValue;
+				std::cerr << "found valid output" << std::endl;
                 totalinputs += it->second.satoshis;
 				validUnspentOutputs.push_back(*it);
             }
