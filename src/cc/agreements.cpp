@@ -298,12 +298,12 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("not enough vins for 'p' tx in AgreementsValidate!");
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
 					return eval->Invalid("vin.0 must be normal for agreementcreate!");
-				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
+				else if ((*cp->ismyvin)(tx.vin[1].scriptSig) == 0)
 					return eval->Invalid("vin.1 must be CC for agreementcreate!");
 				// does vin1 and vin2 point to the previous proposal's vout0 and vout1? (if it doesn't, the tx might have no previous proposal, in that case it shouldn't have CC inputs)
 				else if (tx.vin[1].prevout.hash != prevproposaltxid || tx.vin[1].prevout.n != 0)
 					return eval->Invalid("vin.1 tx hash doesn't match prevproposaltxid!");
-				else if (IsCCInput(tx.vin[2].scriptSig) == 0)
+				else if ((*cp->ismyvin)(tx.vin[2].scriptSig) == 0)
 					return eval->Invalid("vin.2 must be CC for agreementcreate!");
 				else if (tx.vin[2].prevout.hash != prevproposaltxid || tx.vin[2].prevout.n != 1)
 					return eval->Invalid("vin.2 tx hash doesn't match prevproposaltxid!");
@@ -363,7 +363,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("not enough vins for 't' tx!");
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
 					return eval->Invalid("vin.0 must be normal for agreementstopproposal!");
-				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
+				else if ((*cp->ismyvin)(tx.vin[1].scriptSig) == 0)
 					return eval->Invalid("vin.1 must be CC for agreementstopproposal!");
 				// does vin1 point to the previous proposal's vout1?
 				else if (tx.vin[1].prevout.hash != proposaltxid || tx.vin[1].prevout.n != 1)
@@ -430,12 +430,12 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("not enough vins for 'c' tx!");
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
 					return eval->Invalid("vin.0 must be normal for 'c' tx!");
-				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
+				else if ((*cp->ismyvin)(tx.vin[1].scriptSig) == 0)
 					return eval->Invalid("vin.1 must be CC for 'c' tx!");
 				// does vin1 and vin2 point to the proposal's vout0 and vout1?
 				else if (tx.vin[1].prevout.hash != proposaltxid || tx.vin[1].prevout.n != 0)
 					return eval->Invalid("vin.1 tx hash doesn't match proposaltxid!");
-				else if (IsCCInput(tx.vin[2].scriptSig) == 0)
+				else if ((*cp->ismyvin)(tx.vin[2].scriptSig) == 0)
 					return eval->Invalid("vin.2 must be CC for 'c' tx!");
 				else if (tx.vin[2].prevout.hash != proposaltxid || tx.vin[2].prevout.n != 1)
 					return eval->Invalid("vin.2 tx hash doesn't match proposaltxid!");
@@ -497,7 +497,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
 					return eval->Invalid("vin.0 must be normal for 'u' tx!");
 				// does vin1 point to latesttxid baton?
-				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
+				else if ((*cp->ismyvin)(tx.vin[1].scriptSig) == 0)
 					return eval->Invalid("vin.1 must be CC for 'u' tx!");
 				else if (latesttxid == agreementtxid)
 				{
@@ -509,12 +509,12 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					if (tx.vin[1].prevout.hash != latesttxid || tx.vin[1].prevout.n != 0)
 						return eval->Invalid("vin.1 tx hash doesn't match latesttxid!");
 				}
-				else if (IsCCInput(tx.vin[2].scriptSig) == 0)
+				else if ((*cp->ismyvin)(tx.vin[2].scriptSig) == 0)
 					return eval->Invalid("vin.2 must be CC for 'u' tx!");
 				// does vin2 and vin3 point to the proposal's vout0 and vout1?
 				else if (tx.vin[2].prevout.hash != proposaltxid || tx.vin[2].prevout.n != 0)
 					return eval->Invalid("vin.2 tx hash doesn't match proposaltxid!");
-				else if (IsCCInput(tx.vin[3].scriptSig) == 0)
+				else if ((*cp->ismyvin)(tx.vin[3].scriptSig) == 0)
 					return eval->Invalid("vin.3 must be CC for 'u' tx!");
 				else if (tx.vin[3].prevout.hash != proposaltxid || tx.vin[3].prevout.n != 1)
 					return eval->Invalid("vin.3 tx hash doesn't match proposaltxid!");
@@ -579,7 +579,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
 					return eval->Invalid("vin.0 must be normal for 's' tx!");
 				// does vin1 point to latesttxid baton?
-				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
+				else if ((*cp->ismyvin)(tx.vin[1].scriptSig) == 0)
 					return eval->Invalid("vin.1 must be CC for 's' tx!");
 				else if (latesttxid == agreementtxid)
 				{
@@ -591,16 +591,16 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					if (tx.vin[1].prevout.hash != latesttxid || tx.vin[1].prevout.n != 0)
 						return eval->Invalid("vin.1 tx hash doesn't match latesttxid!");
 				}
-				else if (IsCCInput(tx.vin[2].scriptSig) == 0)
+				else if ((*cp->ismyvin)(tx.vin[2].scriptSig) == 0)
 					return eval->Invalid("vin.2 must be CC for 's' tx!");
 				// does vin2 and vin3 point to the proposal's vout0 and vout1?
 				else if (tx.vin[2].prevout.hash != proposaltxid || tx.vin[2].prevout.n != 0)
 					return eval->Invalid("vin.2 tx hash doesn't match proposaltxid!");
-				else if (IsCCInput(tx.vin[3].scriptSig) == 0)
+				else if ((*cp->ismyvin)(tx.vin[3].scriptSig) == 0)
 					return eval->Invalid("vin.3 must be CC for 's' tx!");
 				else if (tx.vin[3].prevout.hash != proposaltxid || tx.vin[3].prevout.n != 1)
 					return eval->Invalid("vin.3 tx hash doesn't match proposaltxid!");
-				else if (IsCCInput(tx.vin[4].scriptSig) == 0)
+				else if ((*cp->ismyvin)(tx.vin[4].scriptSig) == 0)
 					return eval->Invalid("vin.4 must be CC for 's' tx!");
 				else if (tx.vin[4].prevout.hash != agreementtxid || tx.vin[4].prevout.n != 2)
 					return eval->Invalid("vin.4 tx hash doesn't match agreementtxid!");
@@ -651,7 +651,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("not enough vins for 'd' tx!");
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
 					return eval->Invalid("vin.0 must be normal for agreementdispute!");
-				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
+				else if ((*cp->ismyvin)(tx.vin[1].scriptSig) == 0)
 					return eval->Invalid("vin.1 must be CC for agreementdispute!");
 				// does vin1 point to latesttxid baton?
 				else if (latesttxid == agreementtxid)
@@ -710,7 +710,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("not enough vins for 'r' tx!");
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
 					return eval->Invalid("vin.0 must be normal for agreementresolve!");
-				else if (IsCCInput(tx.vin[1].scriptSig) == 0)
+				else if ((*cp->ismyvin)(tx.vin[1].scriptSig) == 0)
 					return eval->Invalid("vin.1 must be CC for agreementresolve!");
 				// does vin1 point to latesttxid baton?
 				else if (latesttxid == agreementtxid)
@@ -724,7 +724,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 						return eval->Invalid("vin.1 tx hash doesn't match latesttxid!");
 				}
 				// does vin2 point to deposit?
-				else if (IsCCInput(tx.vin[2].scriptSig) == 0)
+				else if ((*cp->ismyvin)(tx.vin[2].scriptSig) == 0)
 					return eval->Invalid("vin.2 must be CC for agreementresolve!");
 				else if (tx.vin[2].prevout.hash != agreementtxid || tx.vin[2].prevout.n != 2)
 					return eval->Invalid("vin.2 tx hash doesn't match agreementtxid!");
@@ -1753,8 +1753,8 @@ UniValue AgreementResolve(const CPubKey& pk, uint64_t txfee, uint256 agreementtx
 // TODO: agreementunlock(agreementtxid exchangetxid)
 UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 exchangetxid)
 {
-	/*CPubKey mypk, CPK_seller, CPK_client, CPK_arbitrator;
-	uint256 latesttxid, dummytxid;
+	CPubKey mypk, CPK_seller, CPK_client, CPK_arbitrator;
+	uint256 latesttxid, dummytxid, refagreementtxid;
 	std::vector<uint8_t> destpub, sellerpk, clientpk, arbitratorpk, ref_srcpub, ref_destpub, dummypk;
 	int64_t arbitratorfee, dummyamount;
 	std::string dummystr;
@@ -1771,7 +1771,6 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	
 	CPK_seller = pubkey2pk(sellerpk);
 	CPK_client = pubkey2pk(clientpk);
-	//CPK_arbitrator = pubkey2pk(arbitratorpk);
 	
 	// check sender pubkey
 	if (mypk != CPK_seller && mypk != CPK_client)
@@ -1781,32 +1780,70 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	GetLatestAgreementUpdate(agreementtxid, latesttxid, updatefuncid);
 	
 	if (updatefuncid != 'c' && updatefuncid != 'u' && updatefuncid != 'd')
-		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreement is no longer active");*/
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreement is no longer active");
+	
+	if (exchangetxid != zeroid)
+	{
+		if (myGetTransaction(exchangetxid, exchangetx, hashBlock) == 0 || (numvouts = exchangetx.vout.size()) <= 0)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cant find specified exchange txid " << exchangetxid.GetHex());
+		if (DecodeExchangeOpenOpRet(exchangetx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,tokenid,numtokens,numcoins,refagreementtxid) == 0)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid exchange create opret " << exchangetxid.GetHex());
+		
+		if (refagreementtxid != agreementtxid)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreement txid in exchange is different from agreement txid specified");
+		
+		if (!(exchangetype & EXTF_FINALSETTLEMENT))
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "deposit unlock is disabled for this exchange");
+		
+		if (!ValidateExchangeOpenTx(exchangetx,CCerror))
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << CCerror);
+		
+		if (!GetLatestExchangeTxid(exchangetxid, latesttxid, lastfuncid) || lastfuncid == 'c' || lastfuncid == 's' || lastfuncid == 'p' || lastfuncid == 'r')
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "exchange " << exchangetxid.GetHex() << " closed");
+		
+		if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "exchange borrow transaction search failed, quitting");
+		else if (borrowtxid != zeroid)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cannot cancel when loan is in progress");
+
+		if (mypk != tokensupplier && mypk != coinsupplier)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "you are not a valid party for exchange " << exchangetxid.GetHex());
+		
+		// TODO: If exchange has an assoc. agreement and finalsettlement = true, the deposit must NOT be sent to the exchange's coin escrow
+		
+		coinbalance = GetExchangesInputs(cp,exchangetx,EIF_COINS,unspentOutputs);
+		tokenbalance = GetExchangesInputs(cp,exchangetx,EIF_TOKENS,unspentOutputs);
+		if (exchangetype & EXTF_TRADE && coinbalance >= numcoins && tokenbalance >= numtokens)
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "cannot cancel trade when escrow has enough coins and tokens");
+	}
+	else
+		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Invalid exchangetxid");
 	
 	/*
-		unlock contract deposit:
-			vin.0 normal input
-			vin.1 deposit
-			vout.0 payout to exchange CC 1of2 address
-			vout.n-2 change
-			vout.n-1 OP_RETURN EVAL_AGREEMENTS 'n' agreementtxid exchangetxid
-			
-		"Deposit Unlock" constraints:
-		must be initiated by seller or client
-		exchange must have agreementtxid, and finalsettlement set to true
-		ValidateExchangeOpenTx(exchangetx)
-		exchange mustn't be closed, no borrow txes
-		if GetExchangesInputs(tokens) < numtokens, invalidate
-		coinbalance = GetExchangesInputs(coins)
-		if (coinbalance + deposit < numcoins), invalidate
-		refund = (coinbalance + deposit - numcoins) >= 10000 ? coinbalance + deposit - numcoins : 0
-		send vout to 1of2 exchangeaddr with value: deposit - refund
-		if refund > 0 send vout with refund to client
+	"Deposit Unlock" constraints:
+	must be initiated by seller or client
+	exchange must have agreementtxid, and finalsettlement set to true
+	ValidateExchangeOpenTx(exchangetx)
+	exchange mustn't be closed, no borrow txes
+	if GetExchangesInputs(tokens) < numtokens, invalidate
+	coinbalance = GetExchangesInputs(coins)
+	if (coinbalance + deposit < numcoins), invalidate
+	
+	refund = coinbalance + deposit - numcoins
+	//refund = (coinbalance + deposit - numcoins) >= 10000 ? coinbalance + deposit - numcoins : 0
+	send vout to 1of2 exchangeaddr with value: deposit - refund
+	if refund > 0 send vout with refund to client
 	*/
 	
 	/*if (AddNormalinputs2(mtx, txfee + arbitratorfee, 64) > 0)
 	{
-		
+		/*
+		//unlock contract deposit:
+		//	vin.0 normal input
+		//	vin.1 deposit
+		//	vout.0 payout to exchange CC 1of2 address
+		//	vout.n-2 change
+		//	vout.n-1 OP_RETURN EVAL_AGREEMENTS 'n' agreementtxid exchangetxid
 		
 		GetCCaddress1of2(cp, mutualaddr, CPK_seller, CPK_client);
 		
