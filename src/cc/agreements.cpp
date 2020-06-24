@@ -1753,7 +1753,7 @@ UniValue AgreementResolve(const CPubKey& pk, uint64_t txfee, uint256 agreementtx
 // TODO: agreementunlock(agreementtxid exchangetxid)
 UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 exchangetxid)
 {
-	CPubKey mypk, CPK_seller, CPK_client, CPK_arbitrator;
+	/*CPubKey mypk, CPK_seller, CPK_client, CPK_arbitrator;
 	uint256 latesttxid, dummytxid, refagreementtxid;
 	std::vector<uint8_t> destpub, sellerpk, clientpk, arbitratorpk, ref_srcpub, ref_destpub, dummypk;
 	int64_t arbitratorfee, dummyamount;
@@ -1818,7 +1818,7 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	}
 	else
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Invalid exchangetxid");
-	
+	*/
 	/*
 	"Deposit Unlock" constraints:
 	must be initiated by seller or client
