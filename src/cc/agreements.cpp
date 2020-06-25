@@ -1838,7 +1838,7 @@ UniValue AgreementResolve(const CPubKey& pk, uint64_t txfee, uint256 agreementtx
 	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "error adding normal inputs");
 }
 // agreementunlock - constructs a 'n' transaction and spends the latest update baton of agreementtxid
-// sends deposit to 1of2 CC exchangeaddr, and if agreement was in dispute, sends arbitratorfee to arbitrator's normal addr
+// sends amount required to fill numcoins amount to 1of2 CC exchangeaddr from deposit, and refunds the rest to client
 UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 exchangetxid)
 {
 	CPubKey mypk, CPK_seller, CPK_client, tokensupplier, coinsupplier;
@@ -1923,6 +1923,7 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	if (AddNormalinputs2(mtx, txfee, 5) > 0)
 	{
 		GetCCaddress1of2(cp, mutualaddr, CPK_seller, CPK_client);
+		std::cerr << "mutualaddr: " << mutualaddr << std::endl;
 		if (latesttxid == agreementtxid)
 			mtx.vin.push_back(CTxIn(agreementtxid,1,CScript())); // vin.1 last update baton (no previous updates)
 		else
