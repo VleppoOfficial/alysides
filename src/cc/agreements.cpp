@@ -232,14 +232,17 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	CTransaction proposaltx, exchangetx;
 	CScript proposalopret;
 	int32_t numvins, numvouts;
-	uint256 hashBlock, datahash, agreementtxid, proposaltxid, prevproposaltxid, dummytxid, exchangetxid, spendingtxid, latesttxid;
+	uint256 hashBlock, datahash, agreementtxid, proposaltxid, prevproposaltxid, dummytxid, exchangetxid, spendingtxid, latesttxid, borrowtxid, updatetxid, refagreementtxid;
 	std::vector<uint8_t> srcpub, destpub, signpub, sellerpk, clientpk, arbitratorpk, rewardedpubkey;
-	int64_t payment, arbitratorfee, depositval, totaldeposit, dummyamount;
+	int64_t payment, arbitratorfee, depositval, totaldeposit, dummyamount, numtokens, numcoins, tokenbalance, coinbalance, refund;
 	std::string info, CCerror = "";
 	bool bHasReceiver, bHasArbitrator;
-	uint8_t proposaltype, version, spendingfuncid, funcid, updatefuncid;
-	char globaladdr[65], srcaddr[65], destaddr[65], arbitratoraddr[65];
-	CPubKey CPK_src, CPK_dest, CPK_arbitrator, CPK_signer, CPK_rewarded;
+	uint8_t proposaltype, version, spendingfuncid, funcid, updatefuncid, exchangetype;
+	char globaladdr[65], srcaddr[65], destaddr[65], arbitratoraddr[65], exchangeaddr[65];
+	CPubKey CPK_src, CPK_dest, CPK_arbitrator, CPK_signer, CPK_rewarded, tokensupplier, coinsupplier;
+	struct CCcontract_info *cpExchanges, CExchanges;
+	cpExchanges = CCinit(&CExchanges, EVAL_EXCHANGES);
+	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	numvins = tx.vin.size();
 	numvouts = tx.vout.size();
 	if (numvouts < 1)
@@ -747,15 +750,6 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				vout.n-2 change
 				vout.n-1 OP_RETURN EVAL_AGREEMENTS 'n' agreementtxid exchangetxid
 				*/
-				// Some additional variables.
-				CPubKey tokensupplier, coinsupplier;
-				uint256 borrowtxid, updatetxid, refagreementtxid;
-				int64_t numtokens, numcoins, tokenbalance, coinbalance, refund;
-				uint8_t exchangetype;
-				char exchangeaddr[65];
-				std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
-				struct CCcontract_info *cpExchanges, CExchanges;
-				cpExchanges = CCinit(&CExchanges, EVAL_EXCHANGES);
 				// Getting the transaction data.
 				DecodeAgreementUnlockOpRet(tx.vout[numvouts-1].scriptPubKey, version, agreementtxid, exchangetxid);
 				if (exchangetxid == zeroid)
