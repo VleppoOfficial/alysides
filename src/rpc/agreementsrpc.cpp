@@ -321,8 +321,6 @@ UniValue agreementunlock(const UniValue& params, bool fHelp, const CPubKey& mypk
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 || ensure_CCrequirements(EVAL_EXCHANGES) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	
-	throw runtime_error("not implemented yet\n");
-	
     Lock2NSPV(mypk);
 	
 	agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
