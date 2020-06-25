@@ -1928,7 +1928,7 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 		else
 			mtx.vin.push_back(CTxIn(latesttxid,0,CScript())); // vin.1 last update baton (with previous updates)
 		Myprivkey(mypriv);
-		CCaddr1of2set(cp, CPK_src, CPK_dest, mypriv, mutualaddr);
+		CCaddr1of2set(cp, CPK_seller, CPK_client, mypriv, mutualaddr);
 		mtx.vin.push_back(CTxIn(agreementtxid,2,CScript())); // vin.2 deposit
 		
 		mtx.vout.push_back(MakeCC1of2vout(EVAL_EXCHANGES, deposit - refund, tokensupplier, coinsupplier));
