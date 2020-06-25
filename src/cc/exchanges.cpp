@@ -577,7 +577,7 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
 {
 	char exchangeaddr[65];
 	int64_t totalinputs = 0, numvouts, numtokens, numcoins;
-	uint256 txid = zeroid, hashBlock, exchangetxid, agreementtxid, tokenid, fundtokenid, borrowtxid;
+	uint256 txid = zeroid, hashBlock, exchangetxid, agreementtxid, refagreementtxid, tokenid, fundtokenid, borrowtxid;
 	CTransaction vintx;
     std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	CPubKey tokensupplier, coinsupplier;
@@ -620,16 +620,6 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
             continue;
         if (myGetTransaction(txid, vintx, hashBlock) != 0 && (numvouts = vintx.vout.size()) > 0)
         {
-			
-			// TODO: add deposit support here
-			
-			// if (agreementtxid != null and tx vout is agreement 'n')
-			//	 include deposit vin as valid
-		
-			// agreements cc output
-			// deposit unlock tx
-			// unlock tx data (correct exchangetxid)
-			
 			// is this an exchanges CC output?
 			if (IsExchangesvout(cp, vintx, mode, tokensupplier, coinsupplier, (int32_t)it->first.index) > 0 &&
 			// is the output from a funding transaction to this exchange txid?
@@ -644,6 +634,14 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
                 totalinputs += it->second.satoshis;
 				validUnspentOutputs.push_back(*it);
             }
+			// if exchange has an agreementtxid, is this a CC output from agreementunlock?
+			else if (agreementtxid != zeroid && IsExchangesvout(cp, vintx, EIF_COINS, tokensupplier, coinsupplier, (int32_t)it->first.index) > 0 &&
+			DecodeAgreementUnlockOpRet(vintx.vout[numvouts-1].scriptPubKey, version, refagreementtxid, exchangetxid) == 'n' && 
+			exchangetxid == exchangetx.GetHash() && refagreementtxid == agreementtxid)
+			{
+				totalinputs += it->second.satoshis;
+				validUnspentOutputs.push_back(*it);
+			}
         }
     }
     return (totalinputs);
