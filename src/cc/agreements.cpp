@@ -777,7 +777,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				if (refagreementtxid != agreementtxid)
 					return eval->Invalid("agreement txid in exchange is different from agreement txid specified!");
 					
-				if (!(exchangetype & EXTF_FINALSETTLEMENT))
+				if (!(exchangetype & EXTF_DEPOSITUNLOCKABLE))
 					return eval->Invalid("deposit unlock is disabled for this exchange!");
 
 				if (!ValidateExchangeOpenTx(exchangetx,CCerror))
@@ -1886,7 +1886,7 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 		if (refagreementtxid != agreementtxid)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreement txid in exchange is different from agreement txid specified");
 		
-		if (!(exchangetype & EXTF_FINALSETTLEMENT))
+		if (!(exchangetype & EXTF_DEPOSITUNLOCKABLE))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "deposit unlock is disabled for this exchange");
 		
 		if (!ValidateExchangeOpenTx(exchangetx,CCerror))

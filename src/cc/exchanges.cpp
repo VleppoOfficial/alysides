@@ -756,7 +756,7 @@ UniValue ExchangeOpen(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,CPu
 		
 		if (bSpendDeposit)
 		{
-			exchangetype |= EXTF_FINALSETTLEMENT;
+			exchangetype |= EXTF_DEPOSITUNLOCKABLE;
 		}
 	}
 
@@ -1096,10 +1096,10 @@ UniValue ExchangeInfo(const CPubKey& pk, uint256 exchangetxid)
 		if (agreementtxid != zeroid)
 		{
 			result.push_back(Pair("agreementtxid", agreementtxid.GetHex()));
-			if (exchangetype & EXTF_FINALSETTLEMENT)
-				result.push_back(Pair("settlementtype", "final"));
+			if (exchangetype & EXTF_DEPOSITUNLOCKABLE)
+				result.push_back(Pair("deposit_unlock_enabled", "true"));
 			else
-				result.push_back(Pair("settlementtype", "non-final"));
+				result.push_back(Pair("deposit_unlock_enabled", "false"));
 		}
 		return(result);
 	}

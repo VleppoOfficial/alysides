@@ -31,7 +31,7 @@ enum EExchangeTypeFlags
 {
 	EXTF_TRADE = 1,
 	EXTF_LOAN = 2,
-	EXTF_FINALSETTLEMENT = 4,
+	EXTF_DEPOSITUNLOCKABLE = 4,
 };
 
 enum EExchangeInputsFlags
