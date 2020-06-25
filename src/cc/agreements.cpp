@@ -1924,10 +1924,10 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	{
 		GetCCaddress1of2(cp, mutualaddr, CPK_seller, CPK_client);
 		std::cerr << "mutualaddr: " << mutualaddr << std::endl;
-		if (latesttxid == agreementtxid)
+		if (updatetxid == agreementtxid)
 			mtx.vin.push_back(CTxIn(agreementtxid,1,CScript())); // vin.1 last update baton (no previous updates)
 		else
-			mtx.vin.push_back(CTxIn(latesttxid,0,CScript())); // vin.1 last update baton (with previous updates)
+			mtx.vin.push_back(CTxIn(updatetxid,0,CScript())); // vin.1 last update baton (with previous updates)
 		Myprivkey(mypriv);
 		CCaddr1of2set(cp, CPK_seller, CPK_client, mypriv, mutualaddr);
 		mtx.vin.push_back(CTxIn(agreementtxid,2,CScript())); // vin.2 deposit
