@@ -243,6 +243,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	struct CCcontract_info *cpExchanges, CExchanges;
 	cpExchanges = CCinit(&CExchanges, EVAL_EXCHANGES);
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
+	bool bHasRefund, bIsSuspended; 
 	numvins = tx.vin.size();
 	numvouts = tx.vout.size();
 	if (numvouts < 1)
@@ -772,7 +773,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					Getscriptaddress(arbitratoraddr, CScript() << ParseHex(HexStr(CPK_arbitrator)) << OP_CHECKSIG);
 				}
 
-				bool bIsSuspended = (bHasArbitrator && updatefuncid == 'd');
+				bIsSuspended = (bHasArbitrator && updatefuncid == 'd');
 				//
 				if (bIsSuspended)
 					std::cerr << "AgreementsValidate: agreement is suspended" << std::endl;
@@ -817,15 +818,13 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				else
 					refund = coinbalance + depositval - numcoins;
 				
-				bool bHasRefund = (refund > 0);
+				bHasRefund = (refund > 0);
 
 				// Checking if vins/vouts are correct.
-				if (numvouts < 2)
-					return eval->Invalid("not enough vouts for 'n' tx!");
-				
-				
 				std::cerr << "AgreementsValidate -  bHasRefund: " << (int)(bHasRefund) << "bIsSuspended: " << (int)(bIsSuspended) << std::endl;
 				
+				if (numvouts < 2)
+					return eval->Invalid("not enough vouts for 'n' tx!");
 				else if (ConstrainVout(tx.vout[0], 1, exchangeaddr, depositval - refund) == 0)
 					return eval->Invalid("vout.0 must be CC to exchanges mutual 1of2 address!");
 				if (bHasRefund && bIsSuspended) // contains both a deposit and arbitrator fee refund
