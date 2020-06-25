@@ -817,8 +817,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 		
 				if (tokenbalance < numtokens)
 					return eval->Invalid("not enough tokens in exchange!");
-					CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange must have all required tokens for deposit unlock");
-		
+					
 				if (coinbalance + depositval < numcoins)
 					return eval->Invalid("not enough coins in exchange!");
 				else
@@ -831,9 +830,9 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("not enough vouts for 'n' tx!");
 				
 				
-				std::cerr << "AgreementsValidate -  bHasRefund: " << (int)(bHasRefund) << "bIsSuspended: " << (int)(bIsSuspended) <<std::endl;
+				std::cerr << "AgreementsValidate -  bHasRefund: " << (int)(bHasRefund) << "bIsSuspended: " << (int)(bIsSuspended) << std::endl;
 				
-				else if (ConstrainVout(tx.vout[0], 1, exchangeaddr, deposit - refund) == 0)
+				else if (ConstrainVout(tx.vout[0], 1, exchangeaddr, depositval - refund) == 0)
 					return eval->Invalid("vout.0 must be CC to exchanges mutual 1of2 address!");
 				if (bHasRefund && bIsSuspended) // contains both a deposit and arbitrator fee refund
 				{
