@@ -1875,9 +1875,10 @@ UniValue AgreementResolve(const CPubKey& pk, uint64_t txfee, uint256 agreementtx
 UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 exchangetxid)
 {
 	CPubKey mypk, CPK_seller, CPK_client, CPK_arbitrator, tokensupplier, coinsupplier;
-	uint256 borrowtxid, updatetxid, latesttxid, dummytxid, refagreementtxid;
+	uint256 hashBlock,borrowtxid, updatetxid, latesttxid, dummytxid, refagreementtxid;
 	std::vector<uint8_t> sellerpk, clientpk, arbitratorpk;
 	int64_t arbitratorfee, deposit, numtokens, numcoins, tokenbalance, coinbalance, refund;
+	int32_t numvouts;
 	std::string dummystr, CCerror = "";
 	uint8_t version, exchangetype, updatefuncid, mypriv[32];
 	char mutualaddr[65];
