@@ -243,7 +243,6 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	struct CCcontract_info *cpExchanges, CExchanges;
 	cpExchanges = CCinit(&CExchanges, EVAL_EXCHANGES);
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
-	bool bHasRefund, bIsSuspended; 
 	numvins = tx.vin.size();
 	numvouts = tx.vout.size();
 	if (numvouts < 1)
@@ -805,8 +804,6 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				else
 					refund = coinbalance + depositval - numcoins;
 				
-				bHasRefund = (refund > 0);
-
 				// Checking if vins/vouts are correct.
 				std::cerr << "AgreementsValidate -  bHasRefund: " << (int)(bHasRefund) << std::endl;
 				
@@ -814,7 +811,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("not enough vouts for 'n' tx!");
 				else if (ConstrainVout(tx.vout[0], 1, exchangeaddr, depositval - refund) == 0)
 					return eval->Invalid("vout.0 must be CC to exchanges mutual 1of2 address!");
-				else if (bHasRefund) // contains deposit refund
+				else if (refund > 0) // contains deposit refund
 				{
 					if (numvouts < 3)
 						return eval->Invalid("not enough vouts for 'n' tx!");
