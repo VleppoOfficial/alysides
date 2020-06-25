@@ -805,7 +805,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					refund = coinbalance + depositval - numcoins;
 				
 				// Checking if vins/vouts are correct.
-				std::cerr << "AgreementsValidate -  bHasRefund: " << (int)(bHasRefund) << std::endl;
+				std::cerr << "AgreementsValidate -  bHasRefund: " << refund << std::endl;
 				
 				if (numvouts < 2)
 					return eval->Invalid("not enough vouts for 'n' tx!");
