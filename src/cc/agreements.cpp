@@ -758,27 +758,14 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				if (!GetAgreementInitialData(agreementtxid, dummytxid, srcpub, destpub, arbitratorpk, arbitratorfee, depositval, dummytxid, dummytxid, info))
 					return eval->Invalid("couldn't find agreement tx for 'n' tx!");
 				GetLatestAgreementUpdate(agreementtxid, updatetxid, updatefuncid);
-				if (updatefuncid != 'c' && updatefuncid != 'u' && updatefuncid != 'd')
-					return eval->Invalid("agreement inactive!");
+				if (updatefuncid != 'c' && updatefuncid != 'u')
+					return eval->Invalid("agreement inactive or suspended!");
 				CPK_src = pubkey2pk(srcpub);
 				CPK_dest = pubkey2pk(destpub);
-				CPK_arbitrator = pubkey2pk(arbitratorpk);
-				bHasArbitrator = CPK_arbitrator.IsValid();
 				if (TotalPubkeyCCInputs(tx, CPK_src) == 0 && TotalPubkeyCCInputs(tx, CPK_dest) == 0)
 					return eval->Invalid("found no cc inputs signed by agreement member pubkey!");
 				
 				Getscriptaddress(destaddr, CScript() << ParseHex(HexStr(CPK_dest)) << OP_CHECKSIG);
-				if (bHasArbitrator)
-				{
-					Getscriptaddress(arbitratoraddr, CScript() << ParseHex(HexStr(CPK_arbitrator)) << OP_CHECKSIG);
-				}
-
-				bIsSuspended = (bHasArbitrator && updatefuncid == 'd');
-				//
-				if (bIsSuspended)
-					std::cerr << "AgreementsValidate: agreement is suspended" << std::endl;
-				else
-					std::cerr << "AgreementsValidate: agreement is not suspended" << std::endl;
 				
 				// Checking exchange.
 				if (myGetTransaction(exchangetxid, exchangetx, hashBlock) == 0 || exchangetx.vout.size() <= 0)
@@ -821,37 +808,20 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				bHasRefund = (refund > 0);
 
 				// Checking if vins/vouts are correct.
-				std::cerr << "AgreementsValidate -  bHasRefund: " << (int)(bHasRefund) << "bIsSuspended: " << (int)(bIsSuspended) << std::endl;
+				std::cerr << "AgreementsValidate -  bHasRefund: " << (int)(bHasRefund) << std::endl;
 				
 				if (numvouts < 2)
 					return eval->Invalid("not enough vouts for 'n' tx!");
 				else if (ConstrainVout(tx.vout[0], 1, exchangeaddr, depositval - refund) == 0)
 					return eval->Invalid("vout.0 must be CC to exchanges mutual 1of2 address!");
-				if (bHasRefund && bIsSuspended) // contains both a deposit and arbitrator fee refund
-				{
-					if (numvouts < 4)
-						return eval->Invalid("not enough vouts for 'n' tx!");
-					// vout.1 must be deposit refund, vout.2 must be arbitrator fee refund
-					else if (ConstrainVout(tx.vout[1], 0, destaddr, refund) == 0)
-						return eval->Invalid("vout.1 must be normal deposit refund payout to destpub!");
-					else if (ConstrainVout(tx.vout[2], 0, arbitratoraddr, arbitratorfee) == 0)
-						return eval->Invalid("vout.2 must be normal arbitratorfee payout to arbitrator!");
-				}
-				else if (bHasRefund && !bIsSuspended) // contains only deposit refund
+				else if (bHasRefund) // contains deposit refund
 				{
 					if (numvouts < 3)
 						return eval->Invalid("not enough vouts for 'n' tx!");
 					else if (ConstrainVout(tx.vout[1], 0, destaddr, refund) == 0)
 						return eval->Invalid("vout.1 must be normal deposit refund payout to destpub!");
 				}
-				else if (!bHasRefund && bIsSuspended) // contains only arbitrator fee refund
-				{
-					if (numvouts < 3)
-						return eval->Invalid("not enough vouts for 'n' tx!");
-					else if (ConstrainVout(tx.vout[1], 0, arbitratoraddr, arbitratorfee) == 0)
-						return eval->Invalid("vout.1 must be normal arbitratorfee payout to arbitrator!");
-				}
-
+				
 				if (numvins < 3)
 					return eval->Invalid("not enough vins for 'n' tx!");
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
@@ -1874,7 +1844,7 @@ UniValue AgreementResolve(const CPubKey& pk, uint64_t txfee, uint256 agreementtx
 // sends deposit to 1of2 CC exchangeaddr, and if agreement was in dispute, sends arbitratorfee to arbitrator's normal addr
 UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 exchangetxid)
 {
-	CPubKey mypk, CPK_seller, CPK_client, CPK_arbitrator, tokensupplier, coinsupplier;
+	CPubKey mypk, CPK_seller, CPK_client, tokensupplier, coinsupplier;
 	uint256 hashBlock,borrowtxid, updatetxid, latesttxid, dummytxid, refagreementtxid;
 	std::vector<uint8_t> sellerpk, clientpk, arbitratorpk;
 	int64_t arbitratorfee, deposit, numtokens, numcoins, tokenbalance, coinbalance, refund;
@@ -1883,7 +1853,6 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	uint8_t version, exchangetype, updatefuncid, mypriv[32];
 	char mutualaddr[65];
 	CTransaction exchangetx;
-	bool bHasArbitrator = false, bIsSuspended = false;
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	struct CCcontract_info *cp, C, *cpExchanges, CExchanges;
@@ -1898,8 +1867,6 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	
 	CPK_seller = pubkey2pk(sellerpk);
 	CPK_client = pubkey2pk(clientpk);
-	CPK_arbitrator = pubkey2pk(arbitratorpk);
-	bHasArbitrator = CPK_arbitrator.IsFullyValid();
 	
 	// check sender pubkey
 	if (mypk != CPK_seller && mypk != CPK_client)
@@ -1909,16 +1876,9 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	GetLatestAgreementUpdate(agreementtxid, updatetxid, updatefuncid);
 	if (updatefuncid == 'n')
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "deposit is already unlocked for this agreement");
-	else if (updatefuncid != 'c' && updatefuncid != 'u' && updatefuncid != 'd')
+	else if (updatefuncid != 'c' && updatefuncid != 'u')
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreement is no longer active");
-	
-	bIsSuspended = (bHasArbitrator && updatefuncid == 'd');
-	//
-	if (bIsSuspended)
-		std::cerr << "AgreementUnlock: agreement is suspended" << std::endl;
-	else
-		std::cerr << "AgreementUnlock: agreement is not suspended" << std::endl;
-	
+
 	if (exchangetxid != zeroid)
 	{
 		if (myGetTransaction(exchangetxid, exchangetx, hashBlock) == 0 || (numvouts = exchangetx.vout.size()) <= 0)
@@ -1971,19 +1931,17 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 			mtx.vin.push_back(CTxIn(agreementtxid,1,CScript())); // vin.1 last update baton (no previous updates)
 		else
 			mtx.vin.push_back(CTxIn(latesttxid,0,CScript())); // vin.1 last update baton (with previous updates)
-		mtx.vin.push_back(CTxIn(agreementtxid,2,CScript())); // vin.2 deposit
+		
 		Myprivkey(mypriv);
 		
 		CCaddr1of2set(cp, CPK_seller, CPK_client, mypriv, mutualaddr);
+		
+		mtx.vin.push_back(CTxIn(agreementtxid,2,CScript())); // vin.2 deposit
 		
 		mtx.vout.push_back(MakeCC1of2vout(EVAL_EXCHANGES, deposit - refund, tokensupplier, coinsupplier));
 		if (refund > 0)
 		{
 			mtx.vout.push_back(CTxOut(refund, CScript() << ParseHex(HexStr(CPK_client)) << OP_CHECKSIG)); // vout.1 deposit refund to client (optional)
-		}
-		if (bIsSuspended)
-		{
-			mtx.vout.push_back(CTxOut(arbitratorfee, CScript() << ParseHex(HexStr(CPK_arbitrator)) << OP_CHECKSIG)); // vout.2 arbitrator fee payout to arbitrator (optional)
 		}
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementUnlockOpRet(AGREEMENTCC_VERSION, agreementtxid, exchangetxid));
 	}
