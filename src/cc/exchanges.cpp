@@ -494,7 +494,7 @@ int64_t CheckDepositUnlockCond(uint256 exchangetxid)
 	int32_t vini, height, retcode, numvouts;
 	int64_t dummyamount;
 	CPubKey tokensupplier, coinsupplier;
-	uint256 refexchangetxid, hashBlock, agreementtxid, dummytxid;
+	uint256 refexchangetxid, unlocktxid, hashBlock, agreementtxid, dummytxid;
 	CTransaction exchangetx, unlocktx;
 	uint8_t version, unlockfuncid, exchangetype;
 	struct CCcontract_info *cp, C;
