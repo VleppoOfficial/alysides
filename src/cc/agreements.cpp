@@ -2148,7 +2148,7 @@ UniValue AgreementInfo(uint256 txid)
 				DecodeAgreementUnlockOpRet(tx.vout[numvouts-1].scriptPubKey, version, agreementtxid, exchangetxid);
 				result.push_back(Pair("contract_txid",agreementtxid.GetHex()));
 				result.push_back(Pair("dest_exchange_txid",exchangetxid.GetHex()));
-				GetAgreementInitialData(txid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, totaldeposit, datahash, agreementtxid, info);
+				GetAgreementInitialData(agreementtxid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, totaldeposit, datahash, dummytxid, info);
 				deposit = CheckDepositUnlockCond(exchangetxid);
 				if (deposit > 0)
 				{
