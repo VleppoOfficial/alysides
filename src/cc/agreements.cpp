@@ -2390,8 +2390,8 @@ UniValue AgreementSettlements(const CPubKey& pk, uint256 agreementtxid, bool bAc
 	if (!GetAgreementInitialData(agreementtxid, dummytxid, sellerpk, clientpk, arbitratorpk, dummyamount, dummyamount, dummytxid, dummytxid, dummystr))
 		return (result);
 	
-	CPK_seller = pubkey2pk(seller);
-	CPK_client = pubkey2pk(client);
+	CPK_seller = pubkey2pk(sellerpk);
+	CPK_client = pubkey2pk(clientpk);
 	
 	if (mypk != CPK_seller && mypk != CPK_client)
 		return (result);
