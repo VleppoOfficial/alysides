@@ -790,8 +790,9 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("exchange borrow transaction search failed!");
 				else if (borrowtxid != zeroid)
 					return eval->Invalid("cannot unlock after borrow tx!");
-					
-				// TODO: CheckDepositUnlockCond here (or just check if deposit was already spent here)
+
+				if (CheckDepositUnlockCond(exchangetxid) != 0)
+					return eval->Invalid("deposit unlock disabled or already sent to exchange!");
 		
 				coinbalance = GetExchangesInputs(cpExchanges,exchangetx,EIF_COINS,unspentOutputs);
 				tokenbalance = GetExchangesInputs(cpExchanges,exchangetx,EIF_TOKENS,unspentOutputs);
@@ -1900,8 +1901,6 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 		else if (borrowtxid != zeroid)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cannot unlock after borrow transaction");
 		
-		// TODO: CheckDepositUnlockCond here (or just check if deposit was already spent here)
-		
 		coinbalance = GetExchangesInputs(cpExchanges,exchangetx,EIF_COINS,unspentOutputs);
 		tokenbalance = GetExchangesInputs(cpExchanges,exchangetx,EIF_TOKENS,unspentOutputs);
 		
@@ -1916,14 +1915,9 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Invalid exchangetxid");
 	
-	std::cerr << "deposit: " << deposit << std::endl;
-	std::cerr << "coinbalance: " << coinbalance << std::endl;
-	std::cerr << "refund: " << refund << std::endl;
-	
 	if (AddNormalinputs2(mtx, txfee, 5) > 0)
 	{
 		GetCCaddress1of2(cp, mutualaddr, CPK_seller, CPK_client);
-		std::cerr << "mutualaddr: " << mutualaddr << std::endl;
 		if (updatetxid == agreementtxid)
 			mtx.vin.push_back(CTxIn(agreementtxid,1,CScript())); // vin.1 last update baton (no previous updates)
 		else
@@ -1949,7 +1943,7 @@ UniValue AgreementInfo(uint256 txid)
 	UniValue result(UniValue::VOBJ), members(UniValue::VOBJ), data(UniValue::VOBJ);
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator;
 	CTransaction tx, proposaltx;
-	uint256 hashBlock, datahash, proposaltxid, prevproposaltxid, agreementtxid, latesttxid, spendingtxid, dummytxid;
+	uint256 hashBlock, datahash, proposaltxid, prevproposaltxid, agreementtxid, latesttxid, spendingtxid, dummytxid, exchangetxid;
 	std::vector<uint8_t> srcpub, destpub, arbitrator, rewardedpubkey;
 	int32_t numvouts;
 	int64_t payment, arbitratorfee, deposit, totaldeposit, revision;
@@ -2151,6 +2145,17 @@ UniValue AgreementInfo(uint256 txid)
 				break;
 			case 'n':
 				result.push_back(Pair("type","agreement unlock"));
+				DecodeAgreementUnlockOpRet(tx.vout[numvouts-1].scriptPubKey, version, agreementtxid, exchangetxid);
+				result.push_back(Pair("contract_txid",agreementtxid.GetHex()));
+				result.push_back(Pair("dest_exchange_txid",exchangetxid.GetHex()));
+				GetAgreementInitialData(txid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, totaldeposit, datahash, agreementtxid, info);
+				deposit = CheckDepositUnlockCond(exchangetxid);
+				if (deposit > 0)
+				{
+					result.push_back(Pair("deposit_sent", deposit));
+					result.push_back(Pair("deposit_refunded", totaldeposit-deposit));
+				}
+				result.push_back(Pair("total_deposit", totaldeposit));
 				break;
 		}
 		return(result);

@@ -487,10 +487,36 @@ bool FindExchangeTxidType(uint256 exchangetxid, uint8_t type, uint256 &typetxid)
 	return true;
 }
 
-// Check if deposit is sent to this exchange's coin escrow
-/*bool CheckDepositUnlockCond(uint256 exchangetxid)
+// Check if agreement deposit is sent to this exchange's coin escrow
+// returns -1 if no agreementtxid defined or deposit unlock disabled, otherwise returns amount sent to exchange 1of2 CC address
+int64_t CheckDepositUnlockCond(uint256 exchangetxid)
 {
-}*/
+	int32_t vini, height, retcode, numvouts;
+	int64_t dummyamount;
+	CPubKey tokensupplier, coinsupplier;
+	uint256 refexchangetxid, hashBlock, agreementtxid, dummytxid;
+	CTransaction exchangetx, unlocktx;
+	uint8_t version, unlockfuncid, exchangetype;
+	struct CCcontract_info *cp, C;
+	
+	cp = CCinit(&C, EVAL_EXCHANGES);
+	
+	if (myGetTransaction(exchangetxid, exchangetx, hashBlock) && (numvouts = exchangetx.vout.size()) > 0 && 
+	DecodeExchangeOpenOpRet(exchangetx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,dummytxid,dummyamount,dummyamount,agreementtxid) != 0)
+	{
+		if (agreementtxid == zeroid || !(exchangetype & EXTF_DEPOSITUNLOCKABLE))
+			return -1;
+		else if (GetLatestAgreementUpdate(agreementtxid, unlocktxid, unlockfuncid) && unlockfuncid == 'n' &&
+		myGetTransaction(unlocktxid, unlocktx, hashBlock) && (numvouts = unlocktx.vout.size()) > 0 && 
+		DecodeAgreementUnlockOpRet(unlocktx.vout[numvouts - 1].scriptPubKey, version, dummytxid, refexchangetxid) != 0 &&
+		refexchangetxid == exchangetxid)
+		{
+			return (IsExchangesvout(cp, unlocktx, EIF_COINS, tokensupplier, coinsupplier, 0));
+		}
+	}
+	
+	return 0;
+}
 
 // check if exchange open transaction has valid data and sigs
 bool ValidateExchangeOpenTx(CTransaction opentx, std::string &CCerror)
@@ -635,7 +661,7 @@ int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bo
 				validUnspentOutputs.push_back(*it);
             }
 			// if exchange has an agreementtxid, is this a CC output from agreementunlock?
-			else if (agreementtxid != zeroid && IsExchangesvout(cp, vintx, EIF_COINS, tokensupplier, coinsupplier, (int32_t)it->first.index) > 0 &&
+			else if (CheckDepositUnlockCond(exchangetx.GetHash()) > 0 && IsExchangesvout(cp, vintx, EIF_COINS, tokensupplier, coinsupplier, (int32_t)it->first.index) > 0 &&
 			DecodeAgreementUnlockOpRet(vintx.vout[numvouts-1].scriptPubKey, version, refagreementtxid, exchangetxid) == 'n' && 
 			exchangetxid == exchangetx.GetHash() && refagreementtxid == agreementtxid)
 			{

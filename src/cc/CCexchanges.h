@@ -53,6 +53,7 @@ int64_t IsExchangesvout(struct CCcontract_info *cp,const CTransaction& tx,bool m
 bool ExchangesExactAmounts(struct CCcontract_info *cp,Eval* eval,const CTransaction &tx);
 bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &funcid);
 bool FindExchangeTxidType(uint256 exchangetxid, uint8_t type, uint256 &typetxid);
+int64_t CheckDepositUnlockCond(uint256 exchangetxid);
 bool ValidateExchangeOpenTx(CTransaction opentx, std::string &CCerror);
 int64_t GetExchangesInputs(struct CCcontract_info *cp,CTransaction exchangetx,bool mode,std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > &validUnspentOutputs);
 int64_t AddExchangesInputs(struct CCcontract_info *cp,CMutableTransaction &mtx,CTransaction exchangetx,bool mode,int32_t maxinputs);
