@@ -53,7 +53,7 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
 	std::string info;
 	int64_t prepayment, arbitratorfee, deposit;
     if (fHelp || params.size() < 4 || params.size() > 9)
-        throw runtime_error("agreementcreate info datahash buyer arbitrator [prepayment][arbitratorfee][deposit][prevproposaltxid][refagreementtxid]\n");
+        throw runtime_error("agreementcreate info datahash client arbitrator [prepayment][arbitratorfee][deposit][prevproposaltxid][refagreementtxid]\n");
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     Lock2NSPV(mypk);
@@ -68,7 +68,7 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
 		Unlock2NSPV(mypk);
         throw runtime_error("Data hash empty or invalid\n");
     }
-	std::vector<unsigned char> buyer(ParseHex(params[2].get_str().c_str()));
+	std::vector<unsigned char> client(ParseHex(params[2].get_str().c_str()));
 	std::vector<unsigned char> arbitrator(ParseHex(params[3].get_str().c_str()));
 	prepayment = 0;
 	if (params.size() >= 5) {
@@ -101,7 +101,7 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
 	if (params.size() == 9)     {
         refagreementtxid = Parseuint256((char *)params[8].get_str().c_str());
     }
-	result = AgreementCreate(mypk, 0, info, datahash, buyer, arbitrator, prepayment, arbitratorfee, deposit, prevproposaltxid, refagreementtxid);
+	result = AgreementCreate(mypk, 0, info, datahash, client, arbitrator, prepayment, arbitratorfee, deposit, prevproposaltxid, refagreementtxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
@@ -419,15 +419,21 @@ UniValue agreementsubcontracts(const UniValue& params, bool fHelp, const CPubKey
 UniValue agreementsettlements(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     uint256 agreementtxid;
-    if ( fHelp || params.size() != 1 )
-        throw runtime_error("agreementsettlements agreementtxid\n");
+    if ( fHelp || params.size() != 2 )
+        throw runtime_error("agreementsettlements agreementtxid active_only\n");
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 || ensure_CCrequirements(EVAL_EXCHANGES) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
-	
-	throw runtime_error("not implemented yet\n");
-	
+	std::string typestr;
+	bool bActiveOnly;
     agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
-    return(AgreementSettlements(agreementtxid));
+	typestr = params[1].get_str();
+    if (STR_TOLOWER(typestr) == "1" || STR_TOLOWER(typestr) == "true")
+        bActiveOnly = true;
+    else if (STR_TOLOWER(typestr) == "0" || STR_TOLOWER(typestr) == "false")
+        bActiveOnly = false;
+    else 
+        throw runtime_error("active_only flag invalid or empty\n");
+    return(AgreementSettlements(mypk, agreementtxid, bActiveOnly));
 }
 
 UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)

@@ -22,14 +22,14 @@ The Agreements Antara Module enables anyone to create a blockchain representatio
 An agreement created using this module features, among other things, the ability to store the checksum of off-chain contract documents (or an oracletxid) to prevent tampering, 
 a two party approval protocol for actions such as updates, terminations, and a dispute resolution system which utilizes an arbitrator, a mutually agreed upon third party.
 
-To create an active contract between two parties, the seller must first use the agreementcreate RPC to create a proposal and designate a buyer pubkey, 
+To create an active contract between two parties, the seller must first use the agreementcreate RPC to create a proposal and designate a client pubkey, 
 which will need to execute the agreementaccept RPC and sign the proposal.
 
 RPC list:
 	agreementcreate
 	Creates or updates an agreement proposal, with an optional prepayment that will be required for its acceptance by the other party.
 	The pubkey that executes this RPC will always be the seller in the resulting contract. 
-	The buyer pubkey may or may not be specified, but the resulting proposal must have a designated buyer to be able to be accepted.
+	The client pubkey may or may not be specified, but the resulting proposal must have a designated client to be able to be accepted.
 	The arbitrator pubkey may or may not be specified. If a arbitrator is included, a arbitrator fee must also be specified, 
 	and the deposit will be controlled by the arbitrator when a dispute occurs.
 
@@ -248,7 +248,6 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	if (numvouts < 1)
 		return eval->Invalid("no vouts");
 	CCOpretCheck(eval,tx,true,true,true);
-	//CCExactAmounts(eval,tx,CC_TXFEE);
 	ExactAmounts(eval,tx,ASSETCHAINS_CCZEROTXFEE[EVAL_AGREEMENTS]?0:CC_TXFEE);
 	if ((funcid = DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey)) != 0)
 	{
@@ -806,8 +805,6 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					refund = coinbalance + depositval - numcoins;
 				
 				// Checking if vins/vouts are correct.
-				std::cerr << "AgreementsValidate -  bHasRefund: " << refund << std::endl;
-				
 				if (numvouts < 2)
 					return eval->Invalid("not enough vouts for 'n' tx!");
 				else if (ConstrainVout(tx.vout[0], 1, exchangeaddr, depositval - refund) == 0)
@@ -1326,7 +1323,7 @@ UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::string info, ui
 	bHasArbitrator = CPK_arbitrator.IsFullyValid();
 	// check if destpub & arbitrator pubkeys exist and are valid
 	if (!destpub.empty() && !bHasReceiver)
-		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Buyer pubkey invalid");
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Receiver pubkey invalid");
 	if (!arbitrator.empty() && !bHasArbitrator)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Arbitrator pubkey invalid");
 	// if arbitrator exists, check if arbitrator fee & deposit are sufficient
@@ -2081,7 +2078,8 @@ UniValue AgreementInfo(uint256 txid)
 							result.push_back(Pair("status","arbitrated"));
 							break;
 						case 'n':
-							result.push_back(Pair("status","in exchange mode"));
+							// TODO: show different status based on exchange status
+							result.push_back(Pair("status","in settlement"));
 							break;
 					}
 					result.push_back(Pair("last_txid",latesttxid.GetHex()));
@@ -2368,10 +2366,57 @@ UniValue AgreementInventory(CPubKey pk)
 	result.push_back(Pair("arbitrator",arbitratorlist));
 	return (result);
 }
-// TODO: agreementsettlements
-UniValue AgreementSettlements(uint256 agreementtxid)
+// agreementsettlements - returns every exchange that has been designated to this agreement
+// bActiveOnly can be used to filter out inactive/closed exchanges
+UniValue AgreementSettlements(const CPubKey& pk, uint256 agreementtxid, bool bActiveOnly)
 {
 	UniValue result(UniValue::VARR);
+	CPubKey mypk, CPK_seller, CPK_client, dummypk;
+	CTransaction tx;
+	uint256 txid, hashBlock, refagreementtxid, dummytxid;
+	std::vector<uint8_t> sellerpk, clientpk, arbitratorpk;
+	int32_t numvouts;
+	int64_t dummyamount;
+	std::string dummystr;
+	uint8_t version, exchangetype, lastfuncid;
+	char myCCaddr[65];
+	std::vector<uint256> txids;
+	
+	struct CCcontract_info *cpExchanges, CExchanges;
+	cpExchanges = CCinit(&CExchanges, EVAL_EXCHANGES);
+	
+	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
+	
+	if (!GetAgreementInitialData(agreementtxid, dummytxid, sellerpk, clientpk, arbitratorpk, dummyamount, dummyamount, dummytxid, dummytxid, dummystr))
+		return (result);
+	
+	CPK_seller = pubkey2pk(seller);
+	CPK_client = pubkey2pk(client);
+	
+	if (mypk != CPK_seller && mypk != CPK_client)
+		return (result);
+	
+	GetCCaddress(cpExchanges,myCCaddr,mypk);
+	SetCCtxids(txids,myCCaddr,true,EVAL_EXCHANGES,CC_MARKER_VALUE,zeroid,'o');
+	
+	for (std::vector<uint256>::const_iterator it=txids.begin(); it!=txids.end(); it++)
+	{
+		txid = *it;
+		if (myGetTransaction(txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
+		DecodeExchangeOpenOpRet(tx.vout[numvouts-1].scriptPubKey,version,dummypk,dummypk,exchangetype,dummytxid,dummyamount,dummyamount,refagreementtxid) == 'o' &&
+		refagreementtxid == agreementtxid && GetLatestExchangeTxid(txid, dummytxid, lastfuncid))
+		{
+			if (bActiveOnly)
+			{
+				if (lastfuncid == 'o' || lastfuncid == 'l' || lastfuncid == 'b')
+					result.push_back(txid.GetHex());
+			}
+			else
+			{
+				result.push_back(txid.GetHex());
+			}
+		}
+	}
 	return (result);
 }
 UniValue AgreementList()

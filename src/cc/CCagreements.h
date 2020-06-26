@@ -64,7 +64,7 @@ UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backw
 UniValue AgreementProposals(CPubKey pk, uint256 agreementtxid);
 UniValue AgreementSubcontracts(uint256 agreementtxid);
 UniValue AgreementInventory(CPubKey pk);
-UniValue AgreementSettlements(uint256 agreementtxid);
+UniValue AgreementSettlements(const CPubKey& pk, uint256 agreementtxid, bool bActiveOnly);
 UniValue AgreementList();
 
 #endif

@@ -133,7 +133,6 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 	if (numvouts < 1)
 		return eval->Invalid("no vouts");
 	CCOpretCheck(eval,tx,true,true,true);
-	//CCExactAmounts(eval,tx,CC_TXFEE);
 	ExactAmounts(eval,tx,ASSETCHAINS_CCZEROTXFEE[EVAL_AGREEMENTS]?0:CC_TXFEE);
 	
 	/*if (ExchangesExactAmounts(cp,eval,tx) == false)
@@ -877,6 +876,7 @@ UniValue ExchangeFund(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid, i
 		if (useTokens)
 		{
 			mtx.vout.push_back(MakeTokensCC1of2vout(EVAL_EXCHANGES, amount, tokensupplier, coinsupplier));
+			// MakeTokensCC1of2vout(uint8_t evalcode, CAmount nValue, CPubKey pk1, CPubKey pk2, std::vector<std::vector<unsigned char>>* vData)
 		}
 		else
 		{
@@ -1121,7 +1121,7 @@ UniValue ExchangeInfo(const CPubKey& pk, uint256 exchangetxid)
 		
 		if (agreementtxid != zeroid)
 		{
-			result.push_back(Pair("agreementtxid", agreementtxid.GetHex()));
+			result.push_back(Pair("agreement_txid", agreementtxid.GetHex()));
 			if (exchangetype & EXTF_DEPOSITUNLOCKABLE)
 				result.push_back(Pair("deposit_unlock_enabled", "true"));
 			else
@@ -1136,7 +1136,6 @@ UniValue ExchangeList(const CPubKey& pk)
 {
 	UniValue result(UniValue::VARR);
 	std::vector<uint256> txids;
-	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > addressIndexCCMarker;
 	struct CCcontract_info *cp, C;
 	uint256 txid, dummytxid, hashBlock;
 	CTransaction tx;
