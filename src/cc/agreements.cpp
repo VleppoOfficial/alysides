@@ -12,55 +12,49 @@
  * Removal or modification of this copyright notice is prohibited.            *
  *                                                                            *
  ******************************************************************************/
-
 #include "CCagreements.h"
 #include "CCexchanges.h"
-
 /*
 The Agreements Antara Module enables anyone to create a blockchain representation of a legally binding bilateral agreement.
-
 An agreement created using this module features, among other things, the ability to store the checksum of off-chain contract documents (or an oracletxid) to prevent tampering, 
 a two party approval protocol for actions such as updates, terminations, and a dispute resolution system which utilizes an arbitrator, a mutually agreed upon third party.
-
 To create an active contract between two parties, the seller must first use the agreementcreate RPC to create a proposal and designate a client pubkey, 
 which will need to execute the agreementaccept RPC and sign the proposal.
-
 RPC list:
 	agreementcreate
-	Creates or updates an agreement proposal, with an optional prepayment that will be required for its acceptance by the other party.
-	The pubkey that executes this RPC will always be the seller in the resulting contract. 
-	The client pubkey may or may not be specified, but the resulting proposal must have a designated client to be able to be accepted.
-	The arbitrator pubkey may or may not be specified. If a arbitrator is included, a arbitrator fee must also be specified, 
-	and the deposit will be controlled by the arbitrator when a dispute occurs.
-
+		Creates or updates an agreement proposal, with an optional prepayment that will be required for its acceptance by the other party.
+		The pubkey that executes this RPC will always be the seller in the resulting contract. 
+		The client pubkey may or may not be specified, but the resulting proposal must have a designated client to be able to be accepted.
+		The arbitrator pubkey may or may not be specified. If a arbitrator is included, a arbitrator fee must also be specified, 
+		and the deposit will be controlled by the arbitrator when a dispute occurs.
 	agreementstopproposal
-	Closes the specified agreement proposal/request. The proposal txid specified must be of an active proposal – 
-	if the txid has been updated or closed by another txid down the proposal's update chain, the RPC will not work.
-	This RPC can be executed by the proposal's initiator or, if they exist, the receiver.
-
+		Closes the specified agreement proposal/request. The proposal txid specified must be of an active proposal – 
+		if the txid has been updated or closed by another txid down the proposal's update chain, the RPC will not work.
+		This RPC can be executed by the proposal's initiator or, if they exist, the receiver.
 	agreementaccept
-	Accepts and signs the specified agreement proposal/request. The proposal txid specified must be of an active proposal – 
-	if the txid has been updated or closed by another txid down the proposal's update chain, the RPC will not work.
-	This RPC can only be executed by the proposal's receiver.
-
+		Accepts and signs the specified agreement proposal/request. The proposal txid specified must be of an active proposal – 
+		if the txid has been updated or closed by another txid down the proposal's update chain, the RPC will not work.
+		This RPC can only be executed by the proposal's receiver.
 	agreementupdate
-	Opens a request to update an existing contract. This RPC must be executed by one of the parties related to the contract, not including the arbitrator.
-
+		Opens a request to update an existing contract. This RPC must be executed by one of the parties related to the contract, not including the arbitrator.
 	agreementclose
-	Opens a request to permanently terminate an existing contract. This RPC must be executed by one of the parties related to the contract, not including the arbitrator.
-	If the contract has a deposit locked in, the acceptance of this request will split it between the two parties. 
-	The deposit split can be adjusted by using a parameter in this RPC.
-
+		Opens a request to permanently terminate an existing contract. This RPC must be executed by one of the parties related to the contract, not including the arbitrator.
+		If the contract has a deposit locked in, the acceptance of this request will split it between the two parties. 
+		The deposit split can be adjusted by using a parameter in this RPC.
 	agreementdispute
-	Opens a new contract dispute. This RPC must be executed by one of the parties related to the contract, not including the arbitrator. 
-	In addition, this transaction will require paying the arbitrator fee that was specified at the agreement's proposal stage.
-	Only available if the contract has an arbitrator pubkey specified.
-
+		Opens a new contract dispute. This RPC must be executed by one of the parties related to the contract, not including the arbitrator. 
+		In addition, this transaction will require paying the arbitrator fee that was specified at the agreement's proposal stage.
+		Only available if the contract has an arbitrator pubkey specified.
 	agreementresolve
-	Resolves an existing contract dispute. This RPC can be executed by the arbitrator. The dispute creator is only allowed to close the dispute. 
-	The arbitrator can pay out the deposit to either party as they see fit.
+		Resolves an existing contract dispute. This RPC can be executed by the arbitrator. The dispute creator is only allowed to close the dispute. 
+		The arbitrator can pay out the deposit to either party as they see fit.
+	agreementunlock
+		Sends the agreement completion marker / deposit to the specified exchange txid address.
+		This RPC can only be executed if Exchanges CC is enabled, and the exchange has the agreementtxid and deposit spending enabled.
+		The exchange escrow must have enough tokens and coins (including the deposit amount) to satisfy the exchange requirements.
+		A specific amount is sent to the exchange, so that the exchange coin balance matches the required amount of coins. The remainder is sent back to the client.
+		This RPC can only be executed by a member of the agreement (not including arbitrator).
 */
-
 //===========================================================================
 // Opret encoders/decoders
 //===========================================================================
@@ -762,48 +756,35 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				CPK_dest = pubkey2pk(destpub);
 				if (TotalPubkeyCCInputs(tx, CPK_src) == 0 && TotalPubkeyCCInputs(tx, CPK_dest) == 0)
 					return eval->Invalid("found no cc inputs signed by agreement member pubkey!");
-				
 				Getscriptaddress(destaddr, CScript() << ParseHex(HexStr(CPK_dest)) << OP_CHECKSIG);
-				
 				// Checking exchange.
 				if (myGetTransaction(exchangetxid, exchangetx, hashBlock) == 0 || exchangetx.vout.size() <= 0)
 					return eval->Invalid("cant find exchange tx!");
 				if (DecodeExchangeOpenOpRet(exchangetx.vout[exchangetx.vout.size() - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
 					return eval->Invalid("invalid exchange open opret!");
-				
 				GetCCaddress1of2(cpExchanges, exchangeaddr, tokensupplier, coinsupplier);
-				
 				if (refagreementtxid != agreementtxid)
 					return eval->Invalid("agreement txid in exchange is different from agreement txid specified!");
-					
 				if (!(exchangetype & EXTF_DEPOSITUNLOCKABLE))
 					return eval->Invalid("deposit unlock is disabled for this exchange!");
-
 				if (!ValidateExchangeOpenTx(exchangetx,CCerror))
 					return eval->Invalid(CCerror);
-
 				if (!GetLatestExchangeTxid(exchangetxid, latesttxid, updatefuncid) || updatefuncid == 'c' || updatefuncid == 's' || updatefuncid == 'p' || updatefuncid == 'r')
 					return eval->Invalid("exchange tx closed!");
-					
 				if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
 					return eval->Invalid("exchange borrow transaction search failed!");
 				else if (borrowtxid != zeroid)
 					return eval->Invalid("cannot unlock after borrow tx!");
-
 				if (CheckDepositUnlockCond(exchangetxid) != 0)
 					return eval->Invalid("deposit unlock disabled or already sent to exchange!");
-		
 				coinbalance = GetExchangesInputs(cpExchanges,exchangetx,EIF_COINS,unspentOutputs);
 				tokenbalance = GetExchangesInputs(cpExchanges,exchangetx,EIF_TOKENS,unspentOutputs);
-		
 				if (tokenbalance < numtokens)
 					return eval->Invalid("not enough tokens in exchange!");
-					
 				if (coinbalance + depositval < numcoins)
 					return eval->Invalid("not enough coins in exchange!");
 				else
 					refund = coinbalance + depositval - numcoins;
-				
 				// Checking if vins/vouts are correct.
 				if (numvouts < 2)
 					return eval->Invalid("not enough vouts for 'n' tx!");
@@ -816,7 +797,6 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					else if (ConstrainVout(tx.vout[1], 0, destaddr, refund) == 0)
 						return eval->Invalid("vout.1 must be normal deposit refund payout to destpub!");
 				}
-				
 				if (numvins < 3)
 					return eval->Invalid("not enough vins for 'n' tx!");
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
@@ -846,7 +826,6 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 						return eval->Invalid("tx exceeds allowed amount of CC vins!");
 				}
 				break;
-				
 			default:
 				fprintf(stderr,"unexpected agreements funcid (%c)\n",funcid);
 				return eval->Invalid("unexpected agreements funcid!");
@@ -1853,57 +1832,43 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	struct CCcontract_info *cp, C, *cpExchanges, CExchanges;
 	cp = CCinit(&C, EVAL_AGREEMENTS);
 	cpExchanges = CCinit(&CExchanges, EVAL_EXCHANGES);
-	
 	if (txfee == 0) txfee = CC_TXFEE;
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
-	
 	if (!GetAgreementInitialData(agreementtxid, dummytxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, deposit, dummytxid, dummytxid, dummystr))
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "couldn't get specified agreement info successfully, probably invalid agreement txid");
-	
 	CPK_seller = pubkey2pk(sellerpk);
 	CPK_client = pubkey2pk(clientpk);
-	
 	// check sender pubkey
 	if (mypk != CPK_seller && mypk != CPK_client)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "you are not a valid member of this agreement");
-	
 	// check if agreement is active
 	GetLatestAgreementUpdate(agreementtxid, updatetxid, updatefuncid);
 	if (updatefuncid == 'n')
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "deposit is already unlocked for this agreement");
 	else if (updatefuncid != 'c' && updatefuncid != 'u')
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreement is no longer active");
-
 	if (exchangetxid != zeroid)
 	{
 		if (myGetTransaction(exchangetxid, exchangetx, hashBlock) == 0 || (numvouts = exchangetx.vout.size()) <= 0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cant find specified exchange txid " << exchangetxid.GetHex());
 		if (DecodeExchangeOpenOpRet(exchangetx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid exchange create opret " << exchangetxid.GetHex());
-		
 		if (refagreementtxid != agreementtxid)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreement txid in exchange is different from agreement txid specified");
-		
 		if (!(exchangetype & EXTF_DEPOSITUNLOCKABLE))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "deposit unlock is disabled for this exchange");
-		
 		if (!ValidateExchangeOpenTx(exchangetx,CCerror))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << CCerror);
-		
 		if (!GetLatestExchangeTxid(exchangetxid, latesttxid, updatefuncid) || updatefuncid == 'c' || updatefuncid == 's' || updatefuncid == 'p' || updatefuncid == 'r')
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "exchange " << exchangetxid.GetHex() << " closed");
-		
 		if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "exchange borrow transaction search failed, quitting");
 		else if (borrowtxid != zeroid)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cannot unlock after borrow transaction");
-		
 		coinbalance = GetExchangesInputs(cpExchanges,exchangetx,EIF_COINS,unspentOutputs);
 		tokenbalance = GetExchangesInputs(cpExchanges,exchangetx,EIF_TOKENS,unspentOutputs);
-		
 		if (tokenbalance < numtokens)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "exchange must have all required tokens for deposit unlock");
-		
 		if (coinbalance + deposit < numcoins)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "exchange must have enough coins + deposit to match required amount for unlock");
 		else
@@ -1911,7 +1876,6 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Invalid exchangetxid");
-	
 	if (AddNormalinputs2(mtx, txfee, 5) > 0)
 	{
 		GetCCaddress1of2(cp, mutualaddr, CPK_seller, CPK_client);
@@ -1922,7 +1886,6 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 		Myprivkey(mypriv);
 		CCaddr1of2set(cp, CPK_seller, CPK_client, mypriv, mutualaddr);
 		mtx.vin.push_back(CTxIn(agreementtxid,2,CScript())); // vin.2 deposit
-		
 		mtx.vout.push_back(MakeCC1of2vout(EVAL_EXCHANGES, deposit - refund, tokensupplier, coinsupplier));
 		if (refund > 0)
 		{
@@ -2078,7 +2041,6 @@ UniValue AgreementInfo(uint256 txid)
 							result.push_back(Pair("status","arbitrated"));
 							break;
 						case 'n':
-							// TODO: show different status based on exchange status
 							result.push_back(Pair("status","in settlement"));
 							break;
 					}
@@ -2381,25 +2343,19 @@ UniValue AgreementSettlements(const CPubKey& pk, uint256 agreementtxid, bool bAc
 	uint8_t version, exchangetype, lastfuncid;
 	char myCCaddr[65];
 	std::vector<uint256> txids;
-	
 	struct CCcontract_info *cpExchanges, CExchanges;
 	cpExchanges = CCinit(&CExchanges, EVAL_EXCHANGES);
-	
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
-
 	if (myGetTransaction(agreementtxid,agreementtx,hashBlock) != 0 && agreementtx.vout.size() > 0 &&
 	DecodeAgreementOpRet(agreementtx.vout[agreementtx.vout.size()-1].scriptPubKey) == 'c' &&
 	GetAgreementInitialData(agreementtxid, dummytxid, sellerpk, clientpk, arbitratorpk, dummyamount, dummyamount, dummytxid, dummytxid, dummystr))
 	{
 		CPK_seller = pubkey2pk(sellerpk);
 		CPK_client = pubkey2pk(clientpk);
-		
 		if (mypk != CPK_seller && mypk != CPK_client)
 			return (result);
-		
 		GetCCaddress(cpExchanges,myCCaddr,mypk);
 		SetCCtxids(txids,myCCaddr,true,EVAL_EXCHANGES,CC_MARKER_VALUE,zeroid,'o');
-		
 		for (std::vector<uint256>::const_iterator it=txids.begin(); it!=txids.end(); it++)
 		{
 			txid = *it;
