@@ -2372,7 +2372,7 @@ UniValue AgreementSettlements(const CPubKey& pk, uint256 agreementtxid, bool bAc
 {
 	UniValue result(UniValue::VARR);
 	CPubKey mypk, CPK_seller, CPK_client, dummypk;
-	CTransaction tx;
+	CTransaction agreementtx, tx;
 	uint256 txid, hashBlock, refagreementtxid, dummytxid;
 	std::vector<uint8_t> sellerpk, clientpk, arbitratorpk;
 	int32_t numvouts;
@@ -2386,34 +2386,36 @@ UniValue AgreementSettlements(const CPubKey& pk, uint256 agreementtxid, bool bAc
 	cpExchanges = CCinit(&CExchanges, EVAL_EXCHANGES);
 	
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
-	
-	if (!GetAgreementInitialData(agreementtxid, dummytxid, sellerpk, clientpk, arbitratorpk, dummyamount, dummyamount, dummytxid, dummytxid, dummystr))
-		return (result);
-	
-	CPK_seller = pubkey2pk(sellerpk);
-	CPK_client = pubkey2pk(clientpk);
-	
-	if (mypk != CPK_seller && mypk != CPK_client)
-		return (result);
-	
-	GetCCaddress(cpExchanges,myCCaddr,mypk);
-	SetCCtxids(txids,myCCaddr,true,EVAL_EXCHANGES,CC_MARKER_VALUE,zeroid,'o');
-	
-	for (std::vector<uint256>::const_iterator it=txids.begin(); it!=txids.end(); it++)
+
+	if (myGetTransaction(agreementtxid,agreementtx,hashBlock) != 0 && agreementtx.vout.size() > 0 &&
+	DecodeAgreementOpRet(agreementtx.vout[agreementtx.vout.size()-1].scriptPubKey) == 'c' &&
+	GetAgreementInitialData(agreementtxid, dummytxid, sellerpk, clientpk, arbitratorpk, dummyamount, dummyamount, dummytxid, dummytxid, dummystr))
 	{
-		txid = *it;
-		if (myGetTransaction(txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
-		DecodeExchangeOpenOpRet(tx.vout[numvouts-1].scriptPubKey,version,dummypk,dummypk,exchangetype,dummytxid,dummyamount,dummyamount,refagreementtxid) == 'o' &&
-		refagreementtxid == agreementtxid && GetLatestExchangeTxid(txid, dummytxid, lastfuncid))
+		CPK_seller = pubkey2pk(sellerpk);
+		CPK_client = pubkey2pk(clientpk);
+		
+		if (mypk != CPK_seller && mypk != CPK_client)
+			return (result);
+		
+		GetCCaddress(cpExchanges,myCCaddr,mypk);
+		SetCCtxids(txids,myCCaddr,true,EVAL_EXCHANGES,CC_MARKER_VALUE,zeroid,'o');
+		
+		for (std::vector<uint256>::const_iterator it=txids.begin(); it!=txids.end(); it++)
 		{
-			if (bActiveOnly)
+			txid = *it;
+			if (myGetTransaction(txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
+			DecodeExchangeOpenOpRet(tx.vout[numvouts-1].scriptPubKey,version,dummypk,dummypk,exchangetype,dummytxid,dummyamount,dummyamount,refagreementtxid) == 'o' &&
+			refagreementtxid == agreementtxid && GetLatestExchangeTxid(txid, dummytxid, lastfuncid))
 			{
-				if (lastfuncid == 'o' || lastfuncid == 'l' || lastfuncid == 'b')
+				if (bActiveOnly)
+				{
+					if (lastfuncid == 'o' || lastfuncid == 'l' || lastfuncid == 'b')
+						result.push_back(txid.GetHex());
+				}
+				else
+				{
 					result.push_back(txid.GetHex());
-			}
-			else
-			{
-				result.push_back(txid.GetHex());
+				}
 			}
 		}
 	}
