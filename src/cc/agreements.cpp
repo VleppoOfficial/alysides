@@ -2123,7 +2123,7 @@ UniValue AgreementInfo(uint256 txid)
 				result.push_back(Pair("dest_exchange_txid",exchangetxid.GetHex()));
 				GetAgreementInitialData(agreementtxid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, totaldeposit, datahash, dummytxid, info);
 				deposit = CheckDepositUnlockCond(exchangetxid);
-				if (deposit > 0)
+				if (deposit > -1)
 				{
 					result.push_back(Pair("deposit_sent", deposit));
 					result.push_back(Pair("deposit_refunded", totaldeposit-deposit));
