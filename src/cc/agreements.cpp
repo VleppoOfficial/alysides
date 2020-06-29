@@ -1890,12 +1890,6 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Invalid exchangetxid");
-	
-	std::cerr << "coinbalance: " << coinbalance << std::endl;
-	std::cerr << "numcoins: " << numcoins << std::endl;
-	std::cerr << "deposit: " << deposit << std::endl;
-	std::cerr << "refund: " << refund << std::endl;
-	
 	if (AddNormalinputs2(mtx, txfee, 5) > 0)
 	{
 		GetCCaddress1of2(cp, mutualaddr, CPK_seller, CPK_client);
@@ -1908,12 +1902,10 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 		mtx.vin.push_back(CTxIn(agreementtxid,2,CScript())); // vin.2 deposit
 		if (coinbalance < numcoins)
 		{
-			std::cerr << "adding deposit payout vout: " << refund << std::endl;
 			mtx.vout.push_back(MakeCC1of2vout(EVAL_EXCHANGES, deposit - refund, tokensupplier, coinsupplier)); // vout.0 payout to exchange CC 1of2 address
 		}
 		if (refund > 0)
 		{
-			std::cerr << "adding deposit refund vout: " << refund << std::endl;
 			mtx.vout.push_back(CTxOut(refund, CScript() << ParseHex(HexStr(CPK_client)) << OP_CHECKSIG)); // vout.1 deposit refund to client (optional)
 		}
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementUnlockOpRet(AGREEMENTCC_VERSION, agreementtxid, exchangetxid));
