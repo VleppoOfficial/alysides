@@ -762,6 +762,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("cant find exchange tx!");
 				if (DecodeExchangeOpenOpRet(exchangetx.vout[exchangetx.vout.size() - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
 					return eval->Invalid("invalid exchange open opret!");
+				if (TotalPubkeyCCInputs(tx, coinsupplier) == 0)
+					return eval->Invalid("found no cc inputs signed by excahnge coinsupplier pubkey!");
 				GetCCaddress1of2(cpExchanges, exchangeaddr, tokensupplier, coinsupplier);
 				if (refagreementtxid != agreementtxid)
 					return eval->Invalid("agreement txid in exchange is different from agreement txid specified!");
@@ -1863,6 +1865,8 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cant find specified exchange txid " << exchangetxid.GetHex());
 		if (DecodeExchangeOpenOpRet(exchangetx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid exchange create opret " << exchangetxid.GetHex());
+		if (mypk != coinsupplier)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "you are not the coin supplier of this exchange");
 		if (refagreementtxid != agreementtxid)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreement txid in exchange is different from agreement txid specified");
 		if (!(exchangetype & EXTF_DEPOSITUNLOCKABLE))
@@ -1904,10 +1908,12 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 		mtx.vin.push_back(CTxIn(agreementtxid,2,CScript())); // vin.2 deposit
 		if (coinbalance < numcoins)
 		{
+			std::cerr << "adding deposit payout vout: " << refund << std::endl;
 			mtx.vout.push_back(MakeCC1of2vout(EVAL_EXCHANGES, deposit - refund, tokensupplier, coinsupplier)); // vout.0 payout to exchange CC 1of2 address
 		}
 		if (refund > 0)
 		{
+			std::cerr << "adding deposit refund vout: " << refund << std::endl;
 			mtx.vout.push_back(CTxOut(refund, CScript() << ParseHex(HexStr(CPK_client)) << OP_CHECKSIG)); // vout.1 deposit refund to client (optional)
 		}
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementUnlockOpRet(AGREEMENTCC_VERSION, agreementtxid, exchangetxid));
