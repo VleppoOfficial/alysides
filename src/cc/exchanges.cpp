@@ -729,7 +729,7 @@ int64_t AddExchangesInputs(struct CCcontract_info *cp,CMutableTransaction &mtx,C
 UniValue ExchangeOpen(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,CPubKey coinsupplier,uint256 tokenid,int64_t numcoins,int64_t numtokens,uint8_t exchangetype,uint256 agreementtxid,bool bSpendDeposit)
 {
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	CPubKey mypk;
+	CPubKey mypk, CPK_seller, CPK_client;
 	struct CCcontract_info *cp, *cpTokens, C, CTokens;
 	CTransaction tokentx, agreementtx;
 	uint256 hashBlock, spendingtxid, dummytxid;
