@@ -1206,7 +1206,7 @@ bool GetLatestAgreementUpdate(uint256 agreementtxid, uint256 &latesttxid, uint8_
 		return true;
 	}
 	else if (!(myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 &&
-	((funcid = DecodeAgreementOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey)) == 'u' || funcid == 's' || funcid == 'd'))/* ||
+	((funcid = DecodeAgreementOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey)) == 'u' || funcid == 's' || funcid == 'd' || funcid == 'n'))/* ||
 	batontx.vout[1].nValue != CC_MARKER_VALUE*/)
 	{
 		std::cerr << "GetLatestAgreementUpdate: found first update, but it has incorrect funcid" << std::endl;
