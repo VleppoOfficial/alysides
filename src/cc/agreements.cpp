@@ -788,14 +788,24 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// Checking if vins/vouts are correct.
 				if (numvouts < 2)
 					return eval->Invalid("not enough vouts for 'n' tx!");
-				else if (ConstrainVout(tx.vout[0], 1, exchangeaddr, depositval - refund) == 0)
-					return eval->Invalid("vout.0 must be CC to exchanges mutual 1of2 address!");
-				else if (refund > 0) // contains deposit refund
+				else if (coinbalance < numcoins && refund > 0) // contains deposit payout & refund
 				{
 					if (numvouts < 3)
 						return eval->Invalid("not enough vouts for 'n' tx!");
+					else if (ConstrainVout(tx.vout[0], 1, exchangeaddr, depositval - refund) == 0)
+						return eval->Invalid("vout.0 must be CC to exchanges mutual 1of2 address!");
 					else if (ConstrainVout(tx.vout[1], 0, destaddr, refund) == 0)
 						return eval->Invalid("vout.1 must be normal deposit refund payout to destpub!");
+				}
+				else if (coinbalance < numcoins && refund == 0) // contains deposit payout only
+				{
+					if (ConstrainVout(tx.vout[0], 1, exchangeaddr, depositval) == 0)
+						return eval->Invalid("vout.0 must be CC to exchanges mutual 1of2 address!");
+				}
+				else if (coinbalance >= numcoins && refund > 0) // contains deposit refund only
+				{
+					if (ConstrainVout(tx.vout[0], 0, destaddr, refund) == 0)
+						return eval->Invalid("vout.0 must be normal deposit refund payout to destpub!");
 				}
 				if (numvins < 3)
 					return eval->Invalid("not enough vins for 'n' tx!");
@@ -1886,7 +1896,10 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 		Myprivkey(mypriv);
 		CCaddr1of2set(cp, CPK_seller, CPK_client, mypriv, mutualaddr);
 		mtx.vin.push_back(CTxIn(agreementtxid,2,CScript())); // vin.2 deposit
-		mtx.vout.push_back(MakeCC1of2vout(EVAL_EXCHANGES, deposit - refund, tokensupplier, coinsupplier));
+		if (coinbalance < numcoins)
+		{
+			mtx.vout.push_back(MakeCC1of2vout(EVAL_EXCHANGES, deposit - refund, tokensupplier, coinsupplier)); // vout.0 payout to exchange CC 1of2 address
+		}
 		if (refund > 0)
 		{
 			mtx.vout.push_back(CTxOut(refund, CScript() << ParseHex(HexStr(CPK_client)) << OP_CHECKSIG)); // vout.1 deposit refund to client (optional)
