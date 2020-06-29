@@ -732,10 +732,12 @@ UniValue ExchangeOpen(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,CPu
 	CPubKey mypk;
 	struct CCcontract_info *cp, *cpTokens, C, CTokens;
 	CTransaction tokentx, agreementtx;
-	uint256 hashBlock;
+	uint256 hashBlock, spendingtxid, dummytxid;
 	uint8_t version;
-	std::vector<uint8_t> dummyPubkey;
-	std::string dummyName, dummyDescription;
+	std::vector<uint8_t> dummyPubkey, sellerpk, clientpk;
+	std::string dummystr;
+	int64_t dummyamount;
+	int32_t vini, height;
 	
 	cp = CCinit(&C, EVAL_EXCHANGES);
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
@@ -755,7 +757,7 @@ UniValue ExchangeOpen(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,CPu
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "token supplier cannot be the same as coin supplier pubkey");
 	
 	if (!(myGetTransaction(tokenid,tokentx,hashBlock) != 0 && tokentx.vout.size() > 0 &&
-	(DecodeTokenCreateOpRetV1(tokentx.vout[tokentx.vout.size()-1].scriptPubKey,dummyPubkey,dummyName,dummyDescription) == 'c')))
+	(DecodeTokenCreateOpRetV1(tokentx.vout[tokentx.vout.size()-1].scriptPubKey,dummyPubkey,dummystr,dummystr) == 'c')))
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Tokenid is not a valid token creation txid");
 		
 	if (numtokens < 0)
@@ -775,13 +777,21 @@ UniValue ExchangeOpen(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,CPu
 		if (!(myGetTransaction(agreementtxid,agreementtx,hashBlock) != 0 && agreementtx.vout.size() > 0 &&
 			(DecodeAgreementOpRet(agreementtx.vout[agreementtx.vout.size()-1].scriptPubKey) == 'c')))
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Agreement txid is not a valid proposal signing txid");
-		// TODO: check if agreementmarker was already spent here, maybe use a agreements helper function
-		// use this: GetLatestAgreementUpdate(uint256 agreementtxid, uint256 &latesttxid, uint8_t &funcid)
-		// TODO: check coin/tokensupplier in relation to agreement client/seller
+		
+		GetAgreementInitialData(agreementtxid, dummytxid, sellerpk, clientpk, dummyPubkey, dummyamount, dummyamount, dummytxid, dummytxid, dummystr);
+		
+		CPK_seller = pubkey2pk(sellerpk);
+		CPK_client = pubkey2pk(clientpk);
+
+		if ((tokensupplier != CPK_seller && tokensupplier != CPK_client) || (coinsupplier != CPK_seller && coinsupplier != CPK_client))
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Agreement client and seller pubkeys doesn't match exchange coinsupplier and tokensupplier pubkeys");
 		
 		if (bSpendDeposit)
 		{
 			exchangetype |= EXTF_DEPOSITUNLOCKABLE;
+
+			if (CCgetspenttxid(spendingtxid, vini, height, agreementtxid, 2) == 0)
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Agreement deposit was already spent by txid " << spendingtxid.GetHex());
 		}
 	}
 
