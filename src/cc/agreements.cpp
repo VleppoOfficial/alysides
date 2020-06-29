@@ -1886,6 +1886,12 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Invalid exchangetxid");
+	
+	std::cerr << "coinbalance: " << coinbalance << std::endl;
+	std::cerr << "numcoins: " << numcoins << std::endl;
+	std::cerr << "deposit: " << deposit << std::endl;
+	std::cerr << "refund: " << refund << std::endl;
+	
 	if (AddNormalinputs2(mtx, txfee, 5) > 0)
 	{
 		GetCCaddress1of2(cp, mutualaddr, CPK_seller, CPK_client);
