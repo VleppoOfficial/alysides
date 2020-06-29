@@ -859,11 +859,22 @@ UniValue ExchangeFund(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid, i
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "coins can only be sent by coin supplier pubkey, or token supplier if loan is in progress");
 		
 		coinbalance = GetExchangesInputs(cp,exchangetx,EIF_COINS,unspentOutputs);
-		if (!useTokens && coinbalance >= numcoins)
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange already has enough coins");
 		tokenbalance = GetExchangesInputs(cp,exchangetx,EIF_TOKENS,unspentOutputs);
-		if (useTokens && tokenbalance >= numtokens)
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange already has enough tokens");
+		
+		if (useTokens)
+		{
+			if (tokenbalance >= numtokens)
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange already has enough tokens");
+			else if (tokenbalance + amount > numtokens)
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "specified token amount is higher than needed to fill exchange");
+		}
+		else
+		{
+			if (coinbalance >= numcoins)
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange already has enough coins");
+			else if (coinbalance + amount > numcoins)
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "specified coin amount is higher than needed to fill exchange");
+		}
 	}
 	else
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Invalid exchangetxid");
