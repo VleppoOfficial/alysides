@@ -1236,12 +1236,21 @@ UniValue ExchangeClose(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 	else
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Invalid exchangetxid");
 	
+	if (exchangetype & EXTF_TRADE)
+	{
+	}
+	else if (exchangetype & EXTF_LOAN)
+	{
+	}
+	else
+		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Unsupported exchange type");
+
 	switch (exchangetype)
 	{
-		case EXTF_TRADE:
+		case (EXTF_TRADE & exchangetype):
 			// creating swap ('s') transaction
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "'s'");
-		case EXTF_LOAN:
+		case (EXTF_LOAN & exchangetype):
 			// creating release ('r') transaction
 			// not implemented yet
 		default:
