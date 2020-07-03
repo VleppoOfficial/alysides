@@ -141,7 +141,7 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 		DecodeExchangeOpenOpRet(exchangetx.vout[exchangetx.vout.size()-1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,tokenid,numtokens,numcoins,agreementtxid) == 'o'))
 			return eval->Invalid("cannot find exchangeopen tx for ExchangesValidate!");
 			
-		if (funcid != 'c' && ValidateExchangeOpenTx(exchangetx, CCerror))
+		if (funcid != 'c' && !ValidateExchangeOpenTx(exchangetx, CCerror))
 			return eval->Invalid(CCerror);
 		
 		/*if (ExchangesExactAmounts(cp,eval,tx,tokensupplier,coinsupplier,coininputs,tokeninputs,coinoutputs,tokenoutputs) == false)
