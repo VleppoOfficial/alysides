@@ -1106,8 +1106,8 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Invalid exchangetxid");
 	
 	inputs = AddNormalinputs(mtx, mypk, txfee, 5, pk.IsValid()); // txfee
-	coins = AddExchangesInputs(cp, mtx, exchangetx, EIF_COINS, 60); // coin from CC 1of2 addr vins
-	tokens = AddExchangesInputs(cp, mtx, exchangetx, EIF_TOKENS, 60); // token from CC 1of2 addr vins
+	coins = AddExchangesInputs(cp, mtx, exchangetx, EIF_COINS, EXCHANGECC_MAXVINS); // coin from CC 1of2 addr vins
+	tokens = AddExchangesInputs(cp, mtx, exchangetx, EIF_TOKENS, EXCHANGECC_MAXVINS); // token from CC 1of2 addr vins
 	
 	std::cerr << "coins: " << coins << std::endl;
 	std::cerr << "tokens: " << tokens << std::endl;
@@ -1221,10 +1221,43 @@ UniValue ExchangeClose(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Cannot close trade when escrow doesn't have enough coins and tokens");
 			
 			// creating swap ('s') transaction
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "'s'");
+			
+			inputs = AddNormalinputs(mtx, mypk, txfee, 5, pk.IsValid()); // txfee
+			coins = AddExchangesInputs(cp, mtx, exchangetx, EIF_COINS, EXCHANGECC_MAXVINS); // coin from CC 1of2 addr vins
+			tokens = AddExchangesInputs(cp, mtx, exchangetx, EIF_TOKENS, EXCHANGECC_MAXVINS); // token from CC 1of2 addr vins
+			
+			if (coinbalance < numcoins || tokenbalance < numtokens)
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "no coins and/or tokens");
+			
+			std::cerr << "coins: " << coins << std::endl;
+			std::cerr << "tokens: " << tokens << std::endl;
+			
+			if (inputs < txfee || coins < coinbalance || tokens < tokenbalance)
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "error adding inputs");
+			else
+			{
+				GetCCaddress1of2(cp, exchangeaddr, tokensupplier, coinsupplier);
+				mtx.vin.push_back(CTxIn(exchangetxid,0,CScript())); // previous CC 1of2 baton vin
+				Myprivkey(mypriv);
+				CCaddr1of2set(cp, tokensupplier, coinsupplier, mypriv, exchangeaddr);
+				
+				mtx.vout.push_back(CTxOut(coins, CScript() << ParseHex(HexStr(tokensupplier)) << OP_CHECKSIG)); // coins swap vout
+				mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, tokens, coinsupplier)); // tokens swap vout
+				
+				if (coins - numcoins > 0)
+				{
+					mtx.vout.push_back(CTxOut(coins - numcoins, CScript() << ParseHex(HexStr(coinsupplier)) << OP_CHECKSIG)); // coins refund vout
+				}
+				if (tokens - numtokens > 0)
+				{
+					mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, tokens - numtokens, tokensupplier)); // tokens refund vout
+				}
+				return (FinalizeCCTxExt(pk.IsValid(), 0, cp, mtx, mypk, txfee, EncodeExchangeOpRet('s', EXCHANGECC_VERSION, exchangetxid, tokenid, tokensupplier, coinsupplier))); 
+			}
 		}
 		else if (exchangetype & EXTF_LOAN)
 		{
+			
 			if (borrowtxid == zeroid || loantermstxid == zeroid)
 				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Loan has not been initiated yet, cannot close");
 			
@@ -1236,6 +1269,15 @@ UniValue ExchangeClose(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 			if (coinbalance < numcoins/*<- TODO: change to prepayment/interest/w/e*/)
 				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Cannot close loan when escrow doesn't have enough coins");
 			
+			/*"Release" or "r" (part of exchangeclose rpc):
+			Data constraints:
+				(FindExchangeTxidType) exchange must contain a borrow transaction
+				(GetExchangesInputs) Token escrow must contain >= numtokens, coin escrow must contain >= numcoins + interest from latest loan terms
+			TX constraints:
+				(Pubkey check) must be executed by token or coin provider pk
+				(Tokens dest addr) all tokens must be sent to token provider
+				(Coins dest addr) all coins must be sent to coin provider. if there are more coins than numcoins, return remaining coins to token provider*/
+
 			// creating release ('r') transaction
 			// not implemented yet
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "not implemented yet");
@@ -1245,25 +1287,6 @@ UniValue ExchangeClose(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 	}
 	else
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Invalid exchangetxid");
-	
-	/*"Swap" or "s" (part of exchangeclose rpc):
-		Data constraints:
-			(CheckDepositUnlockCond) If exchange has an assoc. agreement and finalsettlement = true, the deposit must be sent to the exchange's coin escrow
-			(GetExchangesInputs) Token escrow must contain >= numtokens, and coin escrow must contain >= numcoins
-			
-		TX constraints:
-			(Pubkey check) must be executed by token or coin provider pk
-			(Tokens dest addr) all tokens must be sent to coin provider. if (somehow) there are more tokens than numtokens, return remaining tokens to token provider
-			(Coins dest addr) all coins must be sent to token provider. if there are more coins than numcoins, return remaining coins to coin provider*/
-			
-	/*"Release" or "r" (part of exchangeclose rpc):
-		Data constraints:
-			(FindExchangeTxidType) exchange must contain a borrow transaction
-			(GetExchangesInputs) Token escrow must contain >= numtokens, coin escrow must contain >= numcoins + interest from latest loan terms
-		TX constraints:
-			(Pubkey check) must be executed by token or coin provider pk
-			(Tokens dest addr) all tokens must be sent to token provider
-			(Coins dest addr) all coins must be sent to coin provider. if there are more coins than numcoins, return remaining coins to token provider*/
 }
 
 //===========================================================================
