@@ -236,7 +236,8 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 					(Pubkey check) must be executed by token or coin provider pk
 					(Tokens dest addr) all tokens must be sent to coin provider. if (somehow) there are more tokens than numtokens, return remaining tokens to token provider
 					(Coins dest addr) all coins must be sent to token provider. if there are more coins than numcoins, return remaining coins to coin provider*/
-			
+				return eval->Invalid("'s'!");
+				
 			case 'b':
 				// exchange borrow:
 				// vin.0 normal input
