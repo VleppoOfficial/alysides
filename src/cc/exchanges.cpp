@@ -360,7 +360,7 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 	uint8_t funcid, version;
 	CTransaction vinTx;
 	
-	inputs = outputs = 0;
+	coininputs = coinoutputs = 0;
 
 	numvins = tx.vin.size();
     numvouts = tx.vout.size();
@@ -480,9 +480,9 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 			default:
 				return (false);
 		}
-		if (inputs != outputs)
+		if (coininputs != coinoutputs)
 		{
-			LOGSTREAM("exchangescc", CCLOG_INFO, stream << "inputs " << inputs << " vs outputs " << outputs << std::endl);			
+			LOGSTREAM("exchangescc", CCLOG_INFO, stream << "inputs " << coininputs << " vs outputs " << coinoutputs << std::endl);			
 			return eval->Invalid("mismatched inputs != outputs");
 		} 
 		else return (true);	   
