@@ -1230,7 +1230,7 @@ bool GetLatestAgreementUpdate(uint256 agreementtxid, uint256 &latesttxid, uint8_
 				sourcetxid = batontxid;
 				break;
 			default:
-				std::cerr << "GetLatestAgreementUpdate: found an update, but it has incorrect funcid" << std::endl;
+				std::cerr << "GetLatestAgreementUpdate: found an update, but it has incorrect funcid " << funcid << std::endl;
 				return false;
 		}
 		break;
