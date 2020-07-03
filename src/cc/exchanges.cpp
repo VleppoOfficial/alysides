@@ -1216,8 +1216,12 @@ UniValue ExchangeClose(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 		{
 			if (borrowtxid != zeroid)
 				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Found loan borrow transaction in trade type exchange");
+			
 			if (coinbalance < numcoins || tokenbalance < numtokens)
 				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Cannot close trade when escrow doesn't have enough coins and tokens");
+			
+			// creating swap ('s') transaction
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "'s'");
 		}
 		else if (exchangetype & EXTF_LOAN)
 		{
@@ -1231,31 +1235,16 @@ UniValue ExchangeClose(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 			
 			if (coinbalance < numcoins/*<- TODO: change to prepayment/interest/w/e*/)
 				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Cannot close loan when escrow doesn't have enough coins");
+			
+			// creating release ('r') transaction
+			// not implemented yet
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "not implemented yet");
 		}
+		else
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Unsupported exchange type");
 	}
 	else
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Invalid exchangetxid");
-	
-	if (exchangetype & EXTF_TRADE)
-	{
-	}
-	else if (exchangetype & EXTF_LOAN)
-	{
-	}
-	else
-		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Unsupported exchange type");
-
-	switch (exchangetype)
-	{
-		case (EXTF_TRADE & exchangetype):
-			// creating swap ('s') transaction
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "'s'");
-		case (EXTF_LOAN & exchangetype):
-			// creating release ('r') transaction
-			// not implemented yet
-		default:
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Unsupported exchange type");
-	}
 	
 	/*"Swap" or "s" (part of exchangeclose rpc):
 		Data constraints:
