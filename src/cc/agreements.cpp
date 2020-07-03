@@ -53,7 +53,7 @@ RPC list:
 		This RPC can only be executed if Exchanges CC is enabled, and the exchange has the agreementtxid and deposit spending enabled.
 		The exchange escrow must have enough tokens and coins (including the deposit amount) to satisfy the exchange requirements.
 		A specific amount is sent to the exchange, so that the exchange coin balance matches the required amount of coins. The remainder is sent back to the client.
-		This RPC can only be executed by a member of the agreement (not including arbitrator).
+		This RPC can only be executed by a member of the agreement (not including the arbitrator).
 */
 //===========================================================================
 // Opret encoders/decoders
@@ -846,7 +846,6 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	else
 		return eval->Invalid("must be valid agreements funcid!");
 	LOGSTREAM("agreements", CCLOG_INFO, stream << "Agreements tx validated" << std::endl);
-	//std::cerr << "Agreements tx validated" << std::endl;
 	return true;
 }
 //===========================================================================
@@ -2034,9 +2033,9 @@ UniValue AgreementInfo(uint256 txid)
 				members.push_back(Pair("client",HexStr(destpub)));
 				if (bHasArbitrator)
 				{
+					result.push_back(Pair("deposit",deposit));
 					members.push_back(Pair("arbitrator",HexStr(arbitrator)));
 				}
-				result.push_back(Pair("deposit",deposit));
 				result.push_back(Pair("members",members));
 				if (agreementtxid != zeroid)
 					data.push_back(Pair("master_contract_txid",agreementtxid.GetHex()));

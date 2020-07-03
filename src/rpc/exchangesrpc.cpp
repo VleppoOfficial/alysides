@@ -85,17 +85,17 @@ UniValue exchangeopen(const UniValue& params, bool fHelp, const CPubKey& mypk)
 	
 	//numcoins = atof((char *)params[3].get_str().c_str()) * COIN + 0.00000000499999;
 	numcoins = atoll(params[3].get_str().c_str());
-	if (numcoins < 0)
+	if (numcoins < 1)
 	{
 		Unlock2NSPV(mypk);
-		throw runtime_error("Required coin amount must be positive\n");
+		throw runtime_error("Required coin amount must be above 0\n");
 	}
 	
 	numtokens = atoll(params[4].get_str().c_str());
-	if (numtokens < 0)
+	if (numtokens < 1)
 	{
 		Unlock2NSPV(mypk);
-		throw runtime_error("Required token amount must be positive\n");
+		throw runtime_error("Required token amount must be above 0\n");
 	}
 	
 	typestr = params[5].get_str();

@@ -119,8 +119,8 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
 	int32_t numvins, numvouts;
-	int64_t numtokens, numcoins;
-	uint8_t funcid, version, exchangetype;
+	int64_t numtokens, numcoins, coininputs, tokeninputs, coinoutputs, tokenoutputs;
+	uint8_t funcid, version, exchangetype; 
 	uint256 hashBlock, exchangetxid, agreementtxid, tokenid;
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	CPubKey tokensupplier, coinsupplier;
@@ -133,13 +133,8 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 	if (numvouts < 1)
 		return eval->Invalid("no vouts");
 	CCOpretCheck(eval,tx,true,true,true);
-	ExactAmounts(eval,tx,ASSETCHAINS_CCZEROTXFEE[EVAL_AGREEMENTS]?0:CC_TXFEE);
+	ExactAmounts(eval,tx,ASSETCHAINS_CCZEROTXFEE[EVAL_EXCHANGES]?0:CC_TXFEE);
 	
-	/*if (ExchangesExactAmounts(cp,eval,tx) == false)
-	{
-		return eval->Invalid("invalid exchange inputs vs. outputs!");
-	}*/
-
 	if ((funcid = DecodeExchangeOpRet(tx.vout[numvouts-1].scriptPubKey, version, exchangetxid, tokenid)) != 0)
 	{
 		if (!(myGetTransaction(exchangetxid,exchangetx,hashBlock) != 0 && exchangetx.vout.size() > 0 &&
@@ -149,6 +144,11 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 		if (funcid != 'c' && ValidateExchangeOpenTx(exchangetx, CCerror))
 			return eval->Invalid(CCerror);
 		
+		/*if (ExchangesExactAmounts(cp,eval,tx,tokensupplier,coinsupplier,coininputs,tokeninputs,coinoutputs,tokenoutputs) == false)
+		{
+			return eval->Invalid("invalid exchange inputs vs. outputs!");
+		}*/
+	
 		switch (funcid)
 		{
 			case 'o':
@@ -206,8 +206,8 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 
 			/*"Cancel" or "c":
 				Data constraints:
-					(FindExchangeTxidType) exchange must not contain a borrow transaction
-					(CheckDepositUnlockCond) If exchange has an assoc. agreement and finalsettlement = true, the deposit must NOT be sent to the exchange's coin escrow
+					(FindExchangeTxidType) if exchange contains borrow tx, can only be executed by coin provider pk
+					(CheckDepositUnlockCond) If exchange contains no borrow tx, has an assoc. agreement and finalsettlement = true, the deposit must NOT be sent to the exchange's coin escrow
 					(GetExchangesInputs) If exchange is trade type, token & coin escrow cannot be fully filled (tokens >= numtokens && coins >= numcoins).
 				TX constraints:
 					(Pubkey check) must be executed by token or coin provider pk
@@ -353,20 +353,112 @@ int64_t IsExchangesMarkervout(struct CCcontract_info *cp,const CTransaction& tx,
 	return(0);
 }
 
-bool ExchangesExactAmounts(struct CCcontract_info *cp,Eval* eval,const CTransaction &tx)
+bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, int64_t &coininputs, int64_t &tokeninputs, int64_t &coinoutputs, int64_t &tokenoutputs)
 {
 	uint256 hashBlock, exchangetxid, tokenid;
-	int32_t numvouts;
-	int64_t inputs = 0,outputs = 0;
+	int32_t i, numvins, numvouts;
 	uint8_t funcid, version;
 	CTransaction vinTx;
+	
+	inputs = outputs = 0;
 
+	numvins = tx.vin.size();
+    numvouts = tx.vout.size();
+
+    
+	
+	
 	if ((numvouts = tx.vout.size()) > 0 && (funcid = DecodeExchangeOpRet(tx.vout[numvouts-1].scriptPubKey, version, exchangetxid, tokenid)) != 0)
 	{		
 		switch (funcid)
 		{
 			case 'o':
 				return (true);
+			case 'l':
+				// exchange loan terms:
+				// vin.0 normal input
+				// vin.1 previous baton CC input
+				// vout.0 next baton CC output
+				// vout.n-2 normal change (if any)
+				// vout.n-1 OP_RETURN EVAL_EXCHANGES ‘l’ exchangetxid interest duedate
+				return (false);
+			case 'c':
+				// exchange cancel:
+				// vin.0 normal input
+				// vin.1 previous CC 1of2 baton
+				// vin.2 .. vin.n-1: valid CC coin or token outputs (if any)
+				// vout.0 normal output to coinsupplier
+				// vout.1 token CC output to tokensupplier
+				// vout.n-2 normal change (if any)
+				// vout.n-1 OP_RETURN EVAL_EXCHANGES ‘c’ version exchangetxid tokenid tokensupplier coinsupplier
+				
+				/*for (i=0; i<numvins; i++)
+				{
+					if ((*cp->ismyvin)(tx.vin[i].scriptSig) != 0)
+					{
+						if (eval->GetTxUnconfirmed(tx.vin[i].prevout.hash,vinTx,hashBlock) == 0)
+							return eval->Invalid("always should find vin, but didnt");
+						else
+						{
+							if ( hashBlock == zerohash )
+								return eval->Invalid("cant rewards from mempool");
+							if ( (assetoshis= IsRewardsvout(cp,vinTx,tx.vin[i].prevout.n,refsbits,reffundingtxid)) != 0 )
+								inputs += assetoshis;
+						}
+					}
+				}
+				for (i=0; i<numvouts; i++)
+				{
+					//fprintf(stderr,"i.%d of numvouts.%d\n",i,numvouts);
+					if ( (assetoshis= IsRewardsvout(cp,tx,i,refsbits,reffundingtxid)) != 0 )
+						outputs += assetoshis;
+				}
+				*/
+				
+			case 's':
+				// exchange swap:
+				// vin.0 normal input
+				// vin.1 previous CC 1of2 baton
+				// vin.2 .. vin.n-1: valid CC coin or token outputs
+				// vout.0 normal output to tokensupplier
+				// vout.1 token CC output to coinsupplier
+				// vout.2 normal change from CC 1of2 addr to coinsupplier (if any)
+				// vout.3 token CC change from CC 1of2 addr to tokensupplier (if any)
+				// vout.n-2 normal change (if any)
+				// vout.n-1 OP_RETURN EVAL_EXCHANGES ‘s’ version exchangetxid tokenid tokensupplier coinsupplier
+			case 'b':
+				// exchange borrow:
+				// vin.0 normal input
+				// vin.1 previous baton CC input
+				// vin.2 .. vin.n-1: valid CC coin outputs (no tokens)
+				// vout.0 next baton CC output
+				// vout.1 normal change from CC 1of2 addr to coinsupplier (if any)
+				// vout.n-2 coins to tokensupplier & normal change
+				// vout.n-1 OP_RETURN EVAL_EXCHANGES ‘b’ exchangetxid
+				return (false);
+			case 'p':
+				// exchange repo:
+				// vin.0 normal input
+				// vin.1 previous CC 1of2 baton
+				// vin.2 .. vin.n-1: valid CC coin or token outputs
+				// vout.0 normal output to tokensupplier
+				// vout.1 token CC output to coinsupplier
+				// vout.2 token CC change from CC 1of2 addr to tokensupplier (if any)
+				// vout.n-2 normal change (if any)
+				// vout.n-1 OP_RETURN EVAL_EXCHANGES ‘p’ version exchangetxid tokenid tokensupplier coinsupplier
+				return (false);
+			case 'r':
+				// exchange release:
+				// vin.0 normal input
+				// vin.1 previous CC 1of2 baton
+				// vin.2 .. vin.n-1: valid CC coin or token outputs
+				// vout.0 normal output to coinsupplier
+				// vout.1 token CC output to tokensupplier
+				// vout.2 normal change from CC 1of2 addr to coinsupplier (if any)
+				// vout.n-2 normal change (if any)
+				// vout.n-1 OP_RETURN EVAL_EXCHANGES ‘r’ version exchangetxid tokenid tokensupplier coinsupplier
+				return (false);
+				break;
 			/*case 'f':
 				if ( eval->GetTxUnconfirmed(tx.vin[1].prevout.hash,vinTx,hashBlock) == 0 )
 					return eval->Invalid("cant find vinTx");
@@ -401,6 +493,42 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp,Eval* eval,const CTransact
 	}
 	return (false);
 }
+
+/*bool RewardsExactAmounts(struct CCcontract_info *cp,Eval *eval,const CTransaction &tx,uint64_t txfee,uint64_t refsbits,uint256 reffundingtxid)
+{
+    static uint256 zerohash;
+    CTransaction vinTx; uint256 hashBlock; int32_t i,numvins,numvouts; int64_t inputs=0,outputs=0,assetoshis;
+    numvins = tx.vin.size();
+    numvouts = tx.vout.size();
+    for (i=0; i<numvins; i++)
+    {
+        if ( (*cp->ismyvin)(tx.vin[i].scriptSig) != 0 )
+        {
+            if ( eval->GetTxUnconfirmed(tx.vin[i].prevout.hash,vinTx,hashBlock) == 0 )
+                return eval->Invalid("always should find vin, but didnt");
+            else
+            {
+                if ( hashBlock == zerohash )
+                    return eval->Invalid("cant rewards from mempool");
+                if ( (assetoshis= IsRewardsvout(cp,vinTx,tx.vin[i].prevout.n,refsbits,reffundingtxid)) != 0 )
+                    inputs += assetoshis;
+            }
+        }
+    }
+    for (i=0; i<numvouts; i++)
+    {
+        //fprintf(stderr,"i.%d of numvouts.%d\n",i,numvouts);
+        if ( (assetoshis= IsRewardsvout(cp,tx,i,refsbits,reffundingtxid)) != 0 )
+            outputs += assetoshis;
+    }
+    if ( inputs != outputs+txfee )
+    {
+        fprintf(stderr,"inputs %llu vs outputs %llu txfee %llu\n",(long long)inputs,(long long)outputs,(long long)txfee);
+        return eval->Invalid("mismatched inputs != outputs + txfee");
+    }
+    else return(true);
+}*/
+
 
 // Get latest update txid and funcid
 bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &funcid)
@@ -551,12 +679,12 @@ bool ValidateExchangeOpenTx(CTransaction opentx, std::string &CCerror)
 		return false;
 	}
 	if (!(myGetTransaction(tokenid,tokentx,hashBlock) != 0 && tokentx.vout.size() > 0 &&
-	(DecodeTokenCreateOpRetV1(tokentx.vout[tokentx.vout.size()-1].scriptPubKey,dummyPubkey,dummystr,dummystr) == 'c')))
+	(DecodeTokenCreateOpRetV1(tokentx.vout[tokentx.vout.size()-1].scriptPubKey,dummyPubkey,dummystr,dummystr) != 0)))
 	{
 		CCerror = "tokenid in exchange open opret is not a valid token creation txid!";
 		return false;
 	}
-	if (numtokens < 0 || numtokens > CCfullsupply(tokenid) || numcoins < 10000)
+	if (numtokens < 1 || numtokens > CCfullsupply(tokenid) || numcoins < 1)
 	{
 		CCerror = "invalid numcoins or numtokens value in exchange open opret!";
 		return false;
@@ -730,14 +858,14 @@ UniValue ExchangeOpen(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,CPu
 {
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	CPubKey mypk, CPK_seller, CPK_client;
-	struct CCcontract_info *cp, *cpTokens, C, CTokens;
 	CTransaction tokentx, agreementtx;
+	int32_t vini, height;
+	int64_t dummyamount;
+	std::string dummystr;
+	std::vector<uint8_t> dummyPubkey, sellerpk, clientpk;
+	struct CCcontract_info *cp, *cpTokens, C, CTokens;
 	uint256 hashBlock, spendingtxid, dummytxid;
 	uint8_t version;
-	std::vector<uint8_t> dummyPubkey, sellerpk, clientpk;
-	std::string dummystr;
-	int64_t dummyamount;
-	int32_t vini, height;
 	
 	cp = CCinit(&C, EVAL_EXCHANGES);
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
@@ -748,29 +876,29 @@ UniValue ExchangeOpen(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,CPu
 	}
 	
 	if (!(tokensupplier.IsFullyValid()))
-		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "token supplier pubkey invalid");
+		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Token supplier pubkey invalid");
 	
 	if (!(coinsupplier.IsFullyValid()))
-		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "coin supplier pubkey invalid");
+		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Toin supplier pubkey invalid");
 	
 	if (tokensupplier == coinsupplier)
-		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "token supplier cannot be the same as coin supplier pubkey");
+		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Token supplier cannot be the same as coin supplier pubkey");
 	
 	if (!(myGetTransaction(tokenid,tokentx,hashBlock) != 0 && tokentx.vout.size() > 0 &&
-	(DecodeTokenCreateOpRetV1(tokentx.vout[tokentx.vout.size()-1].scriptPubKey,dummyPubkey,dummystr,dummystr) == 'c')))
+	(DecodeTokenCreateOpRetV1(tokentx.vout[tokentx.vout.size()-1].scriptPubKey,dummyPubkey,dummystr,dummystr) != 0)))
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Tokenid is not a valid token creation txid");
 		
-	if (numtokens < 0)
-		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Required token amount must be positive");
+	if (numtokens < 1)
+		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Required token amount must be above 0");
 	
 	if (numtokens > CCfullsupply(tokenid))
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Required token amount can't be higher than total token supply");
 	
-	if (numcoins < 0)
-		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Required coin amount must be positive");
+	if (numcoins < 1)
+		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Required coin amount must be above 0");
 	
 	if (!(exchangetype & EXTF_TRADE || exchangetype & EXTF_LOAN))
-		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Incorrect type");
+		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Incorrect exchange type");
 	
 	if (agreementtxid != zeroid)
 	{
@@ -803,22 +931,21 @@ UniValue ExchangeOpen(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,CPu
 
 		return (FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeExchangeOpenOpRet(EXCHANGECC_VERSION,tokensupplier,coinsupplier,exchangetype,tokenid,numtokens,numcoins,agreementtxid)));
 	}
-	CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "error adding normal inputs");
+	CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Error adding normal inputs");
 }
 
 UniValue ExchangeFund(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid, int64_t amount, bool useTokens)
 {
+	char addr[65];
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	CPubKey mypk, tokensupplier, coinsupplier;
 	CTransaction exchangetx;
 	int32_t numvouts;
+	int64_t numtokens, numcoins, coinbalance, tokenbalance, tokens = 0, inputs = 0;
+	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
+	struct CCcontract_info *cp, C, *cpTokens, CTokens;
 	uint256 hashBlock, tokenid, agreementtxid, borrowtxid = zeroid, latesttxid;
 	uint8_t version, exchangetype, lastfuncid;
-	int64_t numtokens, numcoins, coinbalance, tokenbalance, tokens = 0, inputs = 0;
-	struct CCcontract_info *cp, C, *cpTokens, CTokens;
-	char addr[65];
-	bool bHasBorrowed = false;
-	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	
 	cp = CCinit(&C, EVAL_EXCHANGES);
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
@@ -828,35 +955,30 @@ UniValue ExchangeFund(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid, i
 		txfee = CC_TXFEE;
 	}	
 	
-	if (amount < 0)
-		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Funding amount must be positive");
-	if (!useTokens && amount < 1)
-		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Coin amount must be at least 10000 satoshis");
+	if (amount < 1)
+		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Funding amount must be above 0");
 	
 	if (exchangetxid != zeroid)
 	{
 		if (myGetTransaction(exchangetxid, exchangetx, hashBlock) == 0 || (numvouts = exchangetx.vout.size()) <= 0)
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "cant find specified exchange txid " << exchangetxid.GetHex());
-		if (DecodeExchangeOpenOpRet(exchangetx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,tokenid,numtokens,numcoins,agreementtxid) == 0)
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "invalid exchange create opret " << exchangetxid.GetHex());
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Can't find specified exchange txid " << exchangetxid.GetHex());
 		
 		if (!ValidateExchangeOpenTx(exchangetx,CCerror))
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << CCerror);
 		
 		if (!GetLatestExchangeTxid(exchangetxid, latesttxid, lastfuncid) || lastfuncid == 'c' || lastfuncid == 's' || lastfuncid == 'p' || lastfuncid == 'r')
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange " << exchangetxid.GetHex() << " closed");
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Exchange " << exchangetxid.GetHex() << " closed");
 		
 		if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange borrow transaction search failed, quitting");
-		else if (borrowtxid != zeroid)
-		{
-			bHasBorrowed = true;
-		}
-
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Exchange borrow transaction search failed, quitting");
+		
+		DecodeExchangeOpenOpRet(exchangetx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,tokenid,numtokens,numcoins,agreementtxid);
+		
 		if (useTokens && mypk != tokensupplier)
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "tokens can only be sent by token supplier pubkey");
-		if (!useTokens && (mypk != coinsupplier || (bHasBorrowed && mypk != tokensupplier)))
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "coins can only be sent by coin supplier pubkey, or token supplier if loan is in progress");
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Tokens can only be sent by token supplier pubkey");
+		
+		if (!useTokens && (mypk != coinsupplier || (borrowtxid != zeroid && mypk != tokensupplier)))
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Coins can only be sent by coin supplier pubkey, or token supplier if loan is in progress");
 		
 		coinbalance = GetExchangesInputs(cp,exchangetx,EIF_COINS,unspentOutputs);
 		tokenbalance = GetExchangesInputs(cp,exchangetx,EIF_TOKENS,unspentOutputs);
@@ -864,16 +986,16 @@ UniValue ExchangeFund(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid, i
 		if (useTokens)
 		{
 			if (tokenbalance >= numtokens)
-				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange already has enough tokens");
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Exchange already has enough tokens");
 			else if (tokenbalance + amount > numtokens)
-				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "specified token amount is higher than needed to fill exchange");
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Specified token amount is higher than needed to fill exchange");
 		}
 		else
 		{
 			if (coinbalance >= numcoins)
-				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange already has enough coins");
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Exchange already has enough coins");
 			else if (coinbalance + amount > numcoins)
-				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "specified coin amount is higher than needed to fill exchange");
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Specified coin amount is higher than needed to fill exchange");
 		}
 	}
 	else
@@ -896,7 +1018,7 @@ UniValue ExchangeFund(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid, i
 	{
 		if (useTokens)
 		{
-			mtx.vout.push_back(MakeTokensCC1of2vout(EVAL_EXCHANGES, amount, tokensupplier, coinsupplier));
+			mtx.vout.push_back(MakeTokensCC1of2vout(EVAL_EXCHANGES, amount, tokensupplier, coinsupplier, NULL));
 			// MakeTokensCC1of2vout(uint8_t evalcode, CAmount nValue, CPubKey pk1, CPubKey pk2, std::vector<std::vector<unsigned char>>* vData)
 		}
 		else
@@ -920,16 +1042,16 @@ UniValue ExchangeLoanTerms(const CPubKey& pk, uint64_t txfee, uint256 exchangetx
 
 UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 {
+	char exchangeaddr[65];
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	CPubKey mypk, tokensupplier, coinsupplier;
 	CTransaction exchangetx;
 	int32_t numvouts;
+	int64_t numtokens, numcoins, coinbalance, tokenbalance, tokens = 0, coins = 0, inputs = 0;
+	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
+	struct CCcontract_info *cp, C, *cpTokens, CTokens;
 	uint256 hashBlock, tokenid, agreementtxid, latesttxid, borrowtxid;
 	uint8_t version, exchangetype, mypriv[32], lastfuncid;
-	int64_t numtokens, numcoins, coinbalance, tokenbalance, tokens = 0, coins = 0, inputs = 0;
-	struct CCcontract_info *cp, C, *cpTokens, CTokens;
-	char exchangeaddr[65];
-	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	
 	cp = CCinit(&C, EVAL_EXCHANGES);
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
@@ -941,8 +1063,8 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 	
 	/*"Cancel" or "c":
 		Data constraints:
-			(FindExchangeTxidType) exchange must not contain a borrow transaction
-			(CheckDepositUnlockCond) If exchange has an assoc. agreement and finalsettlement = true, the deposit must NOT be sent to the exchange's coin escrow
+			(FindExchangeTxidType) if exchange contains borrow tx, can only be executed by coin provider pk
+			(CheckDepositUnlockCond) If exchange contains no borrow tx, has an assoc. agreement and finalsettlement = true, the deposit must NOT be sent to the exchange's coin escrow
 			(GetExchangesInputs) If exchange is trade type, token & coin escrow cannot be fully filled (tokens >= numtokens && coins >= numcoins).
 		TX constraints:
 			(Pubkey check) must be executed by token or coin provider pk
@@ -952,30 +1074,33 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 	if (exchangetxid != zeroid)
 	{
 		if (myGetTransaction(exchangetxid, exchangetx, hashBlock) == 0 || (numvouts = exchangetx.vout.size()) <= 0)
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "cant find specified exchange txid " << exchangetxid.GetHex());
-		if (DecodeExchangeOpenOpRet(exchangetx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,tokenid,numtokens,numcoins,agreementtxid) == 0)
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "invalid exchange create opret " << exchangetxid.GetHex());
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Can't find specified exchange txid " << exchangetxid.GetHex());
 		
 		if (!ValidateExchangeOpenTx(exchangetx,CCerror))
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << CCerror);
 		
 		if (!GetLatestExchangeTxid(exchangetxid, latesttxid, lastfuncid) || lastfuncid == 'c' || lastfuncid == 's' || lastfuncid == 'p' || lastfuncid == 'r')
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange " << exchangetxid.GetHex() << " closed");
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Exchange " << exchangetxid.GetHex() << " closed");
 		
 		if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "exchange borrow transaction search failed, quitting");
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Exchange borrow transaction search failed, quitting");
 		else if (borrowtxid != zeroid)
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "cannot cancel when loan is in progress");
-
-		if (mypk != tokensupplier && mypk != coinsupplier)
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "you are not a valid party for exchange " << exchangetxid.GetHex());
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Cannot cancel when loan is in progress");
 		
-		// TODO: If exchange has an assoc. agreement and finalsettlement = true, the deposit must NOT be sent to the exchange's coin escrow
+		DecodeExchangeOpenOpRet(exchangetx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,tokenid,numtokens,numcoins,agreementtxid);
+		
+		if (mypk != tokensupplier && mypk != coinsupplier)
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "You are not a valid party for exchange " << exchangetxid.GetHex());
+		
+		// If exchange has an associated agreement and deposit spending enabled, the deposit must NOT be sent to the exchange's coin escrow
+		if (CheckDepositUnlockCond(exchangetxid) > 0)
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Cannot cancel exchange if its associated agreement has deposit unlocked");
 		
 		coinbalance = GetExchangesInputs(cp,exchangetx,EIF_COINS,unspentOutputs);
 		tokenbalance = GetExchangesInputs(cp,exchangetx,EIF_TOKENS,unspentOutputs);
+		
 		if (exchangetype & EXTF_TRADE && coinbalance >= numcoins && tokenbalance >= numtokens)
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "cannot cancel trade when escrow has enough coins and tokens");
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Cannot cancel trade when escrow has enough coins and tokens");
 	}
 	else
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Invalid exchangetxid");
@@ -995,11 +1120,11 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 		CCaddr1of2set(cp, tokensupplier, coinsupplier, mypriv, exchangeaddr);
 		if (coins > 0)
 		{
-			mtx.vout.push_back(CTxOut(coins, CScript() << ParseHex(HexStr(tokensupplier)) << OP_CHECKSIG)); // coins refund vout
+			mtx.vout.push_back(CTxOut(coins, CScript() << ParseHex(HexStr(coinsupplier)) << OP_CHECKSIG)); // coins refund vout
 		}
 		if (tokens > 0)
 		{
-			mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, tokens, coinsupplier)); // tokens refund vout
+			mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, tokens, tokensupplier)); // tokens refund vout
 		}
 		return (FinalizeCCTxExt(pk.IsValid(), 0, cp, mtx, mypk, txfee, EncodeExchangeOpRet('c', EXCHANGECC_VERSION, exchangetxid, tokenid, tokensupplier, coinsupplier))); 
 	}
@@ -1038,13 +1163,96 @@ UniValue ExchangeRepo(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 }
 UniValue ExchangeClose(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 {
-	CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "incomplete");
+	char exchangeaddr[65];
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+	CPubKey mypk, tokensupplier, coinsupplier;
+	CTransaction exchangetx;
+	int32_t numvouts;
+	int64_t numtokens, numcoins, coinbalance, tokenbalance, tokens = 0, coins = 0, inputs = 0;
+	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
+	struct CCcontract_info *cp, C, *cpTokens, CTokens;
+	uint256 hashBlock, tokenid, agreementtxid, latesttxid, loantermstxid, borrowtxid;
+	uint8_t version, exchangetype, mypriv[32], lastfuncid;
+	
+	cp = CCinit(&C, EVAL_EXCHANGES);
+	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
+	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
+	if (txfee == 0)
+	{
+		txfee = CC_TXFEE;
+	}
+	
+	if (exchangetxid != zeroid)
+	{
+		if (myGetTransaction(exchangetxid, exchangetx, hashBlock) == 0 || (numvouts = exchangetx.vout.size()) <= 0)
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Can't find specified exchange txid " << exchangetxid.GetHex());
+		
+		if (!ValidateExchangeOpenTx(exchangetx,CCerror))
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << CCerror);
+		
+		if (!GetLatestExchangeTxid(exchangetxid, latesttxid, lastfuncid) || lastfuncid == 'c' || lastfuncid == 's' || lastfuncid == 'p' || lastfuncid == 'r')
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Exchange " << exchangetxid.GetHex() << " closed");
+		
+		// checking for borrow transaction
+		if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Exchange borrow transaction search failed, quitting");
+		
+		// checking for latest loan terms transaction
+		if (!FindExchangeTxidType(exchangetxid, 'l', loantermstxid))
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Exchange loan terms transaction search failed, quitting");
+		
+		DecodeExchangeOpenOpRet(exchangetx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,tokenid,numtokens,numcoins,agreementtxid);
+		
+		if (mypk != tokensupplier && mypk != coinsupplier)
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "You are not a valid party for exchange " << exchangetxid.GetHex());
+		
+		if (CheckDepositUnlockCond(exchangetxid) == 0)
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Deposit from agreement " << agreementtxid.GetHex() << " must be unlocked first for exchange " << exchangetxid.GetHex());
+		
+		coinbalance = GetExchangesInputs(cp,exchangetx,EIF_COINS,unspentOutputs);
+		tokenbalance = GetExchangesInputs(cp,exchangetx,EIF_TOKENS,unspentOutputs);
+		
+		if (exchangetype & EXTF_TRADE)
+		{
+			if (borrowtxid != zeroid)
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Found loan borrow transaction in trade type exchange");
+			if (coinbalance < numcoins || tokenbalance < numtokens)
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Cannot close trade when escrow doesn't have enough coins and tokens");
+		}
+		else if (exchangetype & EXTF_LOAN)
+		{
+			if (borrowtxid == zeroid || loantermstxid == zeroid)
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Loan has not been initiated yet, cannot close");
+			
+			// get data from loan terms txid
+			
+			if (tokenbalance < numtokens)
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Not enough tokens found in loan escrow");
+			
+			if (coinbalance < numcoins/*<- TODO: change to prepayment/interest/w/e*/)
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Cannot close loan when escrow doesn't have enough coins");
+		}
+	}
+	else
+		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Invalid exchangetxid");
+	
+	switch (exchangetype)
+	{
+		case EXTF_TRADE:
+			// creating swap ('s') transaction
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "'s'");
+		case EXTF_LOAN:
+			// creating release ('r') transaction
+			// not implemented yet
+		default:
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Unsupported exchange type");
+	}
+	
 	/*"Swap" or "s" (part of exchangeclose rpc):
 		Data constraints:
-			(Type check) Exchange must be trade type
-			(GetExchangesInputs) Token escrow must contain >= numtokens, and coin escrow must contain >= numcoins
-			(Signing check) at least one coin fund vin must be signed by coin provider pk
 			(CheckDepositUnlockCond) If exchange has an assoc. agreement and finalsettlement = true, the deposit must be sent to the exchange's coin escrow
+			(GetExchangesInputs) Token escrow must contain >= numtokens, and coin escrow must contain >= numcoins
+			
 		TX constraints:
 			(Pubkey check) must be executed by token or coin provider pk
 			(Tokens dest addr) all tokens must be sent to coin provider. if (somehow) there are more tokens than numtokens, return remaining tokens to token provider
@@ -1052,9 +1260,7 @@ UniValue ExchangeClose(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 			
 	/*"Release" or "r" (part of exchangeclose rpc):
 		Data constraints:
-			(Type check) Exchange must be loan type
 			(FindExchangeTxidType) exchange must contain a borrow transaction
-			(Signing check) at least one coin fund vin must be signed by token provider pk
 			(GetExchangesInputs) Token escrow must contain >= numtokens, coin escrow must contain >= numcoins + interest from latest loan terms
 		TX constraints:
 			(Pubkey check) must be executed by token or coin provider pk
