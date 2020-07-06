@@ -81,10 +81,12 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 	
 	if (DecodeTokenOpRetV1(scriptPubKey,tokenid,pubkeys,oprets) != 0 && GetOpReturnCCBlob(oprets, vOpretExtra) && vOpretExtra.size() > 0)
     {
+		std::cerr << "token opret" << std::endl;
         vopret = vOpretExtra;
     }
 	else
 	{
+		std::cerr << "non-token opret" << std::endl;
 		GetOpReturnData(scriptPubKey, vopret);
 	}
 	
@@ -442,6 +444,9 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 							if (DecodeExchangeOpRet(vinTx.vout[vinTx.vout.size() - 1].scriptPubKey,version,refexchangetxid,dummytxid) == 0 && 
 							DecodeAgreementUnlockOpRet(vinTx.vout[vinTx.vout.size() - 1].scriptPubKey,version,dummytxid,refexchangetxid) == 0)
 								return eval->Invalid("can't decode vinTx opret!");
+							
+							std::cerr << "refexchangetxid: " << refexchangetxid.GetHex() << std::endl;
+							std::cerr << "exchangetxid:" << exchangetxid.GetHex() << std::endl;
 							
 							if (refexchangetxid != exchangetxid)
 								return eval->Invalid("can't draw funds sent to different exchangetxid!");
