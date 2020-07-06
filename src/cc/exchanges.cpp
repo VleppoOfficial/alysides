@@ -81,12 +81,12 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 	
 	if (DecodeTokenOpRetV1(scriptPubKey,tokenid,pubkeys,oprets) != 0 && GetOpReturnCCBlob(oprets, vOpretExtra) && vOpretExtra.size() > 0)
     {
-		std::cerr << "token opret" << std::endl;
+		//std::cerr << "token opret" << std::endl;
         vopret = vOpretExtra;
     }
 	else
 	{
-		std::cerr << "non-token opret" << std::endl;
+		//std::cerr << "non-token opret" << std::endl;
 		GetOpReturnData(scriptPubKey, vopret);
 	}
 	
@@ -130,7 +130,7 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 	uint8_t funcid, version, exchangetype, lastfuncid; 
 	struct CCcontract_info *cpTokens, CTokens;
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
-	char tokenaddr[65], coinaddr[65];
+	char tokenpk_coinaddr[65], tokenpk_tokenaddr[65], coinpk_coinaddr[65], coinpk_tokenaddr[65];
 	
 	numvins = tx.vin.size();
 	numvouts = tx.vout.size();
@@ -408,8 +408,11 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 	int64_t nValue, dummyamount, outputs = 0;
 	uint8_t dummychar, funcid, version;
 	CTransaction vinTx, exchangetx;
-	char destaddr[65], tokenaddr[65], coinaddr[65];
+	char destaddr[65], tokenpk_coinaddr[65], tokenpk_tokenaddr[65], coinpk_coinaddr[65], coinpk_tokenaddr[65];
 	CPubKey tokensupplier, coinsupplier;
+	struct CCcontract_info *cpTokens, CTokens;
+	
+	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
 	
 	numvins = tx.vin.size();
     numvouts = tx.vout.size();
@@ -420,8 +423,10 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 		DecodeExchangeOpenOpRet(exchangetx.vout[exchangetx.vout.size()-1].scriptPubKey,version,tokensupplier,coinsupplier,dummychar,dummytxid,dummyamount,dummyamount,dummytxid) == 0)
 			return eval->Invalid("exchangetxid invalid!");
 		
-		Getscriptaddress(tokenaddr, CScript() << ParseHex(HexStr(tokensupplier)) << OP_CHECKSIG);
-		Getscriptaddress(coinaddr, CScript() << ParseHex(HexStr(coinsupplier)) << OP_CHECKSIG);
+		GetCCaddress(cpTokens, tokenpk_tokenaddr, tokensupplier);
+		GetCCaddress(cpTokens, coinpk_tokenaddr, coinsupplier);
+		Getscriptaddress(tokenpk_coinaddr, CScript() << ParseHex(HexStr(tokensupplier)) << OP_CHECKSIG);
+		Getscriptaddress(coinpk_coinaddr, CScript() << ParseHex(HexStr(coinsupplier)) << OP_CHECKSIG);
 		
 		switch (funcid)
 		{
@@ -445,8 +450,8 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 							DecodeAgreementUnlockOpRet(vinTx.vout[vinTx.vout.size() - 1].scriptPubKey,version,dummytxid,refexchangetxid) == 0)
 								return eval->Invalid("can't decode vinTx opret!");
 							
-							std::cerr << "refexchangetxid: " << refexchangetxid.GetHex() << std::endl;
-							std::cerr << "exchangetxid:" << exchangetxid.GetHex() << std::endl;
+							//std::cerr << "refexchangetxid: " << refexchangetxid.GetHex() << std::endl;
+							//std::cerr << "exchangetxid:" << exchangetxid.GetHex() << std::endl;
 							
 							if (refexchangetxid != exchangetxid && vinTx.GetHash() != exchangetxid)
 								return eval->Invalid("can't draw funds sent to different exchangetxid!");
@@ -455,6 +460,8 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 								coininputs += nValue;
 							else if ((nValue = IsExchangesvout(cp,vinTx,EIF_TOKENS,tokensupplier,coinsupplier,tx.vin[i].prevout.n)) != 0)
 								tokeninputs += nValue;
+							
+							std::cerr << "vin." << i << " nValue:" << nValue << std::endl;
 						}
 					}
 				}
@@ -464,8 +471,10 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 					if ((nValue = IsExchangesvout(cp,tx,EIF_COINS,tokensupplier,coinsupplier,i)) != 0 ||
 					(nValue = IsExchangesvout(cp,tx,EIF_TOKENS,tokensupplier,coinsupplier,i)) != 0)
 						outputs += nValue;
-					else if (Getscriptaddress(destaddr,tx.vout[i].scriptPubKey) > 0 && (strcmp(destaddr,tokenaddr) == 0 || strcmp(destaddr,coinaddr) == 0))
+					else if (Getscriptaddress(destaddr,tx.vout[i].scriptPubKey) > 0 &&
+					(strcmp(destaddr,tokenpk_tokenaddr) == 0 || strcmp(destaddr,tokenpk_tokenaddr) == 0 || strcmp(destaddr,coinpk_coinaddr) == 0 || strcmp(destaddr,coinpk_tokenaddr) == 0))
 						outputs += tx.vout[i].nValue;
+					
 					std::cerr << "vout." << i << " nValue:" << tx.vout[i].nValue << std::endl;
 				}
 				break;
