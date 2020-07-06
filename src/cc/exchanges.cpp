@@ -625,7 +625,9 @@ bool ValidateExchangeOpenTx(CTransaction opentx, std::string &CCerror)
 	std::vector<uint8_t> dummyPubkey, sellerpk, clientpk, arbitratorpk;
 	std::string dummystr;
 	char exchangeaddr[65], tokenpkaddr[65], coinpkaddr[65];
+	struct CCcontract_info *cp, C;
 	
+	cp = CCinit(&C, EVAL_EXCHANGES);
 	CCerror = "";
 	
 	if (DecodeExchangeOpenOpRet(opentx.vout[opentx.vout.size() - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,tokenid,numtokens,numcoins,agreementtxid) == 0)
@@ -706,17 +708,17 @@ bool ValidateExchangeOpenTx(CTransaction opentx, std::string &CCerror)
 	GetCCaddress(cp,tokenpkaddr,tokensupplier);
 	GetCCaddress(cp,coinpkaddr,coinsupplier);
 	
-	if (ConstrainVout(tx.vout[0], 1, exchangeaddr, CC_BATON_VALUE) == 0)
+	if (ConstrainVout(opentx.vout[0], 1, exchangeaddr, CC_BATON_VALUE) == 0)
 	{
 		CCerror = "open tx vout0 must be CC baton vout to exchange 1of2 address!";
 		return false;
 	}
-	if (ConstrainVout(tx.vout[1], 1, tokenpkaddr, CC_MARKER_VALUE) == 0)
+	if (ConstrainVout(opentx.vout[1], 1, tokenpkaddr, CC_MARKER_VALUE) == 0)
 	{
 		CCerror = "open tx vout1 must be CC marker to tokensupplier addr!";
 		return false;
 	}
-	if (ConstrainVout(tx.vout[2], 1, coinpkaddr, CC_MARKER_VALUE) == 0)
+	if (ConstrainVout(opentx.vout[2], 1, coinpkaddr, CC_MARKER_VALUE) == 0)
 	{
 		CCerror = "open tx vout2 must be CC marker to coinsupplier addr!";
 		return false;
