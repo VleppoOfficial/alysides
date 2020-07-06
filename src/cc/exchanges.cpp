@@ -1189,7 +1189,7 @@ UniValue ExchangeClose(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 			// creating swap ('s') transaction
 			
 			inputs = AddNormalinputs(mtx, mypk, txfee, 5, pk.IsValid()); // txfee
-			if (inputs < txfee)
+			if (inputs >= txfee)
 			{
 				GetCCaddress1of2(cp, exchangeaddr, tokensupplier, coinsupplier);
 				mtx.vin.push_back(CTxIn(exchangetxid,0,CScript())); // previous CC 1of2 baton vin
