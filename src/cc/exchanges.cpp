@@ -254,18 +254,18 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 				// check vouts
 				if (numvouts < 3)
 					return eval->Invalid("not enough vouts!");
-				else if (ConstrainVout(tx.vout[0], 0, tokenaddr, numcoins) == 0)
+				else if (ConstrainVout(tx.vout[0], 0, tokenpk_coinaddr, numcoins) == 0)
 					return eval->Invalid("vout.0!");
-				else if (ConstrainVout(tx.vout[1], 1, coinaddr, numtokens) == 0 || IsTokensvout(false, true, cpTokens, eval, tx, 1, tokenid) != numtokens)
+				else if (ConstrainVout(tx.vout[1], 1, coinpk_tokenaddr, numtokens) == 0 || IsTokensvout(false, true, cpTokens, eval, tx, 1, tokenid) != numtokens)
 					return eval->Invalid("vout.1!");
 				// additional checks for when coin and/or token escrow are overfilled somehow
 				if (coinbalance - numcoins > 0 && tokenbalance - numtokens > 0)
 				{
 					if (numvouts < 5)
 						return eval->Invalid("not enough vouts!");
-					else if (ConstrainVout(tx.vout[2], 0, coinaddr, coinbalance - numcoins) == 0)
+					else if (ConstrainVout(tx.vout[2], 0, coinpk_coinaddr, coinbalance - numcoins) == 0)
 						return eval->Invalid("vout.2!");
-					else if (ConstrainVout(tx.vout[3], 1, tokenaddr, tokenbalance - numtokens) == 0 || 
+					else if (ConstrainVout(tx.vout[3], 1, tokenpk_tokenaddr, tokenbalance - numtokens) == 0 || 
 						IsTokensvout(false, true, cpTokens, eval, tx, 3, tokenid) != tokenbalance - numtokens)
 						return eval->Invalid("vout.3!");
 				}
@@ -273,14 +273,14 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 				{
 					if (numvouts < 4)
 						return eval->Invalid("not enough vouts!");
-					else if (ConstrainVout(tx.vout[2], 0, coinaddr, coinbalance - numcoins) == 0)
+					else if (ConstrainVout(tx.vout[2], 0, coinpk_coinaddr, coinbalance - numcoins) == 0)
 						return eval->Invalid("vout.2!");
 				}
 				else if (coinbalance - numcoins == 0 && tokenbalance - numtokens > 0)
 				{
 					if (numvouts < 4)
 						return eval->Invalid("not enough vouts!");
-					else if (ConstrainVout(tx.vout[2], 1, tokenaddr, tokenbalance - numtokens) == 0 || 
+					else if (ConstrainVout(tx.vout[2], 1, tokenpk_tokenaddr, tokenbalance - numtokens) == 0 || 
 						IsTokensvout(false, true, cpTokens, eval, tx, 2, tokenid) != tokenbalance - numtokens)
 						return eval->Invalid("vout.2!");
 				}
