@@ -234,6 +234,11 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 				// check if sent by token or coin provider pk
 				if (TotalPubkeyCCInputs(tx, tokensupplier) == 0 && TotalPubkeyCCInputs(tx, coinsupplier) == 0)
 					return eval->Invalid("found no cc inputs signed by any exchange member pubkey!");
+				// get required addresses
+				GetCCaddress(cpTokens, tokenpk_tokenaddr, tokensupplier);
+				GetCCaddress(cpTokens, coinpk_tokenaddr, coinsupplier);
+				Getscriptaddress(tokenpk_coinaddr, CScript() << ParseHex(HexStr(tokensupplier)) << OP_CHECKSIG);
+				Getscriptaddress(coinpk_coinaddr, CScript() << ParseHex(HexStr(coinsupplier)) << OP_CHECKSIG);
 				// check exchange type
 				if (!(exchangetype & EXTF_TRADE))
 					return eval->Invalid("swap transactions are only for trade type exchanges!");
