@@ -242,7 +242,7 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 				// check exchange type
 				if (!(exchangetype & EXTF_TRADE))
 					return eval->Invalid("swap transactions are only for trade type exchanges!");
-				// check if exchange closed
+				// check if exchange is closed
 				if (!GetLatestExchangeTxid(exchangetxid, latesttxid, lastfuncid) || lastfuncid == 'c' || lastfuncid == 's' || lastfuncid == 'p' || lastfuncid == 'r')
 					return eval->Invalid("exchangetxid specified in tx is closed!");
 				// check if borrow transaction exists
@@ -440,10 +440,10 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 			default:
 				for (i = 2; i < numvins; i++)
 				{
-					std::cerr << "checking vin." << i << std::endl;
+					//std::cerr << "checking vin." << i << std::endl;
 					if ((*cp->ismyvin)(tx.vin[i].scriptSig) != 0)
 					{
-						std::cerr << "vin." << i << " is exchanges vin" << std::endl;
+						//std::cerr << "vin." << i << " is exchanges vin" << std::endl;
 						if (eval->GetTxUnconfirmed(tx.vin[i].prevout.hash,vinTx,hashBlock) == 0)
 							return eval->Invalid("always should find vin, but didn't!");
 						else
@@ -454,10 +454,7 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 							if (DecodeExchangeOpRet(vinTx.vout[vinTx.vout.size() - 1].scriptPubKey,version,refexchangetxid,dummytxid) == 0 && 
 							DecodeAgreementUnlockOpRet(vinTx.vout[vinTx.vout.size() - 1].scriptPubKey,version,dummytxid,refexchangetxid) == 0)
 								return eval->Invalid("can't decode vinTx opret!");
-							
-							//std::cerr << "refexchangetxid: " << refexchangetxid.GetHex() << std::endl;
-							//std::cerr << "exchangetxid:" << exchangetxid.GetHex() << std::endl;
-							
+								
 							if (refexchangetxid != exchangetxid && vinTx.GetHash() != exchangetxid)
 								return eval->Invalid("can't draw funds sent to different exchangetxid!");
 							
@@ -466,13 +463,13 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 							else if ((nValue = IsExchangesvout(cp,vinTx,EIF_TOKENS,tokensupplier,coinsupplier,tx.vin[i].prevout.n)) != 0)
 								tokeninputs += nValue;
 							
-							std::cerr << "vin." << i << " nValue:" << nValue << std::endl;
+							//std::cerr << "vin." << i << " nValue:" << nValue << std::endl;
 						}
 					}
 				}
 				for (i = 0; i < numvouts - 2; i++)
 				{
-					std::cerr << "checking vout." << i << std::endl;
+					//std::cerr << "checking vout." << i << std::endl;
 					if ((nValue = IsExchangesvout(cp,tx,EIF_COINS,tokensupplier,coinsupplier,i)) != 0 ||
 					(nValue = IsExchangesvout(cp,tx,EIF_TOKENS,tokensupplier,coinsupplier,i)) != 0)
 						outputs += nValue;
@@ -480,14 +477,14 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 					(strcmp(destaddr,tokenpk_tokenaddr) == 0 || strcmp(destaddr,tokenpk_coinaddr) == 0 || strcmp(destaddr,coinpk_coinaddr) == 0 || strcmp(destaddr,coinpk_tokenaddr) == 0))
 						outputs += tx.vout[i].nValue;
 					
-					std::cerr << "vout." << i << " nValue:" << tx.vout[i].nValue << std::endl;
+					//std::cerr << "vout." << i << " nValue:" << tx.vout[i].nValue << std::endl;
 				}
 				break;
 		}
-		std::cerr << "inputs " << coininputs+tokeninputs << " vs outputs " << outputs << std::endl;
 		
 		if (coininputs + tokeninputs != outputs)
 		{
+			//std::cerr << "inputs " << coininputs+tokeninputs << " vs outputs " << outputs << std::endl;
 			LOGSTREAM("exchangescc", CCLOG_INFO, stream << "inputs " << coininputs+tokeninputs << " vs outputs " << outputs << std::endl);			
 			return eval->Invalid("mismatched inputs != outputs");
 		} 
@@ -623,9 +620,11 @@ bool ValidateExchangeOpenTx(CTransaction opentx, std::string &CCerror)
 	CTransaction tokentx, agreementtx;
 	uint256 hashBlock, tokenid, agreementtxid, dummytxid;
 	uint8_t version, exchangetype;
+	int32_t numvins, numvouts;
 	int64_t numtokens, numcoins, dummyamount;
 	std::vector<uint8_t> dummyPubkey, sellerpk, clientpk, arbitratorpk;
 	std::string dummystr;
+	char exchangeaddr[65], tokenpkaddr[65], coinpkaddr[65];
 	
 	CCerror = "";
 	
@@ -693,7 +692,35 @@ bool ValidateExchangeOpenTx(CTransaction opentx, std::string &CCerror)
 			return false;
 		}
 	}
-	// TODO: Check opentx structure
+	
+	/*for (auto const vin : opentx.vin)
+	{
+		if (IsCCInput(vin.scriptSig) != 0)
+		{
+			CCerror = "open tx contains CC input!";
+			return false;
+        }
+    }*/
+
+	GetCCaddress1of2(cp,exchangeaddr,tokensupplier,coinsupplier);
+	GetCCaddress(cp,tokenpkaddr,tokensupplier);
+	GetCCaddress(cp,coinpkaddr,coinsupplier);
+	
+	if (ConstrainVout(tx.vout[0], 1, exchangeaddr, CC_BATON_VALUE) == 0)
+	{
+		CCerror = "open tx vout0 must be CC baton vout to exchange 1of2 address!";
+		return false;
+	}
+	if (ConstrainVout(tx.vout[1], 1, tokenpkaddr, CC_MARKER_VALUE) == 0)
+	{
+		CCerror = "open tx vout1 must be CC marker to tokensupplier addr!";
+		return false;
+	}
+	if (ConstrainVout(tx.vout[2], 1, coinpkaddr, CC_MARKER_VALUE) == 0)
+	{
+		CCerror = "open tx vout2 must be CC marker to coinsupplier addr!";
+		return false;
+	}
 	return true;
 }
 
