@@ -1189,24 +1189,26 @@ UniValue ExchangeClose(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 			// creating swap ('s') transaction
 			
 			inputs = AddNormalinputs(mtx, mypk, txfee, 5, pk.IsValid()); // txfee
-			coins = AddExchangesInputs(cp, mtx, exchangetx, EIF_COINS, EXCHANGECC_MAXVINS); // coin from CC 1of2 addr vins
-			tokens = AddExchangesInputs(cp, mtx, exchangetx, EIF_TOKENS, EXCHANGECC_MAXVINS); // token from CC 1of2 addr vins
-			
-			if (coinbalance < numcoins || tokenbalance < numtokens)
-				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "no coins and/or tokens");
-			
-			std::cerr << "coins: " << coins << std::endl;
-			std::cerr << "tokens: " << tokens << std::endl;
-			
-			if (inputs < txfee || coins < coinbalance || tokens < tokenbalance)
-				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "error adding inputs");
-			else
+			if (inputs < txfee)
 			{
 				GetCCaddress1of2(cp, exchangeaddr, tokensupplier, coinsupplier);
 				mtx.vin.push_back(CTxIn(exchangetxid,0,CScript())); // previous CC 1of2 baton vin
 				Myprivkey(mypriv);
 				CCaddr1of2set(cp, tokensupplier, coinsupplier, mypriv, exchangeaddr);
-				
+			}
+			else
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "error adding funds for txfee");
+			
+			coins = AddExchangesInputs(cp, mtx, exchangetx, EIF_COINS, EXCHANGECC_MAXVINS); // coin from CC 1of2 addr vins
+			tokens = AddExchangesInputs(cp, mtx, exchangetx, EIF_TOKENS, EXCHANGECC_MAXVINS); // token from CC 1of2 addr vins
+			
+			std::cerr << "coins: " << coins << std::endl;
+			std::cerr << "tokens: " << tokens << std::endl;
+			
+			if (coins < coinbalance || tokens < tokenbalance)
+				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "error adding exchanges inputs");
+			else
+			{
 				mtx.vout.push_back(CTxOut(coins, CScript() << ParseHex(HexStr(tokensupplier)) << OP_CHECKSIG)); // coins swap vout
 				mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, tokens, coinsupplier)); // tokens swap vout
 				
