@@ -124,10 +124,11 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 	int64_t numtokens, numcoins, coininputs, tokeninputs, coinoutputs, tokenoutputs, coinbalance, tokenbalance;
 	std::string CCerror;
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
-	uint256 hashBlock, exchangetxid, agreementtxid, tokenid;
-	uint8_t funcid, version, exchangetype; 
+	uint256 hashBlock, exchangetxid, borrowtxid, agreementtxid, latesttxid, tokenid;
+	uint8_t funcid, version, exchangetype, lastfuncid; 
 	struct CCcontract_info *cpTokens, CTokens;
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
+	char tokenaddr[65], coinaddr[65];
 	
 	numvins = tx.vin.size();
 	numvouts = tx.vout.size();
@@ -146,7 +147,7 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 		if (funcid != 'c' && !ValidateExchangeOpenTx(exchangetx, CCerror))
 			return eval->Invalid(CCerror);
 		
-		if (ExchangesExactAmounts(cp,eval,tx,tokensupplier,coinsupplier,coininputs,tokeninputs) == false)
+		if (ExchangesExactAmounts(cp,eval,tx,coininputs,tokeninputs) == false)
 		{
 			return (false);
 		}
@@ -400,12 +401,13 @@ int64_t IsExchangesvout(struct CCcontract_info *cp,const CTransaction& tx,bool m
 
 bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, int64_t &coininputs, int64_t &tokeninputs)
 {
-	uint256 hashBlock, exchangetxid, tokenid, dummytxid;
+	uint256 hashBlock, exchangetxid, refexchangetxid, tokenid, dummytxid;
 	int32_t i, numvins, numvouts;
-	int64_t dummyamount, outputs = 0;
+	int64_t nValue, dummyamount, outputs = 0;
 	uint8_t dummychar, funcid, version;
 	CTransaction vinTx, exchangetx;
 	char destaddr[65], tokenaddr[65], coinaddr[65];
+	CPubKey tokensupplier, coinsupplier;
 	
 	numvins = tx.vin.size();
     numvouts = tx.vout.size();
