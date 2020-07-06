@@ -413,7 +413,7 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 	struct CCcontract_info *cpTokens, CTokens;
 	
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
-	
+	coininputs = tokeninputs = 0;
 	numvins = tx.vin.size();
     numvouts = tx.vout.size();
 	
