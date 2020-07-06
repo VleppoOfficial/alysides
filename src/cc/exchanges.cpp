@@ -291,7 +291,7 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 					return eval->Invalid("vin.0 must be normal input!");
 				else if ((*cp->ismyvin)(tx.vin[1].scriptSig) == 0)
 					return eval->Invalid("vin.1 must be CC input!");
-				else if (tx.vin[1].prevout.hash != latesttxid || tx.vin[1].prevout.n != 0 || tx.vin[1].prevout.nValue != CC_BATON_VALUE)
+				else if (tx.vin[1].prevout.hash != latesttxid || tx.vin[1].prevout.n != 0)
 					return eval->Invalid("vin.1 tx has invalid prevout data!");
 				else if (coininputs != coinbalance || tokeninputs != tokenbalance)
 					return eval->Invalid("tx coin/token inputs do not match coin/token balance!");
