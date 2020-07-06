@@ -448,7 +448,7 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 							std::cerr << "refexchangetxid: " << refexchangetxid.GetHex() << std::endl;
 							std::cerr << "exchangetxid:" << exchangetxid.GetHex() << std::endl;
 							
-							if (refexchangetxid != exchangetxid)
+							if (refexchangetxid != exchangetxid && vinTx.GetHash() != exchangetxid)
 								return eval->Invalid("can't draw funds sent to different exchangetxid!");
 							
 							if ((nValue = IsExchangesvout(cp,vinTx,EIF_COINS,tokensupplier,coinsupplier,tx.vin[i].prevout.n)) != 0)
