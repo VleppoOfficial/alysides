@@ -472,7 +472,7 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 					(nValue = IsExchangesvout(cp,tx,EIF_TOKENS,tokensupplier,coinsupplier,i)) != 0)
 						outputs += nValue;
 					else if (Getscriptaddress(destaddr,tx.vout[i].scriptPubKey) > 0 &&
-					(strcmp(destaddr,tokenpk_tokenaddr) == 0 || strcmp(destaddr,tokenpk_tokenaddr) == 0 || strcmp(destaddr,coinpk_coinaddr) == 0 || strcmp(destaddr,coinpk_tokenaddr) == 0))
+					(strcmp(destaddr,tokenpk_tokenaddr) == 0 || strcmp(destaddr,tokenpk_coinaddr) == 0 || strcmp(destaddr,coinpk_coinaddr) == 0 || strcmp(destaddr,coinpk_tokenaddr) == 0))
 						outputs += tx.vout[i].nValue;
 					
 					std::cerr << "vout." << i << " nValue:" << tx.vout[i].nValue << std::endl;
