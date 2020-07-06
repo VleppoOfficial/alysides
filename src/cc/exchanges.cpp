@@ -460,14 +460,18 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 				}
 				for (i = 0; i < numvouts; i++)
 				{
+					std::cerr << "checking vout." << i << std::endl;
 					if ((nValue = IsExchangesvout(cp,tx,EIF_COINS,tokensupplier,coinsupplier,i)) != 0 ||
 					(nValue = IsExchangesvout(cp,tx,EIF_TOKENS,tokensupplier,coinsupplier,i)) != 0)
 						outputs += nValue;
 					else if (Getscriptaddress(destaddr,tx.vout[i].scriptPubKey) > 0 && (strcmp(destaddr,tokenaddr) == 0 || strcmp(destaddr,coinaddr) == 0))
 						outputs += tx.vout[i].nValue;
+					std::cerr << "vout." << i << " nValue:" << tx.vout[i].nValue << std::endl;
 				}
 				break;
 		}
+		std::cerr << "inputs " << coininputs+tokeninputs << " vs outputs " << outputs << std::endl;
+		
 		if (coininputs + tokeninputs != outputs)
 		{
 			LOGSTREAM("exchangescc", CCLOG_INFO, stream << "inputs " << coininputs+tokeninputs << " vs outputs " << outputs << std::endl);			
