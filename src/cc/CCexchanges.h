@@ -51,7 +51,7 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
 
 int64_t IsExchangesvout(struct CCcontract_info *cp,const CTransaction& tx,bool mode,CPubKey tokensupplier,CPubKey coinsupplier,int32_t v);
-bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, int64_t &coininputs, int64_t &tokeninputs, int64_t &coinoutputs, int64_t &tokenoutputs);
+bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, int64_t &coininputs, int64_t &tokeninputs);
 bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &funcid);
 bool FindExchangeTxidType(uint256 exchangetxid, uint8_t type, uint256 &typetxid);
 int64_t CheckDepositUnlockCond(uint256 exchangetxid);

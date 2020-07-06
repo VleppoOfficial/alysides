@@ -100,7 +100,7 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 			case 'o':
 				return DecodeExchangeOpenOpRet(scriptPubKey,version,dummypk,dummypk,exchangetype,dummytxid,dummyamount,dummyamount,dummytxid);
 			case 'l':
-				return DecodeExchangeLoanTermsOpRet(scriptPubKey,version,dummytxid,dummyamount,dummyamount);
+				return DecodeExchangeLoanTermsOpRet(scriptPubKey,version,exchangetxid,dummyamount,dummyamount);
 			default:
 				if (E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> exchangetxid) != 0 && evalcode == EVAL_EXCHANGES)
 				{
@@ -118,14 +118,16 @@ uint8_t DecodeExchangeOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 
 bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
-	int32_t numvins, numvouts;
-	int64_t numtokens, numcoins, coininputs, tokeninputs, coinoutputs, tokenoutputs;
-	uint8_t funcid, version, exchangetype; 
-	uint256 hashBlock, exchangetxid, agreementtxid, tokenid;
-	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	CPubKey tokensupplier, coinsupplier;
 	CTransaction exchangetx;
+	int32_t numvins, numvouts;
+	int64_t numtokens, numcoins, coininputs, tokeninputs, coinoutputs, tokenoutputs, coinbalance, tokenbalance;
 	std::string CCerror;
+	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
+	uint256 hashBlock, exchangetxid, agreementtxid, tokenid;
+	uint8_t funcid, version, exchangetype; 
+	struct CCcontract_info *cpTokens, CTokens;
+	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
 	
 	numvins = tx.vin.size();
 	numvouts = tx.vout.size();
@@ -144,10 +146,10 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 		if (funcid != 'c' && !ValidateExchangeOpenTx(exchangetx, CCerror))
 			return eval->Invalid(CCerror);
 		
-		/*if (ExchangesExactAmounts(cp,eval,tx,tokensupplier,coinsupplier,coininputs,tokeninputs,coinoutputs,tokenoutputs) == false)
+		if (ExchangesExactAmounts(cp,eval,tx,tokensupplier,coinsupplier,coininputs,tokeninputs) == false)
 		{
-			return eval->Invalid("invalid exchange inputs vs. outputs!");
-		}*/
+			return (false);
+		}
 	
 		switch (funcid)
 		{
@@ -226,17 +228,71 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 				// vout.n-2 normal change (if any)
 				// vout.n-1 OP_RETURN EVAL_EXCHANGES ‘s’ version exchangetxid tokenid tokensupplier coinsupplier
 				
-			/*"Swap" or "s" (part of exchangeclose rpc):
-				Data constraints:
-					(Type check) Exchange must be trade type
-					(GetExchangesInputs) Token escrow must contain >= numtokens, and coin escrow must contain >= numcoins
-					(Signing check) at least one coin fund vin must be signed by coin provider pk
-					(CheckDepositUnlockCond) If exchange has an assoc. agreement and finalsettlement = true, the deposit must be sent to the exchange's coin escrow
-				TX constraints:
-					(Pubkey check) must be executed by token or coin provider pk
-					(Tokens dest addr) all tokens must be sent to coin provider. if (somehow) there are more tokens than numtokens, return remaining tokens to token provider
-					(Coins dest addr) all coins must be sent to token provider. if there are more coins than numcoins, return remaining coins to coin provider*/
-				return eval->Invalid("lolol");
+				// check if sent by token or coin provider pk
+				if (TotalPubkeyCCInputs(tx, tokensupplier) == 0 && TotalPubkeyCCInputs(tx, coinsupplier) == 0)
+					return eval->Invalid("found no cc inputs signed by any exchange member pubkey!");
+				// check exchange type
+				if (!(exchangetype & EXTF_TRADE))
+					return eval->Invalid("swap transactions are only for trade type exchanges!");
+				// check if exchange closed
+				if (!GetLatestExchangeTxid(exchangetxid, latesttxid, lastfuncid) || lastfuncid == 'c' || lastfuncid == 's' || lastfuncid == 'p' || lastfuncid == 'r')
+					return eval->Invalid("exchangetxid specified in tx is closed!");
+				// check if borrow transaction exists
+				if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
+					return eval->Invalid("borrow tx search failed!");
+				// check deposit unlock condition
+				if (CheckDepositUnlockCond(exchangetxid) == 0)
+					return eval->Invalid("defined deposit must be unlocked for 's' tx!");
+				// get coinbalance and tokenbalance, check if both are sufficient
+				coinbalance = GetExchangesInputs(cp,exchangetx,EIF_COINS,unspentOutputs);
+				tokenbalance = GetExchangesInputs(cp,exchangetx,EIF_TOKENS,unspentOutputs);
+				if (coinbalance < numcoins || tokenbalance < numtokens)
+					return eval->Invalid("not enough coins and tokens for 's' tx!");
+				// check vouts
+				if (numvouts < 3)
+					return eval->Invalid("not enough vouts!");
+				else if (ConstrainVout(tx.vout[0], 0, tokenaddr, numcoins) == 0)
+					return eval->Invalid("vout.0!");
+				else if (ConstrainVout(tx.vout[1], 1, coinaddr, numtokens) == 0 || IsTokensvout(false, true, cpTokens, eval, tx, 1, tokenid) != numtokens)
+					return eval->Invalid("vout.1!");
+				// additional checks for when coin and/or token escrow are overfilled somehow
+				if (coinbalance - numcoins > 0 && tokenbalance - numtokens > 0)
+				{
+					if (numvouts < 5)
+						return eval->Invalid("not enough vouts!");
+					else if (ConstrainVout(tx.vout[2], 0, coinaddr, coinbalance - numcoins) == 0)
+						return eval->Invalid("vout.2!");
+					else if (ConstrainVout(tx.vout[3], 1, tokenaddr, tokenbalance - numtokens) == 0 || 
+						IsTokensvout(false, true, cpTokens, eval, tx, 3, tokenid) != tokenbalance - numtokens)
+						return eval->Invalid("vout.3!");
+				}
+				else if (coinbalance - numcoins > 0 && tokenbalance - numtokens == 0)
+				{
+					if (numvouts < 4)
+						return eval->Invalid("not enough vouts!");
+					else if (ConstrainVout(tx.vout[2], 0, coinaddr, coinbalance - numcoins) == 0)
+						return eval->Invalid("vout.2!");
+				}
+				else if (coinbalance - numcoins == 0 && tokenbalance - numtokens > 0)
+				{
+					if (numvouts < 4)
+						return eval->Invalid("not enough vouts!");
+					else if (ConstrainVout(tx.vout[2], 1, tokenaddr, tokenbalance - numtokens) == 0 || 
+						IsTokensvout(false, true, cpTokens, eval, tx, 2, tokenid) != tokenbalance - numtokens)
+						return eval->Invalid("vout.2!");
+				}
+				// check vins
+				if (numvins < 3)
+					return eval->Invalid("not enough vins!");
+				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
+					return eval->Invalid("vin.0 must be normal input!");
+				else if ((*cp->ismyvin)(tx.vin[1].scriptSig) == 0)
+					return eval->Invalid("vin.1 must be CC input!");
+				else if (tx.vin[1].prevout.hash != latesttxid || tx.vin[1].prevout.n != 0)
+					return eval->Invalid("vin.1 tx hash doesn't match latesttxid!");
+				else if (coininputs != coinbalance || tokeninputs != tokenbalance)
+					return eval->Invalid("tx coin/token inputs do not match coin/token balance!");
+				break;
 				
 			case 'b':
 				// exchange borrow:
@@ -339,197 +395,84 @@ int64_t IsExchangesvout(struct CCcontract_info *cp,const CTransaction& tx,bool m
 		if (Getscriptaddress(destaddr,tx.vout[v].scriptPubKey) > 0 && strcmp(destaddr,exchangeaddr) == 0)
 			return(tx.vout[v].nValue);
 	}
-	return(0); 
-}
-
-int64_t IsExchangesMarkervout(struct CCcontract_info *cp,const CTransaction& tx,CPubKey pubkey,int32_t v)
-{
-	char destaddr[65],ccaddr[65];
-	GetCCaddress(cp,ccaddr,pubkey);
-	if (tx.vout[v].scriptPubKey.IsPayToCryptoCondition() != 0)
-	{
-		if (Getscriptaddress(destaddr,tx.vout[v].scriptPubKey) > 0 && strcmp(destaddr,ccaddr) == 0)
-			return(tx.vout[v].nValue);
-	}
 	return(0);
 }
 
-bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, int64_t &coininputs, int64_t &tokeninputs, int64_t &coinoutputs, int64_t &tokenoutputs)
+bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, int64_t &coininputs, int64_t &tokeninputs)
 {
-	uint256 hashBlock, exchangetxid, tokenid;
+	uint256 hashBlock, exchangetxid, tokenid, dummytxid;
 	int32_t i, numvins, numvouts;
-	uint8_t funcid, version;
-	CTransaction vinTx;
+	int64_t dummyamount, outputs = 0;
+	uint8_t dummychar, funcid, version;
+	CTransaction vinTx, exchangetx;
+	char destaddr[65], tokenaddr[65], coinaddr[65];
 	
-	coininputs = coinoutputs = 0;
-
 	numvins = tx.vin.size();
     numvouts = tx.vout.size();
-
-    
 	
-	
-	if ((numvouts = tx.vout.size()) > 0 && (funcid = DecodeExchangeOpRet(tx.vout[numvouts-1].scriptPubKey, version, exchangetxid, tokenid)) != 0)
-	{		
+	if ((funcid = DecodeExchangeOpRet(tx.vout[tx.vout.size()-1].scriptPubKey, version, exchangetxid, tokenid)) != 0)
+	{
+		if (!myGetTransaction(exchangetxid, exchangetx, hashBlock) || 
+		DecodeExchangeOpenOpRet(exchangetx.vout[exchangetx.vout.size()-1].scriptPubKey,version,tokensupplier,coinsupplier,dummychar,dummytxid,dummyamount,dummyamount,dummytxid) == 0)
+			return eval->Invalid("exchangetxid invalid!");
+		
+		Getscriptaddress(tokenaddr, CScript() << ParseHex(HexStr(tokensupplier)) << OP_CHECKSIG);
+		Getscriptaddress(coinaddr, CScript() << ParseHex(HexStr(coinsupplier)) << OP_CHECKSIG);
+		
 		switch (funcid)
 		{
 			case 'o':
 				return (true);
-			case 'l':
-				// exchange loan terms:
-				// vin.0 normal input
-				// vin.1 previous baton CC input
-				// vout.0 next baton CC output
-				// vout.n-2 normal change (if any)
-				// vout.n-1 OP_RETURN EVAL_EXCHANGES ‘l’ exchangetxid interest duedate
-				return (false);
-			case 'c':
-				// exchange cancel:
-				// vin.0 normal input
-				// vin.1 previous CC 1of2 baton
-				// vin.2 .. vin.n-1: valid CC coin or token outputs (if any)
-				// vout.0 normal output to coinsupplier
-				// vout.1 token CC output to tokensupplier
-				// vout.n-2 normal change (if any)
-				// vout.n-1 OP_RETURN EVAL_EXCHANGES ‘c’ version exchangetxid tokenid tokensupplier coinsupplier
-				
-				/*for (i=0; i<numvins; i++)
+			default:
+				for (i = 0; i < numvins; i++)
 				{
 					if ((*cp->ismyvin)(tx.vin[i].scriptSig) != 0)
 					{
 						if (eval->GetTxUnconfirmed(tx.vin[i].prevout.hash,vinTx,hashBlock) == 0)
-							return eval->Invalid("always should find vin, but didnt");
+							return eval->Invalid("always should find vin, but didn't!");
 						else
 						{
-							if ( hashBlock == zerohash )
-								return eval->Invalid("cant rewards from mempool");
-							if ( (assetoshis= IsRewardsvout(cp,vinTx,tx.vin[i].prevout.n,refsbits,reffundingtxid)) != 0 )
-								inputs += assetoshis;
+							if (hashBlock == zeroid)
+								return eval->Invalid("can't draw funds from mempool!");
+							
+							if (DecodeExchangeOpRet(vinTx.vout[vinTx.vout.size() - 1].scriptPubKey,version,refexchangetxid,dummytxid) == 0 && 
+							DecodeAgreementUnlockOpRet(vinTx.vout[vinTx.vout.size() - 1].scriptPubKey,version,dummytxid,refexchangetxid) == 0)
+								return eval->Invalid("can't decode vinTx opret!");
+							
+							if (refexchangetxid != exchangetxid)
+								return eval->Invalid("can't draw funds sent to different exchangetxid!");
+							
+							if ((nValue = IsExchangesvout(cp,vinTx,EIF_COINS,tokensupplier,coinsupplier,tx.vin[i].prevout.n)) != 0)
+								coininputs += nValue;
+							else if ((nValue = IsExchangesvout(cp,vinTx,EIF_TOKENS,tokensupplier,coinsupplier,tx.vin[i].prevout.n)) != 0)
+								tokeninputs += nValue;
 						}
 					}
 				}
-				for (i=0; i<numvouts; i++)
+				for (i = 0; i < numvouts; i++)
 				{
-					//fprintf(stderr,"i.%d of numvouts.%d\n",i,numvouts);
-					if ( (assetoshis= IsRewardsvout(cp,tx,i,refsbits,reffundingtxid)) != 0 )
-						outputs += assetoshis;
+					if ((nValue = IsExchangesvout(cp,tx,EIF_COINS,tokensupplier,coinsupplier,i)) != 0 ||
+					(nValue = IsExchangesvout(cp,tx,EIF_TOKENS,tokensupplier,coinsupplier,i)) != 0)
+						outputs += nValue;
+					else if (Getscriptaddress(destaddr,tx.vout[i].scriptPubKey) > 0 && (strcmp(destaddr,tokenaddr) == 0 || strcmp(destaddr,coinaddr) == 0))
+						outputs += tx.vout[i].nValue;
 				}
-				*/
-				
-			case 's':
-				// exchange swap:
-				// vin.0 normal input
-				// vin.1 previous CC 1of2 baton
-				// vin.2 .. vin.n-1: valid CC coin or token outputs
-				// vout.0 normal output to tokensupplier
-				// vout.1 token CC output to coinsupplier
-				// vout.2 normal change from CC 1of2 addr to coinsupplier (if any)
-				// vout.3 token CC change from CC 1of2 addr to tokensupplier (if any)
-				// vout.n-2 normal change (if any)
-				// vout.n-1 OP_RETURN EVAL_EXCHANGES ‘s’ version exchangetxid tokenid tokensupplier coinsupplier
-			case 'b':
-				// exchange borrow:
-				// vin.0 normal input
-				// vin.1 previous baton CC input
-				// vin.2 .. vin.n-1: valid CC coin outputs (no tokens)
-				// vout.0 next baton CC output
-				// vout.1 normal change from CC 1of2 addr to coinsupplier (if any)
-				// vout.n-2 coins to tokensupplier & normal change
-				// vout.n-1 OP_RETURN EVAL_EXCHANGES ‘b’ exchangetxid
-				return (false);
-			case 'p':
-				// exchange repo:
-				// vin.0 normal input
-				// vin.1 previous CC 1of2 baton
-				// vin.2 .. vin.n-1: valid CC coin or token outputs
-				// vout.0 normal output to tokensupplier
-				// vout.1 token CC output to coinsupplier
-				// vout.2 token CC change from CC 1of2 addr to tokensupplier (if any)
-				// vout.n-2 normal change (if any)
-				// vout.n-1 OP_RETURN EVAL_EXCHANGES ‘p’ version exchangetxid tokenid tokensupplier coinsupplier
-				return (false);
-			case 'r':
-				// exchange release:
-				// vin.0 normal input
-				// vin.1 previous CC 1of2 baton
-				// vin.2 .. vin.n-1: valid CC coin or token outputs
-				// vout.0 normal output to coinsupplier
-				// vout.1 token CC output to tokensupplier
-				// vout.2 normal change from CC 1of2 addr to coinsupplier (if any)
-				// vout.n-2 normal change (if any)
-				// vout.n-1 OP_RETURN EVAL_EXCHANGES ‘r’ version exchangetxid tokenid tokensupplier coinsupplier
-				return (false);
 				break;
-			/*case 'f':
-				if ( eval->GetTxUnconfirmed(tx.vin[1].prevout.hash,vinTx,hashBlock) == 0 )
-					return eval->Invalid("cant find vinTx");
-				inputs = vinTx.vout[tx.vin[1].prevout.n].nValue;
-				outputs = tx.vout[0].nValue + tx.vout[3].nValue; 
-				break;
-			case 'C':
-				if ( eval->GetTxUnconfirmed(tx.vin[1].prevout.hash,vinTx,hashBlock) == 0 )
-					return eval->Invalid("cant find vinTx");
-				inputs = vinTx.vout[tx.vin[1].prevout.n].nValue;
-				outputs = tx.vout[0].nValue; 
-				break;
-			case 'R':
-				if ( eval->GetTxUnconfirmed(tx.vin[1].prevout.hash,vinTx,hashBlock) == 0 )
-					return eval->Invalid("cant find vinTx");
-				inputs = vinTx.vout[tx.vin[1].prevout.n].nValue;
-				outputs = tx.vout[2].nValue; 
-				break;*/
-			default:
-				return (false);
 		}
-		if (coininputs != coinoutputs)
+		if (coininputs + tokeninputs != outputs)
 		{
-			LOGSTREAM("exchangescc", CCLOG_INFO, stream << "inputs " << coininputs << " vs outputs " << coinoutputs << std::endl);			
+			LOGSTREAM("exchangescc", CCLOG_INFO, stream << "inputs " << coininputs+tokeninputs << " vs outputs " << outputs << std::endl);			
 			return eval->Invalid("mismatched inputs != outputs");
 		} 
-		else return (true);	   
+		else
+			return (true);
 	}
 	else
-	{
-		return eval->Invalid("invalid op_return data");
-	}
-	return (false);
+    {
+        return eval->Invalid("invalid op_return data");
+    }
+    return(false);
 }
-
-/*bool RewardsExactAmounts(struct CCcontract_info *cp,Eval *eval,const CTransaction &tx,uint64_t txfee,uint64_t refsbits,uint256 reffundingtxid)
-{
-    static uint256 zerohash;
-    CTransaction vinTx; uint256 hashBlock; int32_t i,numvins,numvouts; int64_t inputs=0,outputs=0,assetoshis;
-    numvins = tx.vin.size();
-    numvouts = tx.vout.size();
-    for (i=0; i<numvins; i++)
-    {
-        if ( (*cp->ismyvin)(tx.vin[i].scriptSig) != 0 )
-        {
-            if ( eval->GetTxUnconfirmed(tx.vin[i].prevout.hash,vinTx,hashBlock) == 0 )
-                return eval->Invalid("always should find vin, but didnt");
-            else
-            {
-                if ( hashBlock == zerohash )
-                    return eval->Invalid("cant rewards from mempool");
-                if ( (assetoshis= IsRewardsvout(cp,vinTx,tx.vin[i].prevout.n,refsbits,reffundingtxid)) != 0 )
-                    inputs += assetoshis;
-            }
-        }
-    }
-    for (i=0; i<numvouts; i++)
-    {
-        //fprintf(stderr,"i.%d of numvouts.%d\n",i,numvouts);
-        if ( (assetoshis= IsRewardsvout(cp,tx,i,refsbits,reffundingtxid)) != 0 )
-            outputs += assetoshis;
-    }
-    if ( inputs != outputs+txfee )
-    {
-        fprintf(stderr,"inputs %llu vs outputs %llu txfee %llu\n",(long long)inputs,(long long)outputs,(long long)txfee);
-        return eval->Invalid("mismatched inputs != outputs + txfee");
-    }
-    else return(true);
-}*/
-
 
 // Get latest update txid and funcid
 bool GetLatestExchangeTxid(uint256 exchangetxid, uint256 &latesttxid, uint8_t &funcid)
