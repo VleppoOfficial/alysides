@@ -428,8 +428,10 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 			default:
 				for (i = 0; i < numvins; i++)
 				{
+					std::cerr << "checking vin." << i << std::endl;
 					if ((*cp->ismyvin)(tx.vin[i].scriptSig) != 0)
 					{
+						std::cerr << "vin." << i << " is exchanges vin" << std::endl;
 						if (eval->GetTxUnconfirmed(tx.vin[i].prevout.hash,vinTx,hashBlock) == 0)
 							return eval->Invalid("always should find vin, but didn't!");
 						else
