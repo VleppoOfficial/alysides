@@ -291,8 +291,8 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 					return eval->Invalid("vin.0 must be normal input!");
 				else if ((*cp->ismyvin)(tx.vin[1].scriptSig) == 0)
 					return eval->Invalid("vin.1 must be CC input!");
-				else if (tx.vin[1].prevout.hash != latesttxid || tx.vin[1].prevout.n != 0)
-					return eval->Invalid("vin.1 tx hash doesn't match latesttxid!");
+				else if (tx.vin[1].prevout.hash != latesttxid || tx.vin[1].prevout.n != 0 || tx.vin[1].prevout.nValue != CC_BATON_VALUE)
+					return eval->Invalid("vin.1 tx has invalid prevout data!");
 				else if (coininputs != coinbalance || tokeninputs != tokenbalance)
 					return eval->Invalid("tx coin/token inputs do not match coin/token balance!");
 				break;
@@ -433,7 +433,7 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 			case 'o':
 				return (true);
 			default:
-				for (i = 0; i < numvins; i++)
+				for (i = 2; i < numvins; i++)
 				{
 					std::cerr << "checking vin." << i << std::endl;
 					if ((*cp->ismyvin)(tx.vin[i].scriptSig) != 0)
@@ -465,7 +465,7 @@ bool ExchangesExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransa
 						}
 					}
 				}
-				for (i = 0; i < numvouts; i++)
+				for (i = 0; i < numvouts - 2; i++)
 				{
 					std::cerr << "checking vout." << i << std::endl;
 					if ((nValue = IsExchangesvout(cp,tx,EIF_COINS,tokensupplier,coinsupplier,i)) != 0 ||
