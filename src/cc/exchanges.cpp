@@ -267,7 +267,7 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 						return eval->Invalid("vout.0!");
 				}
 				// check vins
-				if (numvins < 3)
+				if (numvins < 2)
 					return eval->Invalid("not enough vins!");
 				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
 					return eval->Invalid("vin.0 must be normal input!");
@@ -275,7 +275,7 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 					return eval->Invalid("vin.1 must be CC input!");
 				else if (tx.vin[1].prevout.hash != latesttxid || tx.vin[1].prevout.n != 0)
 					return eval->Invalid("vin.1 tx has invalid prevout data!");
-				else if (coininputs != coinbalance || tokeninputs != tokenbalance)
+				else if (numvins > 2 && (coininputs != coinbalance || tokeninputs != tokenbalance))
 					return eval->Invalid("tx coin/token inputs do not match coin/token balance!");
 				break;
 			case 's':
