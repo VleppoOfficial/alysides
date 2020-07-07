@@ -918,12 +918,12 @@ int64_t AddExchangesInputs(struct CCcontract_info *cp,CMutableTransaction &mtx,C
 UniValue ExchangeOpen(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,CPubKey coinsupplier,uint256 tokenid,int64_t numcoins,int64_t numtokens,uint8_t exchangetype,uint256 agreementtxid,bool bSpendDeposit)
 {
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	CPubKey mypk, CPK_seller, CPK_client;
+	CPubKey mypk, CPK_seller, CPK_client, CPK_arbitrator;
 	CTransaction tokentx, agreementtx;
 	int32_t vini, height;
 	int64_t dummyamount;
 	std::string dummystr;
-	std::vector<uint8_t> dummyPubkey, sellerpk, clientpk;
+	std::vector<uint8_t> dummyPubkey, sellerpk, clientpk, arbitratorpk;
 	struct CCcontract_info *cp, *cpTokens, C, CTokens;
 	uint256 hashBlock, spendingtxid, dummytxid;
 	uint8_t version;
@@ -967,11 +967,15 @@ UniValue ExchangeOpen(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,CPu
 			(DecodeAgreementOpRet(agreementtx.vout[agreementtx.vout.size()-1].scriptPubKey) == 'c')))
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Agreement txid is not a valid proposal signing txid");
 		
-		GetAgreementInitialData(agreementtxid, dummytxid, sellerpk, clientpk, dummyPubkey, dummyamount, dummyamount, dummytxid, dummytxid, dummystr);
+		GetAgreementInitialData(agreementtxid, dummytxid, sellerpk, clientpk, arbitratorpk, dummyamount, dummyamount, dummytxid, dummytxid, dummystr);
 		
 		CPK_seller = pubkey2pk(sellerpk);
 		CPK_client = pubkey2pk(clientpk);
-
+		CPK_arbitrator = pubkey2pk(arbitratorpk);
+		
+		if (mypk != CPK_seller && mypk != CPK_client && mypk != CPK_arbitrator)
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "you are no a member of the specified agreement");
+		
 		if ((tokensupplier != CPK_seller && tokensupplier != CPK_client) || (coinsupplier != CPK_seller && coinsupplier != CPK_client))
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Agreement client and seller pubkeys doesn't match exchange coinsupplier and tokensupplier pubkeys");
 		
@@ -1175,9 +1179,6 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 	coins = AddExchangesInputs(cp, mtx, exchangetx, EIF_COINS, EXCHANGECC_MAXVINS); // coin from CC 1of2 addr vins
 	tokens = AddExchangesInputs(cp, mtx, exchangetx, EIF_TOKENS, EXCHANGECC_MAXVINS); // token from CC 1of2 addr vins
 	
-	std::cerr << "coins: " << coins << std::endl;
-	std::cerr << "tokens: " << tokens << std::endl;
-	
 	if (coins > 0)
 	{
 		mtx.vout.push_back(CTxOut(coins, CScript() << ParseHex(HexStr(coinsupplier)) << OP_CHECKSIG)); // coins refund vout
@@ -1352,12 +1353,13 @@ UniValue ExchangeInfo(const CPubKey& pk, uint256 exchangetxid)
 {
 	UniValue result(UniValue::VOBJ);
 	CTransaction tx;
-	uint256 hashBlock, tokenid, agreementtxid;
+	uint256 hashBlock, tokenid, latesttxid, agreementtxid;
 	int32_t numvouts;
 	int64_t numtokens, numcoins;
 	uint8_t version, funcid, exchangetype;
 	CPubKey mypk, tokensupplier, coinsupplier;
 	char str[67];
+	std::string status;
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs, unspentTokenOutputs;
 	struct CCcontract_info *cp, C;
 	
@@ -1383,11 +1385,31 @@ UniValue ExchangeInfo(const CPubKey& pk, uint256 exchangetxid)
 
 		cp = CCinit(&C, EVAL_EXCHANGES);
 		
-		//std::cerr << "looking for tokens" << std::endl;
-		result.push_back(Pair("token_balance", GetExchangesInputs(cp,tx,EIF_TOKENS,unspentTokenOutputs)));
-		//std::cerr << "looking for coins" << std::endl;
-		result.push_back(Pair("coin_balance", GetExchangesInputs(cp,tx,EIF_COINS,unspentOutputs)));
-
+		if (GetLatestExchangeTxid(exchangetxid, latesttxid, lastfuncid))
+		{
+			switch (lastfuncid)
+			{
+				case 'c':
+					status = "cancelled";
+					break;
+				case 'r':
+				case 's':
+					status = "closed";
+					break;
+				case 'p':
+					status = "repossessed";
+					break;
+				default:
+					status = "open";
+					//std::cerr << "looking for tokens" << std::endl;
+					result.push_back(Pair("token_balance", GetExchangesInputs(cp,tx,EIF_TOKENS,unspentTokenOutputs)));
+					//std::cerr << "looking for coins" << std::endl;
+					result.push_back(Pair("coin_balance", GetExchangesInputs(cp,tx,EIF_COINS,unspentOutputs)));
+					break;
+			}
+			result.push_back(Pair("status", status));
+		}
+		
 		
 		/*
 		List of info needed:
