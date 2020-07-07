@@ -1356,7 +1356,7 @@ UniValue ExchangeInfo(const CPubKey& pk, uint256 exchangetxid)
 	uint256 hashBlock, tokenid, latesttxid, agreementtxid;
 	int32_t numvouts;
 	int64_t numtokens, numcoins;
-	uint8_t version, funcid, exchangetype;
+	uint8_t version, funcid, exchangetype, lastfuncid;
 	CPubKey mypk, tokensupplier, coinsupplier;
 	char str[67];
 	std::string status;
