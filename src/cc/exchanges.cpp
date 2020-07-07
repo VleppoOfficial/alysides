@@ -205,10 +205,6 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 				// vout.n-2 normal change (if any)
 				// vout.n-1 OP_RETURN EVAL_EXCHANGES ‘c’ version exchangetxid tokenid tokensupplier coinsupplier
 				
-				std::cerr << "validation - coins: " << GetExchangesInputs(cp,exchangetx,EIF_COINS,unspentOutputs) << std::endl;
-				std::cerr << "validation - tokens: " << GetExchangesInputs(cp,exchangetx,EIF_TOKENS,unspentOutputs) << std::endl;
-				break;
-
 			/*"Cancel" or "c":
 				Data constraints:
 					(FindExchangeTxidType) if exchange contains borrow tx, can only be executed by coin provider pk
@@ -218,7 +214,70 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 					(Pubkey check) must be executed by token or coin provider pk
 					(Tokens dest addr) all tokens must be sent to token provider
 					(Coins dest addr) all coins must be sent to coin provider*/
-					
+				
+				// check if sent by token or coin provider pk
+				if (TotalPubkeyCCInputs(tx, tokensupplier) == 0 && TotalPubkeyCCInputs(tx, coinsupplier) == 0)
+					return eval->Invalid("found no cc inputs signed by any exchange member pubkey!");
+				// get required addresses
+				GetCCaddress(cpTokens, tokenpk_tokenaddr, tokensupplier);
+				Getscriptaddress(coinpk_coinaddr, CScript() << ParseHex(HexStr(coinsupplier)) << OP_CHECKSIG);
+				// check if exchange is closed
+				if (!GetLatestExchangeTxid(exchangetxid, latesttxid, lastfuncid) || lastfuncid == 'c' || lastfuncid == 's' || lastfuncid == 'p' || lastfuncid == 'r')
+					return eval->Invalid("exchangetxid specified in tx is closed!");
+				// check if borrow transaction exists
+				if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
+					return eval->Invalid("borrow tx search failed!");
+				if (borrowtxid != zeroid && TotalPubkeyCCInputs(tx, coinsupplier) == 0)
+					return eval->Invalid("'c' tx after loan borrow tx must be signed by coin supplier pk!");
+				// check deposit unlock condition
+				if (CheckDepositUnlockCond(exchangetxid) > 0)
+					return eval->Invalid("defined deposit must not be unlocked for 'c' tx!");
+				// get coinbalance and tokenbalance, check if both are sufficient
+				coinbalance = GetExchangesInputs(cp,exchangetx,EIF_COINS,unspentOutputs);
+				tokenbalance = GetExchangesInputs(cp,exchangetx,EIF_TOKENS,unspentOutputs);
+				if (exchangetype & EXTF_TRADE && coinbalance >= numcoins && tokenbalance >= numtokens)
+					return eval->Invalid("cannot cancel trade when escrow has enough coins and tokens!");
+				// check vouts
+				if (numvouts < 1)
+					return eval->Invalid("not enough vouts!");
+				// additional checks for different vout structures
+				if (coininputs > 0 && tokeninputs > 0)
+				{
+					if (numvouts < 3)
+						return eval->Invalid("not enough vouts!");
+					else if (ConstrainVout(tx.vout[0], 0, coinpk_coinaddr, coininputs) == 0)
+						return eval->Invalid("vout.0!");
+					else if (ConstrainVout(tx.vout[1], 1, tokenpk_tokenaddr, tokeninputs) == 0 || 
+						IsTokensvout(false, true, cpTokens, eval, tx, 1, tokenid) != tokeninputs)
+						return eval->Invalid("vout.1!");
+				}
+				else if (coininputs > 0 && tokeninputs == 0)
+				{
+					if (numvouts < 2)
+						return eval->Invalid("not enough vouts!");
+					else if (ConstrainVout(tx.vout[0], 0, coinpk_coinaddr, coininputs) == 0)
+						return eval->Invalid("vout.0!");
+				}
+				else if (coininputs == 0 && tokeninputs > 0)
+				{
+					if (numvouts < 2)
+						return eval->Invalid("not enough vouts!");
+					else if (ConstrainVout(tx.vout[0], 1, tokenpk_tokenaddr, tokeninputs) == 0 || 
+						IsTokensvout(false, true, cpTokens, eval, tx, 0, tokenid) != tokeninputs)
+						return eval->Invalid("vout.0!");
+				}
+				// check vins
+				if (numvins < 3)
+					return eval->Invalid("not enough vins!");
+				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
+					return eval->Invalid("vin.0 must be normal input!");
+				else if ((*cp->ismyvin)(tx.vin[1].scriptSig) == 0)
+					return eval->Invalid("vin.1 must be CC input!");
+				else if (tx.vin[1].prevout.hash != latesttxid || tx.vin[1].prevout.n != 0)
+					return eval->Invalid("vin.1 tx has invalid prevout data!");
+				else if (coininputs != coinbalance || tokeninputs != tokenbalance)
+					return eval->Invalid("tx coin/token inputs do not match coin/token balance!");
+				break;
 			case 's':
 				// exchange swap:
 				// vin.0 normal input
@@ -248,6 +307,9 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 				// check if borrow transaction exists
 				if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
 					return eval->Invalid("borrow tx search failed!");
+				// if it does, invalidate
+				if (borrowtxid != zeroid)
+					return eval->Invalid("found borrow tx in exchange of 's' tx!");
 				// check deposit unlock condition
 				if (CheckDepositUnlockCond(exchangetxid) == 0)
 					return eval->Invalid("defined deposit must be unlocked for 's' tx!");
@@ -300,8 +362,7 @@ bool ExchangesValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 					return eval->Invalid("vin.1 tx has invalid prevout data!");
 				else if (coininputs != coinbalance || tokeninputs != tokenbalance)
 					return eval->Invalid("tx coin/token inputs do not match coin/token balance!");
-				break;
-				
+				break;	
 			case 'b':
 				// exchange borrow:
 				// vin.0 normal input
@@ -1019,7 +1080,6 @@ UniValue ExchangeFund(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid, i
 		if (useTokens)
 		{
 			mtx.vout.push_back(MakeTokensCC1of2vout(EVAL_EXCHANGES, amount, tokensupplier, coinsupplier, NULL));
-			// MakeTokensCC1of2vout(uint8_t evalcode, CAmount nValue, CPubKey pk1, CPubKey pk2, std::vector<std::vector<unsigned char>>* vData)
 		}
 		else
 		{
@@ -1061,16 +1121,6 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 		txfee = CC_TXFEE;
 	}
 	
-	/*"Cancel" or "c":
-		Data constraints:
-			(FindExchangeTxidType) if exchange contains borrow tx, can only be executed by coin provider pk
-			(CheckDepositUnlockCond) If exchange contains no borrow tx, has an assoc. agreement and finalsettlement = true, the deposit must NOT be sent to the exchange's coin escrow
-			(GetExchangesInputs) If exchange is trade type, token & coin escrow cannot be fully filled (tokens >= numtokens && coins >= numcoins).
-		TX constraints:
-			(Pubkey check) must be executed by token or coin provider pk
-			(Tokens dest addr) all tokens must be sent to token provider
-			(Coins dest addr) all coins must be sent to coin provider*/
-	
 	if (exchangetxid != zeroid)
 	{
 		if (myGetTransaction(exchangetxid, exchangetx, hashBlock) == 0 || (numvouts = exchangetx.vout.size()) <= 0)
@@ -1084,8 +1134,8 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 		
 		if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Exchange borrow transaction search failed, quitting");
-		else if (borrowtxid != zeroid)
-			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Cannot cancel when loan is in progress");
+		else if (borrowtxid != zeroid && mypk != coinsupplier)
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Loan in progress can only be cancelled by coin supplier pubkey");
 		
 		DecodeExchangeOpenOpRet(exchangetx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,tokenid,numtokens,numcoins,agreementtxid);
 		
@@ -1104,32 +1154,35 @@ UniValue ExchangeCancel(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 	}
 	else
 		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Invalid exchangetxid");
+
+	// creating cancel ('c') transaction
 	
 	inputs = AddNormalinputs(mtx, mypk, txfee, 5, pk.IsValid()); // txfee
-	coins = AddExchangesInputs(cp, mtx, exchangetx, EIF_COINS, EXCHANGECC_MAXVINS); // coin from CC 1of2 addr vins
-	tokens = AddExchangesInputs(cp, mtx, exchangetx, EIF_TOKENS, EXCHANGECC_MAXVINS); // token from CC 1of2 addr vins
-	
-	std::cerr << "coins: " << coins << std::endl;
-	std::cerr << "tokens: " << tokens << std::endl;
-	
 	if (inputs >= txfee)
 	{
 		GetCCaddress1of2(cp, exchangeaddr, tokensupplier, coinsupplier);
 		mtx.vin.push_back(CTxIn(exchangetxid,0,CScript())); // previous CC 1of2 baton vin
 		Myprivkey(mypriv);
 		CCaddr1of2set(cp, tokensupplier, coinsupplier, mypriv, exchangeaddr);
-		if (coins > 0)
-		{
-			mtx.vout.push_back(CTxOut(coins, CScript() << ParseHex(HexStr(coinsupplier)) << OP_CHECKSIG)); // coins refund vout
-		}
-		if (tokens > 0)
-		{
-			mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, tokens, tokensupplier)); // tokens refund vout
-		}
-		return (FinalizeCCTxExt(pk.IsValid(), 0, cp, mtx, mypk, txfee, EncodeExchangeOpRet('c', EXCHANGECC_VERSION, exchangetxid, tokenid, tokensupplier, coinsupplier))); 
 	}
 	else
-		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "error adding inputs for txfee");
+		CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "error adding funds for txfee");
+	
+	coins = AddExchangesInputs(cp, mtx, exchangetx, EIF_COINS, EXCHANGECC_MAXVINS); // coin from CC 1of2 addr vins
+	tokens = AddExchangesInputs(cp, mtx, exchangetx, EIF_TOKENS, EXCHANGECC_MAXVINS); // token from CC 1of2 addr vins
+	
+	std::cerr << "coins: " << coins << std::endl;
+	std::cerr << "tokens: " << tokens << std::endl;
+	
+	if (coins > 0)
+	{
+		mtx.vout.push_back(CTxOut(coins, CScript() << ParseHex(HexStr(coinsupplier)) << OP_CHECKSIG)); // coins refund vout
+	}
+	if (tokens > 0)
+	{
+		mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, tokens, tokensupplier)); // tokens refund vout
+	}
+	return (FinalizeCCTxExt(pk.IsValid(), 0, cp, mtx, mypk, txfee, EncodeExchangeOpRet('c', EXCHANGECC_VERSION, exchangetxid, tokenid, tokensupplier, coinsupplier))); 
 }
 
 UniValue ExchangeBorrow(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid, uint256 loantermstxid)
@@ -1235,9 +1288,6 @@ UniValue ExchangeClose(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid)
 			
 			coins = AddExchangesInputs(cp, mtx, exchangetx, EIF_COINS, EXCHANGECC_MAXVINS); // coin from CC 1of2 addr vins
 			tokens = AddExchangesInputs(cp, mtx, exchangetx, EIF_TOKENS, EXCHANGECC_MAXVINS); // token from CC 1of2 addr vins
-			
-			std::cerr << "coins: " << coins << std::endl;
-			std::cerr << "tokens: " << tokens << std::endl;
 			
 			if (coins < coinbalance || tokens < tokenbalance)
 				CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "error adding exchanges inputs");
