@@ -1042,7 +1042,11 @@ UniValue ExchangeFund(const CPubKey& pk, uint64_t txfee, uint256 exchangetxid, i
 			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "Coins can only be sent by coin supplier pubkey, or token supplier if loan is in progress");
 		
 		coinbalance = GetExchangesInputs(cp,exchangetx,EIF_COINS,unspentOutputs);
+		if (unspentOutputs.size() > EXCHANGECC_MAXVINS)
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "utxo count in coin escrow exceeds withdrawable amount, close or cancel the exchange");
 		tokenbalance = GetExchangesInputs(cp,exchangetx,EIF_TOKENS,unspentOutputs);
+		if (unspentOutputs.size() > EXCHANGECC_MAXVINS)
+			CCERR_RESULT("exchangescc", CCLOG_INFO, stream << "utxo count in token escrow exceeds withdrawable amount, close or cancel the exchange");
 		
 		if (useTokens)
 		{
