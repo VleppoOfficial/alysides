@@ -100,9 +100,9 @@ UniValue pawnshopopen(const UniValue& params, bool fHelp, const CPubKey& mypk)
 	
 	typestr = params[5].get_str();
 	if (STR_TOLOWER(typestr) == "trade")
-        typenum = EXTF_TRADE;
+        typenum = PTF_TRADE;
 	else if (STR_TOLOWER(typestr) == "loan")
-        typenum = EXTF_LOAN;
+        typenum = PTF_LOAN;
     else
 	{
 		Unlock2NSPV(mypk);
