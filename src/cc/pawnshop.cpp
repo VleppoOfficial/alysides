@@ -940,7 +940,7 @@ UniValue PawnshopCreate(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,C
 		CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Token supplier pubkey invalid");
 	
 	if (!(coinsupplier.IsFullyValid()))
-		CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Toin supplier pubkey invalid");
+		CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Coin supplier pubkey invalid");
 	
 	if (tokensupplier == coinsupplier)
 		CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Token supplier cannot be the same as coin supplier pubkey");
@@ -974,7 +974,7 @@ UniValue PawnshopCreate(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,C
 		CPK_arbitrator = pubkey2pk(arbitratorpk);
 		
 		if (mypk != CPK_seller && mypk != CPK_client && mypk != CPK_arbitrator)
-			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "you are no a member of the specified agreement");
+			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "You are not a member of the specified agreement");
 		
 		if ((tokensupplier != CPK_seller && tokensupplier != CPK_client) || (coinsupplier != CPK_seller && coinsupplier != CPK_client))
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Agreement client and seller pubkeys doesn't match pawnshop coinsupplier and tokensupplier pubkeys");
