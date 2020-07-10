@@ -23,7 +23,7 @@
 
 CScript EncodePawnshopOpenOpRet(uint8_t version,CPubKey tokensupplier,CPubKey coinsupplier,uint8_t pawnshoptype,uint256 tokenid,int64_t numtokens,int64_t numcoins,uint256 agreementtxid)
 {
-	CScript opret; uint8_t evalcode = EVAL_PAWNSHOPS, funcid = 'o';
+	CScript opret; uint8_t evalcode = EVAL_PAWNSHOP, funcid = 'o';
 	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << tokensupplier << coinsupplier << pawnshoptype << tokenid << numtokens << numcoins << agreementtxid);
 	return(opret);
 }
@@ -31,14 +31,14 @@ uint8_t DecodePawnshopOpenOpRet(CScript scriptPubKey,uint8_t &version,CPubKey &t
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> tokensupplier; ss >> coinsupplier; ss >> pawnshoptype; ss >> tokenid; ss >> numtokens; ss >> numcoins; ss >> agreementtxid) != 0 && evalcode == EVAL_PAWNSHOPS)
+	if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> tokensupplier; ss >> coinsupplier; ss >> pawnshoptype; ss >> tokenid; ss >> numtokens; ss >> numcoins; ss >> agreementtxid) != 0 && evalcode == EVAL_PAWNSHOP)
 		return(funcid);
 	return(0);
 }
 
 CScript EncodePawnshopLoanTermsOpRet(uint8_t version,uint256 pawnshoptxid,int64_t interest,int64_t duedate)
 {
-	CScript opret; uint8_t evalcode = EVAL_PAWNSHOPS, funcid = 'l';
+	CScript opret; uint8_t evalcode = EVAL_PAWNSHOP, funcid = 'l';
 	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << interest << duedate);
 	return(opret);
 }
@@ -46,7 +46,7 @@ uint8_t DecodePawnshopLoanTermsOpRet(CScript scriptPubKey,uint8_t &version,uint2
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> pawnshoptxid; ss >> interest; ss >> duedate) != 0 && evalcode == EVAL_PAWNSHOPS)
+	if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> pawnshoptxid; ss >> interest; ss >> duedate) != 0 && evalcode == EVAL_PAWNSHOP)
 		return(funcid);
 	return(0);
 }
@@ -54,7 +54,7 @@ uint8_t DecodePawnshopLoanTermsOpRet(CScript scriptPubKey,uint8_t &version,uint2
 CScript EncodePawnshopOpRet(uint8_t funcid,uint8_t version,uint256 pawnshoptxid,uint256 tokenid,CPubKey tokensupplier,CPubKey coinsupplier)
 {
 	CScript opret;
-	uint8_t evalcode = EVAL_PAWNSHOPS;
+	uint8_t evalcode = EVAL_PAWNSHOP;
 	vscript_t vopret;
 	vopret = E_MARSHAL(ss << evalcode << funcid << version << pawnshoptxid);
 	if (tokenid != zeroid)
@@ -93,7 +93,7 @@ uint8_t DecodePawnshopOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 	script = (uint8_t *)vopret.data();
     if (script != NULL && vopret.size() > 2)
     {
-		if (script[0] != EVAL_PAWNSHOPS)
+		if (script[0] != EVAL_PAWNSHOP)
 			return(0);
 
         funcid = script[1];
@@ -104,7 +104,7 @@ uint8_t DecodePawnshopOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 			case 'l':
 				return DecodePawnshopLoanTermsOpRet(scriptPubKey,version,pawnshoptxid,dummyamount,dummyamount);
 			default:
-				if (E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> pawnshoptxid) != 0 && evalcode == EVAL_PAWNSHOPS)
+				if (E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> pawnshoptxid) != 0 && evalcode == EVAL_PAWNSHOP)
 				{
 					return(funcid);
 				}
@@ -138,7 +138,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 	if (numvouts < 1)
 		return eval->Invalid("no vouts");
 	CCOpretCheck(eval,tx,true,true,true);
-	ExactAmounts(eval,tx,ASSETCHAINS_CCZEROTXFEE[EVAL_PAWNSHOPS]?0:CC_TXFEE);
+	ExactAmounts(eval,tx,ASSETCHAINS_CCZEROTXFEE[EVAL_PAWNSHOP]?0:CC_TXFEE);
 	
 	if ((funcid = DecodePawnshopOpRet(tx.vout[numvouts-1].scriptPubKey, version, pawnshoptxid, tokenid)) != 0)
 	{
@@ -163,7 +163,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 				// vout.1 CC marker to tokensupplier
 				// vout.2 CC marker to coinsupplier
 				// vout.n-2 normal change (if any)
-				// vout.n-1 OP_RETURN EVAL_PAWNSHOPS ‘o’ version tokensupplier coinsupplier pawnshoptype tokenid numtokens numcoins agreementtxid
+				// vout.n-1 OP_RETURN EVAL_PAWNSHOP ‘o’ version tokensupplier coinsupplier pawnshoptype tokenid numtokens numcoins agreementtxid
 				return eval->Invalid("unexpected PawnshopValidate for pawnshopopen!");
 			
 			case 'f':
@@ -173,7 +173,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 				// vout.0 token CC or normal payment to token/coin CC 1of2 addr
 				// vout.1 token change (if any)
 				// vout.n-2 normal change (if any)
-				// vout.n-1 OP_RETURN EVAL_PAWNSHOPS ‘f’ version pawnshoptxid tokenid tokensupplier coinsupplier
+				// vout.n-1 OP_RETURN EVAL_PAWNSHOP ‘f’ version pawnshoptxid tokenid tokensupplier coinsupplier
 				return eval->Invalid("unexpected PawnshopValidate for pawnshopfund!");
 			
 			case 'l':
@@ -182,7 +182,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 				// vin.1 previous baton CC input
 				// vout.0 next baton CC output
 				// vout.n-2 normal change (if any)
-				// vout.n-1 OP_RETURN EVAL_PAWNSHOPS ‘l’ pawnshoptxid interest duedate
+				// vout.n-1 OP_RETURN EVAL_PAWNSHOP ‘l’ pawnshoptxid interest duedate
 				break;
 				
 			/*"Loan terms" or "l":
@@ -203,7 +203,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 				// vout.0 normal output to coinsupplier
 				// vout.1 token CC output to tokensupplier
 				// vout.n-2 normal change (if any)
-				// vout.n-1 OP_RETURN EVAL_PAWNSHOPS ‘c’ version pawnshoptxid tokenid tokensupplier coinsupplier
+				// vout.n-1 OP_RETURN EVAL_PAWNSHOP ‘c’ version pawnshoptxid tokenid tokensupplier coinsupplier
 				
 			/*"Cancel" or "c":
 				Data constraints:
@@ -288,7 +288,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 				// vout.2 normal change from CC 1of2 addr to coinsupplier (if any)
 				// vout.3 token CC change from CC 1of2 addr to tokensupplier (if any)
 				// vout.n-2 normal change (if any)
-				// vout.n-1 OP_RETURN EVAL_PAWNSHOPS ‘s’ version pawnshoptxid tokenid tokensupplier coinsupplier
+				// vout.n-1 OP_RETURN EVAL_PAWNSHOP ‘s’ version pawnshoptxid tokenid tokensupplier coinsupplier
 				
 				// check if sent by token or coin provider pk
 				if (TotalPubkeyCCInputs(tx, tokensupplier) == 0 && TotalPubkeyCCInputs(tx, coinsupplier) == 0)
@@ -371,7 +371,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 				// vout.0 next baton CC output
 				// vout.1 normal change from CC 1of2 addr to coinsupplier (if any)
 				// vout.n-2 coins to tokensupplier & normal change
-				// vout.n-1 OP_RETURN EVAL_PAWNSHOPS ‘b’ pawnshoptxid
+				// vout.n-1 OP_RETURN EVAL_PAWNSHOP ‘b’ pawnshoptxid
 				break;
 			
 			/*"Borrow" or "b":
@@ -395,7 +395,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 				// vout.1 token CC output to coinsupplier
 				// vout.2 token CC change from CC 1of2 addr to tokensupplier (if any)
 				// vout.n-2 normal change (if any)
-				// vout.n-1 OP_RETURN EVAL_PAWNSHOPS ‘p’ version pawnshoptxid tokenid tokensupplier coinsupplier
+				// vout.n-1 OP_RETURN EVAL_PAWNSHOP ‘p’ version pawnshoptxid tokenid tokensupplier coinsupplier
 			
 			/*"Repo" or "p":
 				Data constraints:
@@ -417,7 +417,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 				// vout.1 token CC output to tokensupplier
 				// vout.2 normal change from CC 1of2 addr to coinsupplier (if any)
 				// vout.n-2 normal change (if any)
-				// vout.n-1 OP_RETURN EVAL_PAWNSHOPS ‘r’ version pawnshoptxid tokenid tokensupplier coinsupplier
+				// vout.n-1 OP_RETURN EVAL_PAWNSHOP ‘r’ version pawnshoptxid tokenid tokensupplier coinsupplier
 			
 			/*"Release" or "r" (part of pawnshopclose rpc):
 				Data constraints:
@@ -655,7 +655,7 @@ int64_t CheckDepositUnlockCond(uint256 pawnshoptxid)
 	uint8_t version, unlockfuncid, pawnshoptype;
 	struct CCcontract_info *cp, C;
 	
-	cp = CCinit(&C, EVAL_PAWNSHOPS);
+	cp = CCinit(&C, EVAL_PAWNSHOP);
 	
 	if (myGetTransaction(pawnshoptxid, pawnshoptx, hashBlock) && (numvouts = pawnshoptx.vout.size()) > 0 && 
 	DecodePawnshopOpenOpRet(pawnshoptx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshoptype,dummytxid,dummyamount,dummyamount,agreementtxid) != 0)
@@ -688,7 +688,7 @@ bool ValidatePawnshopOpenTx(CTransaction opentx, std::string &CCerror)
 	char pawnshopaddr[65], tokenpkaddr[65], coinpkaddr[65];
 	struct CCcontract_info *cp, C;
 	
-	cp = CCinit(&C, EVAL_PAWNSHOPS);
+	cp = CCinit(&C, EVAL_PAWNSHOP);
 	CCerror = "";
 	
 	if (DecodePawnshopOpenOpRet(opentx.vout[opentx.vout.size() - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshoptype,tokenid,numtokens,numcoins,agreementtxid) == 0)
@@ -928,7 +928,7 @@ UniValue PawnshopOpen(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,CPu
 	uint256 hashBlock, spendingtxid, dummytxid;
 	uint8_t version;
 	
-	cp = CCinit(&C, EVAL_PAWNSHOPS);
+	cp = CCinit(&C, EVAL_PAWNSHOP);
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 	if (txfee == 0)
@@ -990,9 +990,9 @@ UniValue PawnshopOpen(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,CPu
 
 	if (AddNormalinputs2(mtx, txfee + CC_MARKER_VALUE * 2 + CC_BATON_VALUE, 64) >= txfee + CC_MARKER_VALUE * 2 + CC_BATON_VALUE)
 	{
-		mtx.vout.push_back(MakeCC1of2vout(EVAL_PAWNSHOPS, CC_BATON_VALUE, tokensupplier, coinsupplier)); // vout.0 baton for status tracking sent to coins 1of2 addr
-		mtx.vout.push_back(MakeCC1vout(EVAL_PAWNSHOPS, CC_MARKER_VALUE, tokensupplier)); // vout.1 marker to tokensupplier
-		mtx.vout.push_back(MakeCC1vout(EVAL_PAWNSHOPS, CC_MARKER_VALUE, coinsupplier)); // vout.2 marker to coinsupplier
+		mtx.vout.push_back(MakeCC1of2vout(EVAL_PAWNSHOP, CC_BATON_VALUE, tokensupplier, coinsupplier)); // vout.0 baton for status tracking sent to coins 1of2 addr
+		mtx.vout.push_back(MakeCC1vout(EVAL_PAWNSHOP, CC_MARKER_VALUE, tokensupplier)); // vout.1 marker to tokensupplier
+		mtx.vout.push_back(MakeCC1vout(EVAL_PAWNSHOP, CC_MARKER_VALUE, coinsupplier)); // vout.2 marker to coinsupplier
 
 		return (FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodePawnshopOpenOpRet(PAWNSHOPCC_VERSION,tokensupplier,coinsupplier,pawnshoptype,tokenid,numtokens,numcoins,agreementtxid)));
 	}
@@ -1012,7 +1012,7 @@ UniValue PawnshopFund(const CPubKey& pk, uint64_t txfee, uint256 pawnshoptxid, i
 	uint256 hashBlock, tokenid, agreementtxid, borrowtxid = zeroid, latesttxid;
 	uint8_t version, pawnshoptype, lastfuncid;
 	
-	cp = CCinit(&C, EVAL_PAWNSHOPS);
+	cp = CCinit(&C, EVAL_PAWNSHOP);
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 	if (txfee == 0)
@@ -1087,11 +1087,11 @@ UniValue PawnshopFund(const CPubKey& pk, uint64_t txfee, uint256 pawnshoptxid, i
 	{
 		if (useTokens)
 		{
-			mtx.vout.push_back(MakeTokensCC1of2vout(EVAL_PAWNSHOPS, amount, tokensupplier, coinsupplier, NULL));
+			mtx.vout.push_back(MakeTokensCC1of2vout(EVAL_PAWNSHOP, amount, tokensupplier, coinsupplier, NULL));
 		}
 		else
 		{
-			mtx.vout.push_back(MakeCC1of2vout(EVAL_PAWNSHOPS, amount, tokensupplier, coinsupplier));
+			mtx.vout.push_back(MakeCC1of2vout(EVAL_PAWNSHOP, amount, tokensupplier, coinsupplier));
 		}
 		if (useTokens && tokens > amount)
 		{
@@ -1121,7 +1121,7 @@ UniValue PawnshopCancel(const CPubKey& pk, uint64_t txfee, uint256 pawnshoptxid)
 	uint256 hashBlock, tokenid, agreementtxid, latesttxid, borrowtxid;
 	uint8_t version, pawnshoptype, mypriv[32], lastfuncid;
 	
-	cp = CCinit(&C, EVAL_PAWNSHOPS);
+	cp = CCinit(&C, EVAL_PAWNSHOP);
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 	if (txfee == 0)
@@ -1232,7 +1232,7 @@ UniValue PawnshopClose(const CPubKey& pk, uint64_t txfee, uint256 pawnshoptxid)
 	uint256 hashBlock, tokenid, agreementtxid, latesttxid, loantermstxid, borrowtxid;
 	uint8_t version, pawnshoptype, mypriv[32], lastfuncid;
 	
-	cp = CCinit(&C, EVAL_PAWNSHOPS);
+	cp = CCinit(&C, EVAL_PAWNSHOP);
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 	if (txfee == 0)
@@ -1383,7 +1383,7 @@ UniValue PawnshopInfo(const CPubKey& pk, uint256 pawnshoptxid)
 		result.push_back(Pair("required_tokens", numtokens));
 		result.push_back(Pair("required_coins", numcoins));
 
-		cp = CCinit(&C, EVAL_PAWNSHOPS);
+		cp = CCinit(&C, EVAL_PAWNSHOP);
 		
 		if (GetLatestPawnshopTxid(pawnshoptxid, latesttxid, lastfuncid))
 		{
@@ -1470,11 +1470,11 @@ UniValue PawnshopList(const CPubKey& pk)
 	CPubKey mypk;
 	uint8_t version;
 	
-	cp = CCinit(&C, EVAL_PAWNSHOPS);
+	cp = CCinit(&C, EVAL_PAWNSHOP);
 	mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
 	
 	GetCCaddress(cp,myCCaddr,mypk);
-	SetCCtxids(txids,myCCaddr,true,EVAL_PAWNSHOPS,CC_MARKER_VALUE,zeroid,'o');
+	SetCCtxids(txids,myCCaddr,true,EVAL_PAWNSHOP,CC_MARKER_VALUE,zeroid,'o');
 	
 	for (std::vector<uint256>::const_iterator it=txids.begin(); it!=txids.end(); it++)
 	{
