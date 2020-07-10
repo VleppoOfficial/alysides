@@ -13,7 +13,7 @@
  *                                                                            *
  ******************************************************************************/
 #include "CCagreements.h"
-#include "CCpawnshop.h"
+#include "CCPawnshop.h"
 /*
 The Agreements Antara Module enables anyone to create a blockchain representation of a legally binding bilateral agreement.
 An agreement created using this module features, among other things, the ability to store the checksum of off-chain contract documents (or an oracletxid) to prevent tampering, 

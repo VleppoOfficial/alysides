@@ -34,7 +34,7 @@
 #include "CCImportGateway.h"
 #include "CCKogs.h"
 #include "CCagreements.h"
-#include "CCpawnshop.h"
+#include "CCPawnshop.h"
 
 /*
  CCcustom has most of the functions that need to be extended to create a new CC contract.

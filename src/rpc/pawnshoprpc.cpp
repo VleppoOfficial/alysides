@@ -28,7 +28,7 @@
 #include "../cc/CCinclude.h"
 #include "../cc/CCagreements.h"
 #include "../cc/CCtokens.h"
-#include "../cc/CCpawnshop.h"
+#include "../cc/CCPawnshop.h"
 
 using namespace std;
 

@@ -13,7 +13,7 @@
  *                                                                            *
  ******************************************************************************/
 
-#include "CCpawnshop.h"
+#include "CCPawnshop.h"
 #include "CCagreements.h"
 #include "CCtokens.h"
 
