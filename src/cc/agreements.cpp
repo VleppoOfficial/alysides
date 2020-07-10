@@ -760,7 +760,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// Checking pawnshop.
 				if (myGetTransaction(pawnshoptxid, pawnshoptx, hashBlock) == 0 || pawnshoptx.vout.size() <= 0)
 					return eval->Invalid("cant find pawnshop tx!");
-				if (DecodePawnshopOpenOpRet(pawnshoptx.vout[pawnshoptx.vout.size() - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshoptype,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
+				if (DecodePawnshopCreateOpRet(pawnshoptx.vout[pawnshoptx.vout.size() - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshoptype,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
 					return eval->Invalid("invalid pawnshop open opret!");
 				if (TotalPubkeyCCInputs(tx, coinsupplier) == 0)
 					return eval->Invalid("found no cc inputs signed by excahnge coinsupplier pubkey!");
@@ -769,7 +769,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("agreement txid in pawnshop is different from agreement txid specified!");
 				if (!(pawnshoptype & PTF_DEPOSITUNLOCKABLE))
 					return eval->Invalid("deposit unlock is disabled for this pawnshop!");
-				if (!ValidatePawnshopOpenTx(pawnshoptx,CCerror))
+				if (!ValidatePawnshopCreateTx(pawnshoptx,CCerror))
 					return eval->Invalid(CCerror);
 				if (!GetLatestPawnshopTxid(pawnshoptxid, latesttxid, updatefuncid) || updatefuncid == 'c' || updatefuncid == 's' || updatefuncid == 'p' || updatefuncid == 'r')
 					return eval->Invalid("pawnshop tx closed!");
@@ -1862,7 +1862,7 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	{
 		if (myGetTransaction(pawnshoptxid, pawnshoptx, hashBlock) == 0 || (numvouts = pawnshoptx.vout.size()) <= 0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cant find specified pawnshop txid " << pawnshoptxid.GetHex());
-		if (DecodePawnshopOpenOpRet(pawnshoptx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshoptype,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
+		if (DecodePawnshopCreateOpRet(pawnshoptx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshoptype,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid pawnshop create opret " << pawnshoptxid.GetHex());
 		if (mypk != coinsupplier)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "you are not the coin supplier of this pawnshop");
@@ -1870,7 +1870,7 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreement txid in pawnshop is different from agreement txid specified");
 		if (!(pawnshoptype & PTF_DEPOSITUNLOCKABLE))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "deposit unlock is disabled for this pawnshop");
-		if (!ValidatePawnshopOpenTx(pawnshoptx,CCerror))
+		if (!ValidatePawnshopCreateTx(pawnshoptx,CCerror))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << CCerror);
 		if (!GetLatestPawnshopTxid(pawnshoptxid, latesttxid, updatefuncid) || updatefuncid == 'c' || updatefuncid == 's' || updatefuncid == 'p' || updatefuncid == 'r')
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "pawnshop " << pawnshoptxid.GetHex() << " closed");
@@ -2376,7 +2376,7 @@ UniValue AgreementSettlements(const CPubKey& pk, uint256 agreementtxid, bool bAc
 		{
 			txid = *it;
 			if (myGetTransaction(txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
-			DecodePawnshopOpenOpRet(tx.vout[numvouts-1].scriptPubKey,version,dummypk,dummypk,pawnshoptype,dummytxid,dummyamount,dummyamount,refagreementtxid) == 'o' &&
+			DecodePawnshopCreateOpRet(tx.vout[numvouts-1].scriptPubKey,version,dummypk,dummypk,pawnshoptype,dummytxid,dummyamount,dummyamount,refagreementtxid) == 'o' &&
 			refagreementtxid == agreementtxid && GetLatestPawnshopTxid(txid, dummytxid, lastfuncid))
 			{
 				if (bActiveOnly)

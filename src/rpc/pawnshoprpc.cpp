@@ -48,7 +48,7 @@ UniValue pawnshopaddress(const UniValue& params, bool fHelp, const CPubKey& mypk
     return(CCaddress(cp,(char *)"Pawnshop",pubkey));
 }
 
-UniValue pawnshopopen(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue pawnshopcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	UniValue result(UniValue::VOBJ);
 	uint256 tokenid, agreementtxid = zeroid;
@@ -58,7 +58,7 @@ UniValue pawnshopopen(const UniValue& params, bool fHelp, const CPubKey& mypk)
 	uint8_t typenum = 0;
 	
 	if (fHelp || params.size() < 6 || params.size() > 8)
-		throw runtime_error("pawnshopopen tokensupplier coinsupplier tokenid numcoins numtokens trade|loan [agreementtxid][enable_deposit_spend]\n");
+		throw runtime_error("pawnshopcreate tokensupplier coinsupplier tokenid numcoins numtokens trade|loan [agreementtxid][enable_deposit_spend]\n");
 	if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 
@@ -132,7 +132,7 @@ UniValue pawnshopopen(const UniValue& params, bool fHelp, const CPubKey& mypk)
 		}
     }
 	
-	result = PawnshopOpen(mypk,0,tokensupplier,coinsupplier,tokenid,numcoins,numtokens,typenum,agreementtxid,bSpendDeposit);
+	result = PawnshopCreate(mypk,0,tokensupplier,coinsupplier,tokenid,numcoins,numtokens,typenum,agreementtxid,bSpendDeposit);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	
@@ -179,13 +179,13 @@ UniValue pawnshopfund(const UniValue& params, bool fHelp, const CPubKey& mypk)
 	return(result);
 }
 
-UniValue pawnshoploanterms(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue pawnshopschedule(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 	uint256 pawnshoptxid;
 	int64_t interest, duedate;
     if ( fHelp || params.size() != 3 )
-        throw runtime_error("pawnshoploanterms pawnshoptxid interest duedate\n");
+        throw runtime_error("pawnshopschedule pawnshoptxid interest duedate\n");
     if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	Lock2NSPV(mypk);
@@ -201,7 +201,7 @@ UniValue pawnshoploanterms(const UniValue& params, bool fHelp, const CPubKey& my
 		throw runtime_error("Interest amount must be positive\n");
 	}
 	duedate = atoll(params[2].get_str().c_str());
-	result = PawnshopLoanTerms(mypk, 0, pawnshoptxid, interest, duedate);
+	result = PawnshopSchedule(mypk, 0, pawnshoptxid, interest, duedate);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	Unlock2NSPV(mypk);
@@ -257,12 +257,12 @@ UniValue pawnshopborrow(const UniValue& params, bool fHelp, const CPubKey& mypk)
 	return(result);
 }
 
-UniValue pawnshoprepo(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue pawnshopseize(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	UniValue result(UniValue::VOBJ);
 	uint256 pawnshoptxid;
     if ( fHelp || params.size() != 1 )
-        throw runtime_error("pawnshoprepo pawnshoptxid\n");
+        throw runtime_error("pawnshopseize pawnshoptxid\n");
     if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	Lock2NSPV(mypk);
@@ -272,19 +272,19 @@ UniValue pawnshoprepo(const UniValue& params, bool fHelp, const CPubKey& mypk)
 		Unlock2NSPV(mypk);
 		throw runtime_error("Pawnshoptxid is invalid\n");
 	}
-    result = PawnshopRepo(mypk, 0, pawnshoptxid);
+    result = PawnshopSeize(mypk, 0, pawnshoptxid);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	Unlock2NSPV(mypk);
 	return(result);
 }
 
-UniValue pawnshopclose(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue pawnshopexchange(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	UniValue result(UniValue::VOBJ);
 	uint256 pawnshoptxid;
     if ( fHelp || params.size() != 1 )
-        throw runtime_error("pawnshopclose pawnshoptxid\n");
+        throw runtime_error("pawnshopexchange pawnshoptxid\n");
     if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	Lock2NSPV(mypk);
@@ -294,7 +294,7 @@ UniValue pawnshopclose(const UniValue& params, bool fHelp, const CPubKey& mypk)
 		Unlock2NSPV(mypk);
 		throw runtime_error("Pawnshoptxid is invalid\n");
 	}
-    result = PawnshopClose(mypk, 0, pawnshoptxid);
+    result = PawnshopExchange(mypk, 0, pawnshoptxid);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	Unlock2NSPV(mypk);
@@ -328,15 +328,15 @@ static const CRPCCommand commands[] =
   //  -------------- ------------------------  -----------------------  ----------
 	// pawnshop
 	{ "pawnshop",  "pawnshopaddress",	&pawnshopaddress, 	true },
-	{ "pawnshop",  "pawnshopopen",		&pawnshopopen, 		true },
+	{ "pawnshop",  "pawnshopcreate",		&pawnshopcreate, 		true },
 	{ "pawnshop",  "pawnshopfund",		&pawnshopfund, 		true },
 	{ "pawnshop",  "pawnshopinfo",		&pawnshopinfo, 		true },
 	{ "pawnshop",  "pawnshoplist",		&pawnshoplist,		true },
 	{ "pawnshop",  "pawnshopcancel",	&pawnshopcancel,	true },
-	{ "pawnshop",  "pawnshoprepo",		&pawnshoprepo,		true },
-	{ "pawnshop",  "pawnshoploanterms",&pawnshoploanterms,	true },
+	{ "pawnshop",  "pawnshopseize",		&pawnshopseize,		true },
+	{ "pawnshop",  "pawnshopschedule",&pawnshopschedule,	true },
 	{ "pawnshop",  "pawnshopborrow",	&pawnshopborrow,	true },
-	{ "pawnshop",  "pawnshopclose",	&pawnshopclose,		true },
+	{ "pawnshop",  "pawnshopexchange",	&pawnshopexchange,		true },
 };
 
 void RegisterPawnshopRPCCommands(CRPCTable &tableRPC)
