@@ -231,7 +231,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	int64_t payment, arbitratorfee, depositval, totaldeposit, dummyamount, numtokens, numcoins, tokenbalance, coinbalance, refund;
 	std::string info, CCerror = "";
 	bool bHasReceiver, bHasArbitrator;
-	uint8_t proposaltype, version, spendingfuncid, funcid, updatefuncid, pawnshoptype;
+	uint8_t proposaltype, version, spendingfuncid, funcid, updatefuncid, pawnshopflags;
 	char globaladdr[65], srcaddr[65], destaddr[65], arbitratoraddr[65], pawnshopaddr[65];
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator, CPK_signer, CPK_rewarded, tokensupplier, coinsupplier;
 	struct CCcontract_info *cpPawnshop, CPawnshop;
@@ -760,14 +760,14 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// Checking pawnshop.
 				if (myGetTransaction(pawnshoptxid, pawnshoptx, hashBlock) == 0 || pawnshoptx.vout.size() <= 0)
 					return eval->Invalid("cant find pawnshop tx!");
-				if (DecodePawnshopCreateOpRet(pawnshoptx.vout[pawnshoptx.vout.size() - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshoptype,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
+				if (DecodePawnshopCreateOpRet(pawnshoptx.vout[pawnshoptx.vout.size() - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshopflags,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
 					return eval->Invalid("invalid pawnshop open opret!");
 				if (TotalPubkeyCCInputs(tx, coinsupplier) == 0)
 					return eval->Invalid("found no cc inputs signed by excahnge coinsupplier pubkey!");
 				GetCCaddress1of2(cpPawnshop, pawnshopaddr, tokensupplier, coinsupplier);
 				if (refagreementtxid != agreementtxid)
 					return eval->Invalid("agreement txid in pawnshop is different from agreement txid specified!");
-				if (!(pawnshoptype & PTF_DEPOSITUNLOCKABLE))
+				if (!(pawnshopflags & PTF_DEPOSITUNLOCKABLE))
 					return eval->Invalid("deposit unlock is disabled for this pawnshop!");
 				if (!ValidatePawnshopCreateTx(pawnshoptx,CCerror))
 					return eval->Invalid(CCerror);
@@ -1835,7 +1835,7 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	int64_t arbitratorfee, deposit, numtokens, numcoins, tokenbalance, coinbalance, refund;
 	int32_t numvouts;
 	std::string dummystr, CCerror = "";
-	uint8_t version, pawnshoptype, updatefuncid, mypriv[32];
+	uint8_t version, pawnshopflags, updatefuncid, mypriv[32];
 	char mutualaddr[65];
 	CTransaction pawnshoptx;
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
@@ -1862,13 +1862,13 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	{
 		if (myGetTransaction(pawnshoptxid, pawnshoptx, hashBlock) == 0 || (numvouts = pawnshoptx.vout.size()) <= 0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cant find specified pawnshop txid " << pawnshoptxid.GetHex());
-		if (DecodePawnshopCreateOpRet(pawnshoptx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshoptype,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
+		if (DecodePawnshopCreateOpRet(pawnshoptx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshopflags,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid pawnshop create opret " << pawnshoptxid.GetHex());
 		if (mypk != coinsupplier)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "you are not the coin supplier of this pawnshop");
 		if (refagreementtxid != agreementtxid)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreement txid in pawnshop is different from agreement txid specified");
-		if (!(pawnshoptype & PTF_DEPOSITUNLOCKABLE))
+		if (!(pawnshopflags & PTF_DEPOSITUNLOCKABLE))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "deposit unlock is disabled for this pawnshop");
 		if (!ValidatePawnshopCreateTx(pawnshoptx,CCerror))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << CCerror);
@@ -2356,7 +2356,7 @@ UniValue AgreementSettlements(const CPubKey& pk, uint256 agreementtxid, bool bAc
 	int32_t numvouts;
 	int64_t dummyamount;
 	std::string dummystr;
-	uint8_t version, pawnshoptype, lastfuncid;
+	uint8_t version, pawnshopflags, lastfuncid;
 	char myCCaddr[65];
 	std::vector<uint256> txids;
 	struct CCcontract_info *cpPawnshop, CPawnshop;
@@ -2376,7 +2376,7 @@ UniValue AgreementSettlements(const CPubKey& pk, uint256 agreementtxid, bool bAc
 		{
 			txid = *it;
 			if (myGetTransaction(txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
-			DecodePawnshopCreateOpRet(tx.vout[numvouts-1].scriptPubKey,version,dummypk,dummypk,pawnshoptype,dummytxid,dummyamount,dummyamount,refagreementtxid) == 'o' &&
+			DecodePawnshopCreateOpRet(tx.vout[numvouts-1].scriptPubKey,version,dummypk,dummypk,pawnshopflags,dummytxid,dummyamount,dummyamount,refagreementtxid) == 'o' &&
 			refagreementtxid == agreementtxid && GetLatestPawnshopTxid(txid, dummytxid, lastfuncid))
 			{
 				if (bActiveOnly)

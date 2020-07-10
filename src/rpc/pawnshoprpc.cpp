@@ -54,8 +54,8 @@ UniValue pawnshopcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 	uint256 tokenid, agreementtxid = zeroid;
 	int64_t numcoins, numtokens;
 	bool bSpendDeposit = false;
-	std::string typestr, depositspendstr;
-	uint8_t typenum = 0;
+	std::string flagstr, depositspendstr;
+	uint8_t flagnum = 0;
 	
 	if (fHelp || params.size() < 6 || params.size() > 8)
 		throw runtime_error("pawnshopcreate tokensupplier coinsupplier tokenid numcoins numtokens trade|loan [agreementtxid][enable_deposit_spend]\n");
@@ -98,15 +98,15 @@ UniValue pawnshopcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 		throw runtime_error("Required token amount must be above 0\n");
 	}
 	
-	typestr = params[5].get_str();
-	if (STR_TOLOWER(typestr) == "trade")
-        typenum = PTF_TRADE;
-	else if (STR_TOLOWER(typestr) == "loan")
-        typenum = PTF_LOAN;
+	flagstr = params[5].get_str();
+	if (STR_TOLOWER(flagstr) == "trade")
+        flagnum = PTF_TRADE;
+	else if (STR_TOLOWER(flagstr) == "loan")
+        flagnum = PTF_LOAN;
     else
 	{
 		Unlock2NSPV(mypk);
-        throw runtime_error("Incorrect type, must be 'trade' or 'loan'\n");
+        throw runtime_error("Incorrect flag, must be 'trade' or 'loan'\n");
 	}
 
 	if (params.size() >= 7)
@@ -132,7 +132,7 @@ UniValue pawnshopcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 		}
     }
 	
-	result = PawnshopCreate(mypk,0,tokensupplier,coinsupplier,tokenid,numcoins,numtokens,typenum,agreementtxid,bSpendDeposit);
+	result = PawnshopCreate(mypk,0,tokensupplier,coinsupplier,tokenid,numcoins,numtokens,flagnum,agreementtxid,bSpendDeposit);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	
@@ -143,18 +143,18 @@ UniValue pawnshopcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 UniValue pawnshopfund(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	UniValue result(UniValue::VOBJ);
-	uint256 pawnshoptxid;
+	uint256 createtxid;
 	int64_t amount;
 	bool useTokens = false;
-	std::string typestr;
+	std::string flagstr;
 	if (fHelp || params.size() != 3)
-		throw runtime_error("pawnshopfund pawnshoptxid amount coins|tokens\n");
+		throw runtime_error("pawnshopfund createtxid amount coins|tokens\n");
 	if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	Lock2NSPV(mypk);
 	
-	pawnshoptxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (pawnshoptxid == zeroid) {
+	createtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (createtxid == zeroid) {
 		Unlock2NSPV(mypk);
 		throw runtime_error("Pawnshoptxid is invalid\n");
 	}
@@ -163,16 +163,16 @@ UniValue pawnshopfund(const UniValue& params, bool fHelp, const CPubKey& mypk)
 		Unlock2NSPV(mypk);
 		throw runtime_error("Amount must be positive\n");
 	}
-	typestr = params[2].get_str();
-	if (STR_TOLOWER(typestr) == "coins")
+	flagstr = params[2].get_str();
+	if (STR_TOLOWER(flagstr) == "coins")
 		useTokens = false;
-	else if (STR_TOLOWER(typestr) == "tokens")
+	else if (STR_TOLOWER(flagstr) == "tokens")
 		useTokens = true;
 	else {
 		Unlock2NSPV(mypk);
-		throw runtime_error("Incorrect type, must be 'coins' or 'tokens'\n");
+		throw runtime_error("Incorrect flag, must be 'coins' or 'tokens'\n");
 	}
-	result = PawnshopFund(mypk, 0, pawnshoptxid, amount, useTokens);
+	result = PawnshopFund(mypk, 0, createtxid, amount, useTokens);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	Unlock2NSPV(mypk);
@@ -182,16 +182,16 @@ UniValue pawnshopfund(const UniValue& params, bool fHelp, const CPubKey& mypk)
 UniValue pawnshopschedule(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-	uint256 pawnshoptxid;
+	uint256 createtxid;
 	int64_t interest, duedate;
     if ( fHelp || params.size() != 3 )
-        throw runtime_error("pawnshopschedule pawnshoptxid interest duedate\n");
+        throw runtime_error("pawnshopschedule createtxid interest duedate\n");
     if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	Lock2NSPV(mypk);
 	
-    pawnshoptxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (pawnshoptxid == zeroid) {
+    createtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (createtxid == zeroid) {
 		Unlock2NSPV(mypk);
 		throw runtime_error("Pawnshoptxid is invalid\n");
 	}
@@ -201,7 +201,7 @@ UniValue pawnshopschedule(const UniValue& params, bool fHelp, const CPubKey& myp
 		throw runtime_error("Interest amount must be positive\n");
 	}
 	duedate = atoll(params[2].get_str().c_str());
-	result = PawnshopSchedule(mypk, 0, pawnshoptxid, interest, duedate);
+	result = PawnshopSchedule(mypk, 0, createtxid, interest, duedate);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	Unlock2NSPV(mypk);
@@ -211,19 +211,19 @@ UniValue pawnshopschedule(const UniValue& params, bool fHelp, const CPubKey& myp
 UniValue pawnshopcancel(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	UniValue result(UniValue::VOBJ);
-	uint256 pawnshoptxid;
+	uint256 createtxid;
     if ( fHelp || params.size() != 1 )
-        throw runtime_error("pawnshopcancel pawnshoptxid\n");
+        throw runtime_error("pawnshopcancel createtxid\n");
     if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	Lock2NSPV(mypk);
 	
-    pawnshoptxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (pawnshoptxid == zeroid) {
+    createtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (createtxid == zeroid) {
 		Unlock2NSPV(mypk);
 		throw runtime_error("Pawnshoptxid is invalid\n");
 	}
-    result = PawnshopCancel(mypk, 0, pawnshoptxid);
+    result = PawnshopCancel(mypk, 0, createtxid);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	Unlock2NSPV(mypk);
@@ -233,15 +233,15 @@ UniValue pawnshopcancel(const UniValue& params, bool fHelp, const CPubKey& mypk)
 UniValue pawnshopborrow(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-	uint256 pawnshoptxid, loanparamtxid;
+	uint256 createtxid, loanparamtxid;
     if ( fHelp || params.size() != 2 )
-        throw runtime_error("pawnshoprelease pawnshoptxid loanparamtxid\n");
+        throw runtime_error("pawnshoprelease createtxid loanparamtxid\n");
     if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	Lock2NSPV(mypk);
 	
-    pawnshoptxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (pawnshoptxid == zeroid) {
+    createtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (createtxid == zeroid) {
 		Unlock2NSPV(mypk);
 		throw runtime_error("Pawnshoptxid is invalid\n");
 	}
@@ -250,7 +250,7 @@ UniValue pawnshopborrow(const UniValue& params, bool fHelp, const CPubKey& mypk)
 		Unlock2NSPV(mypk);
 		throw runtime_error("Loan parameter txid is invalid\n");
 	}
-	result = PawnshopBorrow(mypk, 0, pawnshoptxid, loanparamtxid);
+	result = PawnshopBorrow(mypk, 0, createtxid, loanparamtxid);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	Unlock2NSPV(mypk);
@@ -260,19 +260,19 @@ UniValue pawnshopborrow(const UniValue& params, bool fHelp, const CPubKey& mypk)
 UniValue pawnshopseize(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	UniValue result(UniValue::VOBJ);
-	uint256 pawnshoptxid;
+	uint256 createtxid;
     if ( fHelp || params.size() != 1 )
-        throw runtime_error("pawnshopseize pawnshoptxid\n");
+        throw runtime_error("pawnshopseize createtxid\n");
     if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	Lock2NSPV(mypk);
 	
-    pawnshoptxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (pawnshoptxid == zeroid) {
+    createtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (createtxid == zeroid) {
 		Unlock2NSPV(mypk);
 		throw runtime_error("Pawnshoptxid is invalid\n");
 	}
-    result = PawnshopSeize(mypk, 0, pawnshoptxid);
+    result = PawnshopSeize(mypk, 0, createtxid);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	Unlock2NSPV(mypk);
@@ -282,19 +282,19 @@ UniValue pawnshopseize(const UniValue& params, bool fHelp, const CPubKey& mypk)
 UniValue pawnshopexchange(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	UniValue result(UniValue::VOBJ);
-	uint256 pawnshoptxid;
+	uint256 createtxid;
     if ( fHelp || params.size() != 1 )
-        throw runtime_error("pawnshopexchange pawnshoptxid\n");
+        throw runtime_error("pawnshopexchange createtxid\n");
     if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	Lock2NSPV(mypk);
 	
-    pawnshoptxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (pawnshoptxid == zeroid) {
+    createtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (createtxid == zeroid) {
 		Unlock2NSPV(mypk);
 		throw runtime_error("Pawnshoptxid is invalid\n");
 	}
-    result = PawnshopExchange(mypk, 0, pawnshoptxid);
+    result = PawnshopExchange(mypk, 0, createtxid);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	Unlock2NSPV(mypk);
@@ -303,15 +303,15 @@ UniValue pawnshopexchange(const UniValue& params, bool fHelp, const CPubKey& myp
 
 UniValue pawnshopinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
-    uint256 pawnshoptxid;
+    uint256 createtxid;
     if ( fHelp || params.size() != 1 )
-        throw runtime_error("pawnshopinfo pawnshoptxid\n");
+        throw runtime_error("pawnshopinfo createtxid\n");
     if ( ensure_CCrequirements(EVAL_PAWNSHOP) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
-    pawnshoptxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (pawnshoptxid == zeroid)
+    createtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (createtxid == zeroid)
 		throw runtime_error("Pawnshoptxid is invalid\n");
-    return(PawnshopInfo(mypk,pawnshoptxid));
+    return(PawnshopInfo(mypk,createtxid));
 }
 
 UniValue pawnshoplist(const UniValue& params, bool fHelp, const CPubKey& mypk)
@@ -326,17 +326,16 @@ UniValue pawnshoplist(const UniValue& params, bool fHelp, const CPubKey& mypk)
 static const CRPCCommand commands[] =
 { //  category              name                actor (function)        okSafeMode
   //  -------------- ------------------------  -----------------------  ----------
-	// pawnshop
 	{ "pawnshop",  "pawnshopaddress",	&pawnshopaddress, 	true },
-	{ "pawnshop",  "pawnshopcreate",		&pawnshopcreate, 		true },
+	{ "pawnshop",  "pawnshopcreate",	&pawnshopcreate, 	true },
 	{ "pawnshop",  "pawnshopfund",		&pawnshopfund, 		true },
 	{ "pawnshop",  "pawnshopinfo",		&pawnshopinfo, 		true },
 	{ "pawnshop",  "pawnshoplist",		&pawnshoplist,		true },
 	{ "pawnshop",  "pawnshopcancel",	&pawnshopcancel,	true },
 	{ "pawnshop",  "pawnshopseize",		&pawnshopseize,		true },
-	{ "pawnshop",  "pawnshopschedule",&pawnshopschedule,	true },
+	{ "pawnshop",  "pawnshopschedule",  &pawnshopschedule,	true },
 	{ "pawnshop",  "pawnshopborrow",	&pawnshopborrow,	true },
-	{ "pawnshop",  "pawnshopexchange",	&pawnshopexchange,		true },
+	{ "pawnshop",  "pawnshopexchange",	&pawnshopexchange,	true },
 };
 
 void RegisterPawnshopRPCCommands(CRPCTable &tableRPC)
