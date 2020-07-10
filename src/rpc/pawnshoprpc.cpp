@@ -28,27 +28,27 @@
 #include "../cc/CCinclude.h"
 #include "../cc/CCagreements.h"
 #include "../cc/CCtokens.h"
-#include "../cc/CCexchanges.h"
+#include "../cc/CCpawnshop.h"
 
 using namespace std;
 
 extern void Lock2NSPV(const CPubKey &pk);
 extern void Unlock2NSPV(const CPubKey &pk);
 
-UniValue exchangeaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue pawnshopaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     struct CCcontract_info *cp,C; std::vector<unsigned char> pubkey;
-    cp = CCinit(&C,EVAL_EXCHANGES);
+    cp = CCinit(&C,EVAL_PAWNSHOP);
     if ( fHelp || params.size() > 1 )
-        throw runtime_error("exchangeaddress [pubkey]\n");
+        throw runtime_error("pawnshopaddress [pubkey]\n");
     if ( ensure_CCrequirements(0) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     if ( params.size() == 1 )
         pubkey = ParseHex(params[0].get_str().c_str());
-    return(CCaddress(cp,(char *)"Exchanges",pubkey));
+    return(CCaddress(cp,(char *)"Pawnshop",pubkey));
 }
 
-UniValue exchangeopen(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue pawnshopopen(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	UniValue result(UniValue::VOBJ);
 	uint256 tokenid, agreementtxid = zeroid;
@@ -58,8 +58,8 @@ UniValue exchangeopen(const UniValue& params, bool fHelp, const CPubKey& mypk)
 	uint8_t typenum = 0;
 	
 	if (fHelp || params.size() < 6 || params.size() > 8)
-		throw runtime_error("exchangeopen tokensupplier coinsupplier tokenid numcoins numtokens trade|loan [agreementtxid][enable_deposit_spend]\n");
-	if (ensure_CCrequirements(EVAL_EXCHANGES) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
+		throw runtime_error("pawnshopopen tokensupplier coinsupplier tokenid numcoins numtokens trade|loan [agreementtxid][enable_deposit_spend]\n");
+	if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 
 	Lock2NSPV(mypk);
@@ -132,7 +132,7 @@ UniValue exchangeopen(const UniValue& params, bool fHelp, const CPubKey& mypk)
 		}
     }
 	
-	result = ExchangeOpen(mypk,0,tokensupplier,coinsupplier,tokenid,numcoins,numtokens,typenum,agreementtxid,bSpendDeposit);
+	result = PawnshopOpen(mypk,0,tokensupplier,coinsupplier,tokenid,numcoins,numtokens,typenum,agreementtxid,bSpendDeposit);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	
@@ -140,23 +140,23 @@ UniValue exchangeopen(const UniValue& params, bool fHelp, const CPubKey& mypk)
 	return(result);
 }
 
-UniValue exchangefund(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue pawnshopfund(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	UniValue result(UniValue::VOBJ);
-	uint256 exchangetxid;
+	uint256 pawnshoptxid;
 	int64_t amount;
 	bool useTokens = false;
 	std::string typestr;
 	if (fHelp || params.size() != 3)
-		throw runtime_error("exchangefund exchangetxid amount coins|tokens\n");
-	if (ensure_CCrequirements(EVAL_EXCHANGES) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
+		throw runtime_error("pawnshopfund pawnshoptxid amount coins|tokens\n");
+	if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	Lock2NSPV(mypk);
 	
-	exchangetxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (exchangetxid == zeroid) {
+	pawnshoptxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (pawnshoptxid == zeroid) {
 		Unlock2NSPV(mypk);
-		throw runtime_error("Exchangetxid is invalid\n");
+		throw runtime_error("Pawnshoptxid is invalid\n");
 	}
 	amount = atoll(params[1].get_str().c_str());
 	if (amount < 0) {
@@ -172,28 +172,28 @@ UniValue exchangefund(const UniValue& params, bool fHelp, const CPubKey& mypk)
 		Unlock2NSPV(mypk);
 		throw runtime_error("Incorrect type, must be 'coins' or 'tokens'\n");
 	}
-	result = ExchangeFund(mypk, 0, exchangetxid, amount, useTokens);
+	result = PawnshopFund(mypk, 0, pawnshoptxid, amount, useTokens);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	Unlock2NSPV(mypk);
 	return(result);
 }
 
-UniValue exchangeloanterms(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue pawnshoploanterms(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-	uint256 exchangetxid;
+	uint256 pawnshoptxid;
 	int64_t interest, duedate;
     if ( fHelp || params.size() != 3 )
-        throw runtime_error("exchangeloanterms exchangetxid interest duedate\n");
-    if (ensure_CCrequirements(EVAL_EXCHANGES) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
+        throw runtime_error("pawnshoploanterms pawnshoptxid interest duedate\n");
+    if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	Lock2NSPV(mypk);
 	
-    exchangetxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (exchangetxid == zeroid) {
+    pawnshoptxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (pawnshoptxid == zeroid) {
 		Unlock2NSPV(mypk);
-		throw runtime_error("Exchangetxid is invalid\n");
+		throw runtime_error("Pawnshoptxid is invalid\n");
 	}
 	interest = atoll(params[1].get_str().c_str());
 	if (interest < 0) {
@@ -201,145 +201,145 @@ UniValue exchangeloanterms(const UniValue& params, bool fHelp, const CPubKey& my
 		throw runtime_error("Interest amount must be positive\n");
 	}
 	duedate = atoll(params[2].get_str().c_str());
-	result = ExchangeLoanTerms(mypk, 0, exchangetxid, interest, duedate);
+	result = PawnshopLoanTerms(mypk, 0, pawnshoptxid, interest, duedate);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	Unlock2NSPV(mypk);
 	return(result);
 }
 
-UniValue exchangecancel(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue pawnshopcancel(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	UniValue result(UniValue::VOBJ);
-	uint256 exchangetxid;
+	uint256 pawnshoptxid;
     if ( fHelp || params.size() != 1 )
-        throw runtime_error("exchangecancel exchangetxid\n");
-    if (ensure_CCrequirements(EVAL_EXCHANGES) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
+        throw runtime_error("pawnshopcancel pawnshoptxid\n");
+    if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	Lock2NSPV(mypk);
 	
-    exchangetxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (exchangetxid == zeroid) {
+    pawnshoptxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (pawnshoptxid == zeroid) {
 		Unlock2NSPV(mypk);
-		throw runtime_error("Exchangetxid is invalid\n");
+		throw runtime_error("Pawnshoptxid is invalid\n");
 	}
-    result = ExchangeCancel(mypk, 0, exchangetxid);
+    result = PawnshopCancel(mypk, 0, pawnshoptxid);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	Unlock2NSPV(mypk);
 	return(result);
 }
 
-UniValue exchangeborrow(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue pawnshopborrow(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-	uint256 exchangetxid, loanparamtxid;
+	uint256 pawnshoptxid, loanparamtxid;
     if ( fHelp || params.size() != 2 )
-        throw runtime_error("exchangerelease exchangetxid loanparamtxid\n");
-    if (ensure_CCrequirements(EVAL_EXCHANGES) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
+        throw runtime_error("pawnshoprelease pawnshoptxid loanparamtxid\n");
+    if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	Lock2NSPV(mypk);
 	
-    exchangetxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (exchangetxid == zeroid) {
+    pawnshoptxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (pawnshoptxid == zeroid) {
 		Unlock2NSPV(mypk);
-		throw runtime_error("Exchangetxid is invalid\n");
+		throw runtime_error("Pawnshoptxid is invalid\n");
 	}
 	loanparamtxid = Parseuint256((char *)params[1].get_str().c_str());
 	if (loanparamtxid == zeroid) {
 		Unlock2NSPV(mypk);
 		throw runtime_error("Loan parameter txid is invalid\n");
 	}
-	result = ExchangeBorrow(mypk, 0, exchangetxid, loanparamtxid);
+	result = PawnshopBorrow(mypk, 0, pawnshoptxid, loanparamtxid);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	Unlock2NSPV(mypk);
 	return(result);
 }
 
-UniValue exchangerepo(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue pawnshoprepo(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	UniValue result(UniValue::VOBJ);
-	uint256 exchangetxid;
+	uint256 pawnshoptxid;
     if ( fHelp || params.size() != 1 )
-        throw runtime_error("exchangerepo exchangetxid\n");
-    if (ensure_CCrequirements(EVAL_EXCHANGES) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
+        throw runtime_error("pawnshoprepo pawnshoptxid\n");
+    if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	Lock2NSPV(mypk);
 	
-    exchangetxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (exchangetxid == zeroid) {
+    pawnshoptxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (pawnshoptxid == zeroid) {
 		Unlock2NSPV(mypk);
-		throw runtime_error("Exchangetxid is invalid\n");
+		throw runtime_error("Pawnshoptxid is invalid\n");
 	}
-    result = ExchangeRepo(mypk, 0, exchangetxid);
+    result = PawnshopRepo(mypk, 0, pawnshoptxid);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	Unlock2NSPV(mypk);
 	return(result);
 }
 
-UniValue exchangeclose(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue pawnshopclose(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	UniValue result(UniValue::VOBJ);
-	uint256 exchangetxid;
+	uint256 pawnshoptxid;
     if ( fHelp || params.size() != 1 )
-        throw runtime_error("exchangeclose exchangetxid\n");
-    if (ensure_CCrequirements(EVAL_EXCHANGES) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
+        throw runtime_error("pawnshopclose pawnshoptxid\n");
+    if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	Lock2NSPV(mypk);
 	
-    exchangetxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (exchangetxid == zeroid) {
+    pawnshoptxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (pawnshoptxid == zeroid) {
 		Unlock2NSPV(mypk);
-		throw runtime_error("Exchangetxid is invalid\n");
+		throw runtime_error("Pawnshoptxid is invalid\n");
 	}
-    result = ExchangeClose(mypk, 0, exchangetxid);
+    result = PawnshopClose(mypk, 0, pawnshoptxid);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	Unlock2NSPV(mypk);
 	return(result);
 }
 
-UniValue exchangeinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue pawnshopinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
-    uint256 exchangetxid;
+    uint256 pawnshoptxid;
     if ( fHelp || params.size() != 1 )
-        throw runtime_error("exchangeinfo exchangetxid\n");
-    if ( ensure_CCrequirements(EVAL_EXCHANGES) < 0 )
+        throw runtime_error("pawnshopinfo pawnshoptxid\n");
+    if ( ensure_CCrequirements(EVAL_PAWNSHOP) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
-    exchangetxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (exchangetxid == zeroid)
-		throw runtime_error("Exchangetxid is invalid\n");
-    return(ExchangeInfo(mypk,exchangetxid));
+    pawnshoptxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (pawnshoptxid == zeroid)
+		throw runtime_error("Pawnshoptxid is invalid\n");
+    return(PawnshopInfo(mypk,pawnshoptxid));
 }
 
-UniValue exchangelist(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue pawnshoplist(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     if ( fHelp || params.size() > 0 )
-        throw runtime_error("exchangelist\n");
-    if ( ensure_CCrequirements(EVAL_EXCHANGES) < 0 )
+        throw runtime_error("pawnshoplist\n");
+    if ( ensure_CCrequirements(EVAL_PAWNSHOP) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
-    return(ExchangeList(mypk));
+    return(PawnshopList(mypk));
 }
 
 static const CRPCCommand commands[] =
 { //  category              name                actor (function)        okSafeMode
   //  -------------- ------------------------  -----------------------  ----------
-	// exchanges
-	{ "exchanges",  "exchangeaddress",	&exchangeaddress, 	true },
-	{ "exchanges",  "exchangeopen",		&exchangeopen, 		true },
-	{ "exchanges",  "exchangefund",		&exchangefund, 		true },
-	{ "exchanges",  "exchangeinfo",		&exchangeinfo, 		true },
-	{ "exchanges",  "exchangelist",		&exchangelist,		true },
-	{ "exchanges",  "exchangecancel",	&exchangecancel,	true },
-	{ "exchanges",  "exchangerepo",		&exchangerepo,		true },
-	{ "exchanges",  "exchangeloanterms",&exchangeloanterms,	true },
-	{ "exchanges",  "exchangeborrow",	&exchangeborrow,	true },
-	{ "exchanges",  "exchangeclose",	&exchangeclose,		true },
+	// pawnshop
+	{ "pawnshop",  "pawnshopaddress",	&pawnshopaddress, 	true },
+	{ "pawnshop",  "pawnshopopen",		&pawnshopopen, 		true },
+	{ "pawnshop",  "pawnshopfund",		&pawnshopfund, 		true },
+	{ "pawnshop",  "pawnshopinfo",		&pawnshopinfo, 		true },
+	{ "pawnshop",  "pawnshoplist",		&pawnshoplist,		true },
+	{ "pawnshop",  "pawnshopcancel",	&pawnshopcancel,	true },
+	{ "pawnshop",  "pawnshoprepo",		&pawnshoprepo,		true },
+	{ "pawnshop",  "pawnshoploanterms",&pawnshoploanterms,	true },
+	{ "pawnshop",  "pawnshopborrow",	&pawnshopborrow,	true },
+	{ "pawnshop",  "pawnshopclose",	&pawnshopclose,		true },
 };
 
-void RegisterExchangesRPCCommands(CRPCTable &tableRPC)
+void RegisterPawnshopRPCCommands(CRPCTable &tableRPC)
 {
     for (unsigned int vcidx = 0; vcidx < ARRAYLEN(commands); vcidx++)
         tableRPC.appendCommand(commands[vcidx].name, &commands[vcidx]);

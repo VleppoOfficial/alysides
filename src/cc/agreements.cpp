@@ -13,7 +13,7 @@
  *                                                                            *
  ******************************************************************************/
 #include "CCagreements.h"
-#include "CCexchanges.h"
+#include "CCpawnshop.h"
 /*
 The Agreements Antara Module enables anyone to create a blockchain representation of a legally binding bilateral agreement.
 An agreement created using this module features, among other things, the ability to store the checksum of off-chain contract documents (or an oracletxid) to prevent tampering, 
@@ -49,10 +49,10 @@ RPC list:
 		Resolves an existing contract dispute. This RPC can be executed by the arbitrator. The dispute creator is only allowed to close the dispute. 
 		The arbitrator can pay out the deposit to either party as they see fit.
 	agreementunlock
-		Sends the agreement completion marker / deposit to the specified exchange txid address.
-		This RPC can only be executed if Exchanges CC is enabled, and the exchange has the agreementtxid and deposit spending enabled.
-		The exchange escrow must have enough tokens and coins (including the deposit amount) to satisfy the exchange requirements.
-		A specific amount is sent to the exchange, so that the exchange coin balance matches the required amount of coins. The remainder is sent back to the client.
+		Sends the agreement completion marker / deposit to the specified pawnshop txid address.
+		This RPC can only be executed if Pawnshop CC is enabled, and the pawnshop has the agreementtxid and deposit spending enabled.
+		The pawnshop escrow must have enough tokens and coins (including the deposit amount) to satisfy the pawnshop requirements.
+		A specific amount is sent to the pawnshop, so that the pawnshop coin balance matches the required amount of coins. The remainder is sent back to the client.
 		This RPC can only be executed by a member of the agreement (not including the arbitrator).
 */
 //===========================================================================
@@ -204,17 +204,17 @@ uint8_t DecodeAgreementDisputeResolveOpRet(CScript scriptPubKey, uint8_t &versio
 		return(funcid);
 	return(0);
 }
-CScript EncodeAgreementUnlockOpRet(uint8_t version, uint256 agreementtxid, uint256 exchangetxid)
+CScript EncodeAgreementUnlockOpRet(uint8_t version, uint256 agreementtxid, uint256 pawnshoptxid)
 {
 	CScript opret; uint8_t evalcode = EVAL_AGREEMENTS, funcid = 'n';
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << agreementtxid << exchangetxid);
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << agreementtxid << pawnshoptxid);
 	return(opret);
 }
-uint8_t DecodeAgreementUnlockOpRet(CScript scriptPubKey, uint8_t &version, uint256 &agreementtxid, uint256 &exchangetxid)
+uint8_t DecodeAgreementUnlockOpRet(CScript scriptPubKey, uint8_t &version, uint256 &agreementtxid, uint256 &pawnshoptxid)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> agreementtxid; ss >> exchangetxid) != 0 && evalcode == EVAL_AGREEMENTS)
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> agreementtxid; ss >> pawnshoptxid) != 0 && evalcode == EVAL_AGREEMENTS)
 		return(funcid);
 	return(0);
 }
@@ -223,19 +223,19 @@ uint8_t DecodeAgreementUnlockOpRet(CScript scriptPubKey, uint8_t &version, uint2
 //===========================================================================
 bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
-	CTransaction proposaltx, exchangetx;
+	CTransaction proposaltx, pawnshoptx;
 	CScript proposalopret;
 	int32_t numvins, numvouts;
-	uint256 hashBlock, datahash, agreementtxid, proposaltxid, prevproposaltxid, dummytxid, exchangetxid, spendingtxid, latesttxid, borrowtxid, updatetxid, refagreementtxid;
+	uint256 hashBlock, datahash, agreementtxid, proposaltxid, prevproposaltxid, dummytxid, pawnshoptxid, spendingtxid, latesttxid, borrowtxid, updatetxid, refagreementtxid;
 	std::vector<uint8_t> srcpub, destpub, signpub, sellerpk, clientpk, arbitratorpk, rewardedpubkey;
 	int64_t payment, arbitratorfee, depositval, totaldeposit, dummyamount, numtokens, numcoins, tokenbalance, coinbalance, refund;
 	std::string info, CCerror = "";
 	bool bHasReceiver, bHasArbitrator;
-	uint8_t proposaltype, version, spendingfuncid, funcid, updatefuncid, exchangetype;
-	char globaladdr[65], srcaddr[65], destaddr[65], arbitratoraddr[65], exchangeaddr[65];
+	uint8_t proposaltype, version, spendingfuncid, funcid, updatefuncid, pawnshoptype;
+	char globaladdr[65], srcaddr[65], destaddr[65], arbitratoraddr[65], pawnshopaddr[65];
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator, CPK_signer, CPK_rewarded, tokensupplier, coinsupplier;
-	struct CCcontract_info *cpExchanges, CExchanges;
-	cpExchanges = CCinit(&CExchanges, EVAL_EXCHANGES);
+	struct CCcontract_info *cpPawnshop, CPawnshop;
+	cpPawnshop = CCinit(&CPawnshop, EVAL_PAWNSHOP);
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	numvins = tx.vin.size();
 	numvouts = tx.vout.size();
@@ -737,16 +737,16 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				vin.0 normal input
 				vin.1 previous proposal baton
 				vin.2 deposit
-				vout.0 payout to exchange CC 1of2 address
+				vout.0 payout to pawnshop CC 1of2 address
 				vout.1 deposit refund to client (optional)
 				vout.2 arbitrator fee payout to arbitrator (optional)
 				vout.n-2 change
-				vout.n-1 OP_RETURN EVAL_AGREEMENTS 'n' agreementtxid exchangetxid
+				vout.n-1 OP_RETURN EVAL_AGREEMENTS 'n' agreementtxid pawnshoptxid
 				*/
 				// Getting the transaction data.
-				DecodeAgreementUnlockOpRet(tx.vout[numvouts-1].scriptPubKey, version, agreementtxid, exchangetxid);
-				if (exchangetxid == zeroid)
-					return eval->Invalid("exchangetxid invalid or empty!");
+				DecodeAgreementUnlockOpRet(tx.vout[numvouts-1].scriptPubKey, version, agreementtxid, pawnshoptxid);
+				if (pawnshoptxid == zeroid)
+					return eval->Invalid("pawnshoptxid invalid or empty!");
 				if (!GetAgreementInitialData(agreementtxid, dummytxid, srcpub, destpub, arbitratorpk, arbitratorfee, depositval, dummytxid, dummytxid, info))
 					return eval->Invalid("couldn't find agreement tx for 'n' tx!");
 				GetLatestAgreementUpdate(agreementtxid, updatetxid, updatefuncid);
@@ -757,34 +757,34 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				if (TotalPubkeyCCInputs(tx, CPK_src) == 0 && TotalPubkeyCCInputs(tx, CPK_dest) == 0)
 					return eval->Invalid("found no cc inputs signed by agreement member pubkey!");
 				Getscriptaddress(destaddr, CScript() << ParseHex(HexStr(CPK_dest)) << OP_CHECKSIG);
-				// Checking exchange.
-				if (myGetTransaction(exchangetxid, exchangetx, hashBlock) == 0 || exchangetx.vout.size() <= 0)
-					return eval->Invalid("cant find exchange tx!");
-				if (DecodeExchangeOpenOpRet(exchangetx.vout[exchangetx.vout.size() - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
-					return eval->Invalid("invalid exchange open opret!");
+				// Checking pawnshop.
+				if (myGetTransaction(pawnshoptxid, pawnshoptx, hashBlock) == 0 || pawnshoptx.vout.size() <= 0)
+					return eval->Invalid("cant find pawnshop tx!");
+				if (DecodePawnshopOpenOpRet(pawnshoptx.vout[pawnshoptx.vout.size() - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshoptype,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
+					return eval->Invalid("invalid pawnshop open opret!");
 				if (TotalPubkeyCCInputs(tx, coinsupplier) == 0)
 					return eval->Invalid("found no cc inputs signed by excahnge coinsupplier pubkey!");
-				GetCCaddress1of2(cpExchanges, exchangeaddr, tokensupplier, coinsupplier);
+				GetCCaddress1of2(cpPawnshop, pawnshopaddr, tokensupplier, coinsupplier);
 				if (refagreementtxid != agreementtxid)
-					return eval->Invalid("agreement txid in exchange is different from agreement txid specified!");
-				if (!(exchangetype & EXTF_DEPOSITUNLOCKABLE))
-					return eval->Invalid("deposit unlock is disabled for this exchange!");
-				if (!ValidateExchangeOpenTx(exchangetx,CCerror))
+					return eval->Invalid("agreement txid in pawnshop is different from agreement txid specified!");
+				if (!(pawnshoptype & EXTF_DEPOSITUNLOCKABLE))
+					return eval->Invalid("deposit unlock is disabled for this pawnshop!");
+				if (!ValidatePawnshopOpenTx(pawnshoptx,CCerror))
 					return eval->Invalid(CCerror);
-				if (!GetLatestExchangeTxid(exchangetxid, latesttxid, updatefuncid) || updatefuncid == 'c' || updatefuncid == 's' || updatefuncid == 'p' || updatefuncid == 'r')
-					return eval->Invalid("exchange tx closed!");
-				if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
-					return eval->Invalid("exchange borrow transaction search failed!");
+				if (!GetLatestPawnshopTxid(pawnshoptxid, latesttxid, updatefuncid) || updatefuncid == 'c' || updatefuncid == 's' || updatefuncid == 'p' || updatefuncid == 'r')
+					return eval->Invalid("pawnshop tx closed!");
+				if (!FindPawnshopTxidType(pawnshoptxid, 'b', borrowtxid))
+					return eval->Invalid("pawnshop borrow transaction search failed!");
 				else if (borrowtxid != zeroid)
 					return eval->Invalid("cannot unlock after borrow tx!");
-				if (CheckDepositUnlockCond(exchangetxid) != 0)
-					return eval->Invalid("deposit unlock disabled or already sent to exchange!");
-				coinbalance = GetExchangesInputs(cpExchanges,exchangetx,EIF_COINS,unspentOutputs);
-				tokenbalance = GetExchangesInputs(cpExchanges,exchangetx,EIF_TOKENS,unspentOutputs);
+				if (CheckDepositUnlockCond(pawnshoptxid) != 0)
+					return eval->Invalid("deposit unlock disabled or already sent to pawnshop!");
+				coinbalance = GetPawnshopInputs(cpPawnshop,pawnshoptx,EIF_COINS,unspentOutputs);
+				tokenbalance = GetPawnshopInputs(cpPawnshop,pawnshoptx,EIF_TOKENS,unspentOutputs);
 				if (tokenbalance < numtokens)
-					return eval->Invalid("not enough tokens in exchange!");
+					return eval->Invalid("not enough tokens in pawnshop!");
 				if (coinbalance + depositval < numcoins)
-					return eval->Invalid("not enough coins in exchange!");
+					return eval->Invalid("not enough coins in pawnshop!");
 				else
 					refund = coinbalance + depositval - numcoins;
 				// Checking if vins/vouts are correct.
@@ -794,15 +794,15 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				{
 					if (numvouts < 3)
 						return eval->Invalid("not enough vouts for 'n' tx!");
-					else if (ConstrainVout(tx.vout[0], 1, exchangeaddr, depositval - refund) == 0)
-						return eval->Invalid("vout.0 must be CC to exchanges mutual 1of2 address!");
+					else if (ConstrainVout(tx.vout[0], 1, pawnshopaddr, depositval - refund) == 0)
+						return eval->Invalid("vout.0 must be CC to pawnshop mutual 1of2 address!");
 					else if (ConstrainVout(tx.vout[1], 0, destaddr, refund) == 0)
 						return eval->Invalid("vout.1 must be normal deposit refund payout to destpub!");
 				}
 				else if (coinbalance < numcoins && refund == 0) // contains deposit payout only
 				{
-					if (ConstrainVout(tx.vout[0], 1, exchangeaddr, depositval) == 0)
-						return eval->Invalid("vout.0 must be CC to exchanges mutual 1of2 address!");
+					if (ConstrainVout(tx.vout[0], 1, pawnshopaddr, depositval) == 0)
+						return eval->Invalid("vout.0 must be CC to pawnshop mutual 1of2 address!");
 				}
 				else if (coinbalance >= numcoins && refund > 0) // contains deposit refund only
 				{
@@ -1826,8 +1826,8 @@ UniValue AgreementResolve(const CPubKey& pk, uint64_t txfee, uint256 agreementtx
 	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "error adding normal inputs");
 }
 // agreementunlock - constructs a 'n' transaction and spends the latest update baton of agreementtxid
-// sends amount required to fill numcoins amount to 1of2 CC exchangeaddr from deposit, and refunds the rest to client
-UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 exchangetxid)
+// sends amount required to fill numcoins amount to 1of2 CC pawnshopaddr from deposit, and refunds the rest to client
+UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 pawnshoptxid)
 {
 	CPubKey mypk, CPK_seller, CPK_client, tokensupplier, coinsupplier;
 	uint256 hashBlock,borrowtxid, updatetxid, latesttxid, dummytxid, refagreementtxid;
@@ -1835,14 +1835,14 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	int64_t arbitratorfee, deposit, numtokens, numcoins, tokenbalance, coinbalance, refund;
 	int32_t numvouts;
 	std::string dummystr, CCerror = "";
-	uint8_t version, exchangetype, updatefuncid, mypriv[32];
+	uint8_t version, pawnshoptype, updatefuncid, mypriv[32];
 	char mutualaddr[65];
-	CTransaction exchangetx;
+	CTransaction pawnshoptx;
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	struct CCcontract_info *cp, C, *cpExchanges, CExchanges;
+	struct CCcontract_info *cp, C, *cpPawnshop, CPawnshop;
 	cp = CCinit(&C, EVAL_AGREEMENTS);
-	cpExchanges = CCinit(&CExchanges, EVAL_EXCHANGES);
+	cpPawnshop = CCinit(&CPawnshop, EVAL_PAWNSHOP);
 	if (txfee == 0) txfee = CC_TXFEE;
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 	if (!GetAgreementInitialData(agreementtxid, dummytxid, sellerpk, clientpk, arbitratorpk, arbitratorfee, deposit, dummytxid, dummytxid, dummystr))
@@ -1858,37 +1858,37 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "deposit is already unlocked for this agreement");
 	else if (updatefuncid != 'c' && updatefuncid != 'u')
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreement is no longer active");
-	if (exchangetxid != zeroid)
+	if (pawnshoptxid != zeroid)
 	{
-		if (myGetTransaction(exchangetxid, exchangetx, hashBlock) == 0 || (numvouts = exchangetx.vout.size()) <= 0)
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cant find specified exchange txid " << exchangetxid.GetHex());
-		if (DecodeExchangeOpenOpRet(exchangetx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,exchangetype,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid exchange create opret " << exchangetxid.GetHex());
+		if (myGetTransaction(pawnshoptxid, pawnshoptx, hashBlock) == 0 || (numvouts = pawnshoptx.vout.size()) <= 0)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cant find specified pawnshop txid " << pawnshoptxid.GetHex());
+		if (DecodePawnshopOpenOpRet(pawnshoptx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshoptype,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "invalid pawnshop create opret " << pawnshoptxid.GetHex());
 		if (mypk != coinsupplier)
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "you are not the coin supplier of this exchange");
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "you are not the coin supplier of this pawnshop");
 		if (refagreementtxid != agreementtxid)
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreement txid in exchange is different from agreement txid specified");
-		if (!(exchangetype & EXTF_DEPOSITUNLOCKABLE))
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "deposit unlock is disabled for this exchange");
-		if (!ValidateExchangeOpenTx(exchangetx,CCerror))
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreement txid in pawnshop is different from agreement txid specified");
+		if (!(pawnshoptype & EXTF_DEPOSITUNLOCKABLE))
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "deposit unlock is disabled for this pawnshop");
+		if (!ValidatePawnshopOpenTx(pawnshoptx,CCerror))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << CCerror);
-		if (!GetLatestExchangeTxid(exchangetxid, latesttxid, updatefuncid) || updatefuncid == 'c' || updatefuncid == 's' || updatefuncid == 'p' || updatefuncid == 'r')
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "exchange " << exchangetxid.GetHex() << " closed");
-		if (!FindExchangeTxidType(exchangetxid, 'b', borrowtxid))
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "exchange borrow transaction search failed, quitting");
+		if (!GetLatestPawnshopTxid(pawnshoptxid, latesttxid, updatefuncid) || updatefuncid == 'c' || updatefuncid == 's' || updatefuncid == 'p' || updatefuncid == 'r')
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "pawnshop " << pawnshoptxid.GetHex() << " closed");
+		if (!FindPawnshopTxidType(pawnshoptxid, 'b', borrowtxid))
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "pawnshop borrow transaction search failed, quitting");
 		else if (borrowtxid != zeroid)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cannot unlock after borrow transaction");
-		coinbalance = GetExchangesInputs(cpExchanges,exchangetx,EIF_COINS,unspentOutputs);
-		tokenbalance = GetExchangesInputs(cpExchanges,exchangetx,EIF_TOKENS,unspentOutputs);
+		coinbalance = GetPawnshopInputs(cpPawnshop,pawnshoptx,EIF_COINS,unspentOutputs);
+		tokenbalance = GetPawnshopInputs(cpPawnshop,pawnshoptx,EIF_TOKENS,unspentOutputs);
 		if (tokenbalance < numtokens)
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "exchange must have all required tokens for deposit unlock");
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "pawnshop must have all required tokens for deposit unlock");
 		if (coinbalance + deposit < numcoins)
-			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "exchange must have enough coins + deposit to match required amount for unlock");
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "pawnshop must have enough coins + deposit to match required amount for unlock");
 		else
 			refund = coinbalance + deposit - numcoins;
 	}
 	else
-		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Invalid exchangetxid");
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Invalid pawnshoptxid");
 	if (AddNormalinputs2(mtx, txfee, 5) > 0)
 	{
 		GetCCaddress1of2(cp, mutualaddr, CPK_seller, CPK_client);
@@ -1901,13 +1901,13 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 		mtx.vin.push_back(CTxIn(agreementtxid,2,CScript())); // vin.2 deposit
 		if (coinbalance < numcoins)
 		{
-			mtx.vout.push_back(MakeCC1of2vout(EVAL_EXCHANGES, deposit - refund, tokensupplier, coinsupplier)); // vout.0 payout to exchange CC 1of2 address
+			mtx.vout.push_back(MakeCC1of2vout(EVAL_PAWNSHOP, deposit - refund, tokensupplier, coinsupplier)); // vout.0 payout to pawnshop CC 1of2 address
 		}
 		if (refund > 0)
 		{
 			mtx.vout.push_back(CTxOut(refund, CScript() << ParseHex(HexStr(CPK_client)) << OP_CHECKSIG)); // vout.1 deposit refund to client (optional)
 		}
-		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementUnlockOpRet(AGREEMENTCC_VERSION, agreementtxid, exchangetxid));
+		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodeAgreementUnlockOpRet(AGREEMENTCC_VERSION, agreementtxid, pawnshoptxid));
 	}
 	CCERR_RESULT("agreementscc",CCLOG_INFO, stream << "error adding normal inputs");
 }
@@ -1919,7 +1919,7 @@ UniValue AgreementInfo(uint256 txid)
 	UniValue result(UniValue::VOBJ), members(UniValue::VOBJ), data(UniValue::VOBJ);
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator;
 	CTransaction tx, proposaltx;
-	uint256 hashBlock, datahash, proposaltxid, prevproposaltxid, agreementtxid, latesttxid, spendingtxid, dummytxid, exchangetxid;
+	uint256 hashBlock, datahash, proposaltxid, prevproposaltxid, agreementtxid, latesttxid, spendingtxid, dummytxid, pawnshoptxid;
 	std::vector<uint8_t> srcpub, destpub, arbitrator, rewardedpubkey;
 	int32_t numvouts;
 	int64_t payment, arbitratorfee, deposit, totaldeposit, revision;
@@ -2121,11 +2121,11 @@ UniValue AgreementInfo(uint256 txid)
 				break;
 			case 'n':
 				result.push_back(Pair("type","agreement unlock"));
-				DecodeAgreementUnlockOpRet(tx.vout[numvouts-1].scriptPubKey, version, agreementtxid, exchangetxid);
+				DecodeAgreementUnlockOpRet(tx.vout[numvouts-1].scriptPubKey, version, agreementtxid, pawnshoptxid);
 				result.push_back(Pair("contract_txid",agreementtxid.GetHex()));
-				result.push_back(Pair("dest_exchange_txid",exchangetxid.GetHex()));
+				result.push_back(Pair("dest_pawnshop_txid",pawnshoptxid.GetHex()));
 				GetAgreementInitialData(agreementtxid, proposaltxid, srcpub, destpub, arbitrator, arbitratorfee, totaldeposit, datahash, dummytxid, info);
-				deposit = CheckDepositUnlockCond(exchangetxid);
+				deposit = CheckDepositUnlockCond(pawnshoptxid);
 				if (deposit > -1)
 				{
 					result.push_back(Pair("deposit_sent", deposit));
@@ -2344,8 +2344,8 @@ UniValue AgreementInventory(CPubKey pk)
 	result.push_back(Pair("arbitrator",arbitratorlist));
 	return (result);
 }
-// agreementsettlements - returns every exchange that has been designated to this agreement
-// bActiveOnly can be used to filter out inactive/closed exchanges
+// agreementsettlements - returns every pawnshop that has been designated to this agreement
+// bActiveOnly can be used to filter out inactive/closed pawnshop
 UniValue AgreementSettlements(const CPubKey& pk, uint256 agreementtxid, bool bActiveOnly)
 {
 	UniValue result(UniValue::VARR);
@@ -2356,11 +2356,11 @@ UniValue AgreementSettlements(const CPubKey& pk, uint256 agreementtxid, bool bAc
 	int32_t numvouts;
 	int64_t dummyamount;
 	std::string dummystr;
-	uint8_t version, exchangetype, lastfuncid;
+	uint8_t version, pawnshoptype, lastfuncid;
 	char myCCaddr[65];
 	std::vector<uint256> txids;
-	struct CCcontract_info *cpExchanges, CExchanges;
-	cpExchanges = CCinit(&CExchanges, EVAL_EXCHANGES);
+	struct CCcontract_info *cpPawnshop, CPawnshop;
+	cpPawnshop = CCinit(&CPawnshop, EVAL_PAWNSHOP);
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 	if (myGetTransaction(agreementtxid,agreementtx,hashBlock) != 0 && agreementtx.vout.size() > 0 &&
 	DecodeAgreementOpRet(agreementtx.vout[agreementtx.vout.size()-1].scriptPubKey) == 'c' &&
@@ -2370,14 +2370,14 @@ UniValue AgreementSettlements(const CPubKey& pk, uint256 agreementtxid, bool bAc
 		CPK_client = pubkey2pk(clientpk);
 		if (mypk != CPK_seller && mypk != CPK_client)
 			return (result);
-		GetCCaddress(cpExchanges,myCCaddr,mypk);
-		SetCCtxids(txids,myCCaddr,true,EVAL_EXCHANGES,CC_MARKER_VALUE,zeroid,'o');
+		GetCCaddress(cpPawnshop,myCCaddr,mypk);
+		SetCCtxids(txids,myCCaddr,true,EVAL_PAWNSHOP,CC_MARKER_VALUE,zeroid,'o');
 		for (std::vector<uint256>::const_iterator it=txids.begin(); it!=txids.end(); it++)
 		{
 			txid = *it;
 			if (myGetTransaction(txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
-			DecodeExchangeOpenOpRet(tx.vout[numvouts-1].scriptPubKey,version,dummypk,dummypk,exchangetype,dummytxid,dummyamount,dummyamount,refagreementtxid) == 'o' &&
-			refagreementtxid == agreementtxid && GetLatestExchangeTxid(txid, dummytxid, lastfuncid))
+			DecodePawnshopOpenOpRet(tx.vout[numvouts-1].scriptPubKey,version,dummypk,dummypk,pawnshoptype,dummytxid,dummyamount,dummyamount,refagreementtxid) == 'o' &&
+			refagreementtxid == agreementtxid && GetLatestPawnshopTxid(txid, dummytxid, lastfuncid))
 			{
 				if (bActiveOnly)
 				{

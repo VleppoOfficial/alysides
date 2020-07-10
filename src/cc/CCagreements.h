@@ -13,8 +13,8 @@
  *                                                                            *
  ******************************************************************************/
 
-#ifndef CC_COMMITMENTS_H
-#define CC_COMMITMENTS_H
+#ifndef CC_AGREEMENTS_H
+#define CC_AGREEMENTS_H
 
 #include "CCinclude.h"
 
@@ -37,8 +37,8 @@ CScript EncodeAgreementDisputeOpRet(uint8_t version, uint256 agreementtxid, std:
 uint8_t DecodeAgreementDisputeOpRet(CScript scriptPubKey, uint8_t &version, uint256 &agreementtxid, std::vector<uint8_t> &srcpub, uint256 &datahash);
 CScript EncodeAgreementDisputeResolveOpRet(uint8_t version, uint256 agreementtxid, std::vector<uint8_t> rewardedpubkey);
 uint8_t DecodeAgreementDisputeResolveOpRet(CScript scriptPubKey, uint8_t &version, uint256 &agreementtxid, std::vector<uint8_t> &rewardedpubkey);
-CScript EncodeAgreementUnlockOpRet(uint8_t version, uint256 agreementtxid, uint256 exchangetxid);
-uint8_t DecodeAgreementUnlockOpRet(CScript scriptPubKey, uint8_t &version, uint256 &agreementtxid, uint256 &exchangetxid);
+CScript EncodeAgreementUnlockOpRet(uint8_t version, uint256 agreementtxid, uint256 pawnshoptxid);
+uint8_t DecodeAgreementUnlockOpRet(CScript scriptPubKey, uint8_t &version, uint256 &agreementtxid, uint256 &pawnshoptxid);
 
 bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
 
@@ -57,7 +57,7 @@ UniValue AgreementStopProposal(const CPubKey& pk, uint64_t txfee, uint256 propos
 UniValue AgreementAccept(const CPubKey& pk, uint64_t txfee, uint256 proposaltxid);
 UniValue AgreementDispute(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 datahash);
 UniValue AgreementResolve(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, std::vector<uint8_t> rewardedpubkey);
-UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 exchangetxid);
+UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxid, uint256 pawnshoptxid);
 
 UniValue AgreementInfo(uint256 txid);
 UniValue AgreementUpdateLog(uint256 agreementtxid, int64_t samplenum, bool backwards);

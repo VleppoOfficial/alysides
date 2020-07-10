@@ -315,10 +315,10 @@ UniValue agreementresolve(const UniValue& params, bool fHelp, const CPubKey& myp
 UniValue agreementunlock(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-	uint256 exchangetxid, agreementtxid;
+	uint256 pawnshoptxid, agreementtxid;
     if (fHelp || params.size() != 2)
-        throw runtime_error("agreementunlock agreementtxid exchangetxid\n");
-    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 || ensure_CCrequirements(EVAL_EXCHANGES) < 0 )
+        throw runtime_error("agreementunlock agreementtxid pawnshoptxid\n");
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 || ensure_CCrequirements(EVAL_PAWNSHOP) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	
     Lock2NSPV(mypk);
@@ -328,12 +328,12 @@ UniValue agreementunlock(const UniValue& params, bool fHelp, const CPubKey& mypk
 		Unlock2NSPV(mypk);
         throw runtime_error("Agreement id invalid\n");
     }
-    exchangetxid = Parseuint256((char *)params[1].get_str().c_str());
-	if (exchangetxid == zeroid) {
+    pawnshoptxid = Parseuint256((char *)params[1].get_str().c_str());
+	if (pawnshoptxid == zeroid) {
 		Unlock2NSPV(mypk);
-        throw runtime_error("Exchange id invalid\n");
+        throw runtime_error("Pawnshop id invalid\n");
     }
-	result = AgreementUnlock(mypk, 0, agreementtxid, exchangetxid);
+	result = AgreementUnlock(mypk, 0, agreementtxid, pawnshoptxid);
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
     Unlock2NSPV(mypk);
@@ -421,7 +421,7 @@ UniValue agreementsettlements(const UniValue& params, bool fHelp, const CPubKey&
     uint256 agreementtxid;
     if ( fHelp || params.size() != 2 )
         throw runtime_error("agreementsettlements agreementtxid active_only\n");
-    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 || ensure_CCrequirements(EVAL_EXCHANGES) < 0 )
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 || ensure_CCrequirements(EVAL_PAWNSHOP) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
 	std::string typestr;
 	bool bActiveOnly;
