@@ -767,7 +767,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				GetCCaddress1of2(cpPawnshop, pawnshopaddr, tokensupplier, coinsupplier);
 				if (refagreementtxid != agreementtxid)
 					return eval->Invalid("agreement txid in pawnshop is different from agreement txid specified!");
-				if (!(pawnshoptype & EXTF_DEPOSITUNLOCKABLE))
+				if (!(pawnshoptype & PTF_DEPOSITUNLOCKABLE))
 					return eval->Invalid("deposit unlock is disabled for this pawnshop!");
 				if (!ValidatePawnshopOpenTx(pawnshoptx,CCerror))
 					return eval->Invalid(CCerror);
@@ -779,8 +779,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("cannot unlock after borrow tx!");
 				if (CheckDepositUnlockCond(pawnshoptxid) != 0)
 					return eval->Invalid("deposit unlock disabled or already sent to pawnshop!");
-				coinbalance = GetPawnshopInputs(cpPawnshop,pawnshoptx,EIF_COINS,unspentOutputs);
-				tokenbalance = GetPawnshopInputs(cpPawnshop,pawnshoptx,EIF_TOKENS,unspentOutputs);
+				coinbalance = GetPawnshopInputs(cpPawnshop,pawnshoptx,PIF_COINS,unspentOutputs);
+				tokenbalance = GetPawnshopInputs(cpPawnshop,pawnshoptx,PIF_TOKENS,unspentOutputs);
 				if (tokenbalance < numtokens)
 					return eval->Invalid("not enough tokens in pawnshop!");
 				if (coinbalance + depositval < numcoins)
@@ -1868,7 +1868,7 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "you are not the coin supplier of this pawnshop");
 		if (refagreementtxid != agreementtxid)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreement txid in pawnshop is different from agreement txid specified");
-		if (!(pawnshoptype & EXTF_DEPOSITUNLOCKABLE))
+		if (!(pawnshoptype & PTF_DEPOSITUNLOCKABLE))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "deposit unlock is disabled for this pawnshop");
 		if (!ValidatePawnshopOpenTx(pawnshoptx,CCerror))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << CCerror);
@@ -1878,8 +1878,8 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "pawnshop borrow transaction search failed, quitting");
 		else if (borrowtxid != zeroid)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "cannot unlock after borrow transaction");
-		coinbalance = GetPawnshopInputs(cpPawnshop,pawnshoptx,EIF_COINS,unspentOutputs);
-		tokenbalance = GetPawnshopInputs(cpPawnshop,pawnshoptx,EIF_TOKENS,unspentOutputs);
+		coinbalance = GetPawnshopInputs(cpPawnshop,pawnshoptx,PIF_COINS,unspentOutputs);
+		tokenbalance = GetPawnshopInputs(cpPawnshop,pawnshoptx,PIF_TOKENS,unspentOutputs);
 		if (tokenbalance < numtokens)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "pawnshop must have all required tokens for deposit unlock");
 		if (coinbalance + deposit < numcoins)
