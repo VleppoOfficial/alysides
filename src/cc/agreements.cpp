@@ -761,7 +761,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// Checking pawnshop.
 				if (myGetTransaction(pawnshoptxid, pawnshoptx, hashBlock) == 0 || pawnshoptx.vout.size() <= 0)
 					return eval->Invalid("cant find pawnshop tx!");
-				if (DecodePawnshopCreateOpRet(pawnshoptx.vout[pawnshoptx.vout.size() - 1].scriptPubKey,pawnshopname,version,tokensupplier,coinsupplier,pawnshopflags,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
+				if (DecodePawnshopCreateOpRet(pawnshoptx.vout[pawnshoptx.vout.size() - 1].scriptPubKey,version,pawnshopname,tokensupplier,coinsupplier,pawnshopflags,dummytxid,numtokens,numcoins,refagreementtxid) == 0)
 					return eval->Invalid("invalid pawnshop open opret!");
 				if (TotalPubkeyCCInputs(tx, coinsupplier) == 0)
 					return eval->Invalid("found no cc inputs signed by excahnge coinsupplier pubkey!");

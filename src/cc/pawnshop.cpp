@@ -129,7 +129,8 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 	std::string CCerror, name;
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	uint256 hashBlock, createtxid, borrowtxid, agreementtxid, latesttxid, tokenid;
-	uint8_t funcid, version, pawnshopflags, lastfuncid; 
+	uint8_t funcid, version, lastfuncid;
+	uint32_t pawnshopflags;
 	struct CCcontract_info *cpTokens, CTokens;
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
 	char tokenpk_coinaddr[65], tokenpk_tokenaddr[65], coinpk_coinaddr[65], coinpk_tokenaddr[65];
@@ -475,6 +476,7 @@ bool PawnshopExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransac
 	int32_t i, numvins, numvouts;
 	int64_t nValue, dummyamount, outputs = 0;
 	uint8_t dummychar, funcid, version;
+	uint32_t pawnshopflags;
 	CTransaction vinTx, createtx;
 	char destaddr[65], tokenpk_coinaddr[65], tokenpk_tokenaddr[65], coinpk_coinaddr[65], coinpk_tokenaddr[65];
 	CPubKey tokensupplier, coinsupplier;
@@ -489,7 +491,7 @@ bool PawnshopExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransac
 	if ((funcid = DecodePawnshopOpRet(tx.vout[tx.vout.size()-1].scriptPubKey, version, createtxid, tokenid)) != 0)
 	{
 		if (!myGetTransaction(createtxid, createtx, hashBlock) || 
-		DecodePawnshopCreateOpRet(createtx.vout[createtx.vout.size()-1].scriptPubKey,version,name,tokensupplier,coinsupplier,dummychar,dummytxid,dummyamount,dummyamount,dummytxid) == 0)
+		DecodePawnshopCreateOpRet(createtx.vout[createtx.vout.size()-1].scriptPubKey,version,name,tokensupplier,coinsupplier,pawnshopflags,dummytxid,dummyamount,dummyamount,dummytxid) == 0)
 			return eval->Invalid("createtxid invalid!");
 		
 		GetCCaddress(cpTokens, tokenpk_tokenaddr, tokensupplier);
