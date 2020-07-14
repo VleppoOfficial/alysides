@@ -1835,7 +1835,8 @@ UniValue AgreementUnlock(const CPubKey& pk, uint64_t txfee, uint256 agreementtxi
 	int64_t arbitratorfee, deposit, numtokens, numcoins, tokenbalance, coinbalance, refund;
 	int32_t numvouts;
 	std::string dummystr, CCerror = "", pawnshopname;
-	uint8_t version, pawnshopflags, updatefuncid, mypriv[32];
+	uint8_t version, updatefuncid, mypriv[32];
+	uint32_t pawnshopflags;
 	char mutualaddr[65];
 	CTransaction pawnshoptx;
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
@@ -2356,7 +2357,8 @@ UniValue AgreementSettlements(const CPubKey& pk, uint256 agreementtxid, bool bAc
 	int32_t numvouts;
 	int64_t dummyamount;
 	std::string dummystr, pawnshopname;
-	uint8_t version, pawnshopflags, lastfuncid;
+	uint8_t version, lastfuncid;
+	uint32_t pawnshopflags;
 	char myCCaddr[65];
 	std::vector<uint256> txids;
 	struct CCcontract_info *cpPawnshop, CPawnshop;
