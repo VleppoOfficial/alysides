@@ -478,7 +478,7 @@ bool PawnshopExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransac
 	CTransaction vinTx, createtx;
 	char destaddr[65], tokenpk_coinaddr[65], tokenpk_tokenaddr[65], coinpk_coinaddr[65], coinpk_tokenaddr[65];
 	CPubKey tokensupplier, coinsupplier;
-	std::tring name;
+	std::string name;
 	struct CCcontract_info *cpTokens, CTokens;
 	
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
