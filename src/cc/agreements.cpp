@@ -231,7 +231,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	int64_t payment, arbitratorfee, depositval, totaldeposit, dummyamount, numtokens, numcoins, tokenbalance, coinbalance, refund;
 	std::string info, CCerror = "", pawnshopname;
 	bool bHasReceiver, bHasArbitrator;
-	uint8_t proposaltype, version, spendingfuncid, funcid, updatefuncid, pawnshopflags;
+	uint8_t proposaltype, version, spendingfuncid, funcid, updatefuncid;
+	uint32_t pawnshopflags;
 	char globaladdr[65], srcaddr[65], destaddr[65], arbitratoraddr[65], pawnshopaddr[65];
 	CPubKey CPK_src, CPK_dest, CPK_arbitrator, CPK_signer, CPK_rewarded, tokensupplier, coinsupplier;
 	struct CCcontract_info *cpPawnshop, CPawnshop;
