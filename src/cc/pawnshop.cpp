@@ -237,7 +237,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 				// get coinbalance and tokenbalance, check if both are sufficient
 				coinbalance = GetPawnshopInputs(cp,createtx,PIF_COINS,unspentOutputs);
 				tokenbalance = GetPawnshopInputs(cp,createtx,PIF_TOKENS,unspentOutputs);
-				if (pawnshopflags & PTF_TRADE && coinbalance >= numcoins && tokenbalance >= numtokens)
+				if (pawnshopflags & PTF_NOLOAN && coinbalance >= numcoins && tokenbalance >= numtokens)
 					return eval->Invalid("cannot cancel trade when escrow has enough coins and tokens!");
 				// check vouts
 				if (numvouts < 1)
@@ -301,7 +301,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 				Getscriptaddress(tokenpk_coinaddr, CScript() << ParseHex(HexStr(tokensupplier)) << OP_CHECKSIG);
 				Getscriptaddress(coinpk_coinaddr, CScript() << ParseHex(HexStr(coinsupplier)) << OP_CHECKSIG);
 				// check pawnshop type
-				if (!(pawnshopflags & PTF_TRADE))
+				if (!(pawnshopflags & PTF_NOLOAN))
 					return eval->Invalid("swap transactions are only for trade type pawnshop!");
 				// check if pawnshop is closed
 				if (!GetLatestPawnshopTxid(createtxid, latesttxid, lastfuncid) || lastfuncid == 'x' || lastfuncid == 'e' || lastfuncid == 's' || lastfuncid == 'r')
@@ -733,7 +733,7 @@ bool ValidatePawnshopCreateTx(CTransaction opentx, std::string &CCerror)
 		CCerror = "invalid numcoins or numtokens value in pawnshop open opret!";
 		return false;
 	}
-	if (!(pawnshopflags & PTF_TRADE || pawnshopflags & PTF_LOAN))
+	if (!(pawnshopflags & PTF_NOLOAN || pawnshopflags & PTF_NOTRADE))
 	{
 		CCerror = "incorrect type in pawnshop open opret!";
 		return false;
@@ -976,7 +976,7 @@ UniValue PawnshopCreate(const CPubKey& pk,uint64_t txfee,std::string name,CPubKe
 	if (numcoins < 1)
 		CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Required coin amount must be above 0");
 	
-	//if (!(pawnshopflags & PTF_TRADE || pawnshopflags & PTF_LOAN))
+	//if (!(pawnshopflags & PTF_NOLOAN || pawnshopflags & PTF_NOTRADE))
 	//	CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Incorrect pawnshop type");
 
 	if (agreementtxid != zeroid)
@@ -1177,7 +1177,7 @@ UniValue PawnshopCancel(const CPubKey& pk, uint64_t txfee, uint256 createtxid)
 		coinbalance = GetPawnshopInputs(cp,createtx,PIF_COINS,unspentOutputs);
 		tokenbalance = GetPawnshopInputs(cp,createtx,PIF_TOKENS,unspentOutputs);
 		
-		if (pawnshopflags & PTF_TRADE && coinbalance >= numcoins && tokenbalance >= numtokens)
+		if (pawnshopflags & PTF_NOLOAN && coinbalance >= numcoins && tokenbalance >= numtokens)
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Cannot cancel trade when escrow has enough coins and tokens");
 	}
 	else
@@ -1292,7 +1292,7 @@ UniValue PawnshopExchange(const CPubKey& pk, uint64_t txfee, uint256 createtxid)
 		coinbalance = GetPawnshopInputs(cp,createtx,PIF_COINS,unspentOutputs);
 		tokenbalance = GetPawnshopInputs(cp,createtx,PIF_TOKENS,unspentOutputs);
 		
-		if (pawnshopflags & PTF_TRADE)
+		if (pawnshopflags & PTF_NOLOAN)
 		{
 			if (borrowtxid != zeroid)
 				CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Found loan borrow transaction in trade type pawnshop");
@@ -1334,7 +1334,7 @@ UniValue PawnshopExchange(const CPubKey& pk, uint64_t txfee, uint256 createtxid)
 				return (FinalizeCCTxExt(pk.IsValid(), 0, cp, mtx, mypk, txfee, EncodePawnshopOpRet('e', PAWNSHOPCC_VERSION, createtxid, tokenid, tokensupplier, coinsupplier))); 
 			}
 		}
-		else if (pawnshopflags & PTF_LOAN)
+		else if (pawnshopflags & PTF_NOTRADE)
 		{
 			
 			if (borrowtxid == zeroid || scheduletxid == zeroid)
