@@ -33,7 +33,6 @@ enum EPawnshopTypeFlags
 	//PTF_EARLYEXCHANGE = 16,
 	//PTF_EARLYRESCHEDULE = 32,
 	//PTF_NOREDEEM = 64,
-	//PTF_ = 128,
 };
 
 enum EPawnshopInputsFlags

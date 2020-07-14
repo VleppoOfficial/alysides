@@ -110,17 +110,6 @@ UniValue pawnshopcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
         flags = atoll(params[6].get_str().c_str());
     }
 	
-	/*flagstr = params[5].get_str();
-	if (STR_TOLOWER(flagstr) == "trade")
-        flagnum = PTF_TRADE;
-	else if (STR_TOLOWER(flagstr) == "loan")
-        flagnum = PTF_LOAN;
-    else
-	{
-		Unlock2NSPV(mypk);
-        throw runtime_error("Incorrect flag, must be 'trade' or 'loan'\n");
-	}*/
-
 	if (params.size() == 8)
 	{
         agreementtxid = Parseuint256((char *)params[7].get_str().c_str());
@@ -130,19 +119,6 @@ UniValue pawnshopcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 			throw runtime_error("Agreement transaction id invalid\n");
 		}
     }
-	
-	/*if (params.size() == 8)
-	{
-		depositspendstr = params[7].get_str();
-		if (STR_TOLOWER(depositspendstr) == "true" || STR_TOLOWER(depositspendstr) == "1")
-		{
-			bSpendDeposit = true;
-		}
-		else if (STR_TOLOWER(depositspendstr) == "false" || STR_TOLOWER(depositspendstr) == "0")
-		{
-			bSpendDeposit = false;
-		}
-    }*/
 	
 	result = PawnshopCreate(mypk,0,name,tokensupplier,coinsupplier,numcoins,tokenid,numtokens,flags,agreementtxid);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
@@ -168,7 +144,7 @@ UniValue pawnshopfund(const UniValue& params, bool fHelp, const CPubKey& mypk)
 	createtxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (createtxid == zeroid) {
 		Unlock2NSPV(mypk);
-		throw runtime_error("Pawnshoptxid is invalid\n");
+		throw runtime_error("Create txid is invalid\n");
 	}
 	amount = atoll(params[1].get_str().c_str());
 	if (amount < 0) {
@@ -205,7 +181,7 @@ UniValue pawnshopschedule(const UniValue& params, bool fHelp, const CPubKey& myp
     createtxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (createtxid == zeroid) {
 		Unlock2NSPV(mypk);
-		throw runtime_error("Pawnshoptxid is invalid\n");
+		throw runtime_error("Create txid is invalid\n");
 	}
 	interest = atoll(params[1].get_str().c_str());
 	if (interest < 0) {
@@ -233,7 +209,7 @@ UniValue pawnshopcancel(const UniValue& params, bool fHelp, const CPubKey& mypk)
     createtxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (createtxid == zeroid) {
 		Unlock2NSPV(mypk);
-		throw runtime_error("Pawnshoptxid is invalid\n");
+		throw runtime_error("Create txid is invalid\n");
 	}
     result = PawnshopCancel(mypk, 0, createtxid);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
@@ -255,7 +231,7 @@ UniValue pawnshopborrow(const UniValue& params, bool fHelp, const CPubKey& mypk)
     createtxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (createtxid == zeroid) {
 		Unlock2NSPV(mypk);
-		throw runtime_error("Pawnshoptxid is invalid\n");
+		throw runtime_error("Create txid is invalid\n");
 	}
 	loanparamtxid = Parseuint256((char *)params[1].get_str().c_str());
 	if (loanparamtxid == zeroid) {
@@ -282,7 +258,7 @@ UniValue pawnshopseize(const UniValue& params, bool fHelp, const CPubKey& mypk)
     createtxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (createtxid == zeroid) {
 		Unlock2NSPV(mypk);
-		throw runtime_error("Pawnshoptxid is invalid\n");
+		throw runtime_error("Create txid is invalid\n");
 	}
     result = PawnshopSeize(mypk, 0, createtxid);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
@@ -304,7 +280,7 @@ UniValue pawnshopexchange(const UniValue& params, bool fHelp, const CPubKey& myp
     createtxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (createtxid == zeroid) {
 		Unlock2NSPV(mypk);
-		throw runtime_error("Pawnshoptxid is invalid\n");
+		throw runtime_error("Create txid is invalid\n");
 	}
     result = PawnshopExchange(mypk, 0, createtxid);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
@@ -322,7 +298,7 @@ UniValue pawnshopinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
         throw runtime_error(CC_REQUIREMENTS_MSG);
     createtxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (createtxid == zeroid)
-		throw runtime_error("Pawnshoptxid is invalid\n");
+		throw runtime_error("Create txid is invalid\n");
     return(PawnshopInfo(mypk,createtxid));
 }
 
