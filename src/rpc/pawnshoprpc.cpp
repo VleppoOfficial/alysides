@@ -144,9 +144,7 @@ UniValue pawnshopcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 		}
     }*/
 	
-	PawnshopCreate(mypk,0,name,tokensupplier,coinsupplier,numcoins,tokenid,numtokens,flags,agreementtxid)
-	
-	result = PawnshopCreate(mypk,0,tokensupplier,coinsupplier,tokenid,numcoins,numtokens,flagnum,agreementtxid,bSpendDeposit);
+	result = PawnshopCreate(mypk,0,name,tokensupplier,coinsupplier,numcoins,tokenid,numtokens,flags,agreementtxid);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
 		result.push_back(Pair("result", "success"));
 	
