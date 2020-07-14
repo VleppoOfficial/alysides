@@ -21,24 +21,24 @@
 // Opret encoding/decoding functions
 //===========================================================================
 
-CScript EncodePawnshopCreateOpRet(uint8_t version,CPubKey tokensupplier,CPubKey coinsupplier,uint8_t pawnshopflags,uint256 tokenid,int64_t numtokens,int64_t numcoins,uint256 agreementtxid)
+CScript EncodePawnshopCreateOpRet(uint8_t version,std::string name,CPubKey tokensupplier,CPubKey coinsupplier,uint32_t pawnshopflags,uint256 tokenid,int64_t numtokens,int64_t numcoins,uint256 agreementtxid)
 {
-	CScript opret; uint8_t evalcode = EVAL_PAWNSHOP, funcid = 'o';
-	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << tokensupplier << coinsupplier << pawnshopflags << tokenid << numtokens << numcoins << agreementtxid);
+	CScript opret; uint8_t evalcode = EVAL_PAWNSHOP, funcid = 'c';
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << name << tokensupplier << coinsupplier << pawnshopflags << tokenid << numtokens << numcoins << agreementtxid);
 	return(opret);
 }
-uint8_t DecodePawnshopCreateOpRet(CScript scriptPubKey,uint8_t &version,CPubKey &tokensupplier,CPubKey &coinsupplier,uint8_t &pawnshopflags,uint256 &tokenid,int64_t &numtokens,int64_t &numcoins,uint256 &agreementtxid)
+uint8_t DecodePawnshopCreateOpRet(CScript scriptPubKey,uint8_t &version,std::string &name,CPubKey &tokensupplier,CPubKey &coinsupplier,uint32_t &pawnshopflags,uint256 &tokenid,int64_t &numtokens,int64_t &numcoins,uint256 &agreementtxid)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
-	if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> tokensupplier; ss >> coinsupplier; ss >> pawnshopflags; ss >> tokenid; ss >> numtokens; ss >> numcoins; ss >> agreementtxid) != 0 && evalcode == EVAL_PAWNSHOP)
+	if (vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> name; ss >> tokensupplier; ss >> coinsupplier; ss >> pawnshopflags; ss >> tokenid; ss >> numtokens; ss >> numcoins; ss >> agreementtxid) != 0 && evalcode == EVAL_PAWNSHOP)
 		return(funcid);
 	return(0);
 }
 
 CScript EncodePawnshopScheduleOpRet(uint8_t version,uint256 createtxid,int64_t interest,int64_t duedate)
 {
-	CScript opret; uint8_t evalcode = EVAL_PAWNSHOP, funcid = 'l';
+	CScript opret; uint8_t evalcode = EVAL_PAWNSHOP, funcid = 't';
 	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << interest << duedate);
 	return(opret);
 }
@@ -71,10 +71,12 @@ uint8_t DecodePawnshopOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 {
 	std::vector<vscript_t> oprets;
 	std::vector<uint8_t> vopret, vOpretExtra;
-	uint8_t *script, evalcode, funcid, pawnshopflags;
+	uint8_t *script, evalcode, funcid;
+	uint32_t pawnshopflags;
 	std::vector<CPubKey> pubkeys;
 	int64_t dummyamount;
-	CPubKey dummypk; 
+	CPubKey dummypk;
+	std::string name;
 	uint256 dummytxid;
 	
 	createtxid = tokenid = zeroid;
@@ -99,9 +101,9 @@ uint8_t DecodePawnshopOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
         funcid = script[1];
         switch (funcid)
         {
-			case 'o':
-				return DecodePawnshopCreateOpRet(scriptPubKey,version,dummypk,dummypk,pawnshopflags,dummytxid,dummyamount,dummyamount,dummytxid);
-			case 'l':
+			case 'c':
+				return DecodePawnshopCreateOpRet(scriptPubKey,version,name,dummypk,dummypk,pawnshopflags,dummytxid,dummyamount,dummyamount,dummytxid);
+			case 't':
 				return DecodePawnshopScheduleOpRet(scriptPubKey,version,createtxid,dummyamount,dummyamount);
 			default:
 				if (E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> createtxid) != 0 && evalcode == EVAL_PAWNSHOP)
@@ -124,7 +126,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 	CTransaction createtx;
 	int32_t numvins, numvouts;
 	int64_t numtokens, numcoins, coininputs, tokeninputs, coinoutputs, tokenoutputs, coinbalance, tokenbalance;
-	std::string CCerror;
+	std::string CCerror, name;
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	uint256 hashBlock, createtxid, borrowtxid, agreementtxid, latesttxid, tokenid;
 	uint8_t funcid, version, pawnshopflags, lastfuncid; 
@@ -143,10 +145,10 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 	if ((funcid = DecodePawnshopOpRet(tx.vout[numvouts-1].scriptPubKey, version, createtxid, tokenid)) != 0)
 	{
 		if (!(myGetTransaction(createtxid,createtx,hashBlock) != 0 && createtx.vout.size() > 0 &&
-		DecodePawnshopCreateOpRet(createtx.vout[createtx.vout.size()-1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid) == 'o'))
+		DecodePawnshopCreateOpRet(createtx.vout[createtx.vout.size()-1].scriptPubKey,version,name,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid) == 'c'))
 			return eval->Invalid("cannot find pawnshopcreate tx for PawnshopValidate!");
 			
-		if (funcid != 'c' && !ValidatePawnshopCreateTx(createtx, CCerror))
+		if (funcid != 'x' && !ValidatePawnshopCreateTx(createtx, CCerror))
 			return eval->Invalid(CCerror);
 		
 		if (PawnshopExactAmounts(cp,eval,tx,coininputs,tokeninputs) == false)
@@ -156,7 +158,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 	
 		switch (funcid)
 		{
-			case 'o':
+			case 'c':
 				// pawnshop open:
 				// vin.0 normal input
 				// vout.0 CC baton to mutual 1of2 address
@@ -176,7 +178,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 				// vout.n-1 OP_RETURN EVAL_PAWNSHOP ‘f’ version createtxid tokenid tokensupplier coinsupplier
 				return eval->Invalid("unexpected PawnshopValidate for pawnshopfund!");
 			
-			case 'l':
+			case 't':
 				// pawnshop loan terms:
 				// vin.0 normal input
 				// vin.1 previous baton CC input
@@ -195,7 +197,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 					(Tokens dest addr) no tokens should be moved anywhere
 					(Coins dest addr) no coins should be moved anywhere*/
 
-			case 'c':
+			case 'x':
 				// pawnshop cancel:
 				// vin.0 normal input
 				// vin.1 previous CC 1of2 baton
@@ -222,16 +224,16 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 				GetCCaddress(cpTokens, tokenpk_tokenaddr, tokensupplier);
 				Getscriptaddress(coinpk_coinaddr, CScript() << ParseHex(HexStr(coinsupplier)) << OP_CHECKSIG);
 				// check if pawnshop is closed
-				if (!GetLatestPawnshopTxid(createtxid, latesttxid, lastfuncid) || lastfuncid == 'c' || lastfuncid == 's' || lastfuncid == 'p' || lastfuncid == 'r')
+				if (!GetLatestPawnshopTxid(createtxid, latesttxid, lastfuncid) || lastfuncid == 'x' || lastfuncid == 'e' || lastfuncid == 's' || lastfuncid == 'r')
 					return eval->Invalid("createtxid specified in tx is closed!");
 				// check if borrow transaction exists
 				if (!FindPawnshopTxidType(createtxid, 'b', borrowtxid))
 					return eval->Invalid("borrow tx search failed!");
 				if (borrowtxid != zeroid && TotalPubkeyCCInputs(tx, coinsupplier) == 0)
-					return eval->Invalid("'c' tx after loan borrow tx must be signed by coin supplier pk!");
+					return eval->Invalid("'x' tx after loan borrow tx must be signed by coin supplier pk!");
 				// check deposit unlock condition
 				if (CheckDepositUnlockCond(createtxid) > 0)
-					return eval->Invalid("defined deposit must not be unlocked for 'c' tx!");
+					return eval->Invalid("defined deposit must not be unlocked for 'x' tx!");
 				// get coinbalance and tokenbalance, check if both are sufficient
 				coinbalance = GetPawnshopInputs(cp,createtx,PIF_COINS,unspentOutputs);
 				tokenbalance = GetPawnshopInputs(cp,createtx,PIF_TOKENS,unspentOutputs);
@@ -278,7 +280,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 				else if (numvins > 2 && (coininputs != coinbalance || tokeninputs != tokenbalance))
 					return eval->Invalid("tx coin/token inputs do not match coin/token balance!");
 				break;
-			case 's':
+			case 'e':
 				// pawnshop swap:
 				// vin.0 normal input
 				// vin.1 previous CC 1of2 baton
@@ -302,22 +304,22 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 				if (!(pawnshopflags & PTF_TRADE))
 					return eval->Invalid("swap transactions are only for trade type pawnshop!");
 				// check if pawnshop is closed
-				if (!GetLatestPawnshopTxid(createtxid, latesttxid, lastfuncid) || lastfuncid == 'c' || lastfuncid == 's' || lastfuncid == 'p' || lastfuncid == 'r')
+				if (!GetLatestPawnshopTxid(createtxid, latesttxid, lastfuncid) || lastfuncid == 'x' || lastfuncid == 'e' || lastfuncid == 's' || lastfuncid == 'r')
 					return eval->Invalid("createtxid specified in tx is closed!");
 				// check if borrow transaction exists
 				if (!FindPawnshopTxidType(createtxid, 'b', borrowtxid))
 					return eval->Invalid("borrow tx search failed!");
 				// if it does, invalidate
 				if (borrowtxid != zeroid)
-					return eval->Invalid("found borrow tx in pawnshop of 's' tx!");
+					return eval->Invalid("found borrow tx in pawnshop of 'e' tx!");
 				// check deposit unlock condition
 				if (CheckDepositUnlockCond(createtxid) == 0)
-					return eval->Invalid("defined deposit must be unlocked for 's' tx!");
+					return eval->Invalid("defined deposit must be unlocked for 'e' tx!");
 				// get coinbalance and tokenbalance, check if both are sufficient
 				coinbalance = GetPawnshopInputs(cp,createtx,PIF_COINS,unspentOutputs);
 				tokenbalance = GetPawnshopInputs(cp,createtx,PIF_TOKENS,unspentOutputs);
 				if (coinbalance < numcoins || tokenbalance < numtokens)
-					return eval->Invalid("not enough coins and tokens for 's' tx!");
+					return eval->Invalid("not enough coins and tokens for 'e' tx!");
 				// check vouts
 				if (numvouts < 3)
 					return eval->Invalid("not enough vouts!");
@@ -386,7 +388,7 @@ bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction
 					(Tokens dest addr) no tokens should be moved anywhere
 					(Coins dest addr) all coins must be sent to token provider. if there are more coins than numcoins, return remaining coins to coin provider*/
 
-			case 'p':
+			case 's':
 				// pawnshop seize:
 				// vin.0 normal input
 				// vin.1 previous CC 1of2 baton
@@ -476,6 +478,7 @@ bool PawnshopExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransac
 	CTransaction vinTx, createtx;
 	char destaddr[65], tokenpk_coinaddr[65], tokenpk_tokenaddr[65], coinpk_coinaddr[65], coinpk_tokenaddr[65];
 	CPubKey tokensupplier, coinsupplier;
+	std::tring name;
 	struct CCcontract_info *cpTokens, CTokens;
 	
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
@@ -486,7 +489,7 @@ bool PawnshopExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransac
 	if ((funcid = DecodePawnshopOpRet(tx.vout[tx.vout.size()-1].scriptPubKey, version, createtxid, tokenid)) != 0)
 	{
 		if (!myGetTransaction(createtxid, createtx, hashBlock) || 
-		DecodePawnshopCreateOpRet(createtx.vout[createtx.vout.size()-1].scriptPubKey,version,tokensupplier,coinsupplier,dummychar,dummytxid,dummyamount,dummyamount,dummytxid) == 0)
+		DecodePawnshopCreateOpRet(createtx.vout[createtx.vout.size()-1].scriptPubKey,version,name,tokensupplier,coinsupplier,dummychar,dummytxid,dummyamount,dummyamount,dummytxid) == 0)
 			return eval->Invalid("createtxid invalid!");
 		
 		GetCCaddress(cpTokens, tokenpk_tokenaddr, tokensupplier);
@@ -496,7 +499,7 @@ bool PawnshopExactAmounts(struct CCcontract_info *cp, Eval* eval, const CTransac
 		
 		switch (funcid)
 		{
-			case 'o':
+			case 'c':
 				return (true);
 			default:
 				for (i = 2; i < numvins; i++)
@@ -572,7 +575,7 @@ bool GetLatestPawnshopTxid(uint256 createtxid, uint256 &latesttxid, uint8_t &fun
 		std::cerr << "GetLatestPawnshopTxid: couldn't find pawnshop tx" << std::endl;
 		return false;
 	}
-	if (DecodePawnshopOpRet(createtx.vout[createtx.vout.size() - 1].scriptPubKey,version,dummytxid,dummytxid) != 'o')
+	if (DecodePawnshopOpRet(createtx.vout[createtx.vout.size() - 1].scriptPubKey,version,dummytxid,dummytxid) != 'c')
 	{
 		std::cerr << "GetLatestPawnshopTxid: pawnshop tx is not an opening tx" << std::endl;
 		return false;
@@ -580,7 +583,7 @@ bool GetLatestPawnshopTxid(uint256 createtxid, uint256 &latesttxid, uint8_t &fun
 	if ((retcode = CCgetspenttxid(batontxid, vini, height, createtxid, 0)) != 0)
 	{
 		latesttxid = createtxid; // no updates, return createtxid
-		funcid = 'o';
+		funcid = 'c';
 		return true;
 	}
 	sourcetxid = createtxid;
@@ -590,14 +593,14 @@ bool GetLatestPawnshopTxid(uint256 createtxid, uint256 &latesttxid, uint8_t &fun
 		funcid = DecodePawnshopOpRet(batontx.vout[batontx.vout.size() - 1].scriptPubKey,version,dummytxid,dummytxid);
 		switch (funcid)
 		{
-			case 'l':
+			case 't':
 			case 'b':
 				sourcetxid = batontxid;
 				continue;
-			case 'c':
-			case 's':
+			case 'x':
+			case 'e':
 			case 'r':
-			case 'p':
+			case 's':
 				sourcetxid = batontxid;
 				break;
 			default:
@@ -621,7 +624,7 @@ bool FindPawnshopTxidType(uint256 createtxid, uint8_t type, uint256 &typetxid)
 		std::cerr << "FindPawnshopTxidType: can't find latest update tx" << std::endl;
 		return false;
 	}
-	if (batontxid == createtxid && funcid == 'o')
+	if (batontxid == createtxid && funcid == 'c')
 	{
 		typetxid == createtxid;
 		return true;
@@ -652,15 +655,17 @@ int64_t CheckDepositUnlockCond(uint256 createtxid)
 	CPubKey tokensupplier, coinsupplier;
 	uint256 refcreatetxid, unlocktxid, hashBlock, agreementtxid, dummytxid;
 	CTransaction createtx, unlocktx;
-	uint8_t version, unlockfuncid, pawnshopflags;
+	uint8_t version, unlockfuncid;
+	uint32_t pawnshopflags;
+	std::string name;
 	struct CCcontract_info *cp, C;
 	
 	cp = CCinit(&C, EVAL_PAWNSHOP);
 	
 	if (myGetTransaction(createtxid, createtx, hashBlock) && (numvouts = createtx.vout.size()) > 0 && 
-	DecodePawnshopCreateOpRet(createtx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshopflags,dummytxid,dummyamount,dummyamount,agreementtxid) != 0)
+	DecodePawnshopCreateOpRet(createtx.vout[numvouts - 1].scriptPubKey,version,name,tokensupplier,coinsupplier,pawnshopflags,dummytxid,dummyamount,dummyamount,agreementtxid) != 0)
 	{
-		if (agreementtxid == zeroid || !(pawnshopflags & PTF_DEPOSITUNLOCKABLE))
+		if (agreementtxid == zeroid || !(pawnshopflags & PTF_REQUIREUNLOCK))
 			return -1;
 		else if (GetLatestAgreementUpdate(agreementtxid, unlocktxid, unlockfuncid) && unlockfuncid == 'n' &&
 		myGetTransaction(unlocktxid, unlocktx, hashBlock) && (numvouts = unlocktx.vout.size()) > 0 && 
@@ -680,20 +685,26 @@ bool ValidatePawnshopCreateTx(CTransaction opentx, std::string &CCerror)
 	CPubKey CPK_seller, CPK_client, CPK_arbitrator, tokensupplier, coinsupplier;
 	CTransaction tokentx, agreementtx;
 	uint256 hashBlock, tokenid, agreementtxid, dummytxid;
-	uint8_t version, pawnshopflags;
+	uint8_t version;
+	uint32_t pawnshopflags;
 	int32_t numvins, numvouts;
 	int64_t numtokens, numcoins, dummyamount;
 	std::vector<uint8_t> dummyPubkey, sellerpk, clientpk, arbitratorpk;
-	std::string dummystr;
+	std::string dummystr, name;
 	char pawnshopaddr[65], tokenpkaddr[65], coinpkaddr[65];
 	struct CCcontract_info *cp, C;
 	
 	cp = CCinit(&C, EVAL_PAWNSHOP);
 	CCerror = "";
 	
-	if (DecodePawnshopCreateOpRet(opentx.vout[opentx.vout.size() - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid) == 0)
+	if (DecodePawnshopCreateOpRet(opentx.vout[opentx.vout.size() - 1].scriptPubKey,version,name,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid) == 0)
 	{
 		CCerror = "invalid pawnshop open opret!";
+		return false;
+	}
+	if (name.size() == 0 || name.size() > 32)
+	{
+		CCerror = "name must not be empty and up to 32 chars!";
 		return false;
 	}
 	if (tokenid == zeroid)
@@ -730,7 +741,7 @@ bool ValidatePawnshopCreateTx(CTransaction opentx, std::string &CCerror)
 	if (agreementtxid != zeroid)
 	{
 		if (!(myGetTransaction(agreementtxid,agreementtx,hashBlock) != 0 && agreementtx.vout.size() > 0 &&
-		(DecodeAgreementOpRet(agreementtx.vout[agreementtx.vout.size()-1].scriptPubKey) == 'c')))
+		(DecodeAgreementOpRet(agreementtx.vout[agreementtx.vout.size()-1].scriptPubKey) == 'x')))
 		{
 			CCerror = "invalid agreement txid in pawnshop open opret!";
 			return false;
@@ -795,11 +806,13 @@ int64_t GetPawnshopInputs(struct CCcontract_info *cp,CTransaction createtx,bool 
 	CTransaction vintx;
     std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	CPubKey tokensupplier, coinsupplier;
-	uint8_t myprivkey[32], version, funcid, pawnshopflags;
+	uint8_t myprivkey[32], version, funcid;
+	uint32_t pawnshopflags;
+	std::string name;
 	bool bHasBorrowed = false;
 	
     if ((numvouts = createtx.vout.size()) > 0 && 
-	DecodePawnshopCreateOpRet(createtx.vout[numvouts-1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid) == 'o')
+	DecodePawnshopCreateOpRet(createtx.vout[numvouts-1].scriptPubKey,version,name,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid) == 'c')
     {
 		if (mode == PIF_TOKENS)
 		{
@@ -869,14 +882,16 @@ int64_t AddPawnshopInputs(struct CCcontract_info *cp,CMutableTransaction &mtx,CT
 	CTransaction vintx;
     std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	CPubKey tokensupplier, coinsupplier;
-	uint8_t myprivkey[32], version, funcid, pawnshopflags;
+	uint8_t myprivkey[32], version, funcid;
+	std::string name;
+	uint32_t pawnshopflags;
 	int32_t n = 0;
 	
 	if (maxinputs == 0 || GetPawnshopInputs(cp,createtx,mode,unspentOutputs) == 0)
 		return 0;
 	
 	if ((numvouts = createtx.vout.size()) > 0 && 
-	DecodePawnshopCreateOpRet(createtx.vout[numvouts-1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid) == 'o')
+	DecodePawnshopCreateOpRet(createtx.vout[numvouts-1].scriptPubKey,version,name,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid) == 'c')
     {
 		if (mode == PIF_TOKENS)
 		{
@@ -915,7 +930,7 @@ int64_t AddPawnshopInputs(struct CCcontract_info *cp,CMutableTransaction &mtx,CT
 // RPCs - tx creation
 //===========================================================================
 
-UniValue PawnshopCreate(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,CPubKey coinsupplier,uint256 tokenid,int64_t numcoins,int64_t numtokens,uint8_t pawnshopflags,uint256 agreementtxid,bool bSpendDeposit)
+UniValue PawnshopCreate(const CPubKey& pk,uint64_t txfee,std::string name,CPubKey tokensupplier,CPubKey coinsupplier,int64_t numcoins,uint256 tokenid,int64_t numtokens,uint32_t pawnshopflags,uint256 agreementtxid)
 {
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	CPubKey mypk, CPK_seller, CPK_client, CPK_arbitrator;
@@ -935,6 +950,9 @@ UniValue PawnshopCreate(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,C
 	{
 		txfee = CC_TXFEE;
 	}
+	
+	if (name.size() == 0 || name.size() > 32)
+		CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Name must not be empty and up to 32 chars");
 	
 	if (!(tokensupplier.IsFullyValid()))
 		CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Token supplier pubkey invalid");
@@ -958,13 +976,13 @@ UniValue PawnshopCreate(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,C
 	if (numcoins < 1)
 		CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Required coin amount must be above 0");
 	
-	if (!(pawnshopflags & PTF_TRADE || pawnshopflags & PTF_LOAN))
-		CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Incorrect pawnshop type");
-	
+	//if (!(pawnshopflags & PTF_TRADE || pawnshopflags & PTF_LOAN))
+	//	CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Incorrect pawnshop type");
+
 	if (agreementtxid != zeroid)
 	{
 		if (!(myGetTransaction(agreementtxid,agreementtx,hashBlock) != 0 && agreementtx.vout.size() > 0 &&
-			(DecodeAgreementOpRet(agreementtx.vout[agreementtx.vout.size()-1].scriptPubKey) == 'c')))
+			(DecodeAgreementOpRet(agreementtx.vout[agreementtx.vout.size()-1].scriptPubKey) == 'x')))
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Agreement txid is not a valid proposal signing txid");
 		
 		GetAgreementInitialData(agreementtxid, dummytxid, sellerpk, clientpk, arbitratorpk, dummyamount, dummyamount, dummytxid, dummytxid, dummystr);
@@ -979,10 +997,8 @@ UniValue PawnshopCreate(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,C
 		if ((tokensupplier != CPK_seller && tokensupplier != CPK_client) || (coinsupplier != CPK_seller && coinsupplier != CPK_client))
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Agreement client and seller pubkeys doesn't match pawnshop coinsupplier and tokensupplier pubkeys");
 		
-		if (bSpendDeposit)
+		if (pawnshopflags & PTF_REQUIREUNLOCK)
 		{
-			pawnshopflags |= PTF_DEPOSITUNLOCKABLE;
-
 			if (CCgetspenttxid(spendingtxid, vini, height, agreementtxid, 2) == 0)
 				CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Agreement deposit was already spent by txid " << spendingtxid.GetHex());
 		}
@@ -994,7 +1010,7 @@ UniValue PawnshopCreate(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,C
 		mtx.vout.push_back(MakeCC1vout(EVAL_PAWNSHOP, CC_MARKER_VALUE, tokensupplier)); // vout.1 marker to tokensupplier
 		mtx.vout.push_back(MakeCC1vout(EVAL_PAWNSHOP, CC_MARKER_VALUE, coinsupplier)); // vout.2 marker to coinsupplier
 
-		return (FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodePawnshopCreateOpRet(PAWNSHOPCC_VERSION,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid)));
+		return (FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,EncodePawnshopCreateOpRet(PAWNSHOPCC_VERSION,name,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid)));
 	}
 	CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Error adding normal inputs");
 }
@@ -1010,7 +1026,9 @@ UniValue PawnshopFund(const CPubKey& pk, uint64_t txfee, uint256 createtxid, int
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	struct CCcontract_info *cp, C, *cpTokens, CTokens;
 	uint256 hashBlock, tokenid, agreementtxid, borrowtxid = zeroid, latesttxid;
-	uint8_t version, pawnshopflags, lastfuncid;
+	uint8_t version, lastfuncid;
+	std::string name;
+	uint32_t pawnshopflags;
 	
 	cp = CCinit(&C, EVAL_PAWNSHOP);
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
@@ -1031,13 +1049,13 @@ UniValue PawnshopFund(const CPubKey& pk, uint64_t txfee, uint256 createtxid, int
 		if (!ValidatePawnshopCreateTx(createtx,CCerror))
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << CCerror);
 		
-		if (!GetLatestPawnshopTxid(createtxid, latesttxid, lastfuncid) || lastfuncid == 'c' || lastfuncid == 's' || lastfuncid == 'p' || lastfuncid == 'r')
+		if (!GetLatestPawnshopTxid(createtxid, latesttxid, lastfuncid) || lastfuncid == 'x' || lastfuncid == 'e' || lastfuncid == 's' || lastfuncid == 'r')
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Pawnshop " << createtxid.GetHex() << " closed");
 		
 		if (!FindPawnshopTxidType(createtxid, 'b', borrowtxid))
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Pawnshop borrow transaction search failed, quitting");
 		
-		DecodePawnshopCreateOpRet(createtx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid);
+		DecodePawnshopCreateOpRet(createtx.vout[numvouts - 1].scriptPubKey,version,name,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid);
 		
 		if (useTokens && mypk != tokensupplier)
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Tokens can only be sent by token supplier pubkey");
@@ -1119,7 +1137,9 @@ UniValue PawnshopCancel(const CPubKey& pk, uint64_t txfee, uint256 createtxid)
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	struct CCcontract_info *cp, C, *cpTokens, CTokens;
 	uint256 hashBlock, tokenid, agreementtxid, latesttxid, borrowtxid;
-	uint8_t version, pawnshopflags, mypriv[32], lastfuncid;
+	uint8_t version, mypriv[32], lastfuncid;
+	std::string name;
+	uint32_t pawnshopflags;
 	
 	cp = CCinit(&C, EVAL_PAWNSHOP);
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
@@ -1137,7 +1157,7 @@ UniValue PawnshopCancel(const CPubKey& pk, uint64_t txfee, uint256 createtxid)
 		if (!ValidatePawnshopCreateTx(createtx,CCerror))
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << CCerror);
 		
-		if (!GetLatestPawnshopTxid(createtxid, latesttxid, lastfuncid) || lastfuncid == 'c' || lastfuncid == 's' || lastfuncid == 'p' || lastfuncid == 'r')
+		if (!GetLatestPawnshopTxid(createtxid, latesttxid, lastfuncid) || lastfuncid == 'x' || lastfuncid == 'e' || lastfuncid == 's' || lastfuncid == 'r')
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Pawnshop " << createtxid.GetHex() << " closed");
 		
 		if (!FindPawnshopTxidType(createtxid, 'b', borrowtxid))
@@ -1145,7 +1165,7 @@ UniValue PawnshopCancel(const CPubKey& pk, uint64_t txfee, uint256 createtxid)
 		else if (borrowtxid != zeroid && mypk != coinsupplier)
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Loan in progress can only be cancelled by coin supplier pubkey");
 		
-		DecodePawnshopCreateOpRet(createtx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid);
+		DecodePawnshopCreateOpRet(createtx.vout[numvouts - 1].scriptPubKey,version,name,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid);
 		
 		if (mypk != tokensupplier && mypk != coinsupplier)
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "You are not a valid party for pawnshop " << createtxid.GetHex());
@@ -1163,7 +1183,7 @@ UniValue PawnshopCancel(const CPubKey& pk, uint64_t txfee, uint256 createtxid)
 	else
 		CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Invalid createtxid");
 
-	// creating cancel ('c') transaction
+	// creating cancel ('x') transaction
 	
 	inputs = AddNormalinputs(mtx, mypk, txfee, 5, pk.IsValid()); // txfee
 	if (inputs >= txfee)
@@ -1187,7 +1207,7 @@ UniValue PawnshopCancel(const CPubKey& pk, uint64_t txfee, uint256 createtxid)
 	{
 		mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, tokens, tokensupplier)); // tokens refund vout
 	}
-	return (FinalizeCCTxExt(pk.IsValid(), 0, cp, mtx, mypk, txfee, EncodePawnshopOpRet('c', PAWNSHOPCC_VERSION, createtxid, tokenid, tokensupplier, coinsupplier))); 
+	return (FinalizeCCTxExt(pk.IsValid(), 0, cp, mtx, mypk, txfee, EncodePawnshopOpRet('x', PAWNSHOPCC_VERSION, createtxid, tokenid, tokensupplier, coinsupplier))); 
 }
 
 UniValue PawnshopBorrow(const CPubKey& pk, uint64_t txfee, uint256 createtxid, uint256 scheduletxid)
@@ -1230,7 +1250,9 @@ UniValue PawnshopExchange(const CPubKey& pk, uint64_t txfee, uint256 createtxid)
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs;
 	struct CCcontract_info *cp, C, *cpTokens, CTokens;
 	uint256 hashBlock, tokenid, agreementtxid, latesttxid, scheduletxid, borrowtxid;
-	uint8_t version, pawnshopflags, mypriv[32], lastfuncid;
+	uint8_t version, mypriv[32], lastfuncid;
+	std::string name;
+	uint32_t pawnshopflags;
 	
 	cp = CCinit(&C, EVAL_PAWNSHOP);
 	cpTokens = CCinit(&CTokens, EVAL_TOKENS);
@@ -1248,7 +1270,7 @@ UniValue PawnshopExchange(const CPubKey& pk, uint64_t txfee, uint256 createtxid)
 		if (!ValidatePawnshopCreateTx(createtx,CCerror))
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << CCerror);
 		
-		if (!GetLatestPawnshopTxid(createtxid, latesttxid, lastfuncid) || lastfuncid == 'c' || lastfuncid == 's' || lastfuncid == 'p' || lastfuncid == 'r')
+		if (!GetLatestPawnshopTxid(createtxid, latesttxid, lastfuncid) || lastfuncid == 'x' || lastfuncid == 'e' || lastfuncid == 's' || lastfuncid == 'r')
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Pawnshop " << createtxid.GetHex() << " closed");
 		
 		// checking for borrow transaction
@@ -1256,10 +1278,10 @@ UniValue PawnshopExchange(const CPubKey& pk, uint64_t txfee, uint256 createtxid)
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Pawnshop borrow transaction search failed, quitting");
 		
 		// checking for latest loan terms transaction
-		if (!FindPawnshopTxidType(createtxid, 'l', scheduletxid))
+		if (!FindPawnshopTxidType(createtxid, 't', scheduletxid))
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Pawnshop loan terms transaction search failed, quitting");
 		
-		DecodePawnshopCreateOpRet(createtx.vout[numvouts - 1].scriptPubKey,version,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid);
+		DecodePawnshopCreateOpRet(createtx.vout[numvouts - 1].scriptPubKey,version,name,tokensupplier,coinsupplier,pawnshopflags,tokenid,numtokens,numcoins,agreementtxid);
 		
 		if (mypk != tokensupplier && mypk != coinsupplier)
 			CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "You are not a valid party for pawnshop " << createtxid.GetHex());
@@ -1278,7 +1300,7 @@ UniValue PawnshopExchange(const CPubKey& pk, uint64_t txfee, uint256 createtxid)
 			if (coinbalance < numcoins || tokenbalance < numtokens)
 				CCERR_RESULT("pawnshopcc", CCLOG_INFO, stream << "Cannot close trade when escrow doesn't have enough coins and tokens");
 			
-			// creating swap ('s') transaction
+			// creating swap ('e') transaction
 			
 			inputs = AddNormalinputs(mtx, mypk, txfee, 5, pk.IsValid()); // txfee
 			if (inputs >= txfee)
@@ -1309,7 +1331,7 @@ UniValue PawnshopExchange(const CPubKey& pk, uint64_t txfee, uint256 createtxid)
 				{
 					mtx.vout.push_back(MakeCC1vout(EVAL_TOKENS, tokens - numtokens, tokensupplier)); // tokens refund vout
 				}
-				return (FinalizeCCTxExt(pk.IsValid(), 0, cp, mtx, mypk, txfee, EncodePawnshopOpRet('s', PAWNSHOPCC_VERSION, createtxid, tokenid, tokensupplier, coinsupplier))); 
+				return (FinalizeCCTxExt(pk.IsValid(), 0, cp, mtx, mypk, txfee, EncodePawnshopOpRet('e', PAWNSHOPCC_VERSION, createtxid, tokenid, tokensupplier, coinsupplier))); 
 			}
 		}
 		else if (pawnshopflags & PTF_LOAN)
@@ -1356,27 +1378,29 @@ UniValue PawnshopInfo(const CPubKey& pk, uint256 createtxid)
 	uint256 hashBlock, tokenid, latesttxid, agreementtxid;
 	int32_t numvouts;
 	int64_t numtokens, numcoins;
-	uint8_t version, funcid, pawnshopflags, lastfuncid;
+	uint8_t version, funcid, lastfuncid;
+	uint32_t pawnshopflags;
 	CPubKey mypk, tokensupplier, coinsupplier;
 	char str[67];
-	std::string status;
+	std::string status, name;
 	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > unspentOutputs, unspentTokenOutputs;
 	struct CCcontract_info *cp, C;
 	
 	mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
 	
 	if (myGetTransaction(createtxid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
-	(funcid = DecodePawnshopCreateOpRet(tx.vout[numvouts-1].scriptPubKey, version, tokensupplier, coinsupplier, pawnshopflags, tokenid, numtokens, numcoins, agreementtxid)) == 'o')
+	(funcid = DecodePawnshopCreateOpRet(tx.vout[numvouts-1].scriptPubKey, version, name, tokensupplier, coinsupplier, pawnshopflags, tokenid, numtokens, numcoins, agreementtxid)) == 'c')
 	{
 		result.push_back(Pair("result", "success"));
 		result.push_back(Pair("createtxid", createtxid.GetHex()));
 		
+		result.push_back(Pair("name", name));
 		result.push_back(Pair("token_supplier", pubkey33_str(str,(uint8_t *)&tokensupplier)));
 		result.push_back(Pair("coin_supplier", pubkey33_str(str,(uint8_t *)&coinsupplier)));
 		
-		if (pawnshopflags & PTF_TRADE)
+		if (pawnshopflags & PTF_NOLOAN)
 			result.push_back(Pair("pawnshop_type", "trade"));
-		else if (pawnshopflags & PTF_LOAN)
+		else if (pawnshopflags & PTF_NOTRADE)
 			result.push_back(Pair("pawnshop_type", "loan"));
 		
 		result.push_back(Pair("tokenid", tokenid.GetHex()));
@@ -1389,15 +1413,15 @@ UniValue PawnshopInfo(const CPubKey& pk, uint256 createtxid)
 		{
 			switch (lastfuncid)
 			{
-				case 'c':
+				case 'x':
 					status = "cancelled";
 					break;
 				case 'r':
-				case 's':
+				case 'e':
 					status = "closed";
 					break;
-				case 'p':
-					status = "seizessessed";
+				case 's':
+					status = "seized";
 					break;
 				default:
 					status = "open";
@@ -1448,7 +1472,7 @@ UniValue PawnshopInfo(const CPubKey& pk, uint256 createtxid)
 		if (agreementtxid != zeroid)
 		{
 			result.push_back(Pair("agreement_txid", agreementtxid.GetHex()));
-			if (pawnshopflags & PTF_DEPOSITUNLOCKABLE)
+			if (pawnshopflags & PTF_REQUIREUNLOCK)
 				result.push_back(Pair("deposit_unlock_enabled", "true"));
 			else
 				result.push_back(Pair("deposit_unlock_enabled", "false"));
@@ -1474,14 +1498,14 @@ UniValue PawnshopList(const CPubKey& pk)
 	mypk = pk.IsValid()?pk:pubkey2pk(Mypubkey());
 	
 	GetCCaddress(cp,myCCaddr,mypk);
-	SetCCtxids(txids,myCCaddr,true,EVAL_PAWNSHOP,CC_MARKER_VALUE,zeroid,'o');
+	SetCCtxids(txids,myCCaddr,true,EVAL_PAWNSHOP,CC_MARKER_VALUE,zeroid,'c');
 	
 	for (std::vector<uint256>::const_iterator it=txids.begin(); it!=txids.end(); it++)
 	{
 		txid = *it;
 		if ( myGetTransaction(txid,tx,hashBlock) != 0 && (numvouts= tx.vout.size()) > 0 )
 		{
-			if (DecodePawnshopOpRet(tx.vout[numvouts-1].scriptPubKey, version, dummytxid, dummytxid) == 'o')
+			if (DecodePawnshopOpRet(tx.vout[numvouts-1].scriptPubKey, version, dummytxid, dummytxid) == 'c')
 			{				
 				result.push_back(txid.GetHex());
 			}

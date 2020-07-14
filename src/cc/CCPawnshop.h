@@ -13,10 +13,6 @@
  *                                                                            *
  ******************************************************************************/
 
-/*
- Pawnshop stuff
- */
-
 #ifndef CC_PAWNSHOP_H
 #define CC_PAWNSHOP_H
 
@@ -30,9 +26,14 @@
 
 enum EPawnshopTypeFlags
 {
-	PTF_TRADE = 1,
-	PTF_LOAN = 2,
-	PTF_DEPOSITUNLOCKABLE = 4,
+	PTF_NOLOAN = 1,
+	PTF_NOTRADE = 2,
+	PTF_REQUIREUNLOCK = 4,
+	//PTF_NOSEIZE = 8,
+	//PTF_EARLYEXCHANGE = 16,
+	//PTF_EARLYRESCHEDULE = 32,
+	//PTF_NOREDEEM = 64,
+	//PTF_ = 128,
 };
 
 enum EPawnshopInputsFlags
@@ -59,7 +60,7 @@ bool ValidatePawnshopCreateTx(CTransaction opentx, std::string &CCerror);
 int64_t GetPawnshopInputs(struct CCcontract_info *cp,CTransaction createtx,bool mode,std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > &validUnspentOutputs);
 int64_t AddPawnshopInputs(struct CCcontract_info *cp,CMutableTransaction &mtx,CTransaction createtx,bool mode,int32_t maxinputs);
 
-UniValue PawnshopCreate(const CPubKey& pk,uint64_t txfee,CPubKey tokensupplier,CPubKey coinsupplier,uint256 tokenid,int64_t numcoins,int64_t numtokens,uint8_t pawnshopflags,uint256 agreementtxid,bool bSpendDeposit);
+UniValue PawnshopCreate(const CPubKey& pk,uint64_t txfee,std::string name,CPubKey tokensupplier,CPubKey coinsupplier,int64_t numcoins,uint256 tokenid,int64_t numtokens,uint32_t pawnshopflags,uint256 agreementtxid);
 UniValue PawnshopFund(const CPubKey& pk, uint64_t txfee, uint256 createtxid, int64_t amount, bool useTokens);
 UniValue PawnshopSchedule(const CPubKey& pk, uint64_t txfee, uint256 createtxid, int64_t interest, int64_t duedate);
 UniValue PawnshopCancel(const CPubKey& pk, uint64_t txfee, uint256 createtxid);

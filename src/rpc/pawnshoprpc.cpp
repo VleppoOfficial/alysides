@@ -54,51 +54,63 @@ UniValue pawnshopcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 	uint256 tokenid, agreementtxid = zeroid;
 	int64_t numcoins, numtokens;
 	bool bSpendDeposit = false;
-	std::string flagstr, depositspendstr;
-	uint8_t flagnum = 0;
+	std::string name;
+	uint32_t flags = 0;
 	
 	if (fHelp || params.size() < 6 || params.size() > 8)
-		throw runtime_error("pawnshopcreate tokensupplier coinsupplier tokenid numcoins numtokens trade|loan [agreementtxid][enable_deposit_spend]\n");
+		throw runtime_error("pawnshopcreate name coinsupplier tokensupplier numcoins tokenid numtokens [flags][agreementtxid]\n");
 	if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
 
 	Lock2NSPV(mypk);
 	
-	CPubKey tokensupplier(pubkey2pk(ParseHex(params[0].get_str().c_str())));
-	if (STR_TOLOWER(params[0].get_str()) == "mypk")
-	{
-        tokensupplier = mypk.IsValid() ? mypk : pubkey2pk(Mypubkey());
-	}
-
+	name = params[0].get_str();
+    if (name.size() == 0 || name.size() > 32) {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Name must not be empty and up to 32 chars\n");
+    }
+	
 	CPubKey coinsupplier(ParseHex(params[1].get_str().c_str()));
 	if (STR_TOLOWER(params[1].get_str()) == "mypk")
 	{
         coinsupplier = mypk.IsValid() ? mypk : pubkey2pk(Mypubkey());
 	}
 	
-	tokenid = Parseuint256((char *)params[2].get_str().c_str());
-    if (tokenid == zeroid)
-	{
-        Unlock2NSPV(mypk);
-		throw runtime_error("Invalid tokenid\n");
-	}
 	
-	//numcoins = atof((char *)params[3].get_str().c_str()) * COIN + 0.00000000499999;
-	numcoins = atoll(params[3].get_str().c_str());
+	CPubKey tokensupplier(pubkey2pk(ParseHex(params[2].get_str().c_str())));
+	if (STR_TOLOWER(params[2].get_str()) == "mypk")
+	{
+        tokensupplier = mypk.IsValid() ? mypk : pubkey2pk(Mypubkey());
+	}
+
+	//numcoins = atoll(params[3].get_str().c_str());
+	numcoins = AmountFromValue(params[3]);
 	if (numcoins < 1)
 	{
 		Unlock2NSPV(mypk);
 		throw runtime_error("Required coin amount must be above 0\n");
 	}
 	
-	numtokens = atoll(params[4].get_str().c_str());
+	tokenid = Parseuint256((char *)params[4].get_str().c_str());
+    if (tokenid == zeroid)
+	{
+        Unlock2NSPV(mypk);
+		throw runtime_error("Invalid tokenid\n");
+	}
+	
+	numtokens = atoll(params[5].get_str().c_str());
 	if (numtokens < 1)
 	{
 		Unlock2NSPV(mypk);
 		throw runtime_error("Required token amount must be above 0\n");
 	}
 	
-	flagstr = params[5].get_str();
+	if (params.size() >= 7)
+	{
+        flags = atoll(params[6].get_str().c_str());
+    }
+	
+	/*flagstr = params[5].get_str();
 	if (STR_TOLOWER(flagstr) == "trade")
         flagnum = PTF_TRADE;
 	else if (STR_TOLOWER(flagstr) == "loan")
@@ -107,11 +119,11 @@ UniValue pawnshopcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 	{
 		Unlock2NSPV(mypk);
         throw runtime_error("Incorrect flag, must be 'trade' or 'loan'\n");
-	}
+	}*/
 
-	if (params.size() >= 7)
+	if (params.size() == 8)
 	{
-        agreementtxid = Parseuint256((char *)params[6].get_str().c_str());
+        agreementtxid = Parseuint256((char *)params[7].get_str().c_str());
 		if (agreementtxid == zeroid)
 		{
 			Unlock2NSPV(mypk);
@@ -119,7 +131,7 @@ UniValue pawnshopcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 		}
     }
 	
-	if (params.size() == 8)
+	/*if (params.size() == 8)
 	{
 		depositspendstr = params[7].get_str();
 		if (STR_TOLOWER(depositspendstr) == "true" || STR_TOLOWER(depositspendstr) == "1")
@@ -130,7 +142,9 @@ UniValue pawnshopcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 		{
 			bSpendDeposit = false;
 		}
-    }
+    }*/
+	
+	PawnshopCreate(mypk,0,name,tokensupplier,coinsupplier,numcoins,tokenid,numtokens,flags,agreementtxid)
 	
 	result = PawnshopCreate(mypk,0,tokensupplier,coinsupplier,tokenid,numcoins,numtokens,flagnum,agreementtxid,bSpendDeposit);
 	if (result[JSON_HEXTX].getValStr().size() > 0)
