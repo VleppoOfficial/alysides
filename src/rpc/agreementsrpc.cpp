@@ -433,7 +433,7 @@ UniValue agreementsettlements(const UniValue& params, bool fHelp, const CPubKey&
         bActiveOnly = false;
     else 
         throw runtime_error("active_only flag invalid or empty\n");
-	ERR_RESULT("not implemented yet");
+	throw runtime_error("not implemented yet\n");
     return(AgreementSettlements(mypk, agreementtxid, bActiveOnly));
 }
 

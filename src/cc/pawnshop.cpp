@@ -78,6 +78,7 @@ uint8_t DecodePawnshopOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 	CPubKey dummypk;
 	std::string name;
 	uint256 dummytxid;
+	bool dummybool;
 	
 	createtxid = tokenid = zeroid;
 	
@@ -104,7 +105,7 @@ uint8_t DecodePawnshopOpRet(const CScript scriptPubKey,uint8_t &version,uint256 
 			case 'c':
 				return DecodePawnshopCreateOpRet(scriptPubKey,version,name,dummypk,dummypk,pawnshopflags,dummytxid,dummyamount,dummyamount,dummytxid);
 			case 't':
-				return DecodePawnshopScheduleOpRet(scriptPubKey,version,createtxid,dummyamount,dummyamount);
+				return DecodePawnshopScheduleOpRet(scriptPubKey,version,createtxid,dummyamount,dummyamount,dummybool);
 			default:
 				if (E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> createtxid) != 0 && evalcode == EVAL_PAWNSHOP)
 				{
