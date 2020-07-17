@@ -61,7 +61,7 @@ UniValue pawnshopcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 		throw runtime_error("pawnshopcreate name coinsupplier tokensupplier numcoins tokenid numtokens [flags][agreementtxid]\n");
 	if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
-	ERR_RESULT("not implemented yet");
+	throw runtime_error("not implemented yet");
 	Lock2NSPV(mypk);
 	
 	name = params[0].get_str();
@@ -139,7 +139,7 @@ UniValue pawnshopfund(const UniValue& params, bool fHelp, const CPubKey& mypk)
 		throw runtime_error("pawnshopfund createtxid amount coins|tokens\n");
 	if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
-	ERR_RESULT("not implemented yet");
+	throw runtime_error("not implemented yet");
 	
 	Lock2NSPV(mypk);
 	
@@ -182,7 +182,7 @@ UniValue pawnshopschedule(const UniValue& params, bool fHelp, const CPubKey& myp
         throw runtime_error("pawnshopschedule createtxid interest duedate [bRelative]\n");
     if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
-	ERR_RESULT("not implemented yet");
+	throw runtime_error("not implemented yet");
 	
 	Lock2NSPV(mypk);
 	
@@ -223,7 +223,7 @@ UniValue pawnshopcancel(const UniValue& params, bool fHelp, const CPubKey& mypk)
         throw runtime_error("pawnshopcancel createtxid\n");
     if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
-	ERR_RESULT("not implemented yet");
+	throw runtime_error("not implemented yet");
 	
 	Lock2NSPV(mypk);
 	
@@ -248,7 +248,7 @@ UniValue pawnshopborrow(const UniValue& params, bool fHelp, const CPubKey& mypk)
         throw runtime_error("pawnshoprelease createtxid loanparamtxid\n");
     if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
-	ERR_RESULT("not implemented yet");
+	throw runtime_error("not implemented yet");
 	
 	Lock2NSPV(mypk);
 	
@@ -278,7 +278,7 @@ UniValue pawnshopseize(const UniValue& params, bool fHelp, const CPubKey& mypk)
         throw runtime_error("pawnshopseize createtxid\n");
     if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
-	ERR_RESULT("not implemented yet");
+	throw runtime_error("not implemented yet");
 	
 	Lock2NSPV(mypk);
 	
@@ -303,7 +303,7 @@ UniValue pawnshopexchange(const UniValue& params, bool fHelp, const CPubKey& myp
         throw runtime_error("pawnshopexchange createtxid\n");
     if (ensure_CCrequirements(EVAL_PAWNSHOP) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
-	ERR_RESULT("not implemented yet");
+	throw runtime_error("not implemented yet");
 	
 	Lock2NSPV(mypk);
 	
