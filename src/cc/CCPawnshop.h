@@ -43,8 +43,8 @@ enum EPawnshopInputsFlags
 
 CScript EncodePawnshopCreateOpRet(uint8_t version,std::string name,CPubKey tokensupplier,CPubKey coinsupplier,uint32_t pawnshopflags,uint256 tokenid,int64_t numtokens,int64_t numcoins,uint256 agreementtxid);
 uint8_t DecodePawnshopCreateOpRet(CScript scriptPubKey,uint8_t &version,std::string &name,CPubKey &tokensupplier,CPubKey &coinsupplier,uint32_t &pawnshopflags,uint256 &tokenid,int64_t &numtokens,int64_t &numcoins,uint256 &agreementtxid);
-CScript EncodePawnshopScheduleOpRet(uint8_t version,uint256 createtxid,int64_t interest,int64_t duedate);
-uint8_t DecodePawnshopScheduleOpRet(CScript scriptPubKey,uint8_t &version,uint256 &createtxid,int64_t &interest,int64_t &duedate);
+CScript EncodePawnshopScheduleOpRet(uint8_t version,uint256 createtxid,int64_t principal,uint64_t duedate,bool bRelative);
+uint8_t DecodePawnshopScheduleOpRet(CScript scriptPubKey,uint8_t &version,uint256 &createtxid,int64_t &principal,uint64_t &duedate,bool &bRelative);
 CScript EncodePawnshopOpRet(uint8_t funcid,uint8_t version,uint256 createtxid,uint256 tokenid,CPubKey tokensupplier,CPubKey coinsupplier);
 uint8_t DecodePawnshopOpRet(const CScript scriptPubKey,uint8_t &version,uint256 &createtxid,uint256 &tokenid);
 
@@ -61,7 +61,7 @@ int64_t AddPawnshopInputs(struct CCcontract_info *cp,CMutableTransaction &mtx,CT
 
 UniValue PawnshopCreate(const CPubKey& pk,uint64_t txfee,std::string name,CPubKey tokensupplier,CPubKey coinsupplier,int64_t numcoins,uint256 tokenid,int64_t numtokens,uint32_t pawnshopflags,uint256 agreementtxid);
 UniValue PawnshopFund(const CPubKey& pk, uint64_t txfee, uint256 createtxid, int64_t amount, bool useTokens);
-UniValue PawnshopSchedule(const CPubKey& pk, uint64_t txfee, uint256 createtxid, int64_t interest, int64_t duedate);
+UniValue PawnshopSchedule(const CPubKey& pk, uint64_t txfee, uint256 createtxid, int64_t principal, int64_t duedate, bool bRelative);
 UniValue PawnshopCancel(const CPubKey& pk, uint64_t txfee, uint256 createtxid);
 UniValue PawnshopBorrow(const CPubKey& pk, uint64_t txfee, uint256 createtxid, uint256 scheduletxid);
 UniValue PawnshopSeize(const CPubKey& pk, uint64_t txfee, uint256 createtxid);

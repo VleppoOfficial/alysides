@@ -744,6 +744,9 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				vout.n-2 change
 				vout.n-1 OP_RETURN EVAL_AGREEMENTS 'n' agreementtxid pawnshoptxid
 				*/
+				
+				return eval->Invalid("unlock tx not supported yet!");
+				
 				// Getting the transaction data.
 				DecodeAgreementUnlockOpRet(tx.vout[numvouts-1].scriptPubKey, version, agreementtxid, pawnshoptxid);
 				if (pawnshoptxid == zeroid)
