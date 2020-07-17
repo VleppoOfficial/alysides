@@ -330,7 +330,7 @@ UniValue pawnshopinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
     createtxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (createtxid == zeroid)
 		throw runtime_error("Create txid is invalid\n");
-	ERR_RESULT("not implemented yet");
+	throw runtime_error("not implemented yet\n");
     return(PawnshopInfo(mypk,createtxid));
 }
 
