@@ -62,7 +62,6 @@
         EVAL(EVAL_IMPORTGATEWAY, 0xf3)  \
         EVAL(EVAL_KOGS, 0xf4)  \
 
-
 // evalcodes 0x10 to 0x7f are reserved for cclib dynamic CC
 #define EVAL_FIRSTUSER 0x10
 #define EVAL_LASTUSER 0x7f

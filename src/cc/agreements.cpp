@@ -12,6 +12,7 @@
  * Removal or modification of this copyright notice is prohibited.            *
  *                                                                            *
  ******************************************************************************/
+
 #include "CCagreements.h"
 #include "CCPawnshop.h"
 /*
@@ -55,6 +56,7 @@ RPC list:
 		A specific amount is sent to the pawnshop, so that the pawnshop coin balance matches the required amount of coins. The remainder is sent back to the client.
 		This RPC can only be executed by a member of the agreement (not including the arbitrator).
 */
+
 //===========================================================================
 // Opret encoders/decoders
 //===========================================================================
