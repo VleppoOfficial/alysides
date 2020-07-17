@@ -320,7 +320,7 @@ UniValue agreementunlock(const UniValue& params, bool fHelp, const CPubKey& mypk
         throw runtime_error("agreementunlock agreementtxid pawnshoptxid\n");
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 || ensure_CCrequirements(EVAL_PAWNSHOP) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
-	ERR_RESULT("not implemented yet");
+	throw runtime_error("not implemented yet");
     Lock2NSPV(mypk);
 	
 	agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
