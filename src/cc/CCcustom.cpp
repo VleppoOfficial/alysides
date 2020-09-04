@@ -33,6 +33,8 @@
 #include "CCtokens.h"
 #include "CCImportGateway.h"
 #include "CCKogs.h"
+#include "CCagreements.h"
+#include "CCPawnshop.h"
 
 /*
  CCcustom has most of the functions that need to be extended to create a new CC contract.
@@ -230,6 +232,28 @@ const char *TokensCCaddr = "RAMvUfoyURBRxAdVeTMHxn3giJZCFWeha2";
 const char *TokensNormaladdr = "RCNgAngYAdrfzujYyPgfbjCGNVQZzCgTad"; 
 char TokensCChexstr[67] = { "03e6191c70c9c9a28f9fd87089b9488d0e6c02fb629df64979c9cdb6b2b4a68d95" };
 uint8_t TokensCCpriv[32] = { 0x1d, 0x0d, 0x0d, 0xce, 0x2d, 0xd2, 0xe1, 0x9d, 0xf5, 0xb6, 0x26, 0xd5, 0xad, 0xa0, 0xf0, 0x0a, 0xdd, 0x7a, 0x72, 0x7d, 0x17, 0x35, 0xb5, 0xe3, 0x2c, 0x6c, 0xa9, 0xa2, 0x03, 0x16, 0x4b, 0xcf };
+#include "CCcustom.inc"
+#undef FUNCNAME
+#undef EVALCODE
+
+// Agreements
+#define FUNCNAME IsAgreementsInput
+#define EVALCODE EVAL_AGREEMENTS
+const char *AgreementsCCaddr = "RLqMuNM14JBC33gHaufVK1jJs4cFSGpqEY";
+const char *AgreementsNormaladdr = "RKMpncH1SyUJojdc4PR7QYWgKFDS5Z4bxP";
+char AgreementsCChexstr[67] = { "0291ca39fe72f5d0f6a65933239ca7fc608dab04eed3428ba7f425256811ddd07e" };
+uint8_t AgreementsCCpriv[32] = { 0x0d, 0x88, 0x03, 0x42, 0x36, 0x25, 0xd5, 0xe3, 0x35, 0xf2, 0x84, 0x2f, 0xd8, 0x43, 0x51, 0xdf, 0x38, 0x11, 0x1f, 0x8f, 0x03, 0x5e, 0xe6, 0x39, 0xe8, 0x42, 0xf5, 0x4a, 0xbd, 0x74, 0xba, 0x97 };
+#include "CCcustom.inc"
+#undef FUNCNAME
+#undef EVALCODE
+
+// Pawnshop
+#define FUNCNAME IsPawnshopInput
+#define EVALCODE EVAL_PAWNSHOP
+const char *PawnshopCCaddr = "RL1XCTBvAWqhoGFCyQ78LkWzAW55wApdde";
+const char *PawnshopNormaladdr = "RHnZ1ZkHFF44X364yDs85QYEhnzGyMRF8d";
+char PawnshopCChexstr[67] = { "03644763bcfef81ac4532b59b8542abae30d32cfe4233494587547613cb2e55ff9" };
+uint8_t PawnshopCCpriv[32] = { 0x3c, 0x07, 0xcd, 0xed, 0x77, 0xce, 0x83, 0x76, 0x68, 0xeb, 0x8c, 0x6d, 0xbb, 0x3e, 0x96, 0x50, 0xe1, 0xad, 0xb7, 0x09, 0x02, 0xcc, 0x8a, 0x38, 0x88, 0x16, 0x11, 0xf8, 0x98, 0xbc, 0x9f, 0xf3 };
 #include "CCcustom.inc"
 #undef FUNCNAME
 #undef EVALCODE
@@ -448,6 +472,22 @@ struct CCcontract_info *CCinit(struct CCcontract_info *cp, uint8_t evalcode)
 			memcpy(cp->CCpriv, TokensCCpriv, 32);
 			cp->validate = TokensValidate;
 			cp->ismyvin = IsTokensInput;
+			break;
+		case EVAL_AGREEMENTS:
+			strcpy(cp->unspendableCCaddr, AgreementsCCaddr);
+			strcpy(cp->normaladdr, AgreementsNormaladdr);
+			strcpy(cp->CChexstr, AgreementsCChexstr);
+			memcpy(cp->CCpriv, AgreementsCCpriv, 32);
+			cp->validate = AgreementsValidate;
+			cp->ismyvin = IsAgreementsInput;
+			break;
+		case EVAL_PAWNSHOP:
+			strcpy(cp->unspendableCCaddr, PawnshopCCaddr);
+			strcpy(cp->normaladdr, PawnshopNormaladdr);
+			strcpy(cp->CChexstr, PawnshopCChexstr);
+			memcpy(cp->CCpriv, PawnshopCCpriv, 32);
+			cp->validate = PawnshopValidate;
+			cp->ismyvin = IsPawnshopInput;
 			break;
         case EVAL_IMPORTGATEWAY:
 			strcpy(cp->unspendableCCaddr, ImportGatewayCCaddr);
