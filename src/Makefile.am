@@ -320,6 +320,7 @@ libbitcoin_server_a_SOURCES = \
   cc/auction.cpp \
   cc/agreements.cpp \
   cc/pawnshop.cpp \
+  cc/tokentags.cpp \
   cc/betprotocol.cpp \
   cc/pricesfeed.cpp \
   cc/priceslibs/cjsonpointer.cpp \
@@ -363,6 +364,7 @@ libbitcoin_server_a_SOURCES = \
   rpc/marmararpc.cpp \
   rpc/agreementsrpc.cpp \
   rpc/pawnshoprpc.cpp \
+  rpc/tokentagsrpc.cpp \
   script/serverchecker.cpp \
   script/sigcache.cpp \
   timedata.cpp \

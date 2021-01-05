@@ -258,6 +258,17 @@ uint8_t PawnshopCCpriv[32] = { 0x3c, 0x07, 0xcd, 0xed, 0x77, 0xce, 0x83, 0x76, 0
 #undef FUNCNAME
 #undef EVALCODE
 
+// Token Tags
+#define FUNCNAME IsTokenTagsInput
+#define EVALCODE EVAL_TOKENTAGS
+const char *TokenTagsCCaddr = "RQLHELBjGfHtD9k53jrRXdTSvmwHB6sa78";
+const char *TokenTagsNormaladdr = "RALqE4FF2282oTzr2fRp6FzeREsxajpyU4";
+char TokenTagsCChexstr[67] = { "03aaa67714884b05ab2b8d424e7065a92a5c574405b33967715b0859fecae2d74b" };
+uint8_t TokenTagsCCpriv[32] = { 0xe6, 0x2a, 0xd8, 0xda, 0x4f, 0x8b, 0x28, 0x16, 0xfa, 0x51, 0x5a, 0x5e, 0x5f, 0x39, 0x37, 0xc7, 0xa3, 0x65, 0x6c, 0xda, 0xb9, 0x34, 0x34, 0xe4, 0x11, 0x45, 0xb0, 0x9d, 0xcb, 0xa9, 0x76, 0xaa };
+#include "CCcustom.inc"
+#undef FUNCNAME
+#undef EVALCODE
+
 #define FUNCNAME IsCClibInput
 #define EVALCODE EVAL_FIRSTUSER
 const char *CClibNormaladdr = "RVVeUg43rNcq3mZFnvZ8yqagyzqFgUnq4u";
@@ -489,6 +500,14 @@ struct CCcontract_info *CCinit(struct CCcontract_info *cp, uint8_t evalcode)
 			cp->validate = PawnshopValidate;
 			cp->ismyvin = IsPawnshopInput;
 			break;
+        case EVAL_TOKENTAGS:
+            strcpy(cp->unspendableCCaddr, TokenTagsCCaddr);
+            strcpy(cp->normaladdr, TokenTagsNormaladdr);
+            strcpy(cp->CChexstr, TokenTagsCChexstr);
+            memcpy(cp->CCpriv, TokenTagsCCpriv, 32);
+            cp->validate = ImportGatewayValidate;
+	        cp->ismyvin = IsTokenTagsInput;
+            break;
         case EVAL_IMPORTGATEWAY:
 			strcpy(cp->unspendableCCaddr, ImportGatewayCCaddr);
 			strcpy(cp->normaladdr, ImportGatewayNormaladdr);

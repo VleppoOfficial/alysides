@@ -13,9 +13,12 @@
  *                                                                            *
  ******************************************************************************/
 
-#include "CCPawnshop.h"
 
-bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
-{
-	return eval->Invalid("not supported yet");
-}
+#ifndef CC_TOKENTAGS_H
+#define CC_TOKENTAGS_H
+
+#include "CCinclude.h"
+
+bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
+
+#endif

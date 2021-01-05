@@ -38,8 +38,10 @@ void RegisterRawTransactionRPCCommands(CRPCTable &tableRPC);
 void RegisterTokensRPCCommands(CRPCTable &tableRPC);
 // agreements cc rpcs:
 void RegisterAgreementsRPCCommands(CRPCTable &tableRPC);
-// exchanges cc rpcs:
+// pawnshop cc rpcs:
 void RegisterPawnshopRPCCommands(CRPCTable &tableRPC);
+// tokentags cc rpcs:
+void RegisterTokenTagsRPCCommands(CRPCTable &tableRPC);
 // marmara cc rpcs:
 void RegisterMarmaraRPCCommands(CRPCTable &tableRPC);
 
@@ -53,6 +55,7 @@ static inline void RegisterAllCoreRPCCommands(CRPCTable &tableRPC)
     RegisterTokensRPCCommands(tableRPC);
 	RegisterAgreementsRPCCommands(tableRPC);
 	RegisterPawnshopRPCCommands(tableRPC);
+    RegisterTokenTagsRPCCommands(tableRPC);
     RegisterMarmaraRPCCommands(tableRPC);
 }
 
