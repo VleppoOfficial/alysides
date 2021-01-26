@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright © 2014-2020 The SuperNET Developers.                             *
+* Copyright © 2014-2021 The SuperNET Developers.                             *
 *                                                                            *
 * See the AUTHORS, DEVELOPER-AGREEMENT and LICENSE files at                  *
 * the top-level directory of this distribution for the individual copyright  *
@@ -26,12 +26,45 @@
 #include "sync_ext.h"
 
 #include "../cc/CCinclude.h"
+#include "../cc/CCtokens.h"
 #include "../cc/CCTokenTags.h"
 
 using namespace std;
 
 extern void Lock2NSPV(const CPubKey &pk);
 extern void Unlock2NSPV(const CPubKey &pk);
+
+UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    uint256 tokenid;
+    int64_t minbalance = 1;
+    if ( fHelp || params.size() < 1 || params.size() > 2 )
+        throw runtime_error("tokenowners tokenid [minbalance]\n");
+    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    tokenid = Parseuint256((char *)params[0].get_str().c_str());
+    bool bShowAll = false;
+    if (params.size() == 2)
+        minbalance = atoll(params[1].get_str().c_str()); 
+    return(TokenOwners(tokenid,minbalance));
+}
+
+UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    std::vector<unsigned char> vpubkey;
+    int64_t minbalance = 1;
+    if ( fHelp || params.size() > 2 )
+        throw runtime_error("tokeninventory [minbalance][pubkey]\n");
+    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    if (params.size() >= 1)
+        minbalance = atoll(params[0].get_str().c_str()); 
+    if (params.size() == 2)
+        vpubkey = ParseHex(params[1].get_str().c_str());
+    else 
+		vpubkey = Mypubkey();
+    return(TokenInventory(pubkey2pk(vpubkey),minbalance));
+}
 
 UniValue tokentagaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
@@ -49,8 +82,11 @@ UniValue tokentagaddress(const UniValue& params, bool fHelp, const CPubKey& mypk
 static const CRPCCommand commands[] =
 { //  category              name                actor (function)        okSafeMode
   //  -------------- ------------------------  -----------------------  ----------
-	// token tags
-	{ "tokentags",  "tokentagaddress", &tokentagaddress, true },
+    // extended tokens
+	{ "tokens",    "tokenowners",     &tokenowners,     true },
+    { "tokens",    "tokeninventory",  &tokeninventory,  true },
+    // token tags
+	{ "tokentags", "tokentagaddress", &tokentagaddress, true },
 	//{ "tokentags",  "tokentaginfo",    &tokentaginfo,	true },
 };
 
