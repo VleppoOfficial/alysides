@@ -1286,9 +1286,15 @@ UniValue AgreementCreate(const CPubKey& pk,uint64_t txfee,CPubKey destpub,std::s
 		txfee = CC_TXFEE;
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 
-	// Checking passed parameters.
+	// Checking pubkeys.
 	if (!(destpub.IsFullyValid()))
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Destination pubkey must be valid");
+
+	// mypk and destpub cannot be the same.
+	else if (mypk == destpub)
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Source pubkey and destination pubkey cannot be the same");
+
+	// Checking other passed parameters.
 	if (agreementname.empty() || agreementname.size() > 64)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Agreement name cannot be empty and must be up to 64 characters");
 	if (agreementhash == zeroid)
@@ -1301,6 +1307,10 @@ UniValue AgreementCreate(const CPubKey& pk,uint64_t txfee,CPubKey destpub,std::s
 	// Check arbitrator and disputefee.
 	if (arbitratorpub.IsFullyValid())
 	{
+		// If arbitratorpub is defined, it can't be the same as mypk or destpub.
+		if (arbitratorpub == mypk || arbitratorpub == destpub)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Arbitrator pubkey cannot be the same as source or destination pubkey");
+
 		if (disputefee < CC_MARKER_VALUE)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Required dispute fee must be at least "+std::to_string(CC_MARKER_VALUE)+" satoshis when arbitrator is defined");
 	}
