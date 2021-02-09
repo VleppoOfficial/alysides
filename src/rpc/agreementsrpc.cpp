@@ -80,10 +80,9 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
         throw runtime_error("Agreement hash empty or invalid\n");
     }
 
-    deposit = atoll(params[3].get_str().c_str()) * COIN;
-    if (deposit >= 0)
-        deposit = AmountFromValue(params[3]);
-    else
+    deposit = atof((char *)params[3].get_str().c_str()) * COIN + 0.00000000499999;
+    //deposit = AmountFromValue(params[3]); // doesn't work with Lock/Unlock2NSPV, causes a softlock - Dan
+    if (deposit < 10000)
     {
         Unlock2NSPV(mypk);
         throw runtime_error("Required deposit too low\n");
@@ -97,10 +96,9 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
     {
         if (arbitratorpub.IsFullyValid())
         {
-            disputefee = atoll(params[5].get_str().c_str()) * COIN;
-            if (disputefee == 0 || disputefee >= 10000)
-                disputefee = AmountFromValue(params[5]);
-            else
+            disputefee = atof((char *)params[5].get_str().c_str()) * COIN + 0.00000000499999;
+            //disputefee = AmountFromValue(params[5]);
+            if (disputefee != 0 && disputefee < 10000)
             {
                 Unlock2NSPV(mypk);
                 throw runtime_error("Dispute fee too low\n");
@@ -114,10 +112,9 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
 	payment = 0;
 	if (params.size() == 8)
     {
-        payment = atoll(params[7].get_str().c_str()) * COIN;
-        if (payment == 0 || payment >= 10000)
-            payment = AmountFromValue(params[7]);
-        else
+        payment = atof((char *)params[7].get_str().c_str()) * COIN + 0.00000000499999;
+        //payment = AmountFromValue(params[7]);
+        if (payment != 0 && payment < 10000)
         {
             Unlock2NSPV(mypk);
             throw runtime_error("Required prepayment too low\n");
@@ -171,13 +168,12 @@ UniValue agreementupdate(const UniValue& params, bool fHelp, const CPubKey& mypk
         }
     }
 
-	payment = 0;
+    payment = 0;
 	if (params.size() == 4)
     {
-        payment = atoll(params[3].get_str().c_str()) * COIN;
-        if (payment == 0 || payment >= 10000)
-            payment = AmountFromValue(params[3]);
-        else
+        payment = atof((char *)params[3].get_str().c_str()) * COIN + 0.00000000499999;
+        //payment = AmountFromValue(params[3]);
+        if (payment != 0 && payment < 10000)
         {
             Unlock2NSPV(mypk);
             throw runtime_error("Required payment too low\n");
@@ -221,10 +217,9 @@ UniValue agreementclose(const UniValue& params, bool fHelp, const CPubKey& mypk)
         throw runtime_error("Agreement hash empty or invalid\n");
     }
 
-    depositcut = atoll(params[2].get_str().c_str()) * COIN;
-    if (depositcut >= 0)
-        depositcut = AmountFromValue(params[2]);
-    else
+    depositcut = atof((char *)params[2].get_str().c_str()) * COIN + 0.00000000499999;
+    //depositcut = AmountFromValue(params[2]);
+    if (depositcut < 0)
     {
         Unlock2NSPV(mypk);
         throw runtime_error("Required deposit cut can't be negative\n");
@@ -240,13 +235,12 @@ UniValue agreementclose(const UniValue& params, bool fHelp, const CPubKey& mypk)
         }
     }
 
-	payment = 0;
+    payment = 0;
 	if (params.size() == 5)
     {
-        payment = atoll(params[4].get_str().c_str()) * COIN;
-        if (payment == 0 || payment >= 10000)
-            payment = AmountFromValue(params[4]);
-        else
+        payment = atof((char *)params[4].get_str().c_str()) * COIN + 0.00000000499999;
+        //payment = AmountFromValue(params[4]);
+        if (payment != 0 && payment < 10000)
         {
             Unlock2NSPV(mypk);
             throw runtime_error("Required payment too low\n");
@@ -398,9 +392,8 @@ UniValue agreementresolve(const UniValue& params, bool fHelp, const CPubKey& myp
         throw runtime_error("Dispute transaction id invalid\n");
     }
     
-    depositcut = atoll(params[1].get_str().c_str()) * COIN;
-    if (depositcut >= 0)
-        depositcut = AmountFromValue(params[1]);
+    depositcut = atof((char *)params[1].get_str().c_str()) * COIN + 0.00000000499999;
+    //depositcut = AmountFromValue(params[1]);
 
 	if (params.size() == 3)
     {

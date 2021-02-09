@@ -346,8 +346,8 @@ bool ValidateAgreementsCCVin(struct CCcontract_info *cp,Eval* eval,const CTransa
 		return eval->Invalid("vin."+std::to_string(index)+" invalid prevout number, expected "+std::to_string(prevVout)+", got "+std::to_string(tx.vin[index].prevout.n)+"!");
 
 	// Validate previous txid.
-	else if (prevTx.GetHash()!=prevtxid) 
-		return eval->Invalid("invalid vin."+std::to_string(index)+" tx, different txid than expected!");
+	else if (prevTx.GetHash()!=prevtxid)
+		return eval->Invalid("invalid vin."+std::to_string(index)+" tx, expecting "+prevtxid.GetHex()+", got "+prevTx.GetHash().GetHex()+" !");
 	
 	return (true);
 }
@@ -1350,7 +1350,7 @@ UniValue AgreementCreate(const CPubKey& pk,uint64_t txfee,CPubKey destpub,std::s
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
 
-	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds");
+	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 }
 
 // Transaction constructor for agreementupdate rpc. 
@@ -1425,7 +1425,7 @@ UniValue AgreementUpdate(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
 
-	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds");
+	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 }
 
 // Transaction constructor for agreementclose rpc. 
@@ -1505,7 +1505,7 @@ UniValue AgreementClose(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,u
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
 
-	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds");
+	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 }
 
 // Transaction constructor for agreementstopproposal rpc.
@@ -1561,7 +1561,7 @@ UniValue AgreementStopProposal(const CPubKey& pk,uint64_t txfee,uint256 proposal
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
 
-	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds");
+	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 }
 
 // Transaction constructor for agreementaccept rpc.
@@ -1636,7 +1636,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 proposaltxid)
 			return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 		}
 
-		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds");
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 	}
 
 	// Find the specified agreement.
@@ -1689,7 +1689,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 proposaltxid)
 			return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 		}
 
-		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds");
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 	}
 
 	// If deposit in proposal is >= 0, create 't' type transaction. (agreement closure)
@@ -1718,7 +1718,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 proposaltxid)
 			return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 		}
 
-		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds");
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 	}
 }
 
@@ -1794,7 +1794,7 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
 
-	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds");
+	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 }
 
 // Transaction constructor for agreementresolve rpc.
@@ -1888,7 +1888,7 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
 
-	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds");
+	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 }
 
 // Transaction constructor for agreementunlock rpc.
@@ -2129,6 +2129,9 @@ UniValue AgreementInfo(uint256 txid)
 				}
 				else
 					result.push_back(Pair("agreement_closed","false"));
+				
+				if (!(resolutioninfo.empty()))
+					result.push_back(Pair("resolution_info",resolutioninfo));
 				
 				break;
 			//case 'n': // unlock

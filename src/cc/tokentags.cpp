@@ -23,8 +23,10 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 
 // internal function that looks for voutPubkeys in token tx oprets
 // used by TokenOwners
-void GetTokenOwnerPubkeys(const CTransaction tx, struct CCcontract_info *cp, uint256 tokenid, std::vector<CPubKey> &PubkeyList)
+void GetTokenOwnerPubkeys(const CTransaction tx, struct CCcontract_info *cp, uint256 tokenid, std::vector<CPubKey> &OwnerList)
 {
+    // TODO: add "max depth" variable to avoid stack overflows from recursive calls
+
     // Examine each vout in the tx (except last vout)
     for (int64_t n = 0; n <= tx.vout.size() - 1; n++)
     {
@@ -49,9 +51,9 @@ void GetTokenOwnerPubkeys(const CTransaction tx, struct CCcontract_info *cp, uin
             if (voutPubkeys.size() == 1)
             {
                 // Check if found pubkey is already in the list, if not, add it
-                std::vector<CPubKey>::iterator it = std::find(PubkeyList.begin(), PubkeyList.end(), voutPubkeys[0]);
-                if (it == PubkeyList.end())
-                    PubkeyList.push_back(voutPubkeys[0]);
+                std::vector<CPubKey>::iterator it = std::find(OwnerList.begin(), OwnerList.end(), voutPubkeys[0]);
+                if (it == OwnerList.end())
+                    OwnerList.push_back(voutPubkeys[0]);
             }
 
             // Check if this vout was spent, and if it was, find the tx that spent it
@@ -59,7 +61,7 @@ void GetTokenOwnerPubkeys(const CTransaction tx, struct CCcontract_info *cp, uin
             myGetTransaction(spendingtxid, spendingtx, hashBlock))
             {
                 // Same procedure for the spending tx, until no more are found
-                GetTokenOwnerPubkeys(spendingtx, cp, tokenid, PubkeyList);
+                GetTokenOwnerPubkeys(spendingtx, cp, tokenid, OwnerList);
             }
         }
     }
@@ -69,13 +71,14 @@ void GetTokenOwnerPubkeys(const CTransaction tx, struct CCcontract_info *cp, uin
 
 UniValue TokenOwners(uint256 tokenid, int64_t minbalance)
 {
+    // TODO: add option to retrieve addresses instead, including 1of2 addresses
 	UniValue result(UniValue::VARR); 
     CTransaction tokenbaseTx; 
     uint256 hashBlock;
 	uint8_t funcid;
     std::vector<uint8_t> origpubkey;
     std::string name, description; 
-    std::vector<CPubKey> PubkeyList;
+    std::vector<CPubKey> OwnerList;
     char str[67];
 
     struct CCcontract_info *cpTokens, tokensCCinfo;
@@ -97,11 +100,11 @@ UniValue TokenOwners(uint256 tokenid, int64_t minbalance)
     }
 
     // Get a full list of owner pubkeys using a recursive looping function
-    GetTokenOwnerPubkeys(tokenbaseTx, cpTokens, tokenid, PubkeyList);
+    GetTokenOwnerPubkeys(tokenbaseTx, cpTokens, tokenid, OwnerList);
     // TODO: maybe remove/skip known CC global pubkeys from the list?
 
     // Add pubkeys to result array
-    for (auto pk : PubkeyList)
+    for (auto pk : OwnerList)
         if (minbalance == 0 || GetTokenBalance(pk, tokenid, false) >= minbalance)
             result.push_back(pubkey33_str(str,(uint8_t *)&pk));
 
@@ -110,6 +113,7 @@ UniValue TokenOwners(uint256 tokenid, int64_t minbalance)
 
 UniValue TokenInventory(const CPubKey pk, int64_t minbalance)
 {
+    // TODO: add option to specify an address instead of a pubkey
 	UniValue result(UniValue::VARR); 
     char tokenaddr[KOMODO_ADDRESS_BUFSIZE];
     std::vector<std::pair<CAddressIndexKey, CAmount> > addressIndex;
