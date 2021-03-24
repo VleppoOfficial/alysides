@@ -404,20 +404,22 @@ uint256 GetAcceptedProposalData(uint256 accepttxid, CPubKey &offerorpub, CPubKey
 
 // Finds the txid of the latest valid transaction that spent the event log baton for the specified agreement.
 // Returns agreementtxid if event log baton is unspent, or zeroid if agreement with the specified txid couldn't be found.
-// For use in validation code, bCheckBlockHeight is also set to true so this function doesn't return txids newer than the tx being validated, which caused old transactions to fail validation.
-uint256 FindLatestAgreementEventTx(uint256 agreementtxid, struct CCcontract_info *cp, bool bCheckBlockHeight)
+// For use in validation code, eval is also set so this function doesn't return txids newer than the tx being validated, which caused old transactions to fail validation.
+uint256 FindLatestAgreementEventTx(uint256 agreementtxid, struct CCcontract_info *cp, Eval* eval)
 {
 	CTransaction sourcetx, batontx;
 	uint256 hashBlock, batontxid, refagreementtxid;
 	int32_t vini, height, retcode;
 	uint8_t funcid;
+	CBlockIndex blockIdx;
 	char mutualCCaddress[65], arbCCaddress[65];
 	CPubKey offerorpub, signerpub, arbitratorpub;
 	int64_t deposit, disputefee;
 
 	// Get agreement transaction and its op_return.
-	if (myGetTransaction(agreementtxid, sourcetx, hashBlock) && sourcetx.vout.size() > 0 &&
-	DecodeAgreementOpRet(sourcetx.vout.back().scriptPubKey) == 'c')
+	if (((eval && eval->GetTxConfirmed(agreementtxid,sourcetx,blockIdx) && blockIdx.IsValid()) || 
+	(!eval && myGetTransaction(agreementtxid, sourcetx, hashBlock))) && 
+	sourcetx.vout.size() > 0 && DecodeAgreementOpRet(sourcetx.vout.back().scriptPubKey) == 'c')
 	{
 		// Get all member pubkeys of the agreement.
 		GetAcceptedProposalData(agreementtxid,offerorpub,signerpub,arbitratorpub,deposit,disputefee,refagreementtxid);
@@ -435,11 +437,12 @@ uint256 FindLatestAgreementEventTx(uint256 agreementtxid, struct CCcontract_info
 		(retcode = CCgetspenttxid(batontxid, vini, height, sourcetx.GetHash(), 0)) == 0 &&
 
 		// Get spending transaction and its op_return.
-		myGetTransaction(batontxid, batontx, hashBlock) && batontx.vout.size() > 0 && 
+		(eval && eval->GetTxConfirmed(batontxid,batontx,blockIdx) && blockIdx.IsValid()) || 
+		(!eval && myGetTransaction(batontxid, batontx, hashBlock)) && batontx.vout.size() > 0 && 
 		(funcid = DecodeAgreementOpRet(batontx.vout.back().scriptPubKey)) != 0 &&
 		
-		// If bCheckBlockHeight is true, check if the blockheight of the batontx is below or equal to current block height.
-		(!bCheckBlockHeight || komodo_blockheight(hashBlock) <= chainActive.Height()))
+		// If eval is not null, check if the blockheight of the batontx is below current block height.
+		(!eval || blockIdx.GetHeight() < chainActive.Height()))
 		{
 			sourcetx = batontx;
 		}
@@ -603,6 +606,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	uint8_t funcid,version,latestfuncid;
 	std::string cancelinfo,agreementname,disputeinfo,resolutioninfo;
 	bool bNewAgreement,bFinalDispute;
+	CBlockIndex blockIdx;
 	char globalCCaddress[65],mutualCCaddress[65],srcCCaddress[65],srcnormaladdress[65],destCCaddress[65],destnormaladdress[65],arbCCaddress[65];
 
 	// TBD: define CCcontract_info and variables here for integration with other modules.
@@ -803,8 +807,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				DecodeAgreementUpdateOpRet(tx.vout[numvouts-1].scriptPubKey,version,agreementtxid,proposaltxid);
 
 				// Get the agreementtxid transaction.
-				if (myGetTransaction(agreementtxid,agreementtx,hashBlock) == 0 || agreementtx.vout.size() == 0 ||
-				DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
+				if (!eval->GetTxConfirmed(agreementtxid,agreementtx,blockIdx) || !blockIdx.IsValid() ||
+				agreementtx.vout.size() == 0 || DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
 					return eval->Invalid("Specified agreement not found for 'u' type transaction!");
 
 				// Verify that the agreement is still active by checking if its deposit has been spent or not.
@@ -812,7 +816,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Agreement specified in update transaction is no longer active!");
 
 				// Verify that the agreement is not currently suspended.
-				if (myGetTransaction(FindLatestAgreementEventTx(agreementtxid,cp,true),latesttx,hashBlock) != 0 &&
+				if (myGetTransaction(FindLatestAgreementEventTx(agreementtxid,cp,eval),latesttx,hashBlock) != 0 &&
 				latesttx.vout.size() > 0 &&
 				(latestfuncid = DecodeAgreementOpRet(latesttx.vout.back().scriptPubKey)) != 0)
 				{
@@ -862,7 +866,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("vin.0 must be normal input signed by proposal's destination pubkey!");
 
 				// Verify that vin.1 is spending the event log baton from the latest agreement event.
-				else if (ValidateAgreementsCCVin(cp,eval,tx,1,0,FindLatestAgreementEventTx(agreementtxid,cp,true),mutualCCaddress,CC_MARKER_VALUE) == 0)
+				else if (ValidateAgreementsCCVin(cp,eval,tx,1,0,FindLatestAgreementEventTx(agreementtxid,cp,eval),mutualCCaddress,CC_MARKER_VALUE) == 0)
 					return (false);
 
 				// Verify that vin.2 was signed correctly & is spending the proposal response baton.
@@ -898,8 +902,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				DecodeAgreementCloseOpRet(tx.vout[numvouts-1].scriptPubKey,version,agreementtxid,proposaltxid,depositcut);
 
 				// Get the agreementtxid transaction.
-				if (myGetTransaction(agreementtxid,agreementtx,hashBlock) == 0 || agreementtx.vout.size() == 0 ||
-				DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
+				if (!eval->GetTxConfirmed(agreementtxid,agreementtx,blockIdx) || !blockIdx.IsValid() ||
+				agreementtx.vout.size() == 0 || DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
 					return eval->Invalid("Specified agreement not found for 't' type transaction!");
 
 				// Verify that the agreement is still active by checking if its deposit has been spent or not.
@@ -907,7 +911,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Agreement specified in closure transaction is no longer active!");
 
 				// Verify that the agreement is not currently suspended.
-				if (myGetTransaction(FindLatestAgreementEventTx(agreementtxid,cp,true),latesttx,hashBlock) != 0 &&
+				if (myGetTransaction(FindLatestAgreementEventTx(agreementtxid,cp,eval),latesttx,hashBlock) != 0 &&
 				latesttx.vout.size() > 0 &&
 				(latestfuncid = DecodeAgreementOpRet(latesttx.vout.back().scriptPubKey)) != 0)
 				{
@@ -964,7 +968,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("vin.0 must be normal input signed by proposal's destination pubkey!");
 
 				// Verify that vin.1 is spending the event log baton from the latest agreement event.
-				else if (ValidateAgreementsCCVin(cp,eval,tx,1,0,FindLatestAgreementEventTx(agreementtxid,cp,true),mutualCCaddress,CC_MARKER_VALUE) == 0)
+				else if (ValidateAgreementsCCVin(cp,eval,tx,1,0,FindLatestAgreementEventTx(agreementtxid,cp,eval),mutualCCaddress,CC_MARKER_VALUE) == 0)
 					return (false);
 
 				// Verify that vin.2 was signed correctly & is spending the proposal response baton.
@@ -1005,8 +1009,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("disputeinfo string over 256 chars!");
 
 				// Get the agreementtxid transaction.
-				else if (myGetTransaction(agreementtxid,agreementtx,hashBlock) == 0 || agreementtx.vout.size() == 0 ||
-				DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
+				else if (!eval->GetTxConfirmed(agreementtxid,agreementtx,blockIdx) || !blockIdx.IsValid() ||
+				agreementtx.vout.size() == 0 || DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
 					return eval->Invalid("Specified agreement not found for 'd' type transaction!");
 
 				// Verify that the agreement is still active by checking if its deposit has been spent or not.
@@ -1014,7 +1018,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Agreement specified in dispute transaction is no longer active!");
 				
 				// Verify that the agreement is not currently suspended.
-				if (myGetTransaction(FindLatestAgreementEventTx(agreementtxid,cp,true),latesttx,hashBlock) != 0 &&
+				if (myGetTransaction(FindLatestAgreementEventTx(agreementtxid,cp,eval),latesttx,hashBlock) != 0 &&
 				latesttx.vout.size() > 0 &&
 				(latestfuncid = DecodeAgreementOpRet(latesttx.vout.back().scriptPubKey)) != 0)
 				{
@@ -1045,7 +1049,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("vin.0 must be normal input signed by dispute source pubkey!");
 
 				// Verify that vin.1 is spending the event log baton from the latest agreement event.
-				else if (ValidateAgreementsCCVin(cp,eval,tx,1,0,FindLatestAgreementEventTx(agreementtxid,cp,true),mutualCCaddress,CC_MARKER_VALUE) == 0)
+				else if (ValidateAgreementsCCVin(cp,eval,tx,1,0,FindLatestAgreementEventTx(agreementtxid,cp,eval),mutualCCaddress,CC_MARKER_VALUE) == 0)
 					return (false);
 					
 				// Agreement disputes shouldn't have any additional CC inputs.
@@ -1081,8 +1085,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("resolutioninfo string over 256 chars!");
 
 				// Get the agreement transaction and check if it contains an arbitrator pubkey. (aka if disputes are enabled)
-				else if (myGetTransaction(agreementtxid,agreementtx,hashBlock) == 0 || agreementtx.vout.size() == 0 ||
-				DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
+				else if (!eval->GetTxConfirmed(agreementtxid,agreementtx,blockIdx) || !blockIdx.IsValid() ||
+				agreementtx.vout.size() == 0 || DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
 					return eval->Invalid("Specified agreement not found for 'r' type transaction!");
 
 				// Verify that the agreement is still active by checking if its deposit has been spent or not.
@@ -1099,13 +1103,13 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Invalid depositcut amount for 'r' type transaction, should be between 0 and total deposit!");
 
 				// Get the dispute transaction.
-				else if (myGetTransaction(disputetxid,disputetx,hashBlock) == 0 || disputetx.vout.size() == 0 ||
-				DecodeAgreementOpRet(disputetx.vout.back().scriptPubKey) != 'd')
+				else if (!eval->GetTxConfirmed(disputetxid,disputetx,blockIdx) || !blockIdx.IsValid() ||
+				disputetx.vout.size() == 0 || DecodeAgreementOpRet(disputetx.vout.back().scriptPubKey) != 'd')
 					return eval->Invalid("Specified dispute not found for 'r' type transaction!");
 
 				// Verify that the dispute is valid. (points to correct agreementtxid, srcpub/destpub is correct etc.)
-				else if (FindLatestAgreementEventTx(agreementtxid,cp,true) != disputetxid)
-					return eval->Invalid("Specified dispute txid is not latest event for this agreement!");
+				else if (FindLatestAgreementEventTx(agreementtxid,cp,eval) != disputetxid)
+					return eval->Invalid("Specified dispute txid is not latest event for this agreement, or dispute not confirmed yet!");
 
 				// Get dispute srcpub and destpub pubkeys.
 				DecodeAgreementDisputeOpRet(disputetx.vout.back().scriptPubKey,version,disputeagreementtxid,srcpub,destpub,disputeinfo,bFinalDispute);
@@ -1221,7 +1225,7 @@ uint256 FindLatestAcceptedProposal(uint256 agreementtxid, struct CCcontract_info
 	bool bNewAgreement;
 
 	// Get the latest agreement event.
-	latesttxid = FindLatestAgreementEventTx(agreementtxid, cp, false);
+	latesttxid = FindLatestAgreementEventTx(agreementtxid, cp, NULL);
 
 	// While we iterate through valid Agreements transactions...
 	while (myGetTransaction(latesttxid, latesttx, hashBlock) != 0 && latesttx.vout.size() > 0 &&
@@ -1649,7 +1653,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 proposaltxid)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Referenced agreement is no longer active");
 
 	// Verify that the agreement is not currently suspended.
-	if (myGetTransaction(FindLatestAgreementEventTx(agreementtxid,cp,true),latesttx,hashBlock) != 0 &&
+	if (myGetTransaction(FindLatestAgreementEventTx(agreementtxid,cp,NULL),latesttx,hashBlock) != 0 &&
 	latesttx.vout.size() > 0 &&
 	(latestfuncid = DecodeAgreementOpRet(latesttx.vout.back().scriptPubKey)) != 0)
 	{
@@ -1756,7 +1760,7 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Referenced agreement is no longer active");
 
 	// Verify that the agreement is not currently suspended.
-	if (myGetTransaction(FindLatestAgreementEventTx(agreementtxid,cp,true),latesttx,hashBlock) != 0 &&
+	if (myGetTransaction(FindLatestAgreementEventTx(agreementtxid,cp,NULL),latesttx,hashBlock) != 0 &&
 	latesttx.vout.size() > 0 &&
 	(latestfuncid = DecodeAgreementOpRet(latesttx.vout.back().scriptPubKey)) != 0)
 	{
@@ -1841,7 +1845,7 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Agreement from dispute is no longer active");
 	
 	// Verify that the dispute is valid. (points to correct agreementtxid, srcpub/destpub is correct etc.)
-	else if (FindLatestAgreementEventTx(agreementtxid,cp,true) != disputetxid)
+	else if (FindLatestAgreementEventTx(agreementtxid,cp,NULL) != disputetxid)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Referenced dispute is not the latest event for the related agreement, or is unconfirmed");
 
 	// Get the agreement data.
@@ -2018,7 +2022,7 @@ UniValue AgreementInfo(uint256 txid)
 				result.push_back(Pair("deposit",(double)deposit/COIN));
 
 				// Get latest agreement event.
-				latesttxid = FindLatestAgreementEventTx(txid,cp,false);
+				latesttxid = FindLatestAgreementEventTx(txid,cp,NULL);
 				if (myGetTransaction(latesttxid,latesttx,hashBlock) != 0)
 					latestfuncid = DecodeAgreementOpRet(latesttx.vout.back().scriptPubKey);
 				
@@ -2159,7 +2163,7 @@ UniValue AgreementEventLog(uint256 agreementtxid,uint8_t flags,int64_t samplenum
 	if (myGetTransaction(agreementtxid,agreementtx,hashBlock) != 0 && (numvouts = agreementtx.vout.size()) > 0 &&
 	DecodeAgreementOpRet(agreementtx.vout[numvouts-1].scriptPubKey) == 'c')
 	{
-		latesttxid = FindLatestAgreementEventTx(agreementtxid,cp,true);
+		latesttxid = FindLatestAgreementEventTx(agreementtxid,cp,NULL);
 
 		if (latesttxid != agreementtxid)
 		{
