@@ -807,7 +807,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				DecodeAgreementUpdateOpRet(tx.vout[numvouts-1].scriptPubKey,version,agreementtxid,proposaltxid);
 
 				// Get the agreementtxid transaction.
-				if (!eval->GetTxConfirmed(agreementtxid,agreementtx,blockIdx) == 0 || !blockIdx.IsValid() ||
+				if (!eval->GetTxConfirmed(agreementtxid,agreementtx,blockIdx) || !blockIdx.IsValid() ||
 				agreementtx.vout.size() == 0 || DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
 					return eval->Invalid("Specified agreement not found for 'u' type transaction!");
 
@@ -902,7 +902,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				DecodeAgreementCloseOpRet(tx.vout[numvouts-1].scriptPubKey,version,agreementtxid,proposaltxid,depositcut);
 
 				// Get the agreementtxid transaction.
-				if (!eval->GetTxConfirmed(agreementtxid,agreementtx,blockIdx) == 0 || !blockIdx.IsValid() ||
+				if (!eval->GetTxConfirmed(agreementtxid,agreementtx,blockIdx) || !blockIdx.IsValid() ||
 				agreementtx.vout.size() == 0 || DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
 					return eval->Invalid("Specified agreement not found for 't' type transaction!");
 
@@ -1009,7 +1009,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("disputeinfo string over 256 chars!");
 
 				// Get the agreementtxid transaction.
-				else if (!eval->GetTxConfirmed(agreementtxid,agreementtx,blockIdx) == 0 || !blockIdx.IsValid() ||
+				else if (!eval->GetTxConfirmed(agreementtxid,agreementtx,blockIdx) || !blockIdx.IsValid() ||
 				agreementtx.vout.size() == 0 || DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
 					return eval->Invalid("Specified agreement not found for 'd' type transaction!");
 
@@ -1085,7 +1085,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("resolutioninfo string over 256 chars!");
 
 				// Get the agreement transaction and check if it contains an arbitrator pubkey. (aka if disputes are enabled)
-				else if (!eval->GetTxConfirmed(agreementtxid,agreementtx,blockIdx) == 0 || !blockIdx.IsValid() ||
+				else if (!eval->GetTxConfirmed(agreementtxid,agreementtx,blockIdx) || !blockIdx.IsValid() ||
 				agreementtx.vout.size() == 0 || DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
 					return eval->Invalid("Specified agreement not found for 'r' type transaction!");
 
@@ -1103,7 +1103,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Invalid depositcut amount for 'r' type transaction, should be between 0 and total deposit!");
 
 				// Get the dispute transaction.
-				else if (!eval->GetTxConfirmed(disputetxid,disputetx,blockIdx) == 0 || !blockIdx.IsValid() ||
+				else if (!eval->GetTxConfirmed(disputetxid,disputetx,blockIdx) || !blockIdx.IsValid() ||
 				disputetx.vout.size() == 0 || DecodeAgreementOpRet(disputetx.vout.back().scriptPubKey) != 'd')
 					return eval->Invalid("Specified dispute not found for 'r' type transaction!");
 
