@@ -1926,16 +1926,16 @@ UniValue AgreementInfo(uint256 txid)
 					result.push_back(Pair("proposal_type","agreement_create"));
 					result.push_back(Pair("proposed_agreement_name",agreementname));
 					result.push_back(Pair("proposed_agreement_hash",agreementhash.GetHex()));
-					result.push_back(Pair("required_deposit",(double)deposit/COIN));
+					result.push_back(Pair("required_deposit",ValueFromAmount(deposit)));
 
 					if (payment > 0)
-						result.push_back(Pair("required_payment",(double)payment/COIN));
+						result.push_back(Pair("required_payment",ValueFromAmount(payment)));
 					
 					if (arbitratorpub.IsValid())
 					{
 						result.push_back(Pair("disputes_enabled","true"));
 						result.push_back(Pair("arbitrator_pubkey",pubkey33_str(str,(uint8_t *)&arbitratorpub)));
-						result.push_back(Pair("dispute_fee",(double)disputefee/COIN));
+						result.push_back(Pair("dispute_fee",ValueFromAmount(disputefee)));
 					}
 					else
 						result.push_back(Pair("disputes_enabled","false"));
@@ -1956,9 +1956,9 @@ UniValue AgreementInfo(uint256 txid)
 					result.push_back(Pair("proposed_agreement_hash",agreementhash.GetHex()));
 					
 					if (deposit >= 0)
-						result.push_back(Pair("deposit_cut_requested",(double)deposit/COIN));
+						result.push_back(Pair("deposit_cut_requested",ValueFromAmount(deposit)));
 					if (payment > 0)
-						result.push_back(Pair("required_payment",(double)payment/COIN));
+						result.push_back(Pair("required_payment",ValueFromAmount(payment)));
 				}
 
 				// Check status and spending txid.
@@ -2000,10 +2000,10 @@ UniValue AgreementInfo(uint256 txid)
 				if (arbitratorpub.IsValid())
 				{
 					result.push_back(Pair("arbitrator_pubkey",pubkey33_str(str,(uint8_t *)&arbitratorpub)));
-					result.push_back(Pair("dispute_fee",(double)disputefee/COIN));
+					result.push_back(Pair("dispute_fee",ValueFromAmount(disputefee)));
 				}
 
-				result.push_back(Pair("deposit",(double)deposit/COIN));
+				result.push_back(Pair("deposit",ValueFromAmount(deposit)));
 
 				// Get latest agreement event.
 				latesttxid = FindLatestAgreementEventTx(txid,cp,NULL);
@@ -2072,9 +2072,9 @@ UniValue AgreementInfo(uint256 txid)
 
 				GetAcceptedProposalData(agreementtxid,offerorpub,signerpub,arbitratorpub,deposit,disputefee,refagreementtxid);
 
-				result.push_back(Pair("deposit_cut_to_offeror",(double)depositcut/COIN));
-				result.push_back(Pair("deposit_cut_to_signer",(double)(deposit-depositcut)/COIN));
-				result.push_back(Pair("total_deposit",(double)deposit/COIN));
+				result.push_back(Pair("deposit_cut_to_offeror",ValueFromAmount(depositcut)));
+				result.push_back(Pair("deposit_cut_to_signer",ValueFromAmount(deposit-depositcut)));
+				result.push_back(Pair("total_deposit",ValueFromAmount(deposit)));
 
 				break;
 			case 'd': // dispute
@@ -2111,9 +2111,9 @@ UniValue AgreementInfo(uint256 txid)
 				if (depositcut >= 0)
 				{
 					result.push_back(Pair("agreement_closed","true"));
-					result.push_back(Pair("deposit_cut_to_claimant",(double)depositcut/COIN));
-					result.push_back(Pair("deposit_cut_to_defendant",(double)(deposit-depositcut)/COIN));
-					result.push_back(Pair("total_deposit",(double)deposit/COIN));
+					result.push_back(Pair("deposit_cut_to_claimant",ValueFromAmount(depositcut)));
+					result.push_back(Pair("deposit_cut_to_defendant",ValueFromAmount(deposit-depositcut)));
+					result.push_back(Pair("total_deposit",ValueFromAmount(deposit)));
 				}
 				else
 					result.push_back(Pair("agreement_closed","false"));
