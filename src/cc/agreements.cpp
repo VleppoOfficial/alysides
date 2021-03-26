@@ -611,8 +611,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 
 	// TBD: define CCcontract_info and variables here for integration with other modules.
 
-	if (strcmp(ASSETCHAINS_SYMBOL, "VLB1") == 0 && chainActive.Height() <= 21950) // temporary patch for VLB1
-        return true;
+	//if (strcmp(ASSETCHAINS_SYMBOL, "VLB1") == 0 && chainActive.Height() <= 21950) // temporary patch for VLB1
+    //    return true;
 
 	// Check boundaries, and verify that input/output amounts are exact.
 	numvins = tx.vin.size();
