@@ -610,7 +610,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	char globalCCaddress[65],mutualCCaddress[65],srcCCaddress[65],srcnormaladdress[65],destCCaddress[65],destnormaladdress[65],arbCCaddress[65];
 
 	// TBD: define CCcontract_info and variables here for integration with other modules.
-	
+
 	if (strcmp(ASSETCHAINS_SYMBOL, "VLB1") == 0 && chainActive.Height() <= 21950) // temporary patch for VLB1
         return true;
 
@@ -807,7 +807,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Specified agreement not found for 'u' type transaction!");
 
 				// Verify that the agreement is still active by checking if its deposit has been spent or not.
-				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && eval->GetTxConfirmed(batontxid,batontx,blockIdx))
+				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && eval->GetTxConfirmed(batontxid,batontx,blockIdx) && blockIdx.GetHeight() <= chainActive.Height())
 					return eval->Invalid("Agreement specified in update transaction is no longer active!");
 
 				// Verify that the agreement is not currently suspended.
@@ -898,7 +898,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Specified agreement not found for 't' type transaction!");
 
 				// Verify that the agreement is still active by checking if its deposit has been spent or not.
-				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && eval->GetTxConfirmed(batontxid,batontx,blockIdx))
+				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && eval->GetTxConfirmed(batontxid,batontx,blockIdx) && blockIdx.GetHeight() <= chainActive.Height())
 					return eval->Invalid("Agreement specified in closure transaction is no longer active!");
 
 				// Verify that the agreement is not currently suspended.
@@ -1001,7 +1001,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Specified agreement not found for 'd' type transaction!");
 
 				// Verify that the agreement is still active by checking if its deposit has been spent or not.
-				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && eval->GetTxConfirmed(batontxid,batontx,blockIdx))
+				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && eval->GetTxConfirmed(batontxid,batontx,blockIdx) && blockIdx.GetHeight() <= chainActive.Height())
 					return eval->Invalid("Agreement specified in dispute transaction is no longer active!");
 				
 				// Verify that the agreement is not currently suspended.
@@ -1077,7 +1077,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Specified agreement not found for 'r' type transaction!");
 
 				// Verify that the agreement is still active by checking if its deposit has been spent or not.
-				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && eval->GetTxConfirmed(batontxid,batontx,blockIdx))
+				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && eval->GetTxConfirmed(batontxid,batontx,blockIdx) && blockIdx.GetHeight() <= chainActive.Height())
 					return eval->Invalid("Agreement specified in dispute transaction is no longer active!");
 
 				// Get the agreement deposit value.
