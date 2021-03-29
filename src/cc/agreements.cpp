@@ -598,7 +598,7 @@ bool ValidateAgreementProposalTx(struct CCcontract_info *cp,Eval* eval,const CTr
 
 bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
-	CTransaction proposaltx,agreementtx,disputetx,latesttx;
+	CTransaction proposaltx,agreementtx,disputetx,latesttx,batontx;
 	CPubKey srcpub,destpub,cancelpub,arbitratorpub,offerorpub,signerpub;
 	uint256 proposaltxid,hashBlock,batontxid,agreementhash,agreementtxid,refagreementtxid,disputetxid,disputeagreementtxid;
 	int64_t deposit,payment,disputefee,depositcut,proposeddepositcut;
@@ -610,6 +610,9 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	char globalCCaddress[65],mutualCCaddress[65],srcCCaddress[65],srcnormaladdress[65],destCCaddress[65],destnormaladdress[65],arbCCaddress[65];
 
 	// TBD: define CCcontract_info and variables here for integration with other modules.
+
+	if (strcmp(ASSETCHAINS_SYMBOL, "VLB1") == 0 && chainActive.Height() <= 21950) // temporary patch for VLB1
+        return true;
 
 	// Check boundaries, and verify that input/output amounts are exact.
 	numvins = tx.vin.size();
@@ -668,11 +671,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// Validate the proposal transaction. (non-strict)
 				else if (ValidateAgreementProposalTx(cp,eval,proposaltx,false) == 0)
 					return (false);
-
-				// Verify that the proposal hasn't been spent already.
-				//else if ((retcode = CCgetspenttxid(batontxid,vini,height,proposaltxid,0)) == 0 && height <= chainActive.Height())
-				//	return eval->Invalid("Cancelled proposal transaction has already been spent!");
-
+				
 				// Get the data from the proposaltxid transaction's op_return.
 				DecodeAgreementProposalOpRet(proposaltx.vout.back().scriptPubKey,version,srcpub,destpub,
 				agreementname,agreementhash,deposit,payment,refagreementtxid,bNewAgreement,arbitratorpub,disputefee);
@@ -741,10 +740,6 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				if (!bNewAgreement)
 					return eval->Invalid("Accepted proposal is not for creating new agreement!");
 				
-				// Verify that the proposal hasn't been spent already.
-				//else if ((retcode = CCgetspenttxid(batontxid, vini, height, proposaltxid, 0)) == 0 && height <= chainActive.Height())
-				//	return eval->Invalid("Accepted proposal transaction has already been spent!");
-				
 				GetCCaddress1of2(cp, mutualCCaddress, srcpub, destpub);
 				Getscriptaddress(srcnormaladdress,CScript() << ParseHex(HexStr(srcpub)) << OP_CHECKSIG);
 				GetCCaddress(cp, srcCCaddress, srcpub);
@@ -812,7 +807,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Specified agreement not found for 'u' type transaction!");
 
 				// Verify that the agreement is still active by checking if its deposit has been spent or not.
-				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && height <= chainActive.Height())
+				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && eval->GetTxConfirmed(batontxid,batontx,blockIdx) && blockIdx.GetHeight() <= chainActive.Height())
 					return eval->Invalid("Agreement specified in update transaction is no longer active!");
 
 				// Verify that the agreement is not currently suspended.
@@ -849,10 +844,6 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// Verifying deposit. (should be < 0 for agreement updates)
 				else if (deposit >= 0)
 					return eval->Invalid("Invalid deposit amount for 'u' type transaction, should be -1 or less!");
-				
-				// Verify that the proposal hasn't been spent already.
-				//else if ((retcode = CCgetspenttxid(batontxid, vini, height, proposaltxid, 0)) == 0 && height <= chainActive.Height())
-				//	return eval->Invalid("Accepted proposal transaction has already been spent!");
 				
 				GetCCaddress1of2(cp, mutualCCaddress, srcpub, destpub);
 				Getscriptaddress(srcnormaladdress,CScript() << ParseHex(HexStr(srcpub)) << OP_CHECKSIG);
@@ -907,7 +898,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Specified agreement not found for 't' type transaction!");
 
 				// Verify that the agreement is still active by checking if its deposit has been spent or not.
-				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && height <= chainActive.Height())
+				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && eval->GetTxConfirmed(batontxid,batontx,blockIdx) && blockIdx.GetHeight() <= chainActive.Height())
 					return eval->Invalid("Agreement specified in closure transaction is no longer active!");
 
 				// Verify that the agreement is not currently suspended.
@@ -944,10 +935,6 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				else if (bNewAgreement)
 					return eval->Invalid("Accepted proposal is not for updating existing agreement!");
 
-				// Verify that the proposal hasn't been spent already.
-				//else if ((retcode = CCgetspenttxid(batontxid, vini, height, proposaltxid, 0)) == 0 && height <= chainActive.Height())
-				//	return eval->Invalid("Accepted proposal transaction has already been spent!");
-				
 				// Verify that depositcut is <= deposit, and that it matches with what's in the proposal.
 				else if (depositcut != proposeddepositcut)
 					return eval->Invalid("Deposit cut in 't' type transaction does not match the proposed deposit cut!");
@@ -1014,7 +1001,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Specified agreement not found for 'd' type transaction!");
 
 				// Verify that the agreement is still active by checking if its deposit has been spent or not.
-				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && height <= chainActive.Height())
+				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && eval->GetTxConfirmed(batontxid,batontx,blockIdx) && blockIdx.GetHeight() <= chainActive.Height())
 					return eval->Invalid("Agreement specified in dispute transaction is no longer active!");
 				
 				// Verify that the agreement is not currently suspended.
@@ -1090,7 +1077,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Specified agreement not found for 'r' type transaction!");
 
 				// Verify that the agreement is still active by checking if its deposit has been spent or not.
-				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && height <= chainActive.Height())
+				else if ((retcode = CCgetspenttxid(batontxid, vini, height, agreementtxid, 1)) == 0 && eval->GetTxConfirmed(batontxid,batontx,blockIdx) && blockIdx.GetHeight() <= chainActive.Height())
 					return eval->Invalid("Agreement specified in dispute transaction is no longer active!");
 
 				// Get the agreement deposit value.
@@ -1942,16 +1929,16 @@ UniValue AgreementInfo(uint256 txid)
 					result.push_back(Pair("proposal_type","agreement_create"));
 					result.push_back(Pair("proposed_agreement_name",agreementname));
 					result.push_back(Pair("proposed_agreement_hash",agreementhash.GetHex()));
-					result.push_back(Pair("required_deposit",(double)deposit/COIN));
+					result.push_back(Pair("required_deposit",ValueFromAmount(deposit)));
 
 					if (payment > 0)
-						result.push_back(Pair("required_payment",(double)payment/COIN));
+						result.push_back(Pair("required_payment",ValueFromAmount(payment)));
 					
 					if (arbitratorpub.IsValid())
 					{
 						result.push_back(Pair("disputes_enabled","true"));
 						result.push_back(Pair("arbitrator_pubkey",pubkey33_str(str,(uint8_t *)&arbitratorpub)));
-						result.push_back(Pair("dispute_fee",(double)disputefee/COIN));
+						result.push_back(Pair("dispute_fee",ValueFromAmount(disputefee)));
 					}
 					else
 						result.push_back(Pair("disputes_enabled","false"));
@@ -1972,9 +1959,9 @@ UniValue AgreementInfo(uint256 txid)
 					result.push_back(Pair("proposed_agreement_hash",agreementhash.GetHex()));
 					
 					if (deposit >= 0)
-						result.push_back(Pair("deposit_cut_requested",(double)deposit/COIN));
+						result.push_back(Pair("deposit_cut_requested",ValueFromAmount(deposit)));
 					if (payment > 0)
-						result.push_back(Pair("required_payment",(double)payment/COIN));
+						result.push_back(Pair("required_payment",ValueFromAmount(payment)));
 				}
 
 				// Check status and spending txid.
@@ -2016,10 +2003,10 @@ UniValue AgreementInfo(uint256 txid)
 				if (arbitratorpub.IsValid())
 				{
 					result.push_back(Pair("arbitrator_pubkey",pubkey33_str(str,(uint8_t *)&arbitratorpub)));
-					result.push_back(Pair("dispute_fee",(double)disputefee/COIN));
+					result.push_back(Pair("dispute_fee",ValueFromAmount(disputefee)));
 				}
 
-				result.push_back(Pair("deposit",(double)deposit/COIN));
+				result.push_back(Pair("deposit",ValueFromAmount(deposit)));
 
 				// Get latest agreement event.
 				latesttxid = FindLatestAgreementEventTx(txid,cp,NULL);
@@ -2088,9 +2075,9 @@ UniValue AgreementInfo(uint256 txid)
 
 				GetAcceptedProposalData(agreementtxid,offerorpub,signerpub,arbitratorpub,deposit,disputefee,refagreementtxid);
 
-				result.push_back(Pair("deposit_cut_to_offeror",(double)depositcut/COIN));
-				result.push_back(Pair("deposit_cut_to_signer",(double)(deposit-depositcut)/COIN));
-				result.push_back(Pair("total_deposit",(double)deposit/COIN));
+				result.push_back(Pair("deposit_cut_to_offeror",ValueFromAmount(depositcut)));
+				result.push_back(Pair("deposit_cut_to_signer",ValueFromAmount(deposit-depositcut)));
+				result.push_back(Pair("total_deposit",ValueFromAmount(deposit)));
 
 				break;
 			case 'd': // dispute
@@ -2127,9 +2114,9 @@ UniValue AgreementInfo(uint256 txid)
 				if (depositcut >= 0)
 				{
 					result.push_back(Pair("agreement_closed","true"));
-					result.push_back(Pair("deposit_cut_to_claimant",(double)depositcut/COIN));
-					result.push_back(Pair("deposit_cut_to_defendant",(double)(deposit-depositcut)/COIN));
-					result.push_back(Pair("total_deposit",(double)deposit/COIN));
+					result.push_back(Pair("deposit_cut_to_claimant",ValueFromAmount(depositcut)));
+					result.push_back(Pair("deposit_cut_to_defendant",ValueFromAmount(deposit-depositcut)));
+					result.push_back(Pair("total_deposit",ValueFromAmount(deposit)));
 				}
 				else
 					result.push_back(Pair("agreement_closed","false"));
