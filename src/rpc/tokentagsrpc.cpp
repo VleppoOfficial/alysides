@@ -317,7 +317,7 @@ UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& mypk)
         minbalance = atoll(params[1].get_str().c_str()); 
     if (params.size() == 3)
         maxdepth = atoll(params[2].get_str().c_str()); 
-    return(TokenOwners(tokenid,minbalance,maxdepth));
+    return(TokenOwners<TokensV1>(tokenid,minbalance,maxdepth));
 }
 
 UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey& mypk)
@@ -335,7 +335,7 @@ UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey& mypk)
     else
 		vpubkey = Mypubkey();
 
-    return(TokenInventory(vpubkey,minbalance));
+    return(TokenInventory<TokensV1>(vpubkey,minbalance));
 }
 
 static const CRPCCommand commands[] =
