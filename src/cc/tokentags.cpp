@@ -889,7 +889,7 @@ void GetTokenOwnerList(const CTransaction tx, struct CCcontract_info *cp, uint25
 			// Get the opret from either vout.n or tx.vout.back() scriptPubkey
 			if (!getCCopret(tx.vout[n].scriptPubKey, opret))
 				opret = tx.vout.back().scriptPubKey;
-			uint8_t funcId = DecodeTokenOpRet(opret, tokenIdOpret, voutPubkeys, oprets);
+			uint8_t funcId = V::DecodeTokenOpRet(opret, tokenIdOpret, voutPubkeys, oprets);
 
 			// Include only pubkeys from voutPubkeys arrays with 1 element.
 			// If voutPubkeys size is >= 2 then the vout was probably sent to a CC 1of2 address, which
