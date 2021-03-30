@@ -997,7 +997,7 @@ UniValue TokenInventory(const CPubKey pk, int64_t minbalance)
             // Get the opret from either vout.n or tx.vout.back() scriptPubkey
             if (!getCCopret(vintx.vout[n].scriptPubKey, opret))
                 opret = vintx.vout.back().scriptPubKey;
-            uint8_t funcid = DecodeTokenOpRet(opret, tokenIdInOpret, voutPubkeys, oprets);
+            uint8_t funcid = V::DecodeTokenOpRet(opret, tokenIdInOpret, voutPubkeys, oprets);
 
             // If the vout is from a token creation tx, the tokenid will be hash of vintx
             if (IsTokenCreateFuncid(funcid))
