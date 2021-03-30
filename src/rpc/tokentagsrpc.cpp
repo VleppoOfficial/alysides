@@ -344,7 +344,7 @@ static UniValue tokeninventory(const std::string& name, const UniValue& params, 
     if (params.size() == 2)
         vpubkey = ParseHex(params[1].get_str().c_str());
     else
-        SET_MYPK_OR_REMOTE(vpubkey, remotepk);
+		vpubkey = Mypubkey();
 
     return(TokenInventory<V>(vpubkey,minbalance));
 }
