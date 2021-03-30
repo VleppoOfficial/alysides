@@ -13,7 +13,7 @@
 *                                                                            *
 ******************************************************************************/
 
-#include "CCTokenTags.h"
+#include "CCtokentags.h"
 #include "CCtokens.h"
 
 /*
@@ -51,7 +51,7 @@ vout.n-1: empty op_return
 */
 
 // --- Start of consensus code ---
-
+/*
 int64_t IsTokenTagsvout(struct CCcontract_info *cp,const CTransaction& tx, int32_t v, char* destaddr)
 {
 	char tmpaddr[64];
@@ -368,7 +368,7 @@ bool ValidateTokenTagCreateTx(struct CCcontract_info *cp,Eval* eval,const CTrans
 	}
 
     return true;
-}
+}*/
 
 bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
 {
@@ -388,8 +388,10 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 	struct CCcontract_info *cpTokens, tokensC;
 	cpTokens = CCinit(&tokensC, EVAL_TOKENS);
 
+	return eval->Invalid("not done yet!");
+
 	// Check boundaries, and verify that input/output amounts are exact.
-	numvins = tx.vin.size();
+	/*numvins = tx.vin.size();
 	numvouts = tx.vout.size();
 	if (numvouts < 1)
 		return eval->Invalid("No vouts!");
@@ -508,7 +510,7 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 		return eval->Invalid("Invalid TokenTags function id and/or data!");
 
 	LOGSTREAM("tokentagscc", CCLOG_INFO, stream << "TokenTags transaction validated" << std::endl);
-	return (true);
+	return (true);*/
 }
 
 // --- End of consensus code ---
@@ -516,7 +518,7 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 // --- Helper functions for RPC implementations ---
 
 // --- RPC implementations for transaction creation ---
-
+/*
 UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,std::string name,std::vector<uint256> tokenids,std::vector<CAmount> updateamounts,uint8_t flags,int64_t maxupdates)
 {
 	CScript opret;
@@ -855,7 +857,7 @@ UniValue TokenTagList(uint256 tokenid, CPubKey pubkey)
 	}
 
 	return (result);
-}
+}*/
 
 // --- Useful misc functions for additional token transaction analysis ---
 

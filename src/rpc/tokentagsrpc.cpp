@@ -27,13 +27,13 @@
 
 #include "../cc/CCinclude.h"
 #include "../cc/CCtokens.h"
-#include "../cc/CCTokenTags.h"
+#include "../cc/CCtokentags.h"
 
 using namespace std;
-
+/*
 extern void Lock2NSPV(const CPubKey &pk);
 extern void Unlock2NSPV(const CPubKey &pk);
-
+*/
 UniValue tokentagaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     struct CCcontract_info *cp,C; std::vector<unsigned char> pubkey;
@@ -46,7 +46,7 @@ UniValue tokentagaddress(const UniValue& params, bool fHelp, const CPubKey& mypk
         pubkey = ParseHex(params[0].get_str().c_str());
     return(CCaddress(cp,(char *)"TokenTags",pubkey));
 }
-
+/*
 UniValue tokentagcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ), jsonParams(UniValue::VOBJ); 
@@ -99,7 +99,7 @@ UniValue tokentagcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
         }
         tokenids.push_back(tokenid);
 
-        CAmount nAmount = atoll(jsonParams[i].getValStr().c_str()); /*AmountFromValue(jsonParams[i]) * COIN;*/
+        CAmount nAmount = atoll(jsonParams[i].getValStr().c_str()); //AmountFromValue(jsonParams[i]) * COIN;
         if (nAmount <= 0)
             return MakeResultError("Invalid parameter, updateamount must be positive"); 
         updateamounts.push_back(nAmount);
@@ -301,7 +301,7 @@ UniValue tokentaglist(const UniValue& params, bool fHelp, const CPubKey& mypk)
 
     return(TokenTagList(tokenid, pubkey));
 }
-
+*/
 // Additional RPCs for token transaction analysis
 
 UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& mypk)
@@ -343,12 +343,12 @@ static const CRPCCommand commands[] =
   //  -------------- ------------------------  -----------------------  ----------
     // token tags
 	{ "tokentags", "tokentagaddress", &tokentagaddress, true },
-    { "tokentags", "tokentagcreate",  &tokentagcreate,  true },
+    /*{ "tokentags", "tokentagcreate",  &tokentagcreate,  true },
     { "tokentags", "tokentagupdate",  &tokentagupdate,  true },
     { "tokentags", "tokentagclose",   &tokentagclose,   true },
 	{ "tokentags", "tokentaginfo",    &tokentaginfo,	true },
     { "tokentags", "tokentagsamples", &tokentagsamples,	true },
-    { "tokentags", "tokentaglist",    &tokentaglist,	true },
+    { "tokentags", "tokentaglist",    &tokentaglist,	true },*/
     // extended tokens
 	{ "tokens",    "tokenowners",     &tokenowners,     true },
     { "tokens",    "tokeninventory",  &tokeninventory,  true },
