@@ -304,29 +304,40 @@ UniValue tokentaglist(const UniValue& params, bool fHelp, const CPubKey& mypk)
 */
 // Additional RPCs for token transaction analysis
 
-UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& mypk)
+template <class V>
+static UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     uint256 tokenid;
     int64_t minbalance = 1, maxdepth = 1000;
     if ( fHelp || params.size() < 1 || params.size() > 3 )
         throw runtime_error("tokenowners tokenid [minbalance][maxdepth]\n");
-    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
+    if ( ensure_CCrequirements(V::EvalCode()) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     tokenid = Parseuint256((char *)params[0].get_str().c_str());
     if (params.size() >= 2)
         minbalance = atoll(params[1].get_str().c_str()); 
     if (params.size() == 3)
         maxdepth = atoll(params[2].get_str().c_str()); 
-    return(TokenOwners<TokensV1>(tokenid,minbalance,maxdepth));
+    return(TokenOwners<V>(tokenid,minbalance,maxdepth));
 }
 
-UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+{
+    return tokenowners<TokensV1>("tokenowners", params, fHelp, remotepk);
+}
+UniValue tokenv2owners(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+{
+    return tokenowners<TokensV2>("tokenv2owners", params, fHelp, remotepk);
+}
+
+template <class V>
+static UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     std::vector<unsigned char> vpubkey;
     int64_t minbalance = 1;
     if ( fHelp || params.size() > 2 )
         throw runtime_error("tokeninventory [minbalance][pubkey]\n");
-    if ( ensure_CCrequirements(EVAL_TOKENS) < 0 )
+    if ( ensure_CCrequirements(V::EvalCode()) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     if (params.size() >= 1)
         minbalance = atoll(params[0].get_str().c_str()); 
@@ -335,7 +346,16 @@ UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey& mypk)
     else
 		vpubkey = Mypubkey();
 
-    return(TokenInventory<TokensV1>(vpubkey,minbalance));
+    return(TokenInventory<V>(vpubkey,minbalance));
+}
+
+UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+{
+    return tokeninventory<TokensV1>("tokeninventory", params, fHelp, remotepk);
+}
+UniValue tokenv2inventory(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+{
+    return tokeninventory<TokensV2>("tokenv2inventory", params, fHelp, remotepk);
 }
 
 static const CRPCCommand commands[] =
@@ -351,7 +371,9 @@ static const CRPCCommand commands[] =
     { "tokentags", "tokentaglist",    &tokentaglist,	true },*/
     // extended tokens
 	{ "tokens",    "tokenowners",     &tokenowners,     true },
+    { "tokens",    "tokenv2owners",   &tokenv2owners,   true },
     { "tokens",    "tokeninventory",  &tokeninventory,  true },
+    { "tokens",    "tokenv2inventory",&tokenv2inventory,true },
 };
 
 void RegisterTokenTagsRPCCommands(CRPCTable &tableRPC)
