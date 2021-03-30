@@ -305,7 +305,7 @@ UniValue tokentaglist(const UniValue& params, bool fHelp, const CPubKey& mypk)
 // Additional RPCs for token transaction analysis
 
 template <class V>
-static UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& mypk)
+static UniValue tokenowners(const std::string& name, const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     uint256 tokenid;
     int64_t minbalance = 1, maxdepth = 1000;
@@ -331,7 +331,7 @@ UniValue tokenv2owners(const UniValue& params, bool fHelp, const CPubKey& remote
 }
 
 template <class V>
-static UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey& mypk)
+static UniValue tokeninventory(const std::string& name, const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     std::vector<unsigned char> vpubkey;
     int64_t minbalance = 1;
@@ -344,7 +344,7 @@ static UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey
     if (params.size() == 2)
         vpubkey = ParseHex(params[1].get_str().c_str());
     else
-		vpubkey = Mypubkey();
+        SET_MYPK_OR_REMOTE(vpubkey, remotepk);
 
     return(TokenInventory<V>(vpubkey,minbalance));
 }
