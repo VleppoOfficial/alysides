@@ -863,6 +863,7 @@ UniValue TokenTagList(uint256 tokenid, CPubKey pubkey)
 
 // internal function that looks for voutPubkeys or destaddrs in token tx oprets
 // used by TokenOwners
+template <class V>
 void GetTokenOwnerList(const CTransaction tx, struct CCcontract_info *cp, uint256 tokenid, int64_t &depth, int64_t maxdepth, std::vector<CPubKey> &OwnerList)
 {
     // Check "max depth" variable to avoid stack overflows from recursive calls
@@ -883,12 +884,12 @@ void GetTokenOwnerList(const CTransaction tx, struct CCcontract_info *cp, uint25
 		char destaddr[64];
 
         // We ignore every vout that's not a tokens vout, so we check for that
-        if (IsTokensvout(true, true, cp, NULL, tx, n, tokenid))
+        if (IsTokensvout<V>(true, true, cp, NULL, tx, n, tokenid))
         {
 			// Get the opret from either vout.n or tx.vout.back() scriptPubkey
-			if (!MyGetCCopretV2(tx.vout[n].scriptPubKey, opret))
+			if (!getCCopret(tx.vout[n].scriptPubKey, opret))
 				opret = tx.vout.back().scriptPubKey;
-			uint8_t funcId = DecodeTokenOpRetV1(opret, tokenIdOpret, voutPubkeys, oprets);
+			uint8_t funcId = DecodeTokenOpRet(opret, tokenIdOpret, voutPubkeys, oprets);
 
 			// Include only pubkeys from voutPubkeys arrays with 1 element.
 			// If voutPubkeys size is >= 2 then the vout was probably sent to a CC 1of2 address, which
@@ -907,7 +908,7 @@ void GetTokenOwnerList(const CTransaction tx, struct CCcontract_info *cp, uint25
             {
 				depth++;
                 // Same procedure for the spending tx, until no more are found
-                GetTokenOwnerList(spendingtx, cp, tokenid, depth, maxdepth, OwnerList);
+                V::GetTokenOwnerList(spendingtx, cp, tokenid, depth, maxdepth, OwnerList);
             }
         }
     }
@@ -916,6 +917,7 @@ void GetTokenOwnerList(const CTransaction tx, struct CCcontract_info *cp, uint25
     return;
 }
 
+template <class V>
 UniValue TokenOwners(uint256 tokenid, int64_t minbalance, int64_t maxdepth)
 {
     // NOTE: maybe add option to retrieve addresses instead, including 1of2 addresses?
@@ -930,7 +932,7 @@ UniValue TokenOwners(uint256 tokenid, int64_t minbalance, int64_t maxdepth)
     char str[67];
 
     struct CCcontract_info *cpTokens, tokensCCinfo;
-    cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
+    cpTokens = CCinit(&tokensCCinfo, V::EvalCode());
 
     // Get token create tx
     if (!myGetTransaction(tokenid, tokenbaseTx, hashBlock) || (KOMODO_NSPV_FULLNODE && hashBlock.IsNull()))
@@ -940,7 +942,7 @@ UniValue TokenOwners(uint256 tokenid, int64_t minbalance, int64_t maxdepth)
     }
 
     // Checking if passed tokenid is a token creation txid
-    funcid = DecodeTokenCreateOpRetV1(tokenbaseTx.vout.back().scriptPubKey, origpubkey, name, description);
+    funcid = V::DecodeTokenCreateOpRet(tokenbaseTx.vout.back().scriptPubKey, origpubkey, name, description);
 	if (tokenbaseTx.vout.size() > 0 && !IsTokenCreateFuncid(funcid))
 	{
         LOGSTREAMFN(cctokens_log, CCLOG_INFO, stream << "passed tokenid isnt token creation txid" << std::endl);
@@ -948,16 +950,17 @@ UniValue TokenOwners(uint256 tokenid, int64_t minbalance, int64_t maxdepth)
     }
 
     // Get a full list of owners using a recursive looping function
-    GetTokenOwnerList(tokenbaseTx, cpTokens, tokenid, depth, maxdepth, OwnerList);
+    V::GetTokenOwnerList(tokenbaseTx, cpTokens, tokenid, depth, maxdepth, OwnerList);
 
     // Add owners to result array
     for (auto owner : OwnerList)
-        if (minbalance == 0 || GetTokenBalance(owner, tokenid, false) >= minbalance)
+        if (minbalance == 0 || V::GetTokenBalance(owner, tokenid, false) >= minbalance)
 			result.push_back(pubkey33_str(str,(uint8_t *)&owner));
 
 	return result;
 }
 
+template <class V>
 UniValue TokenInventory(const CPubKey pk, int64_t minbalance)
 {
 	UniValue result(UniValue::VARR); 
@@ -988,20 +991,20 @@ UniValue TokenInventory(const CPubKey pk, int64_t minbalance)
             int32_t n = (int32_t)it->first.index;
 
             // skip markers
-            if (IsTokenMarkerVout(vintx.vout[n]))
+            if (V::IsTokenMarkerVout(vintx.vout[n]))
                 continue;
 
             // Get the opret from either vout.n or tx.vout.back() scriptPubkey
-            if (!MyGetCCopretV2(vintx.vout[n].scriptPubKey, opret))
+            if (!getCCopret(vintx.vout[n].scriptPubKey, opret))
                 opret = vintx.vout.back().scriptPubKey;
-            uint8_t funcid = DecodeTokenOpRetV1(opret, tokenIdInOpret, voutPubkeys, oprets);
+            uint8_t funcid = DecodeTokenOpRet(opret, tokenIdInOpret, voutPubkeys, oprets);
 
             // If the vout is from a token creation tx, the tokenid will be hash of vintx
             if (IsTokenCreateFuncid(funcid))
                 tokenIdInOpret = vintx.GetHash();
             
             // If the vout is not from a token creation tx, check if it is a token vout
-            if (IsTokenCreateFuncid(funcid) || IsTokensvout(true, true, cpTokens, NULL, vintx, n, tokenIdInOpret))
+            if (IsTokenCreateFuncid(funcid) || IsTokensvout<V>(true, true, cpTokens, NULL, vintx, n, tokenIdInOpret))
             {
                 // Check if found tokenid is already in the list, if not, add it
                 std::vector<uint256>::iterator it2 = std::find(TokenList.begin(), TokenList.end(), tokenIdInOpret);
@@ -1013,7 +1016,7 @@ UniValue TokenInventory(const CPubKey pk, int64_t minbalance)
     
     // Add token ids to result array
     for (auto tokenid : TokenList)
-		if (minbalance == 0 || GetTokenBalance(pk, tokenid, false) >= minbalance)
+		if (minbalance == 0 || V::GetTokenBalance(pk, tokenid, false) >= minbalance)
             result.push_back(tokenid.GetHex());
 
 	return result;
