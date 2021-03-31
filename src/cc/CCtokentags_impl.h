@@ -928,7 +928,7 @@ UniValue TokenOwners(uint256 tokenid, int64_t minbalance, int64_t maxdepth)
 	uint8_t funcid;
     std::vector<uint8_t> origpubkey;
     std::string name, description; 
-	std::vector<std::pair<uint8_t,vscript_t>> oprets;
+	std::vector<vscript_t>  oprets;
     std::vector<CPubKey> OwnerList;
 	int64_t depth;
     char str[67];
