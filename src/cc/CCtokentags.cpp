@@ -1022,3 +1022,8 @@ UniValue TokenInventory(const CPubKey pk, int64_t minbalance)
 
 	return result;
 }
+
+template class TokenOwners<TokensV1>;
+template class TokenOwners<TokensV2>;
+template class TokenInventory<TokensV1>;
+template class TokenInventory<TokensV2>;
