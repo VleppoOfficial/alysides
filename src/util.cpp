@@ -450,8 +450,15 @@ void Split(const std::string& strVal, int32_t outsize, uint64_t *outVals, const 
 
 std::string GetArg(const std::string& strArg, const std::string& strDefault)
 {
+    #ifdef _WIN32
+    std::string strArgLower = strArg;
+    boost::to_lower(strArgLower);
+    if (mapArgs.count(strArgLower))
+        return mapArgs[strArgLower];
+    #else
     if (mapArgs.count(strArg))
         return mapArgs[strArg];
+    #endif
     return strDefault;
 }
 

@@ -1037,6 +1037,7 @@ CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reservekey, int32_t nHeight, 
             scriptPubKey[34] = OP_CHECKSIG;
         }
     }
+
     return CreateNewBlock(pubkey, scriptPubKey, gpucount, isStake);
 }
 
