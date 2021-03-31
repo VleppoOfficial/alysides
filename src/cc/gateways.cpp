@@ -665,7 +665,7 @@ bool GatewaysValidate(struct CCcontract_info *cp,Eval *eval,const CTransaction &
                             return eval->Invalid("gatewaysbind tx is not yet confirmed(notarised)!");
                         else if (IsCCInput(tx.vin[0].scriptSig) != 0)
                             return eval->Invalid("vin.0 is normal for gatewayswithdrawsign!");
-                        else if (CheckVinPk(tx,0,pubkeys)==0)
+                        else if (CheckVinPk(cp,tx,0,pubkeys)==0)
                             return eval->Invalid("vin.0 invalid, gatewayswithdrawsign must be created by one of the gateways pubkeys owner!");
                         else if ((*cp->ismyvin)(tx.vin[1].scriptSig) == 0 || myGetTransaction(tx.vin[1].prevout.hash,tmptx,hashblock)==0 || tmptx.vout[tx.vin[1].prevout.n].nValue!=CC_MARKER_VALUE)
                             return eval->Invalid("vin.1 is CC marker for gatewayswithdrawsign or invalid marker amount!");
@@ -715,7 +715,7 @@ bool GatewaysValidate(struct CCcontract_info *cp,Eval *eval,const CTransaction &
                             return eval->Invalid("gatewaysbind tx is not yet confirmed(notarised)!");
                         else if ( IsCCInput(tx.vin[0].scriptSig) != 0 )
                             return eval->Invalid("vin.0 is normal for gatewaysmarkdone!");
-                        else if (CheckVinPk(tx,0,pubkeys)==0)
+                        else if (CheckVinPk(cp,tx,0,pubkeys)==0)
                             return eval->Invalid("vin.0 invalid, gatewaysmarkdone must be created by one of the gateways pubkeys owner!");
                         else if ((*cp->ismyvin)(tx.vin[1].scriptSig) == 0 || myGetTransaction(tx.vin[1].prevout.hash,tmptx,hashblock)==0 || tmptx.vout[tx.vin[1].prevout.n].nValue!=CC_MARKER_VALUE)
                             return eval->Invalid("vin.1 is CC marker for gatewaysmarkdone or invalid marker amount!");
@@ -857,7 +857,7 @@ UniValue GatewaysBind(const CPubKey& pk, uint64_t txfee,std::string coin,uint256
         CCERR_RESULT("gatewayscc",CCLOG_ERROR, stream << "Gateway bind." << coin << " (" << tokenid.GetHex() << ") already exists");
     if ( AddNormalinputs(mtx,mypk,txfee+CC_MARKER_VALUE,2,pk.IsValid()) >= txfee+CC_MARKER_VALUE )
     {
-        if (AddTokenCCInputs(cpTokens, mtx, mypk, tokenid, totalsupply, 64)==totalsupply)
+        if (AddTokenCCInputs<TokensV1>(cpTokens, mtx, mypk, tokenid, totalsupply, 64)==totalsupply)
         {
             for (int i=0; i<100; i++) mtx.vout.push_back(MakeTokensCC1vout(cp->evalcode,totalsupply/100,gatewayspk));       
             mtx.vout.push_back(MakeCC1vout(cp->evalcode,CC_MARKER_VALUE,gatewayspk));
@@ -954,7 +954,7 @@ UniValue GatewaysWithdraw(const CPubKey& pk, uint64_t txfee,uint256 bindtxid,std
             CCERR_RESULT("gatewayscc",CCLOG_ERROR, stream << "withdraw amount is not possible, deposit balance is lower than the amount!");
     if( AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE, 2,pk.IsValid()) >= txfee+CC_MARKER_VALUE )
     {
-		if ((inputs = AddTokenCCInputs(cpTokens, mtx, mypk, tokenid, amount, 60)) >= amount)
+		if ((inputs = AddTokenCCInputs<TokensV1>(cpTokens, mtx, mypk, tokenid, amount, 60)) >= amount)
         {
             if ( inputs > amount ) CCchange = (inputs - amount);
             mtx.vout.push_back(MakeCC1vout(EVAL_GATEWAYS,CC_MARKER_VALUE,gatewayspk));

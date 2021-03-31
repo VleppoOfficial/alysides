@@ -291,9 +291,8 @@ libbitcoin_server_a_SOURCES = \
   cc/eval.cpp \
   cc/import.cpp \
   cc/importgateway.cpp \
-  cc/CCassetsCore.cpp \
+  cc/CCassetsUtils.cpp \
   cc/old/CCassetsCore_v0.cpp \
-  cc/CCassetstx.cpp \
   cc/old/CCassetstx_v0.cpp \
   cc/CCcustom.cpp \
   cc/CCtx.cpp \
@@ -311,16 +310,15 @@ libbitcoin_server_a_SOURCES = \
   cc/heir.cpp \
   cc/old/heir_v0.cpp \
   cc/oracles.cpp \
+  cc/oraclesV2.cpp \
   cc/prices.cpp \
   cc/pegs.cpp \
-  cc/marmara.cpp \
   cc/payments.cpp \
-  cc/gateways.cpp \
-  cc/channels.cpp \
+  cc/gatewaysV2.cpp \
+  cc/channelsV2.cpp \
   cc/auction.cpp \
   cc/agreements.cpp \
   cc/pawnshop.cpp \
-  cc/tokentags.cpp \
   cc/betprotocol.cpp \
   cc/pricesfeed.cpp \
   cc/priceslibs/cjsonpointer.cpp \
@@ -361,7 +359,7 @@ libbitcoin_server_a_SOURCES = \
   rpc/server.cpp \
   rpc/tokensrpc.cpp \
   rpc/pricesrpc.cpp \
-  rpc/marmararpc.cpp \
+  rpc/ccutilsrpc.cpp \
   rpc/agreementsrpc.cpp \
   rpc/pawnshoprpc.cpp \
   rpc/tokentagsrpc.cpp \
