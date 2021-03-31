@@ -51,13 +51,13 @@ UniValue TokenTagList(uint256 tokenid, CPubKey pubkey);*/
 /// @param tokenid id of token to check for
 /// @param minbalance if set, only pubkeys that have this many tokens of this id will be returned. If 0, lists every pubkey that ever has/had tokens with this id
 /// @param maxdepth maximum amount of recursions allowed for token transfer transaction tree searches. Highly recommended to keep the default value to avoid stack overflows.
-template <class V>
+//template <class V>
 UniValue TokenOwners(uint256 tokenid, int64_t minbalance, int64_t maxdepth);
 
 /// Returns tokenids of tokens that the specified pubkey is in possession of.
 /// @param pk pubkey to check for tokens
 /// @param minbalance minimum balance of tokens for pubkey required for its id to be added to the array. If 0, lists ids of every token that the pubkey ever has/had
-template <class V>
+//template <class V>
 UniValue TokenInventory(const CPubKey pk, int64_t minbalance);
 
 #endif

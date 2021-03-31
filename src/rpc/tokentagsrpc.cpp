@@ -319,7 +319,7 @@ static UniValue tokenowners(const std::string& name, const UniValue& params, boo
         minbalance = atoll(params[1].get_str().c_str()); 
     if (params.size() == 3)
         maxdepth = atoll(params[2].get_str().c_str()); 
-    return (V::TokenOwners(tokenid,minbalance,maxdepth));
+    return (TokenOwners<V>(tokenid,minbalance,maxdepth));
 }
 
 UniValue tokenowners(const UniValue& params, bool fHelp, const CPubKey& remotepk)
@@ -347,7 +347,7 @@ static UniValue tokeninventory(const std::string& name, const UniValue& params, 
     else
 		vpubkey = Mypubkey();
 
-    return (V::TokenInventory(vpubkey,minbalance));
+    return (TokenInventory<V>(vpubkey,minbalance));
 }
 
 UniValue tokeninventory(const UniValue& params, bool fHelp, const CPubKey& remotepk)
