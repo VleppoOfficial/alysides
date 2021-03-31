@@ -909,7 +909,7 @@ void GetTokenOwnerList(const CTransaction tx, struct CCcontract_info *cp, uint25
             {
 				depth++;
                 // Same procedure for the spending tx, until no more are found
-                V::GetTokenOwnerList(spendingtx, cp, tokenid, depth, maxdepth, OwnerList);
+                GetTokenOwnerList<V>(spendingtx, cp, tokenid, depth, maxdepth, OwnerList);
             }
         }
     }
@@ -928,6 +928,7 @@ UniValue TokenOwners(uint256 tokenid, int64_t minbalance, int64_t maxdepth)
 	uint8_t funcid;
     std::vector<uint8_t> origpubkey;
     std::string name, description; 
+	std::vector<std::pair<uint8_t,vscript_t>> oprets;
     std::vector<CPubKey> OwnerList;
 	int64_t depth;
     char str[67];
@@ -943,7 +944,7 @@ UniValue TokenOwners(uint256 tokenid, int64_t minbalance, int64_t maxdepth)
     }
 
     // Checking if passed tokenid is a token creation txid
-    funcid = V::DecodeTokenCreateOpRet(tokenbaseTx.vout.back().scriptPubKey, origpubkey, name, description);
+    funcid = V::DecodeTokenCreateOpRet(tokenbaseTx.vout.back().scriptPubKey, origpubkey, name, description, oprets);
 	if (tokenbaseTx.vout.size() > 0 && !IsTokenCreateFuncid(funcid))
 	{
         LOGSTREAMFN(cctokens_log, CCLOG_INFO, stream << "passed tokenid isnt token creation txid" << std::endl);
@@ -951,11 +952,11 @@ UniValue TokenOwners(uint256 tokenid, int64_t minbalance, int64_t maxdepth)
     }
 
     // Get a full list of owners using a recursive looping function
-    V::GetTokenOwnerList(tokenbaseTx, cpTokens, tokenid, depth, maxdepth, OwnerList);
+    GetTokenOwnerList<V>(tokenbaseTx, cpTokens, tokenid, depth, maxdepth, OwnerList);
 
     // Add owners to result array
     for (auto owner : OwnerList)
-        if (minbalance == 0 || V::GetTokenBalance(owner, tokenid, false) >= minbalance)
+        if (minbalance == 0 || GetTokenBalance<V>(owner, tokenid, false) >= minbalance)
 			result.push_back(pubkey33_str(str,(uint8_t *)&owner));
 
 	return result;
@@ -992,7 +993,7 @@ UniValue TokenInventory(const CPubKey pk, int64_t minbalance)
             int32_t n = (int32_t)it->first.index;
 
             // skip markers
-            if (V::IsTokenMarkerVout(vintx.vout[n]))
+            if (IsTokenMarkerVout<V>(vintx.vout[n]))
                 continue;
 
             // Get the opret from either vout.n or tx.vout.back() scriptPubkey
@@ -1017,7 +1018,7 @@ UniValue TokenInventory(const CPubKey pk, int64_t minbalance)
     
     // Add token ids to result array
     for (auto tokenid : TokenList)
-		if (minbalance == 0 || V::GetTokenBalance(pk, tokenid, false) >= minbalance)
+		if (minbalance == 0 || GetTokenBalance<V>(pk, tokenid, false) >= minbalance)
             result.push_back(tokenid.GetHex());
 
 	return result;
