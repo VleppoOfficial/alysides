@@ -372,10 +372,10 @@ static const CRPCCommand commands[] =
     { "tokentags", "tokentagsamples", &tokentagsamples,	true },
     { "tokentags", "tokentaglist",    &tokentaglist,	true },*/
     // extended tokens
-	{ "tokens",    "tokenowners",     &tokenowners,     true },
-    { "tokens",    "tokenv2owners",   &tokenv2owners,   true },
-    { "tokens",    "tokeninventory",  &tokeninventory,  true },
-    { "tokens",    "tokenv2inventory",&tokenv2inventory,true },
+	//{ "tokens",    "tokenowners",     &tokenowners,     true },
+    //{ "tokens",    "tokenv2owners",   &tokenv2owners,   true },
+    //{ "tokens",    "tokeninventory",  &tokeninventory,  true },
+    //{ "tokens",    "tokenv2inventory",&tokenv2inventory,true },
 };
 
 void RegisterTokenTagsRPCCommands(CRPCTable &tableRPC)

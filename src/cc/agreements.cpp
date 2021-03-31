@@ -437,8 +437,8 @@ uint256 FindLatestAgreementEventTx(uint256 agreementtxid, struct CCcontract_info
 		(retcode = CCgetspenttxid(batontxid, vini, height, sourcetx.GetHash(), 0)) == 0 &&
 
 		// Get spending transaction and its op_return.
-		(eval && eval->GetTxConfirmed(batontxid,batontx,blockIdx) && blockIdx.IsValid()) || 
-		(!eval && myGetTransaction(batontxid, batontx, hashBlock)) && batontx.vout.size() > 0 && 
+		((eval && eval->GetTxConfirmed(batontxid,batontx,blockIdx) && blockIdx.IsValid()) || 
+		(!eval && myGetTransaction(batontxid, batontx, hashBlock)) && batontx.vout.size() > 0) && 
 		(funcid = DecodeAgreementOpRet(batontx.vout.back().scriptPubKey)) != 0 &&
 		
 		// If eval is not null, check if the blockheight of the batontx is below current block height.
