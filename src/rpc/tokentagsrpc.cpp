@@ -29,6 +29,7 @@
 #include "../cc/CCtokens.h"
 #include "../cc/CCtokens_impl.h"
 #include "../cc/CCtokentags.h"
+#include "../cc/CCtokentags_impl.h"
 
 using namespace std;
 /*
