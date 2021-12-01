@@ -16,6 +16,122 @@
 #include "CCagreements.h"
 
 /*
+Agreements module - preliminary design (not final, very likely subject to change during build)
+
+User Flow
+- Offeror uses agreementcreate to create an offer for a new agreement to the signer
+- Signer uses agreementaccept to accept the received offer, or agreementcancel to reject it
+- Either party can use agreementupdate to create an offer for superseding the mutual agreement with a different one
+- Either party can use agreementclose to create an offer for closing the mutual agreement and splitting the deposit contained within
+- If an arbitrator is defined, either party can use agreementdispute to create a dispute relating to the mutual agreement, and have the arbitrator resolve it using agreementresolve
+- If an escape clause is defined, either party can use agreementescape to close the contract when the conditions are met, and split the deposit according to mutually agreed upon parameters
+- A list of sorted proposals and agreements can be retrieved by agreementlist
+- Information on a specific agreement can be retrieved by agreementinfo
+- Information on a specific agreement's dispute history can be retrieved by agreementdisputelog
+
+RPC List
+agreementcreate signeraddr name deposit payment expiryheight flags [memo][refagreementtxid][arbitratoraddr][arbitratorfee][escapesplit][pubaddress][pubkeyword]
+agreementupdate agreementtxid name deposit payment expiryheight flags [memo][arbitratoraddr][arbitratorfee][escapesplit][pubaddress][pubkeyword]
+agreementclose agreementtxid name deposit_to_recv payment_to_send expiryheight flags [memo]
+agreementcancel txid [memo]
+agreementaccept offertxid
+agreementdispute agreementtxid flags [memo]
+agreementresolve disputetxid deposit_to_claim deposit_to_defend [memo]
+agreementescape agreementtxid reftxid
+agreementlist [all|proposals|agreements][all|open|closed|escaped|arbitrated|autoclosed]
+agreementaddress [pubkey]
+agreementinfo agreementtxid
+agreementreferences agreementtxid
+agreementdisputelog agreementtxid [filter][samplenum][reverse]
+Proposal flags list
+ACF_NOCANCEL - if set, cancellation transactions for this proposal signed by the sender will not be valid.
+ACF_NODISPUTES - if set, dispute transactions for the resulting contract will not be validated.
+ACF_NOESCCLAUSE - if set, agreement escape transactions for the resulting contract will not be validated.
+ACF_SUPERSEDE - if this proposal is accepted, the resulting contract will supersede the agreement specified in the refagreementtxid field. The proposal data must have refagreementtxid specified in order for the proposal to be valid if this flag is set.
+AGF_AUTOCLOSE - if this proposal is accepted, the resulting contract will be considered closed immediately after its creation. If this flag is set, any variables related to closure events (deposit, arbitration variables, escape clause variables) set in the proposal will be ignored.
+AGF_CLOSEEXISTING (AGF_SUPERSEDE|AGF_AUTOCLOSE) - if this proposal is accepted, the contract specified in the refagreementtxid field will be closed, and its deposit will be split between the parties according to the deposit and payment variables set in the proposal. The proposal data must have refagreementtxid specified in order for the proposal to be valid if this flag is set.
+
+Agreements transaction types description
+proposal:
+vin.0: normal input
+vout.0: CC output to signer's address
+vout.1: CC marker to offeror's address
+vout.2: CC marker to signer's address
+vout.3: CC marker to arbitrator's address (if applicable)
+vout.4: normal output for change (if any)
+vout.n-1: opreturn [EVAL_AGREEMENTS] ['p'] [version] [srcaddr] [destaddr] [name] [memo] [deposit] [payment] [expiryheight] [flags] [refagreementtxid] [arbaddr] [arbfee] [escsplit] [pubaddr] [pubkw]
+
+contract create:
+vin.0: normal input
+vin.1: CC input from proposal vout.0
+vin.2: deposit of refagreementtxid from global CC address (if applicable)
+vout.0: deposit to global CC address
+vout.1: CC dispute baton to mutual CC 1of2 address
+vout.2: payment to offeror's address
+vout.3: CC marker to offeror's address
+vout.4: CC marker to signer's address
+vout.5: CC marker to arbitrator's address (if applicable)
+vout.6: normal output for change (if any)
+vout.n-1: opreturn [EVAL_AGREEMENTS] ['c'] [version] [proposaltxid]
+
+contract close:
+vin.0: normal input
+vin.1: CC input from proposal vout.0
+vin.2: deposit of refagreementtxid from global CC address
+vout.0: payment to offeror's address
+vout.1: normal output for change (if any)
+vout.n-1: opreturn [EVAL_AGREEMENTS] ['t'] [version] [agreementtxid] [proposaltxid]
+
+contract autoclose:
+vin.0: normal input
+vin.1: CC input from proposal vout.0
+vout.0: payment to offeror's address
+vout.1: CC output to signer's address
+vout.2: CC marker to offeror's address
+vout.3: normal output for change (if any)
+vout.n-1: opreturn [EVAL_AGREEMENTS] ['a'] [version] [proposaltxid]
+
+contract escape:
+vin.0: normal input
+vin.1: deposit of refagreementtxid from global CC address
+vout.0: payment to source address (if applicable)
+vout.1: payment to other party's address (if applicable)
+vout.2: normal output for change (if any)
+vout.n-1: opreturn [EVAL_AGREEMENTS] ['e'] [version] [agreementtxid] [reftxid]
+
+contract dispute:
+vin.0: normal input
+vin.1: CC input from latest dispute baton vout.0
+vout.0: arbitrator fee to mutual CC 1of2 address between arbitrator and source
+vout.1: normal output for change (if any)
+vout.n-1: opreturn [EVAL_AGREEMENTS] ['d'] [version] [flags] [memo]
+
+contract dispute resolve:
+vin.0: normal input
+vin.1: CC input from latest dispute vout.0
+vout.0: payment to claimant address (if applicable)
+vout.1: payment to defendant address (if applicable)
+vout.2: normal output for change (if any)
+vout.n-1: opreturn [EVAL_AGREEMENTS] ['r'] [version] [memo] [agreementtxid] [disputetxid]
+
+proposal/dispute cancel:
+vin.0: normal input
+vin.1: CC input from proposal vout.0 or dispute vout.0
+vout.0: CC dispute baton to mutual CC 1of2 address (if applicable)
+vout.1: normal output for change (if any)
+vout.n-1: opreturn [EVAL_AGREEMENTS] ['s'] [version] [txid] [type] [memo]
+
+insert:
+types of txes
+tx vins/vouts
+consensus code flow
+function list
+	what these functions do, params, outputs
+RPC impl
+helper funcs, if needed
+*/
+
+/*
 The goal here is to create FSM-like on-chain agreements, which are created and their state updated by mutual assent of two separate pubkeys.
 Each proposal transaction includes a space for a sha256 hash, which can be used to store a checksum for a legal contract document, point to an oracle/KV transaction, etc.
 Agreements are created and their state updated only when the recipient pubkey explicitly accepts an offer/proposal with a separate transaction, somewhat like git pull requests or legally binding contracts.

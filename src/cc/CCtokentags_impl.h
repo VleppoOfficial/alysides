@@ -18,6 +18,64 @@
 #include "CCtokens_impl.h"
 
 /*
+Token Tags module - preliminary design (not final, subject to change during build)
+
+User Flow
+
+- Token owner uses tokentagcreate to set up a tag tied to a specific token than can be updated with new data, as long as the data author has possession of a specified amount of the tokens
+- Token owner uses tokentagupdate to add a new entry to the tag created by the tokentagcreate transaction
+- A list of sorted token tags related to a specific token can be retrieved by tokentaglist
+- Information on a specific token tag can be retrieved by tokentaginfo
+
+RPC List
+
+tokentagcreate tokenid name tokensupply updatesupply [flags] [data]
+tokentagupdate tokentagid [data] [newupdatesupply] [escrowtxid]
+tokentaglist [tokenid]
+tokentaginfo tokentagid
+
+tokentagcreate flags list
+
+TTF_ALLOWANYSUPPLY - allows updatesupply for this tag to be set to below 51% of the total token supply. By default, only values above 51% of the total token supply are allowed for updatesupply. Note: depending on the updatesupply value set, this flag may allow multiple parties that own this token to post update transactions to this tag at the same time. Exercise caution when setting this flag.
+TTF_NOESCROWUPDATES - disables escrow type updates for this tag.
+Token Tags transaction types description
+
+create:
+vin.0: normal input
+vin.1+: CC tokens from source token address
+vout.0: CC marker/baton to global CC address
+vout.2: CC tokens back to source token address
+vout.3: normal output for change (if any)
+vout.n-1: opreturn [EVAL_TOKENTAGS] ['c'] [version] [srcpub] [tokenid] [tokensupply] [updatesupply] [flags] [name] [data]
+
+update (regular):
+vin.0: normal input
+vin.1: CC input from create vout.0 or update vout.0
+vin.2+: CC tokens from source token address
+vout.0: CC baton to global CC address
+vout.1: CC tokens back to source token address
+vout.2: normal output for change (if any)
+vout.n-1: opreturn [EVAL_TOKENTAGS] ['u'] [version] [srcpub] [tokentagid] [newupdatesupply] [data]
+
+update (escrow):
+vin.0: normal input
+vin.1: CC input from create vout.0 or update vout.0
+vout.0: CC baton to global CC address
+vout.1: normal output for change (if any)
+vout.n-1: opreturn [EVAL_TOKENTAGS] ['e'] [version] [srcpub] [tokentagid] [escrowtxid] [newupdatesupply] [data]
+
+insert:
+types of txes
+tx vins/vouts
+consensus code flow
+function list
+	what these functions do, params, outputs
+functions that explicitly use tokens functions (need to separate them, in case tokens gets updated again)
+RPC impl
+helper funcs, if needed
+*/
+
+/*
 TODO: Insert description of token tags here.
 
 Heuristics for finding correct token tag for app:
