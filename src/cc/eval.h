@@ -39,7 +39,9 @@
  * Verus EVAL_STAKEGUARD is 0x01
  */
 #define FOREACH_EVAL(EVAL)             \
-        EVAL(EVAL_VOTES, 0xa6) \
+        EVAL(EVAL_STUB1, 0xa4) \
+        EVAL(EVAL_STUB2, 0xa5) \
+        EVAL(EVAL_STUB3, 0xa6) \
         EVAL(EVAL_AGREEMENTS, 0xa7) \
 		EVAL(EVAL_PAWNSHOP, 0xa8) \
         EVAL(EVAL_TOKENTAGS, 0xa9) \
