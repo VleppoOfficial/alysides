@@ -268,6 +268,35 @@ uint8_t TokenTagsCCpriv[32] = { 0xe6, 0x2a, 0xd8, 0xda, 0x4f, 0x8b, 0x28, 0x16, 
 #undef FUNCNAME
 #undef EVALCODE
 
+// Stubs
+#define FUNCNAME IsStub1Input
+#define EVALCODE EVAL_STUB1
+const char *Stub1CCaddr = "RL1XCTBvAWqhoGFCyQ78LkWzAW55wApdde";
+const char *Stub1Normaladdr = "RHnZ1ZkHFF44X364yDs85QYEhnzGyMRF8d";
+char Stub1CChexstr[67] = { "03644763bcfef81ac4532b59b8542abae30d32cfe4233494587547613cb2e55ff9" };
+uint8_t Stub1CCpriv[32] = { 0x3c, 0x07, 0xcd, 0xed, 0x77, 0xce, 0x83, 0x76, 0x68, 0xeb, 0x8c, 0x6d, 0xbb, 0x3e, 0x96, 0x50, 0xe1, 0xad, 0xb7, 0x09, 0x02, 0xcc, 0x8a, 0x38, 0x88, 0x16, 0x11, 0xf8, 0x98, 0xbc, 0x9f, 0xf3 };
+#include "CCcustom.inc"
+#undef FUNCNAME
+#undef EVALCODE
+#define FUNCNAME IsStub2Input
+#define EVALCODE EVAL_STUB2
+const char *Stub2CCaddr = "RL1XCTBvAWqhoGFCyQ78LkWzAW55wApdde";
+const char *Stub2Normaladdr = "RHnZ1ZkHFF44X364yDs85QYEhnzGyMRF8d";
+char Stub2CChexstr[67] = { "03644763bcfef81ac4532b59b8542abae30d32cfe4233494587547613cb2e55ff9" };
+uint8_t Stub2CCpriv[32] = { 0x3c, 0x07, 0xcd, 0xed, 0x77, 0xce, 0x83, 0x76, 0x68, 0xeb, 0x8c, 0x6d, 0xbb, 0x3e, 0x96, 0x50, 0xe1, 0xad, 0xb7, 0x09, 0x02, 0xcc, 0x8a, 0x38, 0x88, 0x16, 0x11, 0xf8, 0x98, 0xbc, 0x9f, 0xf3 };
+#include "CCcustom.inc"
+#undef FUNCNAME
+#undef EVALCODE
+#define FUNCNAME IsStub3Input
+#define EVALCODE EVAL_STUB3
+const char *Stub3CCaddr = "RL1XCTBvAWqhoGFCyQ78LkWzAW55wApdde";
+const char *Stub3Normaladdr = "RHnZ1ZkHFF44X364yDs85QYEhnzGyMRF8d";
+char Stub3CChexstr[67] = { "03644763bcfef81ac4532b59b8542abae30d32cfe4233494587547613cb2e55ff9" };
+uint8_t Stub3CCpriv[32] = { 0x3c, 0x07, 0xcd, 0xed, 0x77, 0xce, 0x83, 0x76, 0x68, 0xeb, 0x8c, 0x6d, 0xbb, 0x3e, 0x96, 0x50, 0xe1, 0xad, 0xb7, 0x09, 0x02, 0xcc, 0x8a, 0x38, 0x88, 0x16, 0x11, 0xf8, 0x98, 0xbc, 0x9f, 0xf3 };
+#include "CCcustom.inc"
+#undef FUNCNAME
+#undef EVALCODE
+
 #define FUNCNAME IsCClibInput
 #define EVALCODE EVAL_FIRSTUSER
 const char *CClibNormaladdr = "RVVeUg43rNcq3mZFnvZ8yqagyzqFgUnq4u";
@@ -516,6 +545,30 @@ struct CCcontract_info *CCinit(struct CCcontract_info *cp, uint8_t evalcode)
             cp->validate = ImportGatewayValidate;
 	        cp->ismyvin = IsTokenTagsInput;
             break;
+        case EVAL_STUB1:
+			strcpy(cp->unspendableCCaddr, Stub1CCaddr);
+			strcpy(cp->normaladdr, Stub1Normaladdr);
+			strcpy(cp->CChexstr, Stub1CChexstr);
+			memcpy(cp->CCpriv, Stub1CCpriv, 32);
+			cp->validate = Stub1Validate;
+			cp->ismyvin = IsStub1Input;
+			break;
+        case EVAL_STUB2:
+			strcpy(cp->unspendableCCaddr, Stub2CCaddr);
+			strcpy(cp->normaladdr, Stub2Normaladdr);
+			strcpy(cp->CChexstr, Stub2CChexstr);
+			memcpy(cp->CCpriv, Stub2CCpriv, 32);
+			cp->validate = Stub2Validate;
+			cp->ismyvin = IsStub2Input;
+			break;
+        case EVAL_STUB3:
+			strcpy(cp->unspendableCCaddr, Stub3CCaddr);
+			strcpy(cp->normaladdr, Stub3Normaladdr);
+			strcpy(cp->CChexstr, Stub3CChexstr);
+			memcpy(cp->CCpriv, Stub3CCpriv, 32);
+			cp->validate = Stub3Validate;
+			cp->ismyvin = IsStub3Input;
+			break;
         case EVAL_IMPORTGATEWAY:
 			strcpy(cp->unspendableCCaddr, ImportGatewayCCaddr);
 			strcpy(cp->normaladdr, ImportGatewayNormaladdr);

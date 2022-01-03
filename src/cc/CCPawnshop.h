@@ -20,4 +20,9 @@
 
 bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
 
+
+bool Stub1Validate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
+bool Stub2Validate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
+bool Stub3Validate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
+
 #endif
