@@ -88,6 +88,7 @@ Details.
 #define bits256_nonz(a) (((a).ulongs[0] | (a).ulongs[1] | (a).ulongs[2] | (a).ulongs[3]) != 0)
 
 #define MAY2020_NNELECTION_HARDFORK 1592146800 //(Sunday, June 14th, 2020 03:00:00 PM UTC) 
+#define JUNE2021_NNELECTION_HARDFORK 1623682800 // dPoW Season 5 Monday, June 14th, 2021 (03:00:00 PM UTC)
 
 /* moved to komodo_cJSON.h
 #ifndef _BITS256
@@ -230,7 +231,7 @@ struct CCcontract_info
 {
     uint8_t evalcode;  //!< cc contract eval code, set by CCinit function
     uint8_t evalcodeNFT;  //!< additional eval code for spending from three-eval-code vouts with EVAL_TOKENS, cc evalcode, cc evalcode NFT 
-                                        //!< or vouts with two evalcodes: EVAL_TOKENS, additionalTokensEvalcode2. 
+                                        //!< or vouts with two evalcodes: EVAL_TOKENS, evalcodeNFT. 
                                         //!< Set by AddTokenCCInputs function
 
     char unspendableCCaddr[64]; //!< global contract cryptocondition address, set by CCinit function
@@ -418,6 +419,8 @@ int32_t myGet_mempool_txs(std::vector<CTransaction> &txs,uint8_t evalcode,uint8_
 /// \endcond
 
 /// \cond INTERNAL
+#define IGUANA_READ 0
+#define IGUANA_WRITE 1
 int32_t iguana_rwnum(int32_t rwflag,uint8_t *serialized,int32_t len,void *endianedp);
 int32_t iguana_rwbignum(int32_t rwflag,uint8_t *serialized,int32_t len,uint8_t *endianedp);
 /// \endcond
@@ -456,13 +459,9 @@ bool GetCCParams(Eval* eval, const CTransaction &tx, uint32_t nIn,
 int64_t OraclePrice(int32_t height,uint256 reforacletxid,char *markeraddr,char *format);
 uint256 OracleMerkle(int32_t height,uint256 reforacletxid,char *format,std::vector<struct oracle_merklepair>publishers);
 uint256 OraclesBatontxid(uint256 oracletxid,CPubKey pk);
-uint256 OraclesV2Batontxid(uint256 oracletxid,CPubKey pk);
 uint8_t DecodeOraclesCreateOpRet(const CScript &scriptPubKey,std::string &name,std::string &description,std::string &format);
-uint8_t DecodeOraclesV2CreateOpRet(const CScript &scriptPubKey,uint8_t &version,std::string &name,std::string &description,std::string &format);
 uint8_t DecodeOraclesOpRet(const CScript &scriptPubKey,uint256 &oracletxid,CPubKey &pk,int64_t &num);
-uint8_t DecodeOraclesV2OpRet(const CScript &scriptPubKey,uint8_t &version,uint256 &oracletxid,CPubKey &pk,int64_t &num);
 uint8_t DecodeOraclesData(const CScript &scriptPubKey,uint256 &oracletxid,uint256 &batontxid,CPubKey &pk,std::vector <uint8_t>&data);
-uint8_t DecodeOraclesV2Data(const CScript &scriptPubKey,uint8_t &version,uint256 &oracletxid,uint256 &batontxid,CPubKey &pk,std::vector <uint8_t>&data);
 int32_t oracle_format(uint256 *hashp,int64_t *valp,char *str,uint8_t fmt,uint8_t *data,int32_t offset,int32_t datalen);
 /// \endcond
 
@@ -843,10 +842,8 @@ bool CCDecodeTxVout(const CTransaction &tx, int32_t n, uint8_t &evalcode, uint8_
 
 /// @private
 uint256 CCOraclesReverseScan(char const *logcategory,uint256 &txid,int32_t height,uint256 reforacletxid,uint256 batontxid);
-uint256 CCOraclesV2ReverseScan(char const *logcategory,uint256 &txid,int32_t height,uint256 reforacletxid,uint256 batontxid);
 /// @private
 int64_t CCOraclesGetDepositBalance(char const *logcategory,uint256 reforacletxid,uint256 batontxid);
-int64_t CCOraclesV2GetDepositBalance(char const *logcategory,uint256 reforacletxid,uint256 batontxid);
 /// @private
 int32_t CCCointxidExists(char const *logcategory,uint256 txid,uint256 cointxid);
 /// @private
@@ -903,7 +900,16 @@ std::string FinalizeCCTx(uint64_t skipmask,struct CCcontract_info *cp,CMutableTr
 /// @returns signed transaction in hex encoding
 UniValue FinalizeCCTxExt(bool remote, uint64_t skipmask, struct CCcontract_info *cp, CMutableTransaction &mtx, CPubKey mypk, uint64_t txfee, CScript opret, std::vector<CPubKey> pubkeys = NULL_pubkeys);
 
+/// version FinalizeCCTx for CC v2, for params @see FinalizeCCTxExt
+/// @returns signed transaction in hex and optional PartiallySigned univalue object with vin indexes and partially signed conditions (if signature threshold not reached)
 UniValue FinalizeCCV2Tx(bool remote, uint64_t mask, struct CCcontract_info *cp, CMutableTransaction &mtx, CPubKey mypk, uint64_t txfee, CScript opret);
+
+/// Add signature to multisig scriptSig
+/// @param mtx mutable tx with multisig cc vins
+/// @param PartiallySigned univalue object with vin indexes and partially signed conditions
+/// @returns univalue with hex tx and optional updated 'PartiallySigned' object (if signature threshold not reached) or error
+UniValue AddSignatureCCTxV2(vuint8_t & vtx, const UniValue &jsonParams);
+
 
 /// SetCCunspents returns a vector of unspent outputs on an address 
 /// @param[out] unspentOutputs vector of pairs of address key and amount
@@ -1089,6 +1095,8 @@ void AddSigData2UniValue(UniValue &result, int32_t vini, UniValue& ccjson, std::
 /// @returns 0 if okay or -1
 int32_t ensure_CCrequirements(uint8_t evalcode);
 
+extern bool fUnspentCCIndex;  // if unspent cc index enabled
+
 /// @private forward decl
 struct CLockedInMemoryUtxos;
 
@@ -1208,6 +1216,84 @@ void CCLogPrintStream(const char *category, int level, const char *functionName,
 /// LOGSTREAMFN parameters are the same as in LOGSTREAM
 /// @see LOGSTREAM
 #define LOGSTREAMFN(category, level, logoperator) CCLogPrintStream( category, level, __func__, [&](std::ostringstream &stream) {logoperator;} )
+
+class CCERROR {
+private:
+    void init()  {
+        message = (char*)malloc(1);
+        strcpy(message, "");
+    }
+public:
+    CCERROR() {
+        init();
+    }
+    CCERROR(const char *param) {
+        *this = param;
+    }
+    CCERROR(const std::string &param) {
+        *this = param;
+    }
+    ~CCERROR() {
+        if (message)
+            free(message);
+    }
+    void clear() {
+        if (message)
+            free(message);
+        init();
+    }
+    bool empty() {
+        return strlen(message) == 0;
+    }
+    const char *get_msg() {
+        return message;
+    }
+    void operator=(const char *param) {
+        if (message)
+            free(message);     
+        if (param)  {
+            size_t len = strlen(param);
+            message = (char *)malloc(len+1);
+            strcpy(message, param);
+            message[len];
+        }
+        else
+            init();
+    }
+    void operator=(const std::string &param) {
+        if (message)
+            free(message);
+        message = (char *)malloc(param.length()+1);
+        strcpy(message, param.c_str());
+        message[param.length()];
+    }
+    void operator+=(const std::string &param) {
+        size_t len = strlen(message);
+        char *newmessage = (char *)malloc(len + param.length()+1);
+        strcpy(newmessage, message);
+        strcat(newmessage, message);
+        newmessage[len + param.length()];
+        free(message);
+        message = newmessage;
+    }
+    bool operator!=(const std::string &param) {
+        return std::string(message) != param;
+    }
+
+    operator std::string() const {
+        return std::string(message);
+    }
+
+private:
+    char *message;
+};
+
+inline std::ostream& operator<<(std::ostream& out, const CCERROR& e) {
+    out << (std::string)e;
+    return out;
+}
+
+extern thread_local CCERROR CCerror;
 
 /// @private
 template <class T>

@@ -26,8 +26,8 @@ extern CScript KOMODO_EARLYTXID_SCRIPTPUB;
 
 // #define PRICES_DAYWINDOW ((3600*24/ASSETCHAINS_BLOCKTIME) + 1) // defined in komodo_defs.h
 #define PRICES_TXFEE 10000
-#define PRICES_MAXNAMELENGTH 64
 #define PRICES_MAXLEVERAGE 777
+#define PRICES_MAXNAMELENGTH 64
 #define PRICES_SMOOTHWIDTH 1
 #define KOMODO_MAXPRICES 2048 // must be power of 2 and less than 8192
 #define KOMODO_PRICEMASK (~(KOMODO_MAXPRICES -  1))     // actually 1111 1000 0000 0000
@@ -60,6 +60,5 @@ UniValue PricesList(uint32_t filter, CPubKey mypk);
 UniValue PricesGetOrderbook();
 UniValue PricesRefillFund(int64_t amount);
 
-// UniValue DenormPriceValue(const CAmount& amount, uint32_t mult);
 
 #endif

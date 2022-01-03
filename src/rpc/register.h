@@ -54,7 +54,7 @@ static inline void RegisterAllCoreRPCCommands(CRPCTable &tableRPC)
     RegisterRawTransactionRPCCommands(tableRPC);
     RegisterTokensRPCCommands(tableRPC);
     RegisterCCUtilsRPCCommands(tableRPC);
-	RegisterAgreementsRPCCommands(tableRPC);
+    RegisterAgreementsRPCCommands(tableRPC);
 	RegisterPawnshopRPCCommands(tableRPC);
     RegisterTokenTagsRPCCommands(tableRPC);
 }

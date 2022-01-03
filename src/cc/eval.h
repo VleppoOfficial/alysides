@@ -39,10 +39,12 @@
  * Verus EVAL_STAKEGUARD is 0x01
  */
 #define FOREACH_EVAL(EVAL)             \
+        EVAL(EVAL_STUB1, 0xa4) \
+        EVAL(EVAL_STUB2, 0xa5) \
+        EVAL(EVAL_STUB3, 0xa6) \
         EVAL(EVAL_AGREEMENTS, 0xa7) \
-		    EVAL(EVAL_PAWNSHOP, 0xa8) \
+		EVAL(EVAL_PAWNSHOP, 0xa8) \
         EVAL(EVAL_TOKENTAGS, 0xa9) \
-        EVAL(EVAL_ORACLESV2, 0xe0) \
         EVAL(EVAL_IMPORTPAYOUT, 0xe1)  \
         EVAL(EVAL_IMPORTCOIN,   0xe2)  \
         EVAL(EVAL_ASSETS,   0xe3)  \
@@ -65,6 +67,7 @@
         EVAL(EVAL_KOGS, 0xf4)  \
         EVAL(EVAL_TOKENSV2, 0xf5) \
         EVAL(EVAL_ASSETSV2, 0xf6) \
+        EVAL(EVAL_NFTDATA, 0xf7) \
 
 
 // evalcodes 0x10 to 0x7f are reserved for cclib dynamic CC

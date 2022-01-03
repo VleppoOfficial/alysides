@@ -20,6 +20,7 @@
 #ifndef CC_TOKENS_H
 #define CC_TOKENS_H
 
+#include <tuple>
 #include "CCinclude.h"
 
 // implementation of basic token functions
@@ -27,7 +28,8 @@
 /// Returns non-fungible data of token if this is a NFT
 /// @param tokenid id of token
 /// @param vopretNonfungible non-fungible token data. The first byte is the evalcode of the contract that validates the NFT-data
-//void GetNonfungibleData(uint256 tokenid, vscript_t &vopretNonfungible);
+//void GetNonfungibleData(uint256 tokenid, vscript_t &vopretNonfungible);  // see template impl
+typedef std::tuple<vuint8_t, std::string, std::string> TokenDataTuple;  // pubkey, name, desc
 
 // CCcustom
 bool TokensValidate(struct CCcontract_info *cp,Eval* eval,const CTransaction &tx, uint32_t nIn);
@@ -38,11 +40,6 @@ bool Tokensv2Validate(struct CCcontract_info *cp,Eval* eval,const CTransaction &
 // wrappers for tokens cc v1 or v2
 ////std::string CreateTokenLocal(CAmount txfee, CAmount tokensupply, std::string name, std::string description, vscript_t nonfungibleData);
 //bool IsTokenMarkerVout(CTxOut vout);
-
-//int64_t GetTokenBalance(CPubKey pk, uint256 tokenid, bool usemempool = false);
-//UniValue TokenInfo(uint256 tokenid);
-UniValue TokenList();
-UniValue TokenV2List();
 
 /// Adds token inputs to transaction object. If tokenid is a non-fungible token then the function will set additionalTokensEvalcode2 variable in the cp object to the eval code from NFT data to spend NFT outputs properly
 /// @param cp CCcontract_info structure
@@ -209,6 +206,15 @@ CC *MakeTokensv2CCcond1of2(uint8_t evalcode, CPubKey pk1, CPubKey pk2);
 /// @returns cryptocondition object. Must be disposed with cc_free function when not used any more
 CC *MakeTokensv2CCcond1of2(uint8_t evalcode, uint8_t evalcode2, CPubKey pk1, CPubKey pk2);
 
+/// Creates new MofN token cryptocondition that allows to spend it by M of N keys
+/// The resulting cc will have two eval codes (EVAL_TOKENSV2 and evalcode parameter value).
+/// @param evalcode1 cryptocondition eval code (transactions with this eval code in cc inputs will be forwarded to the contract associated with this eval code)
+/// @param evalcode2 yet another cryptocondition eval code (transactions with this eval code in cc inputs will be forwarded to the contract associated with this eval code)
+/// @param M value - min number of signatures
+/// @param pks vector of N pubkeys to spend the cc
+/// @returns cryptocondition object. Must be disposed with cc_free function when not used any more
+CC *MakeTokensv2CCcondMofN(uint8_t evalcode1, uint8_t evalcode2, uint8_t M, std::vector<CPubKey> pks);
+
 /// Creates a token transaction output with a cryptocondition that allows to spend it by one key. 
 /// The resulting vout will have two eval codes (EVAL_TOKENSV2 and evalcode parameter value).
 /// The returned output should be added to a transaction vout array.
@@ -261,11 +267,27 @@ CTxOut MakeTokensCC1of2voutMixed(uint8_t evalcode, CAmount nValue, CPubKey pk1, 
 /// @see CCcontract_info
 CTxOut MakeTokensCC1of2voutMixed(uint8_t evalcode, uint8_t evalcode2, CAmount nValue, CPubKey pk1, CPubKey pk2, vscript_t* pvData = nullptr);
 
+/// MakeTokensCCMofNvout creates a token transaction output with a MofN cryptocondition with two eval codes that allows to spend it by M of N keys. 
+/// The resulting vout will have three eval codes (EVAL_TOKENS, evalcode and evalcode2 parameter values).
+/// The returned output should be added to a transaction vout array.
+/// @param evalcode cryptocondition eval code (transactions with this eval code in cc inputs will be forwarded to the contract associated with this eval code)
+/// @param evalcode2 yet another cryptocondition eval code (transactions with this eval code in cc inputs will be forwarded to the contract associated with this eval code)
+/// @param nValue value of the output in satoshi
+/// @param M value (number of needed signatures)
+/// @param vector of pubkeys to spend the cc
+/// @param pvData pointer to optional data added as OP_DROP op to the vout (could be null)
+/// @returns vout object
+/// @see CCinit
+/// @see CCcontract_info
+CTxOut MakeTokensCCMofNvoutMixed(uint8_t evalcode1, uint8_t evalcode2, CAmount nValue, uint8_t M, const std::vector<CPubKey> & pks, vscript_t* pvData = nullptr);
+
+UniValue TokenList();
+UniValue TokenV2List();
 
 inline bool IsTokenCreateFuncid(uint8_t funcid) { return funcid == 'c'; }
 inline bool IsTokenTransferFuncid(uint8_t funcid) { return funcid == 't'; }
 
-bool IsEqualVouts(const CTxOut &v1, const CTxOut &v2);
+bool IsEqualScriptPubKeys(const CScript &spk1, const CScript &spk2);
 
 bool TokensIsVer1Active(const Eval *eval);
 
@@ -336,7 +358,18 @@ public:
     static CTxOut MakeTokensCC1of2vout(uint8_t evalcode1, uint8_t evalcode2, CAmount nValue, CPubKey pk1, CPubKey pk2, std::vector<std::vector<unsigned char>>* vData = NULL)
     {
         return ::MakeTokensCC1of2vout(evalcode1, evalcode2, nValue, pk1, pk2, vData);
-    }   
+    }  
+
+    static CTxOut MakeTokensCCMofNvout(uint8_t evalcode1, uint8_t evalcode2, CAmount nValue, uint8_t M, const std::vector<CPubKey> &pks, std::vector<vscript_t>* pvvData = NULL)
+    {
+        if (pks.size() == 2)
+            return ::MakeTokensCC1of2vout(evalcode1, evalcode2, nValue, pks[0], pks[1], pvvData);
+        else if (pks.size() == 1)
+            return ::MakeTokensCC1vout(evalcode1, evalcode2, nValue, pks[0], pvvData);
+        else
+            return CTxOut();
+    }    
+
     static UniValue FinalizeCCTx(bool remote, uint64_t CCmask, struct CCcontract_info *cp, CMutableTransaction &mtx, CPubKey mypk, uint64_t txfee, CScript opret)
     {
         return ::FinalizeCCTxExt(remote, CCmask, cp, mtx, mypk, txfee, opret);
@@ -410,6 +443,10 @@ public:
         return ::MakeTokensCC1of2voutMixed(evalcode1, evalcode2, nValue, pk1, pk2, (pvvData != nullptr ? &(*pvvData)[0] : nullptr));
     }
 
+    static CTxOut MakeTokensCCMofNvout(uint8_t evalcode1, uint8_t evalcode2, CAmount nValue, uint8_t M, const std::vector<CPubKey> &pks, std::vector<vscript_t>* pvvData = NULL)
+    {
+        return ::MakeTokensCCMofNvoutMixed(evalcode1, evalcode2, nValue, M, pks, (pvvData != nullptr ? &(*pvvData)[0] : nullptr));
+    }
     static UniValue FinalizeCCTx(bool remote, uint64_t CCmask, struct CCcontract_info *cp, CMutableTransaction &mtx, CPubKey mypk, uint64_t txfee, CScript opret)
     {
         return ::FinalizeCCV2Tx(remote, FINALIZECCTX_NO_CHANGE_WHEN_ZERO, cp, mtx, mypk, txfee, opret);
@@ -423,7 +460,6 @@ template <class V> bool ExtractTokensCCVinPubkeys(const CTransaction &tx, std::v
 /// @private 
 template <class V> bool IsTokenMarkerVout(CTxOut vout);
 /// @private 
-bool GetCCVDataAsOpret(const CScript &scriptPubKey, CScript &opret);  // tmp
 uint8_t DecodeTokenOpretVersion(const CScript &scriptPubKey);
 
 #endif

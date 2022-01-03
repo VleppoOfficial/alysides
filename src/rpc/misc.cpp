@@ -64,7 +64,7 @@ int32_t Jumblr_secretaddradd(char *secretaddr);
 uint64_t komodo_interestsum();
 int32_t komodo_longestchain();
 int32_t komodo_notarized_height(int32_t *prevMoMheightp,uint256 *hashp,uint256 *txidp);
-extern bool komodo_txnotarizedconfirmed(uint256 txid,int32_t minconfirms);
+//bool komodo_txnotarizedconfirmed(uint256 txid);
 uint32_t komodo_chainactive_timestamp();
 int32_t komodo_whoami(char *pubkeystr,int32_t height,uint32_t timestamp);
 extern uint64_t KOMODO_INTERESTSUM,KOMODO_WALLETBALANCE;
@@ -1531,7 +1531,7 @@ UniValue getspentinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
             "\nArguments:\n"
             "{\n"
             "  \"txid\" (string) The hex string of the txid\n"
-            "  \"index\" (number) The output index in tx\n"
+            "  \"index\" (number) The start block height\n"
             "}\n"
             "\nResult:\n"
             "{\n"

@@ -450,15 +450,8 @@ void Split(const std::string& strVal, int32_t outsize, uint64_t *outVals, const 
 
 std::string GetArg(const std::string& strArg, const std::string& strDefault)
 {
-    #ifdef _WIN32
-    std::string strArgLower = strArg;
-    boost::to_lower(strArgLower);
-    if (mapArgs.count(strArgLower))
-        return mapArgs[strArgLower];
-    #else
     if (mapArgs.count(strArg))
         return mapArgs[strArg];
-    #endif
     return strDefault;
 }
 
@@ -719,16 +712,12 @@ boost::filesystem::path GetConfigFile()
 }
 
 void ReadConfigFile(map<string, string>& mapSettingsRet,
-                    map<string, vector<string> >& mapMultiSettingsRet,int32_t abortflag)
+                    map<string, vector<string> >& mapMultiSettingsRet)
 {
 
     boost::filesystem::ifstream streamConfig(GetConfigFile());
     if (!streamConfig.good())
-    {
-        if ( abortflag != 0 )
-            throw missing_zcash_conf();
-        else return;
-    }
+        throw missing_zcash_conf();
     set<string> setOptions;
     setOptions.insert("*");
 
@@ -746,6 +735,8 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
     }
     // If datadir is changed in .conf file:
     ClearDatadirCache();
+    extern uint16_t BITCOIND_RPCPORT;
+    BITCOIND_RPCPORT = GetArg("-rpcport",BaseParams().RPCPort());
 }
 
 #ifndef _WIN32

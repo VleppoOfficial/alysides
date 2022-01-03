@@ -59,7 +59,6 @@ int32_t NSPV_gettransaction(int32_t skipvalidation,int32_t vout,uint256 txid,int
 UniValue NSPV_spend(char *srcaddr,char *destaddr,int64_t satoshis);
 extern uint256 SIG_TXHASH;
 uint32_t NSPV_blocktime(int32_t hdrheight);
-int32_t komodo_DEXprocess(CNode *pfrom,std::vector<uint8_t> &response,uint8_t *msg,int32_t len);
 
 struct NSPV_equihdr
 {
@@ -110,7 +109,7 @@ struct NSPV_mempoolresp
     char coinaddr[64];
     uint256 txid;
     int32_t nodeheight,vout,vindex;
-    uint16_t numtxids; uint8_t CCflag,funcid;
+    uint16_t numtxids; uint8_t CCflag, funcid;
 };
 
 struct NSPV_ntz
@@ -187,7 +186,12 @@ struct NSPV_CCmtxinfo
 struct NSPV_remoterpcresp
 {
     char method[64];
-    char json[11000];
+    char *json;
 };
+
+
+void NSPV_CCunspents(std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > &unspentOutputs,char *coinaddr,bool ccflag);
+void NSPV_CCtxids(std::vector<std::pair<CAddressIndexKey, CAmount> > &txids,char *coinaddr,bool ccflag);
+void NSPV_CCtxids(std::vector<uint256> &txids,char *coinaddr,bool ccflag, uint8_t evalcode,uint256 filtertxid, uint8_t func);
 
 #endif // KOMODO_NSPV_DEFSH

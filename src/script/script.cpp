@@ -389,7 +389,7 @@ bool CScript::IsPayToCryptoCondition() const
     return IsPayToCryptoCondition(NULL);
 }
 
-bool CScript::IsCCV2() const
+bool CScript::IsPayToCCV2() const
 {
     const_iterator pc = begin();
     std::vector<unsigned char> data;
@@ -417,23 +417,24 @@ const std::vector<unsigned char> CScript::GetCCV2SPK() const
     return (std::vector<unsigned char>());
 }
 
-bool CScript::HasEvalcodeCCV2(uint8_t evalCode) const
+bool CScript::SpkHasEvalcodeCCV2(uint8_t evalCode) const
 {
-    std::vector<unsigned char> ccdata=this->GetCCV2SPK();
+    std::vector<unsigned char> ccdata = this->GetCCV2SPK();
 
-    if (ccdata.empty()) return (false);
-    CC* cond=cc_readFulfillmentBinaryMixedMode((unsigned char*)ccdata.data()+1,ccdata.size()-1);
-    VerifyEval eval = [] (CC *cond, void *evalcode)
-    {
-        return (*(uint8_t *)evalcode==cond->code[0])?0:1;
+    if (ccdata.empty())
+        return (false);
+    
+    CC* cond = cc_readFulfillmentBinaryMixedMode((unsigned char*)ccdata.data() + 1, ccdata.size() - 1);
+    if (cond == nullptr)
+        return false;
+    
+    VerifyEval eval = [](CC* cond, void* evalcode) {
+        return (*(uint8_t*)evalcode == cond->code[0]) ? 0 : 1;
     };
-    if (!cc_verifyEval(cond,eval,&evalCode))
-    {
-        cc_free(cond);
-        return (true);
-    }
+
+    bool rc = !cc_verifyEval(cond, eval, &evalCode);
     cc_free(cond);
-    return (false);
+    return rc;
 }
 
 bool CScript::MayAcceptCryptoCondition() const

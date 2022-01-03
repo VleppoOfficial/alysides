@@ -41,7 +41,6 @@ if TARGET_LINUX
 LIBBITCOIN_SERVER=libbitcoin_server.a -lcurl
 endif
 
-LIBBITCOIN_WALLET=libbitcoin_wallet.a
 LIBBITCOIN_COMMON=libbitcoin_common.a
 LIBBITCOIN_CLI=libbitcoin_cli.a
 LIBBITCOIN_UTIL=libbitcoin_util.a
@@ -310,19 +309,18 @@ libbitcoin_server_a_SOURCES = \
   cc/heir.cpp \
   cc/old/heir_v0.cpp \
   cc/oracles.cpp \
-  cc/oraclesV2.cpp \
   cc/prices.cpp \
   cc/pegs.cpp \
   cc/payments.cpp \
-  cc/gatewaysV2.cpp \
-  cc/channelsV2.cpp \
+  cc/gateways.cpp \
+  cc/channels.cpp \
   cc/auction.cpp \
   cc/agreements.cpp \
   cc/pawnshop.cpp \
   cc/betprotocol.cpp \
   cc/pricesfeed.cpp \
   cc/priceslibs/cjsonpointer.cpp \
-  cc/kogs.cpp \
+  cc/CCNFTData.cpp \
   chain.cpp \
   checkpoints.cpp \
   fs.cpp \
@@ -778,6 +776,7 @@ clean-local:
 	-$(MAKE) -C cryptoconditions clean
 	rm -f leveldb/*/*.gcno leveldb/helpers/memenv/*.gcno
 	-rm -f config.h
+	rm -f cc/customcc.so
 
 .rc.o:
 	@test -f $(WINDRES)

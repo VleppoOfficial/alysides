@@ -34,13 +34,13 @@ using namespace std;
 UniValue listccunspents(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	UniValue resarray(UniValue::VARR);
-    bool fUnspentCCIndexTmp = false;
+    //bool fUnspentCCIndexTmp = false;
 
 	if (fHelp || (params.size() < 1 || params.size() > 2))
 		throw runtime_error("listccunspents ccadress [creationid]\n");
 
-    pblocktree->ReadFlag("unspentccindex", fUnspentCCIndexTmp);
-	if (!fUnspentCCIndexTmp)
+    //pblocktree->ReadFlag("unspentccindex", fUnspentCCIndexTmp);
+	if (!fUnspentCCIndex)
 		throw runtime_error("unspent cc index not supported\n");
 
     std::vector<std::pair<CUnspentCCIndexKey, CUnspentCCIndexValue> > unspentOutputs, unspentOutputsMem;
@@ -72,7 +72,7 @@ UniValue listccunspents(const UniValue& params, bool fHelp, const CPubKey& mypk)
     };
 
     SetCCunspentsCCIndex(unspentOutputs, ccaddr.c_str(), creationid);
-    std::cerr << " non mempool unspentOutputs.size=" << unspentOutputs.size() << std::endl;
+    LOGSTREAMFN("ccutils", CCLOG_DEBUG1, stream << " non mempool unspentOutputs.size=" << unspentOutputs.size() << std::endl);
     for( auto const &o : unspentOutputs)    {
         uint256 spenttxid;
         int32_t spentvin;
@@ -81,7 +81,7 @@ UniValue listccunspents(const UniValue& params, bool fHelp, const CPubKey& mypk)
     }
 
     AddCCunspentsCCIndexMempool(unspentOutputsMem, ccaddr.c_str(), creationid);
-    std::cerr << __func__ << " with mempool unspentOutputs.size=" << unspentOutputs.size() << std::endl;
+    LOGSTREAMFN("ccutils", CCLOG_DEBUG1, stream << " with mempool unspentOutputs.size=" << unspentOutputs.size() << std::endl);
      
     for( auto const &o : unspentOutputsMem)    {
         addUniElem(o, zeroid, 0);

@@ -22,6 +22,9 @@
 #include "komodo_structs.h"
 #include "key_io.h"
 
+
+thread_local CCERROR CCerror = "";
+
 #ifdef TESTMODE           
     #define MIN_NON_NOTARIZED_CONFIRMS 2
 #else
@@ -108,7 +111,7 @@ CTxOut MakeCC1vout(uint8_t evalcode, CAmount nValue, CPubKey pk, std::vector<std
         //std::vector<std::vector<unsigned char>> vtmpData = std::vector<std::vector<unsigned char>>(vData->begin(), vData->end());
         std::vector<CPubKey> vPubKeys = std::vector<CPubKey>();
         //vPubKeys.push_back(pk);   // Warning: if add a pubkey here, the Solver function will add it to vSolutions and ExtractDestination might use it to get the spk address (such result might not be expected)
-        COptCCParams ccp = COptCCParams(COptCCParams::VERSION, evalcode, 1, 1, vPubKeys, (*vData));
+        COptCCParams ccp = COptCCParams(COptCCParams::VERSION_1, evalcode, 1, 1, vPubKeys, (*vData));
         vout.scriptPubKey << ccp.AsVector() << OP_DROP;
     }
     return(vout);
@@ -127,7 +130,7 @@ CTxOut MakeCC1of2vout(uint8_t evalcode, CAmount nValue, CPubKey pk1, CPubKey pk2
         // this is for multisig
         //vPubKeys.push_back(pk1);  // Warning: if add a pubkey here, the Solver function will add it to vSolutions and ExtractDestination might use it to get the spk address (such result might not be expected)
         //vPubKeys.push_back(pk2);
-        COptCCParams ccp = COptCCParams(COptCCParams::VERSION, evalcode, 1, 2, vPubKeys, (*vData));
+        COptCCParams ccp = COptCCParams(COptCCParams::VERSION_1, evalcode, 1, 2, vPubKeys, (*vData));
         vout.scriptPubKey << ccp.AsVector() << OP_DROP;
     }
     return(vout);
@@ -460,7 +463,7 @@ bool GetTokensCCaddress1of2(struct CCcontract_info *cp, char *destaddr, CPubKey 
         payoutCond.reset(MakeTokensv2CCcond1of2(cp->evalcode, cp->evalcodeNFT, pk1, pk2));
 
 	destaddr[0] = 0;
-	if (payoutCond != nullptr)  //  if additionalTokensEvalcode2 not set then it is dual-eval cc else three-eval cc
+	if (payoutCond != nullptr)  //  if evalcodeNFT not set then it is dual-eval cc else three-eval cc
 	{
         if (mixed) 
             CCtoAnon(payoutCond.get());
@@ -475,17 +478,17 @@ bool ConstrainVout(CTxOut vout, int32_t CCflag, char *cmpaddr, int64_t nValue)
     char destaddr[64];
     if ( vout.scriptPubKey.IsPayToCryptoCondition() != CCflag )
     {
-        fprintf(stderr,"constrain vout error isCC %d vs %d CCflag\n", vout.scriptPubKey.IsPayToCryptoCondition(), CCflag);
+        //fprintf(stderr,"constrain vout error isCC %d vs %d CCflag\n", vout.scriptPubKey.IsPayToCryptoCondition(), CCflag);
         return(false);
     }
     else if ( cmpaddr != 0 && (Getscriptaddress(destaddr, vout.scriptPubKey) == 0 || strcmp(destaddr, cmpaddr) != 0) )
     {
-        fprintf(stderr,"constrain vout error: check addr %s vs script addr %s\n", cmpaddr!=0?cmpaddr:"", destaddr!=0?destaddr:"");
+        //fprintf(stderr,"constrain vout error: check addr %s vs script addr %s\n", cmpaddr!=0?cmpaddr:"", destaddr!=0?destaddr:"");
         return(false);
     }
     else if ( nValue != 0 && nValue != vout.nValue ) //(nValue == 0 && vout.nValue < 10000) || (
     {
-        fprintf(stderr,"constrain vout error nValue %.8f vs %.8f\n",(double)nValue/COIN,(double)vout.nValue/COIN);
+        //fprintf(stderr,"constrain vout error nValue %.8f vs %.8f\n",(double)nValue/COIN,(double)vout.nValue/COIN);
         return(false);
     }
     else return(true);
@@ -496,7 +499,7 @@ bool ConstrainVoutV2(CTxOut vout, int32_t CCflag, char *cmpaddr, int64_t nValue,
 {
     if (ConstrainVout(vout, CCflag, cmpaddr, nValue))
         if (CCflag && evalCode != 0)
-            return vout.scriptPubKey.HasEvalcodeCCV2(evalCode);
+            return vout.scriptPubKey.SpkHasEvalcodeCCV2(evalCode);
         else
             return true;
     else
@@ -712,47 +715,6 @@ uint256 CCOraclesReverseScan(char const *logcategory,uint256 &txid,int32_t heigh
     return(zeroid);
 }
 
-uint256 CCOraclesV2ReverseScan(char const *logcategory,uint256 &txid,int32_t height,uint256 reforacletxid,uint256 batontxid)
-{
-    CTransaction tx; uint256 hash,mhash,bhash,hashBlock,oracletxid; int32_t len,len2,numvouts; uint8_t version;
-    int64_t val,merkleht; CPubKey pk; std::vector<uint8_t>data; char str[65],str2[65]; struct CCcontract_info *cp,C;
-    
-    cp = CCinit(&C,EVAL_ORACLESV2);
-    txid = zeroid;
-    LogPrint(logcategory,"start reverse scan %s\n",uint256_str(str,batontxid));
-    while ( myGetTransactionCCV2(cp,batontxid,tx,hashBlock) != 0 && (numvouts= tx.vout.size()) > 0 )
-    {
-        LogPrint(logcategory,"check %s\n",uint256_str(str,batontxid));
-        if ( DecodeOraclesV2Data(tx.vout[numvouts-1].scriptPubKey,version,oracletxid,bhash,pk,data) == 'D' && oracletxid == reforacletxid )
-        {
-            LogPrint(logcategory,"decoded %s\n",uint256_str(str,batontxid));
-            if ( oracle_format(&hash,&merkleht,0,'I',(uint8_t *)data.data(),0,(int32_t)data.size()) == sizeof(int32_t) && merkleht == height )
-            {
-                len = oracle_format(&hash,&val,0,'h',(uint8_t *)data.data(),sizeof(int32_t),(int32_t)data.size());
-                len2 = oracle_format(&mhash,&val,0,'h',(uint8_t *)data.data(),(int32_t)(sizeof(int32_t)+sizeof(uint256)),(int32_t)data.size());
-
-                LogPrint(logcategory,"found merkleht.%d len.%d len2.%d %s %s\n",(int32_t)merkleht,len,len2,uint256_str(str,hash),uint256_str(str2,mhash));
-                if ( len == sizeof(hash)+sizeof(int32_t) && len2 == 2*sizeof(mhash)+sizeof(int32_t) && mhash != zeroid )
-                {
-                    txid = batontxid;
-                    LogPrint(logcategory,"set txid\n");
-                    return(mhash);
-                }
-                else
-                {
-                    LogPrint(logcategory,"missing hash\n");
-                    return(zeroid);
-                }
-            }
-            else LogPrint(logcategory,"height.%d vs search ht.%d\n",(int32_t)merkleht,(int32_t)height);
-            batontxid = bhash;
-            LogPrint(logcategory,"new hash %s\n",uint256_str(str,batontxid));
-        } else break;
-    }
-    LogPrint(logcategory,"end of loop\n");
-    return(zeroid);
-}
-
 int64_t CCOraclesGetDepositBalance(char const *logcategory,uint256 reforacletxid,uint256 batontxid)
 {
     CTransaction tx; uint256 hash,prevbatontxid,hashBlock,oracletxid; int32_t len,len2,numvouts;
@@ -771,24 +733,6 @@ int64_t CCOraclesGetDepositBalance(char const *logcategory,uint256 reforacletxid
     return (0);
 }
 
-int64_t CCOraclesV2GetDepositBalance(char const *logcategory,uint256 reforacletxid,uint256 batontxid)
-{
-    CTransaction tx; uint256 hash,prevbatontxid,hashBlock,oracletxid; int32_t len,len2,numvouts;
-    int64_t val,balance=0; CPubKey pk; std::vector<uint8_t>data; struct CCcontract_info *cp,C; uint8_t version;
-
-    cp = CCinit(&C,EVAL_ORACLESV2);
-    if ( myGetTransactionCCV2(cp,batontxid,tx,hashBlock) != 0 && (numvouts= tx.vout.size()) > 0 )
-    {
-        if ( DecodeOraclesV2Data(tx.vout[numvouts-1].scriptPubKey,version,oracletxid,prevbatontxid,pk,data) == 'D' && oracletxid == reforacletxid )
-        {
-            if ( oracle_format(&hash,&balance,0,'L',(uint8_t *)data.data(),(int32_t)(sizeof(int32_t)+sizeof(uint256)*2),(int32_t)data.size()) == (int32_t)(sizeof(int32_t)+sizeof(uint256)*2+sizeof(int64_t)))
-            {
-                return (balance);
-            }
-        }
-    }
-    return (0);
-}
 
 int32_t NSPV_coinaddr_inmempool(char const *logcategory,char *coinaddr,uint8_t CCflag);
 
@@ -1541,9 +1485,20 @@ bool GetCCDropAsOpret(const CScript &scriptPubKey, CScript &opret)
     std::vector<std::vector<unsigned char>> vParams;
     CScript dummy; 
 
-    if (scriptPubKey.IsPayToCryptoCondition(&dummy, vParams) != 0)
+    if (scriptPubKey.IsPayToCryptoCondition(&dummy, vParams))
     {
-        if (vParams.size() >= 1)  // allow more data after cc opret
+
+        if (vParams.size() > 0)  {
+            COptCCParams parsed(vParams[0]);
+
+            LOGSTREAMFN("ccutils", CCLOG_DEBUG1, stream << " evalcode=" << (int)parsed.evalCode << " vKeys.size()=" << (int)parsed.vKeys.size() << " vData.size()=" << (int)parsed.vData.size() << std::endl);
+            if (parsed.vData.size() > 0)      {
+                opret << OP_RETURN << parsed.vData[0];  // return vData[0] as cc opret
+                return true;
+            }
+        }
+
+        /*if (vParams.size() >= 1)  // allow more data after cc opret
         {
             //uint8_t version;
             //uint8_t evalCode;
@@ -1551,17 +1506,25 @@ bool GetCCDropAsOpret(const CScript &scriptPubKey, CScript &opret)
             std::vector< vscript_t > vData;
 
             // parse vParams[0] as script
+            // try read verus header <evalcode version M N>, do not allow pubkeys after the header
             CScript inScript(vParams[0].begin(), vParams[0].end());
             CScript::const_iterator pc = inScript.begin();
             inScript.GetPushedData(pc, vData);
 
-            if (vData.size() > 1 && vData[0].size() == 4) // first vector is 4-byte header
+            if (vData.size() > 1 && vData[0].size() == 4) // first vector is 4-byte verus header
             {
-                //vscript_t vopret(vParams[0].begin() + 6, vParams[0].end());
+                // support Verus-style vData
                 opret << OP_RETURN << vData[1];  // return vData[1] as cc opret
                 return true;
             }
+            else if (vParams.size() == 1)
+            {
+                // support token-v2-style vData:
+                opret << OP_RETURN << vParams[0];  // no verus header, treat vParams[0] as cc data and return as opret
+                return true;
+            }
         }
+        */
     }
     return false;
 }
@@ -1569,7 +1532,7 @@ bool GetCCDropAsOpret(const CScript &scriptPubKey, CScript &opret)
 // get OP_DROP data for mixed cc vouts
 // the function returns OP_DROP data as OP_RETURN script. This looks strange but all cc modules have DecodeOpReturn-like functions 
 // that accept OP_RETURN scripts 
-bool GetCCVDataAsOpret(const CScript &scriptPubKey, CScript &opret)
+/*bool GetCCVDataAsOpret(const CScript &scriptPubKey, CScript &opret)
 {
     std::vector<vscript_t> vParams;
     CScript dummy; 
@@ -1578,13 +1541,12 @@ bool GetCCVDataAsOpret(const CScript &scriptPubKey, CScript &opret)
     {
         if (vParams.size() >= 1)  // allow more data after cc opret
         {
-            //vscript_t vopret(vParams[0].begin() + 6, vParams[0].end());
             opret << OP_RETURN << vParams[0];  // return vData[1] as cc opret
             return true;
         }
     }
     return false;
-}
+}*/
 
 // get cc address for pubkey or mypk
 UniValue CCaddress(struct CCcontract_info *cp, const char *name, const std::vector<unsigned char> &pubkey, bool mixed)
@@ -1673,7 +1635,7 @@ bool CCDecodeTxVout(const CTransaction &tx, int32_t n, uint8_t &evalcode, uint8_
 
         // first try if OP_DROP data exists
         bool usedOpreturn;
-        if (GetCCVDataAsOpret(tx.vout[n].scriptPubKey, opdrop))
+        if (GetCCDropAsOpret(tx.vout[n].scriptPubKey, opdrop))
             GetOpReturnData(opdrop, ccdata), usedOpreturn = false;
         else
             GetOpReturnData(tx.vout.back().scriptPubKey, ccdata), usedOpreturn = true;  // use OP_RETURN in the last vout if no OP_DROP data
@@ -1695,6 +1657,7 @@ bool CCDecodeTxVout(const CTransaction &tx, int32_t n, uint8_t &evalcode, uint8_
                 evalcode = ccdata[0];
                 funcid = ccdata[1];
                 version = ccdata[2];
+                LOGSTREAMFN("ccutils", CCLOG_DEBUG1, stream << " evalcode=" << (int)evalcode << " funcid=" << (char)funcid << "(" << (int)funcid << "), version=" << (int)version << std::endl); 
             }
             else
             {
@@ -1707,7 +1670,7 @@ bool CCDecodeTxVout(const CTransaction &tx, int32_t n, uint8_t &evalcode, uint8_
                     }
                 }
                 creationId = revuint256(encodedCrid);
-                //std::cerr << __func__ << " in opret found creationid=" << creationId.GetHex() << std::endl;
+                LOGSTREAMFN("ccutils", CCLOG_DEBUG1, stream << " evalcode=" << (int)evalcode << " funcid=" << (char)funcid << "(" << (int)funcid << "), version=" << (int)version << " in opret found creationid=" << creationId.GetHex() << std::endl);
             }
         }
         return true;

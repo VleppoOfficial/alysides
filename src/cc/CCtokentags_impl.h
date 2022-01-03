@@ -18,42 +18,245 @@
 #include "CCtokens_impl.h"
 
 /*
+Token Tags module - preliminary design (not final, subject to change during build)
+
+insert:
+types of txes
+tx vins/vouts
+consensus code flow
+function list
+	what these functions do, params, outputs
+functions that explicitly use tokens functions (need to separate them, in case tokens gets updated again)
+RPC impl
+helper funcs, if needed
+
+User Flow
+
+- Token owner uses tokentagcreate to set up a tag tied to a specific token than can be updated with new data, as long as the data author has possession of a specified amount of the tokens
+- Token owner uses tokentagupdate to add a new entry to the tag created by the tokentagcreate transaction
+- A list of sorted token tags related to a specific token can be retrieved by tokentaglist
+- Information on a specific token tag can be retrieved by tokentaginfo
+
+RPC List
+
+tokentagcreate tokenid name tokensupply updatesupply [flags] [data]
+tokentagupdate tokentagid [data] [newupdatesupply] [escrowtxid]
+tokentaglist [tokenid]
+tokentaginfo tokentagid
+
+tokentagcreate flags list
+TTF_ALLOWANYSUPPLY - allows updatesupply for this tag to be set to below 51% of the total token supply. By default, only values above 51% of the total token supply are allowed for updatesupply. Note: depending on the updatesupply value set, this flag may allow multiple parties that own this token to post update transactions to this tag at the same time. Exercise caution when setting this flag.
+TTF_NOESCROWUPDATES - disables escrow type updates for this tag.
+
+TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
+{
+	set up vars
+
+	set up CCcontract_info:
+	struct CCcontract_info *cpTokens, tokensC;
+	cpTokens = CCinit(&tokensC, EVAL_TOKENS);
+
+	// Check boundaries, and verify that input/output amounts are exact.
+	numvins = tx.vin.size();
+	numvouts = tx.vout.size();
+	if (numvouts < 1)
+		return eval->Invalid("No vouts!");
+
+	CCOpretCheck
+	ExactAmounts
+
+	Check the op_return of the transaction and fetch its function id.
+	
+	switch (funcid)
+	{
+		case 'c':
+				// Token tag creation:
+                // vins/vouts
+
+				first, unpack opret data
+				DecodeTokenTagCreateOpRet()
+				make sure its serialized correctly
+
+				this is where version checking would be placed, ideally
+
+				check name, check data limits
+
+				verify srcpub in opret is valid. derive srctokenaddr from it
+				GetTokenCCaddress? <--------- might need token func wrapper
+				verify tokenid legitimacy, find the tx and unpack its opret   <--------- might need token func wrapper
+				DecodeTokenCreateOpRet()
+
+				verify that tokensupply in token tag opret = actual token supply   <--------- might need token func wrapper
+				VerifyTokenSupply(tokensupply, tokencreatetx) = true/false
+
+				if any update supply flag is not set, check to make sure updatesupply is >50% of tokensupply
+
+				now, for vins/vouts
+
+				Check boundaries.
+				
+				Verify that vin.0 was signed by srcpub.
+				
+				this tx shouldn't have any additional CC inputs, except token inputs coming from srctokenaddr.
+				
+				verify that vout.0: CC marker/baton to global CC address
+				
+				verify that vout.1: CC tokens back to source token address, and that its value = tokensupply
+				
+				break;
+
+		case 'u':
+				// Token tag update (regular):
+                // vins/vouts
+
+				first, unpack opret data
+				make sure its serialized correctly
+				DecodeTokenTagUpdateOpRet()
+
+				this is where version checking would be placed, ideally
+
+				check data limits
+
+				verify srcpub in opret is valid. derive srctokenaddr from it
+				GetTokenCCaddress? <--------- might need token func wrapper
+
+				get original tokentagid, unpack its opret
+				DecodeTokenTagCreateOpRet()
+				get tokenid, tokensupply, updatesupply, flags
+
+				if any update supply flag is not set, check to make sure newupdatesupply is >50% of tokensupply
+				
+				now, for vins/vouts
+
+				Check boundaries.
+				
+				Verify that vin.0 was signed by srcpub.
+				
+				verify that vin.1 is connected to original tokentagid vout.0. If not, check if its connected to another 'u' or 'e' type tx.
+				If it is connected to 'u' or 'e' tx, get their opret
+				DecodeTokenTagUpdateOpRet() or DecodeTokenTagEscrowOpRet()
+				verify that they're pointing to that same tokentagid
+				check their updatesupply, and update our own copy with that updatesupply
+				if all checks out, continue
+
+				this tx shouldn't have any additional CC inputs, except token inputs coming from srctokenaddr.
+				
+				verify that vout.0: CC marker/baton to global CC address
+				
+				verify that vout.1: CC tokens back to source token address, and that its value = updatesupply from og or latest tokentagid
+				
+				break;
+
+		case 'e':
+				// Token tag update (escrow):
+                // vins/vouts
+
+				block for now, mark as not done yet
+				-----------------------------------
+
+				first, unpack opret data
+				DecodeTokenTagEscrowOpRet()
+				make sure its serialized correctly
+
+				this is where version checking would be placed, ideally
+
+				check data limits
+
+				verify srcpub in opret is valid
+
+				get original tokentagid, unpack its opret
+				DecodeTokenTagCreateOpRet()
+				get tokenid, tokensupply, updatesupply, flags
+
+				if any update supply flag is not set, check to make sure newupdatesupply is >50% of tokensupply
+				
+				get escrowtxid, get its opret.
+				try to identify what type of tx this is:
+					- asset loans?
+					- assets?
+					- channels?
+					- heir?
+				
+				if assetloans:
+					DecodeAssetLoansCreateOpRet()?
+					we need to find out how many tokens of this id are being held at time of validation.
+					once we have a concrete number, we compare that to our current updatesupply value. if the number is > updatesupply, we good.
+
+				other modules may be supported in the future.
+
+				now, for vins/vouts
+
+				Check boundaries.
+				
+				Verify that vin.0 was signed by srcpub.
+				
+				verify that vin.1 is connected to original tokentagid vout.0. If not, check if its connected to another 'u' or 'e' type tx.
+				If it is connected to 'u' or 'e' tx, get their opret
+				DecodeTokenTagUpdateOpRet() or DecodeTokenTagEscrowOpRet()
+				verify that they're pointing to that same tokentagid
+				check their updatesupply, and update our own copy with that updatesupply
+				if all checks out, continue
+
+				this tx shouldn't have any additional CC inputs.
+				
+				verify that vout.0: CC marker/baton to global CC address
+				
+				break;
+		default:
+				fprintf(stderr,"unexpected tokentags funcid (%c)\n",funcid);
+				return eval->Invalid("Unexpected TokenTags function id!");
+		}
+	}
+	else
+		return eval->Invalid("Invalid TokenTags function id and/or data!");
+
+	LOGSTREAM("tokentagscc", CCLOG_INFO, stream << "TokenTags transaction validated" << std::endl);
+	return (true);
+
+}
+
+
+create:
+vin.0: normal input
+vin.1+: CC tokens from source token address
+vout.0: CC marker/baton to global CC address
+vout.1: CC tokens back to source token address
+vout.2: normal output for change (if any)
+vout.n-1: opreturn [EVAL_TOKENTAGS] ['c'] [version] [srcpub] [tokenid] [tokensupply] [updatesupply] [flags] [name] [data]
+
+update (regular):
+vin.0: normal input
+vin.1: CC input from create vout.0 or update vout.0
+vin.2+: CC tokens from source token address
+vout.0: CC baton to global CC address
+vout.1: CC tokens back to source token address
+vout.2: normal output for change (if any)
+vout.n-1: opreturn [EVAL_TOKENTAGS] ['u'] [version] [srcpub] [tokentagid] [newupdatesupply] [data]
+
+update (escrow):
+vin.0: normal input
+vin.1: CC input from create vout.0 or update vout.0
+vout.0: CC baton to global CC address
+vout.1: normal output for change (if any)
+vout.n-1: opreturn [EVAL_TOKENTAGS] ['e'] [version] [srcpub] [tokentagid] [escrowtxid] [newupdatesupply] [data]
+
+*/
+
+/*
 TODO: Insert description of token tags here.
 
 Heuristics for finding correct token tag for app:
 You will need to know the tokenid of the token you're trying to find the tag/logbook for.
 Look for tags that have been made by the token creator for this tokenid specifically.
 If the token creator did not create any tags, look for tags that were made by any pubkey.
-Choose the tag(s) that have proven ownership of the biggest amount of the token supply.
-Prioritize tags that do not have the "only creator can update" flag.
 The earliest tag in this list is your "official" token tag.
 If there are multiple tags that meet this criteria in the same block / same timestamp, choose the tag with the txid that has the lowest
 numerical value when converting the hex to a number.
-
-Token tag creation:
-vin.0: normal input
-vin.1: tokens
-...
-vin.n-1: normal input
-vout.0: marker to global CC address w/ OP_RETURN EVAL_TOKENTAGS 'c' version srcpub flags maxupdates updateamount
-vout.1: tokens
-vout.n-2: normal change
-vout.n-1: empty op_return
-
-Token tag update:
-vin.0: normal input
-vin.1: previous global OP_RETURN marker
-...
-vin.n-1: normal input
-vout.0: marker to global CC address w/ OP_RETURN EVAL_TOKENTAGS 'u' version tokentagid srcpub data updateamount
-vout.n-2: normal change
-vout.n-1: empty op_return
-
 */
 
 // --- Start of consensus code ---
-/*
-int64_t IsTokenTagsvout(struct CCcontract_info *cp,const CTransaction& tx, int32_t v, char* destaddr)
+
+/*int64_t IsTokenTagsvout(struct CCcontract_info *cp,const CTransaction& tx, int32_t v, char* destaddr)
 {
 	char tmpaddr[64];
 	if ( tx.vout[v].scriptPubKey.IsPayToCryptoCondition() != 0 )
@@ -65,6 +268,7 @@ int64_t IsTokenTagsvout(struct CCcontract_info *cp,const CTransaction& tx, int32
 }
 
 // OP_RETURN data encoders and decoders for all Agreements transactions.
+//opreturn [EVAL_TOKENTAGS] ['c'] [version] [srcpub] [tokenid] [tokensupply] [updatesupply] [flags] [name] [data]
 CScript EncodeTokenTagCreateOpRet(uint8_t version, std::string name, CPubKey srcpub, uint8_t flags, int64_t maxupdates, std::vector<CAmount> updateamounts)
 {
 	CScript opret; uint8_t evalcode = EVAL_TOKENTAGS, funcid = 'c';
@@ -86,7 +290,24 @@ CScript EncodeTokenTagUpdateOpRet(uint8_t version, uint256 tokentagid, CPubKey s
 	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << tokentagid << srcpub << data << updateamounts);
 	return(opret);
 }
+//vout.n-1: opreturn [EVAL_TOKENTAGS] ['u'] [version] [srcpub] [tokentagid] [newupdatesupply] [data]
 uint8_t DecodeTokenTagUpdateOpRet(CScript scriptPubKey, uint8_t &version, uint256 &tokentagid, CPubKey &srcpub, std::string &data, std::vector<CAmount> &updateamounts)
+{
+	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
+	GetOpReturnData(scriptPubKey, vopret);
+	if(vopret.size() > 2 && E_UNMARSHAL(vopret, ss >> evalcode; ss >> funcid; ss >> version; ss >> tokentagid; ss >> srcpub; ss >> data; ss >> updateamounts) != 0 && evalcode == EVAL_TOKENTAGS)
+		return(funcid);
+	return(0);
+}
+
+CScript EncodeTokenTagEscrowOpRet(uint8_t version, uint256 tokentagid, CPubKey srcpub, std::string data, std::vector<CAmount> updateamounts)
+{
+	CScript opret; uint8_t evalcode = EVAL_TOKENTAGS, funcid = 'u';
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << tokentagid << srcpub << data << updateamounts);
+	return(opret);
+}
+//vout.n-1: opreturn [EVAL_TOKENTAGS] ['e'] [version] [srcpub] [tokentagid] [escrowtxid] [newupdatesupply] [data]
+uint8_t DecodeTokenTagEscrowOpRet(CScript scriptPubKey, uint8_t &version, uint256 &tokentagid, CPubKey &srcpub, std::string &data, std::vector<CAmount> &updateamounts)
 {
 	std::vector<uint8_t> vopret; uint8_t evalcode, funcid;
 	GetOpReturnData(scriptPubKey, vopret);
@@ -390,9 +611,9 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 	cpTokens = CCinit(&tokensC, EVAL_TOKENS);
 
 	return eval->Invalid("not done yet!");
-
+/*
 	// Check boundaries, and verify that input/output amounts are exact.
-	/*numvins = tx.vin.size();
+	numvins = tx.vin.size();
 	numvouts = tx.vout.size();
 	if (numvouts < 1)
 		return eval->Invalid("No vouts!");
@@ -513,13 +734,13 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 	LOGSTREAM("tokentagscc", CCLOG_INFO, stream << "TokenTags transaction validated" << std::endl);
 	return (true);*/
 }
-
+/*
 // --- End of consensus code ---
 
 // --- Helper functions for RPC implementations ---
 
 // --- RPC implementations for transaction creation ---
-/*
+
 UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,std::string name,std::vector<uint256> tokenids,std::vector<CAmount> updateamounts,uint8_t flags,int64_t maxupdates)
 {
 	CScript opret;
@@ -858,8 +1079,8 @@ UniValue TokenTagList(uint256 tokenid, CPubKey pubkey)
 	}
 
 	return (result);
-}*/
-
+}
+*/
 // --- Useful misc functions for additional token transaction analysis ---
 
 // internal function that looks for voutPubkeys or destaddrs in token tx oprets
