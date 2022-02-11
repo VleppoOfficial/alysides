@@ -46,377 +46,381 @@ UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& myp
     return(CCaddress(cp,(char *)"Agreements",pubkey));
 }
 
-UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     UniValue result(UniValue::VOBJ);
 
-    CPubKey destpub,arbitratorpub;
-	uint256 agreementhash,refagreementtxid;
-	std::string agreementname;
-	int64_t payment,disputefee,deposit;
-
-    if (fHelp || params.size() < 4 || params.size() > 8)
+    if (fHelp || params.size() < 6 || params.size() > 10)
         throw runtime_error(
-            "agreementcreate destpub agreementname agreementhash deposit [arbitratorpub][disputefee][refagreementtxid][payment]\n"
+            "agreementcreate destkey name memo deposit payment disputefee [arbitratorkey][refagreementtxid][flags]\n" //[ [{\"type\":<char>,\"key\":<string>,\"value\":<string>,\"payout\":<number>}] ]
             );
     if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
     
-    Lock2NSPV(mypk);
-	
-    destpub = pubkey2pk(ParseHex(params[0].get_str().c_str()));
+    if (!EnsureWalletIsAvailable(false))
+        throw runtime_error("wallet is required");
+    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
 
-    agreementname = params[1].get_str();
-    if (agreementname.size() == 0 || agreementname.size() > 64)
-    {
-		Unlock2NSPV(mypk);
-        throw runtime_error("Agreement name must not be empty and up to 64 characters\n");
-    }
+    std::vector<unsigned char> destkey = ParseHex(params[0].get_str().c_str());
+    if (destkey.size() != 33)
+        return MakeResultError("Invalid destination pubkey");
 
-    agreementhash = Parseuint256((char *)params[2].get_str().c_str());
-	if (agreementhash == zeroid)
-    {
-		Unlock2NSPV(mypk);
-        throw runtime_error("Agreement hash empty or invalid\n");
-    }
-
-    deposit = atof((char *)params[3].get_str().c_str()) * COIN + 0.00000000499999;
-    //deposit = AmountFromValue(params[3]); // doesn't work with Lock/Unlock2NSPV, causes a softlock - Dan
-    if (deposit < 10000)
-    {
-        Unlock2NSPV(mypk);
-        throw runtime_error("Required deposit too low\n");
-    }
+    std::string agreementname = params[1].get_str();
+    if (agreementname.size() == 0 || agreementname.size() > AGREEMENTCC_MAX_NAME_SIZE)
+        return MakeResultError("Agreement name must be up to "+std::to_string(AGREEMENTCC_MAX_NAME_SIZE)+" characters");
     
-    if (params.size() >= 5)
-        arbitratorpub = pubkey2pk(ParseHex(params[4].get_str().c_str()));
-
-    disputefee = 0;
-	if (params.size() >= 6)
-    {
-        if (arbitratorpub.IsFullyValid())
-        {
-            disputefee = atof((char *)params[5].get_str().c_str()) * COIN + 0.00000000499999;
-            //disputefee = AmountFromValue(params[5]);
-            if (disputefee != 0 && disputefee < 10000)
-            {
-                Unlock2NSPV(mypk);
-                throw runtime_error("Dispute fee too low\n");
-            }
-        }
-    }
-
+    std::string agreementmemo = params[2].get_str();
+    if (agreementmemo.size() == 0 || agreementmemo.size() > AGREEMENTCC_MAX_MEMO_SIZE)
+        return MakeResultError("Agreement memo must be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
+    
+    CAmount deposit = AmountFromValue(params[3]);
+    if (deposit <= 0)
+        return MakeResultError("Required deposit must be positive");
+    
+    CAmount payment = AmountFromValue(params[4]);
+    if (payment < 0)
+        return MakeResultError("Required payment to sender must be 0 or above");
+    
+    CAmount disputefee = AmountFromValue(params[5]);
+    if (disputefee <= 0)
+        return MakeResultError("Proposed dispute fee must be positive");
+    
+    std::vector<unsigned char> arbitratorkey;
     if (params.size() >= 7)
-        refagreementtxid = Parseuint256((char *)params[6].get_str().c_str());
-
-	payment = 0;
-	if (params.size() == 8)
     {
-        payment = atof((char *)params[7].get_str().c_str()) * COIN + 0.00000000499999;
-        //payment = AmountFromValue(params[7]);
-        if (payment != 0 && payment < 10000)
-        {
-            Unlock2NSPV(mypk);
-            throw runtime_error("Required prepayment too low\n");
-        }
+        arbitratorkey = ParseHex(params[6].get_str().c_str());
+        if (!arbitratorkey.empty() && arbitratorkey.size() != 33)
+            return MakeResultError("Invalid destination pubkey");
     }
-	
-	result = AgreementCreate(mypk,0,destpub,agreementname,agreementhash,deposit,arbitratorpub,disputefee,refagreementtxid,payment);
-    if (result[JSON_HEXTX].getValStr().size() > 0)
-        result.push_back(Pair("result", "success"));
-    Unlock2NSPV(mypk);
-    return(result);
+    
+    uint256 refagreementtxid = zeroid;
+	if (params.size() >= 8)
+        refagreementtxid = Parseuint256((char *)params[7].get_str().c_str());
+
+    uint8_t flags = (uint8_t)0;
+    if (params.size() >= 9)
+    {
+        flags = atoll(params[8].get_str().c_str());
+    }
+
+    UniValue jsonParams(UniValue::VOBJ);
+    if (params.size() == 10)
+    {
+        return MakeResultError("Parameter 10 for agreementcreate currently disabled"); 
+        // TODO: parse the jsonParams here, convert found unlock conditions to std::vector<std::vector<uint8_t>> here
+    }
+    std::vector<std::vector<uint8_t>> unlockconds = (std::vector<std::vector<uint8_t>>)0;
+
+    CPubKey mypk;
+    SET_MYPK_OR_REMOTE(mypk, remotepk);
+
+    result = AgreementCreate(mypk,0,destkey,agreementname,agreementmemo,flags,refagreementtxid,deposit,payment,disputefee,arbitratorkey,unlockconds);
+
+    RETURN_IF_ERROR(CCerror);
+    return result;
 }
 
-UniValue agreementupdate(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementamend(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     UniValue result(UniValue::VOBJ);
 
-	uint256 agreementhash,agreementtxid;
-	std::string agreementname = "";
-	int64_t payment;
-
-    if (fHelp || params.size() < 2 || params.size() > 4)
+    if (fHelp || params.size() < 6 || params.size() > 9)
         throw runtime_error(
-            "agreementupdate agreementtxid agreementhash [agreementname][payment]\n"
+            "agreementamend agreementtxid name memo deposit payment disputefee [arbitratorkey][flags]\n"
             );
     if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
     
-    Lock2NSPV(mypk);
+    if (!EnsureWalletIsAvailable(false))
+        throw runtime_error("wallet is required");
+    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
 
-    agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (agreementtxid == zeroid)   {
-		Unlock2NSPV(mypk);
-        throw runtime_error("Agreement transaction id invalid\n");
-    }
-
-    agreementhash = Parseuint256((char *)params[1].get_str().c_str());
-	if (agreementhash == zeroid)
+    uint256 prevagreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (prevagreementtxid == zeroid)
+		return MakeResultError("Agreement transaction id invalid");
+    
+    std::string agreementname = params[1].get_str();
+    if (agreementname.size() == 0 || agreementname.size() > AGREEMENTCC_MAX_NAME_SIZE)
+        return MakeResultError("New agreement name must be up to "+std::to_string(AGREEMENTCC_MAX_NAME_SIZE)+" characters");
+    
+    std::string agreementmemo = params[2].get_str();
+    if (agreementmemo.size() == 0 || agreementmemo.size() > AGREEMENTCC_MAX_MEMO_SIZE)
+        return MakeResultError("New agreement memo must be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
+    
+    CAmount deposit = AmountFromValue(params[3]);
+    if (deposit <= 0)
+        return MakeResultError("Required deposit must be positive");
+    
+    CAmount payment = AmountFromValue(params[4]);
+    if (payment < 0)
+        return MakeResultError("Required payment to sender must be 0 or above");
+    
+    CAmount disputefee = AmountFromValue(params[5]);
+    if (disputefee <= 0)
+        return MakeResultError("Proposed dispute fee must be positive");
+    
+    std::vector<unsigned char> arbitratorkey;
+    if (params.size() >= 7)
     {
-		Unlock2NSPV(mypk);
-        throw runtime_error("Agreement hash empty or invalid\n");
+        arbitratorkey = ParseHex(params[6].get_str().c_str());
+        if (!arbitratorkey.empty() && arbitratorkey.size() != 33)
+            return MakeResultError("Invalid destination pubkey");
     }
-
-    if (params.size() >= 3)
+    
+    uint8_t flags = AOF_AMENDMENT;
+    if (params.size() >= 8)
     {
-        agreementname = params[2].get_str();
-        if (agreementname.size() > 64)
-        {
-            Unlock2NSPV(mypk);
-            throw runtime_error("Agreement name must be up to 64 characters\n");
-        }
+        flags = atoll(params[7].get_str().c_str());
     }
 
-    payment = 0;
-	if (params.size() == 4)
+    UniValue jsonParams(UniValue::VOBJ);
+    if (params.size() == 9)
     {
-        payment = atof((char *)params[3].get_str().c_str()) * COIN + 0.00000000499999;
-        //payment = AmountFromValue(params[3]);
-        if (payment != 0 && payment < 10000)
-        {
-            Unlock2NSPV(mypk);
-            throw runtime_error("Required payment too low\n");
-        }
+        return MakeResultError("Parameter 9 for agreementamend currently disabled"); 
+        // TODO: parse the jsonParams here, convert found unlock conditions to std::vector<std::vector<uint8_t>> here
     }
+    std::vector<std::vector<uint8_t>> unlockconds = (std::vector<std::vector<uint8_t>>)0;
 
-	result = AgreementUpdate(mypk,0,agreementtxid,agreementhash,agreementname,payment);
-    if (result[JSON_HEXTX].getValStr().size() > 0)
-        result.push_back(Pair("result", "success"));
-    Unlock2NSPV(mypk);
-    return(result);
+    CPubKey mypk;
+    SET_MYPK_OR_REMOTE(mypk, remotepk);
+
+    result = AgreementAmend(mypk,0,prevagreementtxid,agreementname,agreementmemo,flags,deposit,payment,disputefee,arbitratorkey,unlockconds);
+
+    RETURN_IF_ERROR(CCerror);
+    return result;
 }
 
-UniValue agreementclose(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementclose(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     UniValue result(UniValue::VOBJ);
 
-	uint256 agreementhash,agreementtxid;
-	std::string agreementname = "";
-	int64_t payment, depositcut;
-
-    if (fHelp || params.size() < 3 || params.size() > 5)
+    if (fHelp || params.size() != 4)
         throw runtime_error(
-            "agreementclose agreementtxid agreementhash depositcut [agreementname][payment]\n"
+            "agreementclose agreementtxid name memo payment\n"
             );
     if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
     
-    Lock2NSPV(mypk);
+    if (!EnsureWalletIsAvailable(false))
+        throw runtime_error("wallet is required");
+    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
 
-    agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (agreementtxid == zeroid)   {
-		Unlock2NSPV(mypk);
-        throw runtime_error("Agreement transaction id invalid\n");
-    }
+    uint256 prevagreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (prevagreementtxid == zeroid)
+		return MakeResultError("Agreement transaction id invalid");
+    
+    std::string agreementname = params[1].get_str();
+    if (agreementname.size() == 0 || agreementname.size() > AGREEMENTCC_MAX_NAME_SIZE)
+        return MakeResultError("New agreement name must be up to "+std::to_string(AGREEMENTCC_MAX_NAME_SIZE)+" characters");
+    
+    std::string agreementmemo = params[2].get_str();
+    if (agreementmemo.size() == 0 || agreementmemo.size() > AGREEMENTCC_MAX_MEMO_SIZE)
+        return MakeResultError("New agreement memo must be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
+    
+    CAmount payment = AmountFromValue(params[3]);
+    if (payment < 0)
+        return MakeResultError("Required payment to sender must be 0 or above");
 
-    agreementhash = Parseuint256((char *)params[1].get_str().c_str());
-	if (agreementhash == zeroid)
-    {
-		Unlock2NSPV(mypk);
-        throw runtime_error("Agreement hash empty or invalid\n");
-    }
+    CPubKey mypk;
+    SET_MYPK_OR_REMOTE(mypk, remotepk);
 
-    depositcut = atof((char *)params[2].get_str().c_str()) * COIN + 0.00000000499999;
-    //depositcut = AmountFromValue(params[2]);
-    if (depositcut < 0)
-    {
-        Unlock2NSPV(mypk);
-        throw runtime_error("Required deposit cut can't be negative\n");
-    }
+    result = AgreementClose(mypk,0,prevagreementtxid,agreementname,agreementmemo,payment);
 
-    if (params.size() >= 4)
-    {
-        agreementname = params[3].get_str();
-        if (agreementname.size() > 64)
-        {
-            Unlock2NSPV(mypk);
-            throw runtime_error("Agreement name must be up to 64 characters\n");
-        }
-    }
-
-    payment = 0;
-	if (params.size() == 5)
-    {
-        payment = atof((char *)params[4].get_str().c_str()) * COIN + 0.00000000499999;
-        //payment = AmountFromValue(params[4]);
-        if (payment != 0 && payment < 10000)
-        {
-            Unlock2NSPV(mypk);
-            throw runtime_error("Required payment too low\n");
-        }
-    }
-
-    result = AgreementClose(mypk,0,agreementtxid,agreementhash,depositcut,agreementname,payment);
-    if (result[JSON_HEXTX].getValStr().size() > 0)
-        result.push_back(Pair("result", "success"));
-    Unlock2NSPV(mypk);
-    return(result);
+    RETURN_IF_ERROR(CCerror);
+    return result;
 }
 
-UniValue agreementstopproposal(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementstopoffer(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     UniValue result(UniValue::VOBJ);
-
-	uint256 proposaltxid;
-	std::string cancelinfo = "";
 
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
-            "agreementstopproposal proposaltxid [cancelinfo]\n"
+            "agreementstopoffer offertxid [cancelmemo]\n"
             );
     if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
     
-    Lock2NSPV(mypk);
+    if (!EnsureWalletIsAvailable(false))
+        throw runtime_error("wallet is required");
+    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
 
-    proposaltxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (proposaltxid == zeroid)   {
-		Unlock2NSPV(mypk);
-        throw runtime_error("Proposal transaction id invalid\n");
-    }
+    uint256 offertxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (offertxid == zeroid)
+		return MakeResultError("Offer transaction id invalid");
 
+    std::string cancelmemo;
     if (params.size() == 2)
     {
-        cancelinfo = params[1].get_str();
-        if (cancelinfo.size() > 256)
-        {
-            Unlock2NSPV(mypk);
-            throw runtime_error("Cancel info must be up to 256 characters\n");
-        }
+        cancelmemo = params[1].get_str();
+        if (cancelmemo.size() > AGREEMENTCC_MAX_MEMO_SIZE)
+            return MakeResultError("Cancel memo must be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
     }
+    
+    CPubKey mypk;
+    SET_MYPK_OR_REMOTE(mypk, remotepk);
 
-    result = AgreementStopProposal(mypk,0,proposaltxid,cancelinfo);
-    if (result[JSON_HEXTX].getValStr().size() > 0)
-        result.push_back(Pair("result", "success"));
-    Unlock2NSPV(mypk);
-    return(result);
+    result = AgreementStopOffer(mypk,0,offertxid,cancelmemo);
+
+    RETURN_IF_ERROR(CCerror);
+    return result;
 }
 
-UniValue agreementaccept(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementaccept(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     UniValue result(UniValue::VOBJ);
-
-	uint256 proposaltxid;
 
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            "agreementaccept proposaltxid\n"
+            "agreementaccept offertxid\n"
             );
     if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
     
-    Lock2NSPV(mypk);
+    if (!EnsureWalletIsAvailable(false))
+        throw runtime_error("wallet is required");
+    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
+    
+    uint256 offertxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (offertxid == zeroid)
+		return MakeResultError("Offer transaction id invalid");
 
-    proposaltxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (proposaltxid == zeroid)   {
-		Unlock2NSPV(mypk);
-        throw runtime_error("Proposal transaction id invalid\n");
-    }
+    CPubKey mypk;
+    SET_MYPK_OR_REMOTE(mypk, remotepk);
 
-    result = AgreementAccept(mypk,0,proposaltxid);
-    if (result[JSON_HEXTX].getValStr().size() > 0)
-        result.push_back(Pair("result", "success"));
-    Unlock2NSPV(mypk);
-    return(result);
+    result = AgreementAccept(mypk,0,offertxid);
+
+    RETURN_IF_ERROR(CCerror);
+    return result;
 }
 
-UniValue agreementdispute(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementdispute(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     UniValue result(UniValue::VOBJ);
-
-	uint256 agreementtxid;
-	std::string typestr,disputeinfo = "";
-    bool bFinalDispute;
+	std::string typestr;
 
     if (fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error(
-            "agreementdispute agreementtxid [disputeinfo][bFinalDispute]\n"
+            "agreementdispute agreementtxid [disputememo][isdisputefinal]\n"
             );
     if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
     
-    Lock2NSPV(mypk);
+    if (!EnsureWalletIsAvailable(false))
+        throw runtime_error("wallet is required");
+    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
 
-    agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (agreementtxid == zeroid)   {
-		Unlock2NSPV(mypk);
-        throw runtime_error("Agreement transaction id invalid\n");
-    }
+    uint256 agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (agreementtxid == zeroid)
+		return MakeResultError("Agreement transaction id invalid");
 
+    std::string disputememo;
     if (params.size() >= 2)
     {
-        disputeinfo = params[1].get_str();
-        if (disputeinfo.size() > 256)
-        {
-            Unlock2NSPV(mypk);
-            throw runtime_error("Dispute info must be up to 256 characters\n");
-        }
+        disputememo = params[1].get_str();
+        if (disputememo.size() > AGREEMENTCC_MAX_MEMO_SIZE)
+            return MakeResultError("Dispute memo must be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
     }
 
-	bFinalDispute = false;
+	uint8_t disputeflags = 0;
 	if (params.size() == 3)
     {
         typestr = params[2].get_str(); // NOTE: is there a better way to parse a bool from the param array?
         if (STR_TOLOWER(typestr) == "1" || STR_TOLOWER(typestr) == "true")
-            bFinalDispute = true;
+            disputeflags |= ADF_FINALDISPUTE;
     }
 
-    result = AgreementDispute(mypk,0,agreementtxid,disputeinfo,bFinalDispute);
-    if (result[JSON_HEXTX].getValStr().size() > 0)
-        result.push_back(Pair("result", "success"));
-    Unlock2NSPV(mypk);
-    return(result);
+    CPubKey mypk;
+    SET_MYPK_OR_REMOTE(mypk, remotepk);
+
+    result = AgreementDispute(mypk,0,agreementtxid,disputeflags,disputememo);
+
+    RETURN_IF_ERROR(CCerror);
+    return result;
 }
 
-UniValue agreementresolve(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementstopdispute(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     UniValue result(UniValue::VOBJ);
+	std::string typestr;
 
-	uint256 disputetxid;
-	std::string resolutioninfo = "";
-    int64_t depositcut;
-
-    if (fHelp || params.size() < 2 || params.size() > 3)
+    if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
-            "agreementresolve disputetxid depositcut [resolutioninfo]\n"
+            "agreementstopdispute disputetxid [cancelmemo]\n"
             );
     if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
     
-    Lock2NSPV(mypk);
+    if (!EnsureWalletIsAvailable(false))
+        throw runtime_error("wallet is required");
+    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
 
-    disputetxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (disputetxid == zeroid)   {
-		Unlock2NSPV(mypk);
-        throw runtime_error("Dispute transaction id invalid\n");
-    }
-    
-    depositcut = atof((char *)params[1].get_str().c_str()) * COIN + 0.00000000499999;
-    //depositcut = AmountFromValue(params[1]);
+    uint256 disputetxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (disputetxid == zeroid)
+		return MakeResultError("Dispute transaction id invalid");
 
-	if (params.size() == 3)
+    std::string cancelmemo;
+    if (params.size() == 2)
     {
-        resolutioninfo = params[2].get_str();
-        if (resolutioninfo.size() > 256)
-        {
-            Unlock2NSPV(mypk);
-            throw runtime_error("Dispute resolution info must be up to 256 characters\n");
-        }
+        cancelmemo = params[1].get_str();
+        if (cancelmemo.size() > AGREEMENTCC_MAX_MEMO_SIZE)
+            return MakeResultError("Dispute cancel memo must be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
     }
 
-    result = AgreementResolve(mypk,0,disputetxid,depositcut,resolutioninfo);
-    if (result[JSON_HEXTX].getValStr().size() > 0)
-        result.push_back(Pair("result", "success"));
-    Unlock2NSPV(mypk);
-    return(result);
+    CPubKey mypk;
+    SET_MYPK_OR_REMOTE(mypk, remotepk);
+
+    result = AgreementStopDispute(mypk,0,disputetxid,cancelmemo);
+
+    RETURN_IF_ERROR(CCerror);
+    return result;
 }
 
-UniValue agreementunlock(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementresolve(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     UniValue result(UniValue::VOBJ);
+	std::string typestr;
 
-	uint256 agreementtxid,unlocktxid;
+    if (fHelp || params.size() < 2 || params.size() > 3)
+        throw runtime_error(
+            "agreementresolve disputetxid claimantpayout [resolutionmemo]\n"
+            );
+    if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    
+    if (!EnsureWalletIsAvailable(false))
+        throw runtime_error("wallet is required");
+    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
+
+    uint256 disputetxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (disputetxid == zeroid)
+		return MakeResultError("Dispute transaction id invalid");
+
+    CAmount claimantpayout = AmountFromValue(params[1]);
+    if (claimantpayout < 0)
+        return MakeResultError("Payout to claimant must be 0 or above");
+    
+    std::string resolutionmemo;
+    if (params.size() == 3)
+    {
+        resolutionmemo = params[2].get_str();
+        if (resolutionmemo.size() > AGREEMENTCC_MAX_MEMO_SIZE)
+            return MakeResultError("Dispute resolution memo must be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
+    }
+
+    CPubKey mypk;
+    SET_MYPK_OR_REMOTE(mypk, remotepk);
+
+    result = AgreementResolve(mypk,0,disputetxid,claimantpayout,resolutionmemo);
+
+    RETURN_IF_ERROR(CCerror);
+    return result;
+}
+
+UniValue agreementunlock(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+{
+    UniValue result(UniValue::VOBJ);
+	std::string typestr;
 
     if (fHelp || params.size() != 2)
         throw runtime_error(
@@ -425,28 +429,28 @@ UniValue agreementunlock(const UniValue& params, bool fHelp, const CPubKey& mypk
     if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
     
-    Lock2NSPV(mypk);
+    if (!EnsureWalletIsAvailable(false))
+        throw runtime_error("wallet is required");
+    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
 
-    agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (agreementtxid == zeroid)   {
-		Unlock2NSPV(mypk);
-        throw runtime_error("Agreement transaction id invalid\n");
-    }
+    uint256 agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+	if (agreementtxid == zeroid)
+		return MakeResultError("Agreement transaction id invalid");
+    
+    uint256 unlocktxid = Parseuint256((char *)params[1].get_str().c_str());
+	if (unlocktxid == zeroid)
+		return MakeResultError("Unlocking transaction id invalid");
 
-    unlocktxid = Parseuint256((char *)params[0].get_str().c_str());
-	if (unlocktxid == zeroid)   {
-		Unlock2NSPV(mypk);
-        throw runtime_error("Unlocking transaction id invalid\n");
-    }
+    CPubKey mypk;
+    SET_MYPK_OR_REMOTE(mypk, remotepk);
 
     result = AgreementUnlock(mypk,0,agreementtxid,unlocktxid);
-    if (result[JSON_HEXTX].getValStr().size() > 0)
-        result.push_back(Pair("result", "success"));
-    Unlock2NSPV(mypk);
-    return(result);
+
+    RETURN_IF_ERROR(CCerror);
+    return result;
 }
 
-UniValue agreementinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementinfo(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     uint256 txid;
     if ( fHelp || params.size() != 1 )
@@ -455,11 +459,15 @@ UniValue agreementinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
             );
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
+    
     txid = Parseuint256((char *)params[0].get_str().c_str());
-    return(AgreementInfo(txid));
+    if (txid == zeroid)
+        return MakeResultError("Specified transaction id invalid");
+    
+    return (AgreementInfo(txid));
 }
 
-UniValue agreementeventlog(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementeventlog(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     uint256 agreementtxid;
     int64_t samplenum;
@@ -469,14 +477,14 @@ UniValue agreementeventlog(const UniValue& params, bool fHelp, const CPubKey& my
 
     if ( fHelp || params.size() < 1 || params.size() > 4)
         throw runtime_error(
-            "agreementeventlog agreementtxid [all|updates|closures|disputes|resolutions][samplenum][reverse]\n"
+            "agreementeventlog agreementtxid [all|updates|closures|disputes|disputecancels|resolutions][samplenum][reverse]\n"
             );
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
     
     agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
     if (agreementtxid == zeroid)
-        throw runtime_error("Agreement transaction id invalid\n");
+        return MakeResultError("Agreement transaction id invalid");
     
     flags = ASF_ALLEVENTS;
     if (params.size() >= 2)
@@ -484,15 +492,19 @@ UniValue agreementeventlog(const UniValue& params, bool fHelp, const CPubKey& my
         if (STR_TOLOWER(params[1].get_str()) == "all")
             flags = ASF_ALLEVENTS;
         else if (STR_TOLOWER(params[1].get_str()) == "updates")
-            flags = ASF_UPDATES;
+            flags = ASF_AMENDMENTS;
         else if (STR_TOLOWER(params[1].get_str()) == "closures")
             flags = ASF_CLOSURES;
         else if (STR_TOLOWER(params[1].get_str()) == "disputes")
             flags = ASF_DISPUTES;
+        else if (STR_TOLOWER(params[1].get_str()) == "disputecancels")
+            flags = ASF_DISPUTECANCELS;
         else if (STR_TOLOWER(params[1].get_str()) == "resolutions")
             flags = ASF_RESOLUTIONS;
+        else if (STR_TOLOWER(params[1].get_str()) == "unlocks")
+            flags = ASF_UNLOCKS;
         else
-            throw runtime_error("Incorrect search keyword used\n");
+            return MakeResultError("Incorrect search keyword used");
     }
     
     samplenum = 0;
@@ -507,10 +519,10 @@ UniValue agreementeventlog(const UniValue& params, bool fHelp, const CPubKey& my
             bReverse = true;
     }
 
-    return(AgreementEventLog(agreementtxid,flags,samplenum,bReverse));
+    return (AgreementEventLog(agreementtxid,flags,samplenum,bReverse));
 }
 
-UniValue agreementreferences(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementreferences(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     uint256 agreementtxid;
 
@@ -523,19 +535,20 @@ UniValue agreementreferences(const UniValue& params, bool fHelp, const CPubKey& 
     
     agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
     if (agreementtxid == zeroid)
-        throw runtime_error("Agreement transaction id invalid\n");
+        return MakeResultError("Agreement transaction id invalid");
     
-    return(AgreementReferences(mypk,agreementtxid));
+    return (AgreementReferences(agreementtxid));
 }
 
-UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
 	uint256 filtertxid;
     uint8_t flags;
+    CAmount filterdeposit;
 
-    if (fHelp || params.size() > 2)
+    if (fHelp || params.size() > 3)
         throw runtime_error(
-            "agreementlist [all|proposals|agreements][filtertxid]\n"
+            "agreementlist [all|offers|agreements][filtertxid][filterdeposit]\n"
             );
     if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
@@ -545,37 +558,40 @@ UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
     {
         if (STR_TOLOWER(params[0].get_str()) == "all")
             flags = ASF_ALL;
-        else if (STR_TOLOWER(params[0].get_str()) == "proposals")
-            flags = ASF_PROPOSALS;
+        else if (STR_TOLOWER(params[0].get_str()) == "offers")
+            flags = ASF_OFFERS;
         else if (STR_TOLOWER(params[0].get_str()) == "agreements")
             flags = ASF_AGREEMENTS;
         else
-            throw runtime_error("Incorrect search keyword used\n");
+            return MakeResultError("Incorrect search keyword used");
     }
 	
-    if (params.size() == 2)
+    if (params.size() >= 2)
         filtertxid = Parseuint256((char *)params[1].get_str().c_str());
+    
+    if (params.size() == 3)
+        filterdeposit = AmountFromValue(params[2]);
 
-    return(AgreementList(mypk,flags,filtertxid));
+    return (AgreementList(flags,filtertxid,filterdeposit));
 }
 
 static const CRPCCommand commands[] =
-{ //  category              name                actor (function)        okSafeMode
-  //  -------------- ------------------------  -----------------------  ----------
-	// agreements
-	{ "agreements",  "agreementcreate",  &agreementcreate,  true },
-	{ "agreements",  "agreementstopproposal", &agreementstopproposal, true },
-	{ "agreements",  "agreementaccept",  &agreementaccept,  true },
-	{ "agreements",  "agreementupdate",  &agreementupdate,  true }, 
-	{ "agreements",  "agreementclose",   &agreementclose,   true }, 
-	{ "agreements",  "agreementdispute", &agreementdispute, true }, 
-	{ "agreements",  "agreementresolve", &agreementresolve, true }, 
-	{ "agreements",  "agreementunlock",  &agreementunlock,  true }, 
-	{ "agreements",  "agreementaddress", &agreementaddress, true },
-	{ "agreements",  "agreementinfo",    &agreementinfo,	true },
-	{ "agreements",  "agreementeventlog",&agreementeventlog,true },
-	{ "agreements",  "agreementreferences",   &agreementreferences,   true },
-	{ "agreements",  "agreementlist",    &agreementlist,    true },
+{ //  category              name              actor (function)    okSafeMode
+  //  -------------- ---------------------  --------------------  ----------
+	{ "agreements",  "agreementcreate",     &agreementcreate,     true },
+	{ "agreements",  "agreementstopoffer",  &agreementstopoffer,  true },
+	{ "agreements",  "agreementaccept",     &agreementaccept,     true },
+	{ "agreements",  "agreementamend",      &agreementamend,      true }, 
+	{ "agreements",  "agreementclose",      &agreementclose,      true }, 
+	{ "agreements",  "agreementdispute",    &agreementdispute,    true }, 
+    { "agreements",  "agreementstopdispute",&agreementstopdispute,true }, 
+	{ "agreements",  "agreementresolve",    &agreementresolve,    true }, 
+	{ "agreements",  "agreementunlock",     &agreementunlock,     true }, 
+	{ "agreements",  "agreementaddress",    &agreementaddress,    true },
+	{ "agreements",  "agreementinfo",       &agreementinfo,	      true },
+	{ "agreements",  "agreementeventlog",   &agreementeventlog,   true },
+	{ "agreements",  "agreementreferences", &agreementreferences, true },
+	{ "agreements",  "agreementlist",       &agreementlist,       true },
 };
 
 void RegisterAgreementsRPCCommands(CRPCTable &tableRPC)
