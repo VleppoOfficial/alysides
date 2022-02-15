@@ -1606,7 +1606,7 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 		fprintf(stdout,"type: offer_create\n");
 		fprintf(stdout,"agreement_name: '%s'\n",agreementname.c_str());
 		fprintf(stdout,"agreement_memo: '%s'\n",agreementmemo.c_str());
-		fprintf(stdout,"source_key: %s\n",pubkey33_str(str,(uint8_t *)&mypk));
+		//fprintf(stdout,"source_key: %s\n",pubkey33_str(str,(uint8_t *)&mypk));
 		fprintf(stdout,"destination_key: %s\n",HexStr(destkey).c_str());
 		if (CArbitratorPubkey.IsFullyValid())
 		{
@@ -1683,7 +1683,9 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 		// TODO: check unlock conditions here
 	}
 	else
-		result.push_back(Pair("unlock_enabled","false"));*/
+		result.push_back(Pair("unlock_enabled","false"));
+		
+	return (result);*/
 }
 
 // Transaction constructor for agreementamend rpc.
