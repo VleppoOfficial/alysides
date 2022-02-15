@@ -1514,14 +1514,14 @@ static uint8_t FindLatestAgreementEvent(uint256 agreementtxid, struct CCcontract
 UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::vector<uint8_t> destkey, std::string agreementname, std::string agreementmemo, \
 uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, int64_t disputefee, std::vector<uint8_t> arbkey, std::vector<std::vector<uint8_t>> unlockconds)
 {
-	char *str;
+	char str[67];
 	CPubKey mypk,CDestPubkey,CRefOfferorPubkey,CRefSignerPubkey,CArbitratorPubkey;
 	CScript opret;
 	CTransaction refagreementtx,refoffertx;
 	std::vector<uint8_t> refofferorkey,refsignerkey,refarbkey;
 	uint8_t version,refofferflags;
 	uint256 hashBlock;
-	UniValue result(UniValue::VOBJ);
+	UniValue rawtx(UniValue::VOBJ), result(UniValue::VOBJ);
 
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	struct CCcontract_info *cp,C;
@@ -1606,7 +1606,7 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 		fprintf(stdout,"type: offer_create\n");
 		fprintf(stdout,"agreement_name: '%s'\n",agreementname.c_str());
 		fprintf(stdout,"agreement_memo: '%s'\n",agreementmemo.c_str());
-		//fprintf(stdout,"source_key: %s\n",pubkey33_str(str,(uint8_t *)&mypk));
+		fprintf(stdout,"source_key: %s\n",pubkey33_str(str,(uint8_t *)&mypk));
 		fprintf(stdout,"destination_key: %s\n",HexStr(destkey).c_str());
 		if (CArbitratorPubkey.IsFullyValid())
 		{
@@ -1640,12 +1640,14 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 		else
 			fprintf(stdout,"unlock_enabled: false\n");
 
-		return (FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret));
+		//return (FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret));
+		rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
-
-	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
+	else
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 	
-	/*result.push_back(Pair("type","offer_create"));
+	// Return captured values here for debugging/verification before broadcasting.
+	result.push_back(Pair("type","offer_create"));
 	result.push_back(Pair("agreement_name",agreementname));
 	result.push_back(Pair("agreement_memo",agreementmemo));
 
@@ -1685,7 +1687,7 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	else
 		result.push_back(Pair("unlock_enabled","false"));
 		
-	return (result);*/
+	return (result);
 }
 
 // Transaction constructor for agreementamend rpc.
@@ -1693,7 +1695,7 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 UniValue AgreementAmend(const CPubKey& pk, uint64_t txfee, uint256 prevagreementtxid, std::string agreementname, std::string agreementmemo, \
 uint8_t offerflags, int64_t deposit, int64_t payment, int64_t disputefee, std::vector<uint8_t> arbkey, std::vector<std::vector<uint8_t>> unlockconds)
 {
-	char *str;
+	char str[67];
 	CPubKey mypk,CDestPubkey,CPrevOfferorPubkey,CPrevSignerPubkey,CArbitratorPubkey;
 	CScript opret;
 	CTransaction prevagreementtx,prevoffertx;
@@ -1842,7 +1844,7 @@ uint8_t offerflags, int64_t deposit, int64_t payment, int64_t disputefee, std::v
 // Creates transaction with 'o' function id, sets AOF_AMENDMENT and AOF_CLOSEEXISTING flags.
 UniValue AgreementClose(const CPubKey& pk, uint64_t txfee, uint256 prevagreementtxid, std::string agreementname, std::string agreementmemo, int64_t payment)
 {
-	char *str;
+	char str[67];
 	CPubKey mypk,CPrevOfferorPubkey,CPrevSignerPubkey;
 	CScript opret;
 	CTransaction prevagreementtx,prevoffertx;
@@ -1954,7 +1956,7 @@ UniValue AgreementClose(const CPubKey& pk, uint64_t txfee, uint256 prevagreement
 // Creates transaction with 's' function id.
 UniValue AgreementStopOffer(const CPubKey& pk,uint64_t txfee,uint256 offertxid,std::string cancelmemo)
 {
-	char *str;
+	char str[67];
 	CPubKey mypk,CSourcePubkey,CDestPubkey;
 	CScript opret;
 	CTransaction offertx;
@@ -2245,7 +2247,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 // Creates transaction with 'd' function id.
 UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,uint8_t disputeflags,std::string disputememo)
 {
-	char *str, eventCCaddress[65], *txidaddr;
+	char str[67], eventCCaddress[65], *txidaddr;
 	CPubKey mypk,Agreementspk,offertxidpk,COfferorPubkey,CSignerPubkey,CArbitratorPubkey;
 	CScript opret;
 	CTransaction offertx,agreementtx;
@@ -2353,7 +2355,7 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 // Creates transaction with 'x' function id.
 UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,std::string cancelmemo)
 {
-	char *str, eventCCaddress[65], *txidaddr;
+	char str[67], eventCCaddress[65], *txidaddr;
 	CPubKey mypk,Agreementspk,offertxidpk,COfferorPubkey,CSignerPubkey,CArbitratorPubkey,CClaimantPubkey;
 	CScript opret;
 	CTransaction disputetx,offertx,agreementtx;
@@ -2446,7 +2448,7 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 // Creates transaction with 'r' function id.
 UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,int64_t claimantpayout,std::string resolutionmemo)
 {
-	char *str, eventCCaddress[65], *txidaddr;
+	char str[67], eventCCaddress[65], *txidaddr;
 	CPubKey mypk,Agreementspk,offertxidpk,COfferorPubkey,CSignerPubkey,CArbitratorPubkey,CClaimantPubkey,CDefendantPubkey;
 	CScript opret;
 	CTransaction disputetx,offertx,agreementtx;
@@ -2561,7 +2563,7 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 {
 	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreementunlock not done yet");
 
-	char *str, eventCCaddress[65], *txidaddr;
+	char str[67], eventCCaddress[65], *txidaddr;
 	CPubKey mypk,Agreementspk,offertxidpk,COfferorPubkey,CSignerPubkey,CArbitratorPubkey;
 	CScript opret;
 	CTransaction offertx,agreementtx,unlocktx;
