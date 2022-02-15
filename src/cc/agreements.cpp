@@ -1521,7 +1521,7 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	std::vector<uint8_t> refofferorkey,refsignerkey,refarbkey;
 	uint8_t version,refofferflags;
 	uint256 hashBlock;
-	UniValue rawtx(UniValue::VOBJ), result(UniValue::VOBJ);
+	UniValue result(UniValue::VOBJ);
 
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
 	struct CCcontract_info *cp,C;
@@ -1602,14 +1602,49 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 		// vout.0: CC event logger/marker to global CC address
 		mtx.vout.push_back(MakeCC1voutMixed(cp->evalcode, CC_MARKER_VALUE, GetUnspendable(cp, NULL)));
 
-		rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+		// Return captured values here for debugging/verification before broadcasting.
+		fprintf(stdout,"type: offer_create\n");
+		fprintf(stdout,"agreement_name: '%s'\n",agreementname.c_str());
+		fprintf(stdout,"agreement_memo: '%s'\n",agreementmemo.c_str());
+		fprintf(stdout,"source_key: %s\n",pubkey33_str(str,(uint8_t *)&mypk));
+		fprintf(stdout,"destination_key: %s\n",HexStr(destkey).c_str());
+		if (CArbitratorPubkey.IsFullyValid())
+		{
+			fprintf(stdout,"arbitrator_pubkey: %s\n",HexStr(arbkey).c_str());
+			if (!(offerflags & AOF_NODISPUTES))
+			{
+				fprintf(stdout,"disputes_enabled: true\n");
+				fprintf(stdout,"dispute_fee_sats: %ld\n",disputefee);
+			}
+			else
+				fprintf(stdout,"disputes_enabled: false\n");
+		}
+		else
+			fprintf(stdout,"disputes_enabled: false\n");
+		if (refagreementtxid != zeroid)
+			fprintf(stdout,"reference_agreement: %s\n",refagreementtxid.GetHex().c_str());
+
+		if (offerflags & AOF_NOCANCEL)
+			fprintf(stdout,"is_cancellable_by_sender: false\n");
+		else
+			fprintf(stdout,"is_cancellable_by_sender: true\n");
+		
+		fprintf(stdout,"required_deposit_sats: %ld\n",deposit);
+		fprintf(stdout,"required_offerorpayout_sats: %ld\n",payment);
+		
+		if (!(offerflags & AOF_NOUNLOCK))
+		{
+			fprintf(stdout,"unlock_enabled: true\n");
+			// TODO: check unlock conditions here
+		}
+		else
+			fprintf(stdout,"unlock_enabled: false\n");
+
+		return (FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret));
 	}
-	else
-		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
+
+	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 	
-	result.push_back(rawtx);
-	
-	// Return captured values here for easy debugging/verification before broadcasting.
 	/*result.push_back(Pair("type","offer_create"));
 	result.push_back(Pair("agreement_name",agreementname));
 	result.push_back(Pair("agreement_memo",agreementmemo));
@@ -1649,8 +1684,6 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	}
 	else
 		result.push_back(Pair("unlock_enabled","false"));*/
-	
-	return (result);
 }
 
 // Transaction constructor for agreementamend rpc.
