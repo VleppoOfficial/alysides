@@ -1602,45 +1602,6 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 		// vout.0: CC event logger/marker to global CC address
 		mtx.vout.push_back(MakeCC1voutMixed(cp->evalcode, CC_MARKER_VALUE, GetUnspendable(cp, NULL)));
 
-		// Return captured values here for debugging/verification before broadcasting.
-		fprintf(stdout,"type: offer_create\n");
-		fprintf(stdout,"agreement_name: '%s'\n",agreementname.c_str());
-		fprintf(stdout,"agreement_memo: '%s'\n",agreementmemo.c_str());
-		fprintf(stdout,"source_key: %s\n",pubkey33_str(str,(uint8_t *)&mypk));
-		fprintf(stdout,"destination_key: %s\n",HexStr(destkey).c_str());
-		if (CArbitratorPubkey.IsFullyValid())
-		{
-			fprintf(stdout,"arbitrator_pubkey: %s\n",HexStr(arbkey).c_str());
-			if (!(offerflags & AOF_NODISPUTES))
-			{
-				fprintf(stdout,"disputes_enabled: true\n");
-				fprintf(stdout,"dispute_fee_sats: %ld\n",disputefee);
-			}
-			else
-				fprintf(stdout,"disputes_enabled: false\n");
-		}
-		else
-			fprintf(stdout,"disputes_enabled: false\n");
-		if (refagreementtxid != zeroid)
-			fprintf(stdout,"reference_agreement: %s\n",refagreementtxid.GetHex().c_str());
-
-		if (offerflags & AOF_NOCANCEL)
-			fprintf(stdout,"is_cancellable_by_sender: false\n");
-		else
-			fprintf(stdout,"is_cancellable_by_sender: true\n");
-		
-		fprintf(stdout,"required_deposit_sats: %ld\n",deposit);
-		fprintf(stdout,"required_offerorpayout_sats: %ld\n",payment);
-		
-		if (!(offerflags & AOF_NOUNLOCK))
-		{
-			fprintf(stdout,"unlock_enabled: true\n");
-			// TODO: check unlock conditions here
-		}
-		else
-			fprintf(stdout,"unlock_enabled: false\n");
-
-		//return (FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret));
 		rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
 	else
@@ -1650,6 +1611,7 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	{
 		result.push_back(Pair("result", "success"));
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
+		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA].getValStr()));
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
@@ -1804,7 +1766,14 @@ uint8_t offerflags, int64_t deposit, int64_t payment, int64_t disputefee, std::v
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 
-	result.push_back(rawtx);
+	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
+	{
+		result.push_back(Pair("result", "success"));
+		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
+		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA].getValStr()));
+	}
+	else
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
 	
 	// Return captured values here for easy debugging/verification before broadcasting.
 	result.push_back(Pair("type","offer_amend"));
@@ -1939,7 +1908,14 @@ UniValue AgreementClose(const CPubKey& pk, uint64_t txfee, uint256 prevagreement
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 
-	result.push_back(rawtx);
+	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
+	{
+		result.push_back(Pair("result", "success"));
+		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
+		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA].getValStr()));
+	}
+	else
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
 	
 	// Return captured values here for easy debugging/verification before broadcasting.
 	result.push_back(Pair("type","offer_close"));
@@ -2020,7 +1996,14 @@ UniValue AgreementStopOffer(const CPubKey& pk,uint64_t txfee,uint256 offertxid,s
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 
-	result.push_back(rawtx);
+	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
+	{
+		result.push_back(Pair("result", "success"));
+		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
+		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA].getValStr()));
+	}
+	else
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
 
 	// Return captured values here for easy debugging/verification before broadcasting.
 	result.push_back(Pair("type","cancel_offer"));
@@ -2158,7 +2141,14 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 			else
 				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 
-			result.push_back(rawtx);
+			if (rawtx[JSON_HEXTX].getValStr().size() > 0)
+			{
+				result.push_back(Pair("result", "success"));
+				result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
+				result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA].getValStr()));
+			}
+			else
+				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
 
 			// Return captured values here for easy debugging/verification before broadcasting.
 			result.push_back(Pair("type","agreement_closure"));
@@ -2205,7 +2195,14 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 			else
 				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 
-			result.push_back(rawtx);
+			if (rawtx[JSON_HEXTX].getValStr().size() > 0)
+			{
+				result.push_back(Pair("result", "success"));
+				result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
+				result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA].getValStr()));
+			}
+			else
+				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
 
 			// Return captured values here for easy debugging/verification before broadcasting.
 			result.push_back(Pair("type","agreement_amend"));
@@ -2241,7 +2238,14 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 
-	result.push_back(rawtx);
+	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
+	{
+		result.push_back(Pair("result", "success"));
+		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
+		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA].getValStr()));
+	}
+	else
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
 
 	// Return captured values here for easy debugging/verification before broadcasting.
 	result.push_back(Pair("type","agreement_create"));
@@ -2348,7 +2352,14 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 
-	result.push_back(rawtx);
+	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
+	{
+		result.push_back(Pair("result", "success"));
+		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
+		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA].getValStr()));
+	}
+	else
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
 
 	// Return captured values here for easy debugging/verification before broadcasting.
 	result.push_back(Pair("type","agreement_dispute"));
@@ -2441,7 +2452,14 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 
-	result.push_back(rawtx);
+	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
+	{
+		result.push_back(Pair("result", "success"));
+		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
+		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA].getValStr()));
+	}
+	else
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
 
 	// Return captured values here for easy debugging/verification before broadcasting.
 	result.push_back(Pair("type","dispute_cancel"));
@@ -2552,7 +2570,14 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 
-	result.push_back(rawtx);
+	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
+	{
+		result.push_back(Pair("result", "success"));
+		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
+		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA].getValStr()));
+	}
+	else
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
 
 	// Return captured values here for easy debugging/verification before broadcasting.
 	result.push_back(Pair("type","dispute_resolve"));
@@ -2676,7 +2701,14 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 
-	result.push_back(rawtx);
+	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
+	{
+		result.push_back(Pair("result", "success"));
+		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
+		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA].getValStr()));
+	}
+	else
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
 
 	// Return captured values here for easy debugging/verification before broadcasting.
 	result.push_back(Pair("type","agreement_unlock"));
