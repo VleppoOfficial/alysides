@@ -1646,6 +1646,8 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 	
+	result.push_back(rawtx);
+
 	// Return captured values here for debugging/verification before broadcasting.
 	result.push_back(Pair("type","offer_create"));
 	result.push_back(Pair("agreement_name",agreementname));
