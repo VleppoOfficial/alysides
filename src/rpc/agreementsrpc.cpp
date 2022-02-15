@@ -62,7 +62,7 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& remo
     CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
 
     std::vector<unsigned char> destkey = ParseHex(params[0].get_str().c_str());
-    if (destkey.size() != 33)
+    if (!(pubkey2pk(destkey).IsFullyValid()))
         return MakeResultError("Invalid destination pubkey");
 
     std::string agreementname = params[1].get_str();
@@ -89,8 +89,8 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& remo
     if (params.size() >= 7)
     {
         arbitratorkey = ParseHex(params[6].get_str().c_str());
-        if (!arbitratorkey.empty() && arbitratorkey.size() != 33)
-            return MakeResultError("Invalid destination pubkey");
+        if (!arbitratorkey.empty() && !(pubkey2pk(arbitratorkey).IsFullyValid()))
+            return MakeResultError("Invalid arbitrator pubkey");
     }
     
     uint256 refagreementtxid = zeroid;
@@ -163,8 +163,8 @@ UniValue agreementamend(const UniValue& params, bool fHelp, const CPubKey& remot
     if (params.size() >= 7)
     {
         arbitratorkey = ParseHex(params[6].get_str().c_str());
-        if (!arbitratorkey.empty() && arbitratorkey.size() != 33)
-            return MakeResultError("Invalid destination pubkey");
+        if (!arbitratorkey.empty() && !(pubkey2pk(arbitratorkey).IsFullyValid()))
+            return MakeResultError("Invalid arbitrator pubkey");
     }
     
     uint8_t flags = AOF_AMENDMENT;
