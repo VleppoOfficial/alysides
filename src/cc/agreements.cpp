@@ -1652,7 +1652,7 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
 	}
 	else
-		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx, found size "+rawtx[JSON_HEXTX].getValStr().size()+"");
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
 
 	// Return captured values here for debugging/verification before broadcasting.
 	result.push_back(Pair("type","offer_create"));
