@@ -428,12 +428,17 @@ bool CScript::SpkHasEvalcodeCCV2(uint8_t evalCode) const
     if (cond == nullptr)
         return false;
     
+    std::cerr << "SpkHasEvalcodeCCV2 cc_readFulfillmentBinaryMixedMode passed" << std::endl;
+
     VerifyEval eval = [](CC* cond, void* evalcode) {
         return (*(uint8_t*)evalcode == cond->code[0]) ? 0 : 1;
     };
 
     bool rc = !cc_verifyEval(cond, eval, &evalCode);
     cc_free(cond);
+
+    std::cerr << "SpkHasEvalcodeCCV2 passed" << std::endl;
+
     return rc;
 }
 

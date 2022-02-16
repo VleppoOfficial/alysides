@@ -491,12 +491,14 @@ bool ConstrainVout(CTxOut vout, int32_t CCflag, char *cmpaddr, int64_t nValue)
         //fprintf(stderr,"constrain vout error nValue %.8f vs %.8f\n",(double)nValue/COIN,(double)vout.nValue/COIN);
         return(false);
     }
+    std::cerr << "ConstrainVout true" << std::endl;
     else return(true);
 }
 
 // validate cc or normal vout address and value
 bool ConstrainVoutV2(CTxOut vout, int32_t CCflag, char *cmpaddr, int64_t nValue, uint8_t evalCode)
 {
+    std::cerr << "checking ConstrainVout" << std::endl;
     if (ConstrainVout(vout, CCflag, cmpaddr, nValue))
         if (CCflag && evalCode != 0)
             return vout.scriptPubKey.SpkHasEvalcodeCCV2(evalCode);
