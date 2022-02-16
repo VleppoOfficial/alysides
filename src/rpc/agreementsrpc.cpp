@@ -40,7 +40,7 @@ UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& myp
         throw runtime_error(CC_REQUIREMENTS_MSG);
     if ( params.size() == 1 )
         pubkey = ParseHex(params[0].get_str().c_str());
-    return(CCaddress(cp,(char *)"Agreements",pubkey));
+    return(CCaddress(cp,(char *)"Agreements",pubkey,true));
 }
 
 UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
