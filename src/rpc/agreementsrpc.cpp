@@ -30,9 +30,6 @@
 
 using namespace std;
 
-extern void Lock2NSPV(const CPubKey &pk);
-extern void Unlock2NSPV(const CPubKey &pk);
-
 UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     struct CCcontract_info *cp,C; std::vector<unsigned char> pubkey;
@@ -59,7 +56,8 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& remo
     
     if (!EnsureWalletIsAvailable(false))
         throw runtime_error("wallet is required");
-    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
+    //CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
+    LOCK2(cs_main, pwalletMain->cs_wallet);  // remote call not supported yet
 
     std::vector<unsigned char> destkey = ParseHex(params[0].get_str().c_str());
     if (!(pubkey2pk(destkey).IsFullyValid()))
