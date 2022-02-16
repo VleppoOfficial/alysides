@@ -1600,7 +1600,7 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 5, pk.IsValid()) > 0) // vin.*: normal input
 	{
 		// vout.0: CC event logger/marker to global CC address
-		mtx.vout.push_back(MakeCC1voutMixed(cp->evalcode, CC_MARKER_VALUE, GetUnspendable(cp, NULL)));
+		mtx.vout.push_back(MakeCC1voutMixed(EVAL_AGREEMENTS, CC_MARKER_VALUE, GetUnspendable(cp, NULL)));
 
 		rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
