@@ -66,19 +66,11 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
 
     std::vector<unsigned char> destkey = ParseHex(params[0].get_str().c_str());
     if (!(pubkey2pk(destkey).IsFullyValid()))
-    {
-		Unlock2NSPV(mypk);
-        throw runtime_error("Invalid destination pubkey\n");
-    }
-        //return MakeResultError("Invalid destination pubkey");
+        return MakeResultError("Invalid destination pubkey");
 
     std::string agreementname = params[1].get_str();
     if (agreementname.size() == 0 || agreementname.size() > AGREEMENTCC_MAX_NAME_SIZE)
-    {
-		Unlock2NSPV(mypk);
-        throw runtime_error("Agreement name must be up to "+std::to_string(AGREEMENTCC_MAX_NAME_SIZE)+" characters\n");
-    }
-        //return MakeResultError("Agreement name must be up to "+std::to_string(AGREEMENTCC_MAX_NAME_SIZE)+" characters");
+        return MakeResultError("Agreement name must be up to "+std::to_string(AGREEMENTCC_MAX_NAME_SIZE)+" characters");
     
     std::string agreementmemo = params[2].get_str();
     if (agreementmemo.size() == 0 || agreementmemo.size() > AGREEMENTCC_MAX_MEMO_SIZE)

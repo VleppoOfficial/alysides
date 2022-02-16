@@ -1609,7 +1609,6 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
-		result.push_back(Pair("result", "success"));
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
 		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
@@ -1770,7 +1769,6 @@ uint8_t offerflags, int64_t deposit, int64_t payment, int64_t disputefee, std::v
 
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
-		result.push_back(Pair("result", "success"));
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
 		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
@@ -1914,7 +1912,6 @@ UniValue AgreementClose(const CPubKey& pk, uint64_t txfee, uint256 prevagreement
 
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
-		result.push_back(Pair("result", "success"));
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
 		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
@@ -2002,7 +1999,6 @@ UniValue AgreementStopOffer(const CPubKey& pk,uint64_t txfee,uint256 offertxid,s
 
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
-		result.push_back(Pair("result", "success"));
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
 		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
@@ -2147,7 +2143,6 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 
 			if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 			{
-				result.push_back(Pair("result", "success"));
 				result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
 				result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 			}
@@ -2201,7 +2196,6 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 
 			if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 			{
-				result.push_back(Pair("result", "success"));
 				result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
 				result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 			}
@@ -2244,7 +2238,6 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
-		result.push_back(Pair("result", "success"));
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
 		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
@@ -2358,7 +2351,6 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
-		result.push_back(Pair("result", "success"));
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
 		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
@@ -2460,7 +2452,6 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
-		result.push_back(Pair("result", "success"));
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
 		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
@@ -2578,7 +2569,6 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
-		result.push_back(Pair("result", "success"));
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
 		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
@@ -2709,7 +2699,6 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
-		result.push_back(Pair("result", "success"));
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
 		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
