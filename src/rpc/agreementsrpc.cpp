@@ -59,10 +59,10 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
     
     if (!EnsureWalletIsAvailable(false))
         throw runtime_error("wallet is required");
-    //CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
+    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
     //LOCK2(cs_main, pwalletMain->cs_wallet);  // remote call not supported yet
 
-    Lock2NSPV(mypk);
+    //Lock2NSPV(mypk);
 
     std::vector<unsigned char> destkey = ParseHex(params[0].get_str().c_str());
     if (!(pubkey2pk(destkey).IsFullyValid()))
@@ -114,16 +114,17 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
     }
     std::vector<std::vector<uint8_t>> unlockconds = (std::vector<std::vector<uint8_t>>)0;
 
-    //CPubKey mypk;
-    //SET_MYPK_OR_REMOTE(mypk, remotepk);
+    CPubKey mypk;
+    SET_MYPK_OR_REMOTE(mypk, remotepk);
 
     result = AgreementCreate(mypk,0,destkey,agreementname,agreementmemo,flags,refagreementtxid,deposit,payment,disputefee,arbitratorkey,unlockconds);
     
-    //RETURN_IF_ERROR(CCerror);
+    RETURN_IF_ERROR(CCerror);
 
     if (result[JSON_HEXTX].getValStr().size() > 0)
         result.push_back(Pair("result", "success"));
-    Unlock2NSPV(mypk);
+    
+    //Unlock2NSPV(mypk);
 
     return result;
 }
