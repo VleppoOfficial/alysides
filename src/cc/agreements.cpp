@@ -1656,6 +1656,8 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	}
 	else
 		result.push_back(Pair("unlock_enabled","false"));
+	
+	result.push_back(Pair("offer_flags",offerflags));
 		
 	return (result);
 }
@@ -1814,6 +1816,8 @@ uint8_t offerflags, int64_t deposit, int64_t payment, int64_t disputefee, std::v
 	else
 		result.push_back(Pair("unlock_enabled","false"));
 	
+	result.push_back(Pair("offer_flags",offerflags));
+
 	return (result);
 }
 
@@ -2367,6 +2371,8 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 
 	result.push_back(Pair("reference_agreement",agreementtxid.GetHex()));
 
+	result.push_back(Pair("dispute_flags",disputeflags));
+
 	return (result);
 }
 
@@ -2804,6 +2810,8 @@ UniValue AgreementInfo(const uint256 txid)
 				}
 				else
 					result.push_back(Pair("unlock_enabled","false"));
+				
+				result.push_back(Pair("offer_flags",offerflags));
 
 				// Check status and spending txid.
 				if ((retcode = CCgetspenttxid(batontxid,vini,height,txid,0)) == 0 &&
@@ -2972,6 +2980,8 @@ UniValue AgreementInfo(const uint256 txid)
 					result.push_back(Pair("is_final_dispute","true"));
 				else
 					result.push_back(Pair("is_final_dispute","false"));
+				
+				result.push_back(Pair("dispute_flags",disputeflags));
 
 				// Check dispute status.
 				if ((retcode = CCgetspenttxid(batontxid, vini, height, txid, 0)) == 0)
