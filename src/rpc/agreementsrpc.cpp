@@ -43,9 +43,6 @@ UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& myp
     return(CCaddress(cp,(char *)"Agreements",pubkey));
 }
 
-extern void Lock2NSPV(const CPubKey &pk);
-extern void Unlock2NSPV(const CPubKey &pk);
-
 UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
@@ -59,11 +56,7 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
     
     if (!EnsureWalletIsAvailable(false))
         throw runtime_error("wallet is required");
-    //CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
-    //LOCK2(cs_main, pwalletMain->cs_wallet);  // remote call not supported yet
-
-    //Lock2NSPV(mypk);
-
+    
     std::vector<unsigned char> destkey = ParseHex(params[0].get_str().c_str());
     if (!(pubkey2pk(destkey).IsFullyValid()))
         return MakeResultError("Invalid destination pubkey");
@@ -114,10 +107,8 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
     }
     std::vector<std::vector<uint8_t>> unlockconds = (std::vector<std::vector<uint8_t>>)0;
 
-    //CPubKey mypk;
-    //SET_MYPK_OR_REMOTE(mypk, remotepk);
-
-    bool lockWallet = false;
+    // note: for some reason, using LOCK2 or CONDITIONAL_LOCK2 here instead produces tx hex that has completely empty scriptSigs for all vins. Why?
+    bool lockWallet = false; 
     if (!mypk.IsValid())
         lockWallet = true;
 
@@ -127,6 +118,8 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
         ENTER_CRITICAL_SECTION(pwalletMain->cs_wallet);
     }
     result = AgreementCreate(mypk,0,destkey,agreementname,agreementmemo,flags,refagreementtxid,deposit,payment,disputefee,arbitratorkey,unlockconds);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
     if (lockWallet)
     {
         LEAVE_CRITICAL_SECTION(pwalletMain->cs_wallet);
@@ -134,16 +127,10 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
     }
     
     RETURN_IF_ERROR(CCerror);
-
-    if (result[JSON_HEXTX].getValStr().size() > 0)
-        result.push_back(Pair("result", "success"));
-    
-    //Unlock2NSPV(mypk);
-
     return result;
 }
 
-UniValue agreementamend(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+UniValue agreementamend(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 
@@ -156,8 +143,7 @@ UniValue agreementamend(const UniValue& params, bool fHelp, const CPubKey& remot
     
     if (!EnsureWalletIsAvailable(false))
         throw runtime_error("wallet is required");
-    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
-
+    
     uint256 prevagreementtxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (prevagreementtxid == zeroid)
 		return MakeResultError("Agreement transaction id invalid");
@@ -204,16 +190,29 @@ UniValue agreementamend(const UniValue& params, bool fHelp, const CPubKey& remot
     }
     std::vector<std::vector<uint8_t>> unlockconds = (std::vector<std::vector<uint8_t>>)0;
 
-    CPubKey mypk;
-    SET_MYPK_OR_REMOTE(mypk, remotepk);
+    bool lockWallet = false; 
+    if (!mypk.IsValid())
+        lockWallet = true;
 
+    if (lockWallet)
+    {
+        ENTER_CRITICAL_SECTION(cs_main);
+        ENTER_CRITICAL_SECTION(pwalletMain->cs_wallet);
+    }
     result = AgreementAmend(mypk,0,prevagreementtxid,agreementname,agreementmemo,flags,deposit,payment,disputefee,arbitratorkey,unlockconds);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    if (lockWallet)
+    {
+        LEAVE_CRITICAL_SECTION(pwalletMain->cs_wallet);
+        LEAVE_CRITICAL_SECTION(cs_main);
+    }
 
     RETURN_IF_ERROR(CCerror);
     return result;
 }
 
-UniValue agreementclose(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+UniValue agreementclose(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 
@@ -226,7 +225,6 @@ UniValue agreementclose(const UniValue& params, bool fHelp, const CPubKey& remot
     
     if (!EnsureWalletIsAvailable(false))
         throw runtime_error("wallet is required");
-    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
 
     uint256 prevagreementtxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (prevagreementtxid == zeroid)
@@ -244,16 +242,29 @@ UniValue agreementclose(const UniValue& params, bool fHelp, const CPubKey& remot
     if (payment < 0)
         return MakeResultError("Required payment to sender must be 0 or above");
 
-    CPubKey mypk;
-    SET_MYPK_OR_REMOTE(mypk, remotepk);
+    bool lockWallet = false; 
+    if (!mypk.IsValid())
+        lockWallet = true;
 
+    if (lockWallet)
+    {
+        ENTER_CRITICAL_SECTION(cs_main);
+        ENTER_CRITICAL_SECTION(pwalletMain->cs_wallet);
+    }
     result = AgreementClose(mypk,0,prevagreementtxid,agreementname,agreementmemo,payment);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    if (lockWallet)
+    {
+        LEAVE_CRITICAL_SECTION(pwalletMain->cs_wallet);
+        LEAVE_CRITICAL_SECTION(cs_main);
+    }
 
     RETURN_IF_ERROR(CCerror);
     return result;
 }
 
-UniValue agreementstopoffer(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+UniValue agreementstopoffer(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 
@@ -266,7 +277,6 @@ UniValue agreementstopoffer(const UniValue& params, bool fHelp, const CPubKey& r
     
     if (!EnsureWalletIsAvailable(false))
         throw runtime_error("wallet is required");
-    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
 
     uint256 offertxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (offertxid == zeroid)
@@ -280,16 +290,29 @@ UniValue agreementstopoffer(const UniValue& params, bool fHelp, const CPubKey& r
             return MakeResultError("Cancel memo must be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
     }
     
-    CPubKey mypk;
-    SET_MYPK_OR_REMOTE(mypk, remotepk);
+    bool lockWallet = false; 
+    if (!mypk.IsValid())
+        lockWallet = true;
 
+    if (lockWallet)
+    {
+        ENTER_CRITICAL_SECTION(cs_main);
+        ENTER_CRITICAL_SECTION(pwalletMain->cs_wallet);
+    }
     result = AgreementStopOffer(mypk,0,offertxid,cancelmemo);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    if (lockWallet)
+    {
+        LEAVE_CRITICAL_SECTION(pwalletMain->cs_wallet);
+        LEAVE_CRITICAL_SECTION(cs_main);
+    }
 
     RETURN_IF_ERROR(CCerror);
     return result;
 }
 
-UniValue agreementaccept(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+UniValue agreementaccept(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 
@@ -302,22 +325,34 @@ UniValue agreementaccept(const UniValue& params, bool fHelp, const CPubKey& remo
     
     if (!EnsureWalletIsAvailable(false))
         throw runtime_error("wallet is required");
-    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
     
     uint256 offertxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (offertxid == zeroid)
 		return MakeResultError("Offer transaction id invalid");
 
-    CPubKey mypk;
-    SET_MYPK_OR_REMOTE(mypk, remotepk);
+    bool lockWallet = false; 
+    if (!mypk.IsValid())
+        lockWallet = true;
 
+    if (lockWallet)
+    {
+        ENTER_CRITICAL_SECTION(cs_main);
+        ENTER_CRITICAL_SECTION(pwalletMain->cs_wallet);
+    }
     result = AgreementAccept(mypk,0,offertxid);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    if (lockWallet)
+    {
+        LEAVE_CRITICAL_SECTION(pwalletMain->cs_wallet);
+        LEAVE_CRITICAL_SECTION(cs_main);
+    }
 
     RETURN_IF_ERROR(CCerror);
     return result;
 }
 
-UniValue agreementdispute(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+UniValue agreementdispute(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 	std::string typestr;
@@ -331,7 +366,6 @@ UniValue agreementdispute(const UniValue& params, bool fHelp, const CPubKey& rem
     
     if (!EnsureWalletIsAvailable(false))
         throw runtime_error("wallet is required");
-    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
 
     uint256 agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (agreementtxid == zeroid)
@@ -353,16 +387,29 @@ UniValue agreementdispute(const UniValue& params, bool fHelp, const CPubKey& rem
             disputeflags |= ADF_FINALDISPUTE;
     }
 
-    CPubKey mypk;
-    SET_MYPK_OR_REMOTE(mypk, remotepk);
+    bool lockWallet = false; 
+    if (!mypk.IsValid())
+        lockWallet = true;
 
+    if (lockWallet)
+    {
+        ENTER_CRITICAL_SECTION(cs_main);
+        ENTER_CRITICAL_SECTION(pwalletMain->cs_wallet);
+    }
     result = AgreementDispute(mypk,0,agreementtxid,disputeflags,disputememo);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    if (lockWallet)
+    {
+        LEAVE_CRITICAL_SECTION(pwalletMain->cs_wallet);
+        LEAVE_CRITICAL_SECTION(cs_main);
+    }
 
     RETURN_IF_ERROR(CCerror);
     return result;
 }
 
-UniValue agreementstopdispute(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+UniValue agreementstopdispute(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 	std::string typestr;
@@ -376,8 +423,7 @@ UniValue agreementstopdispute(const UniValue& params, bool fHelp, const CPubKey&
     
     if (!EnsureWalletIsAvailable(false))
         throw runtime_error("wallet is required");
-    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
-
+    
     uint256 disputetxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (disputetxid == zeroid)
 		return MakeResultError("Dispute transaction id invalid");
@@ -390,16 +436,29 @@ UniValue agreementstopdispute(const UniValue& params, bool fHelp, const CPubKey&
             return MakeResultError("Dispute cancel memo must be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
     }
 
-    CPubKey mypk;
-    SET_MYPK_OR_REMOTE(mypk, remotepk);
+    bool lockWallet = false; 
+    if (!mypk.IsValid())
+        lockWallet = true;
 
+    if (lockWallet)
+    {
+        ENTER_CRITICAL_SECTION(cs_main);
+        ENTER_CRITICAL_SECTION(pwalletMain->cs_wallet);
+    }
     result = AgreementStopDispute(mypk,0,disputetxid,cancelmemo);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    if (lockWallet)
+    {
+        LEAVE_CRITICAL_SECTION(pwalletMain->cs_wallet);
+        LEAVE_CRITICAL_SECTION(cs_main);
+    }
 
     RETURN_IF_ERROR(CCerror);
     return result;
 }
 
-UniValue agreementresolve(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+UniValue agreementresolve(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 	std::string typestr;
@@ -413,8 +472,7 @@ UniValue agreementresolve(const UniValue& params, bool fHelp, const CPubKey& rem
     
     if (!EnsureWalletIsAvailable(false))
         throw runtime_error("wallet is required");
-    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
-
+    
     uint256 disputetxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (disputetxid == zeroid)
 		return MakeResultError("Dispute transaction id invalid");
@@ -431,16 +489,29 @@ UniValue agreementresolve(const UniValue& params, bool fHelp, const CPubKey& rem
             return MakeResultError("Dispute resolution memo must be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
     }
 
-    CPubKey mypk;
-    SET_MYPK_OR_REMOTE(mypk, remotepk);
+    bool lockWallet = false; 
+    if (!mypk.IsValid())
+        lockWallet = true;
 
+    if (lockWallet)
+    {
+        ENTER_CRITICAL_SECTION(cs_main);
+        ENTER_CRITICAL_SECTION(pwalletMain->cs_wallet);
+    }
     result = AgreementResolve(mypk,0,disputetxid,claimantpayout,resolutionmemo);
-
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    if (lockWallet)
+    {
+        LEAVE_CRITICAL_SECTION(pwalletMain->cs_wallet);
+        LEAVE_CRITICAL_SECTION(cs_main);
+    }
+    
     RETURN_IF_ERROR(CCerror);
     return result;
 }
 
-UniValue agreementunlock(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+UniValue agreementunlock(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 	std::string typestr;
@@ -454,8 +525,7 @@ UniValue agreementunlock(const UniValue& params, bool fHelp, const CPubKey& remo
     
     if (!EnsureWalletIsAvailable(false))
         throw runtime_error("wallet is required");
-    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
-
+    
     uint256 agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
 	if (agreementtxid == zeroid)
 		return MakeResultError("Agreement transaction id invalid");
@@ -464,16 +534,29 @@ UniValue agreementunlock(const UniValue& params, bool fHelp, const CPubKey& remo
 	if (unlocktxid == zeroid)
 		return MakeResultError("Unlocking transaction id invalid");
 
-    CPubKey mypk;
-    SET_MYPK_OR_REMOTE(mypk, remotepk);
+    bool lockWallet = false; 
+    if (!mypk.IsValid())
+        lockWallet = true;
 
+    if (lockWallet)
+    {
+        ENTER_CRITICAL_SECTION(cs_main);
+        ENTER_CRITICAL_SECTION(pwalletMain->cs_wallet);
+    }
     result = AgreementUnlock(mypk,0,agreementtxid,unlocktxid);
-
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    if (lockWallet)
+    {
+        LEAVE_CRITICAL_SECTION(pwalletMain->cs_wallet);
+        LEAVE_CRITICAL_SECTION(cs_main);
+    }
+    
     RETURN_IF_ERROR(CCerror);
     return result;
 }
 
-UniValue agreementinfo(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+UniValue agreementinfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     uint256 txid;
     if ( fHelp || params.size() != 1 )
@@ -490,7 +573,7 @@ UniValue agreementinfo(const UniValue& params, bool fHelp, const CPubKey& remote
     return (AgreementInfo(txid));
 }
 
-UniValue agreementeventlog(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+UniValue agreementeventlog(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     uint256 agreementtxid;
     int64_t samplenum;
@@ -545,7 +628,7 @@ UniValue agreementeventlog(const UniValue& params, bool fHelp, const CPubKey& re
     return (AgreementEventLog(agreementtxid,flags,samplenum,bReverse));
 }
 
-UniValue agreementreferences(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+UniValue agreementreferences(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     uint256 agreementtxid;
 
@@ -563,7 +646,7 @@ UniValue agreementreferences(const UniValue& params, bool fHelp, const CPubKey& 
     return (AgreementReferences(agreementtxid));
 }
 
-UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	uint256 filtertxid;
     uint8_t flags;
