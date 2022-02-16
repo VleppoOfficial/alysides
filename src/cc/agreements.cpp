@@ -1726,16 +1726,16 @@ UniValue AgreementCreate(const CPubKey& pk,uint64_t txfee,CPubKey destpub,std::s
 	if (AddNormalinputs2(mtx, txfee + CC_RESPONSE_VALUE + CC_MARKER_VALUE * 3, 60) > 0) // vin.*: normal input
 	{
 		// vout.0: response baton output to srcpub/destpub CC 1of2 address
-		mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_RESPONSE_VALUE, mypk, destpub)); 
+		mtx.vout.push_back(MakeCC1of2voutMixed(EVAL_AGREEMENTS, CC_RESPONSE_VALUE, mypk, destpub)); 
 		// vout.1: marker to srcpub CC address
-		mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, mypk)); 
+		mtx.vout.push_back(MakeCC1voutMixed(EVAL_AGREEMENTS, CC_MARKER_VALUE, mypk)); 
 		// vout.2: marker to destpub CC address
-		mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, destpub)); 
+		mtx.vout.push_back(MakeCC1voutMixed(EVAL_AGREEMENTS, CC_MARKER_VALUE, destpub)); 
 		if (arbitratorpub.IsFullyValid())
 			// vout.3 (optional): marker to arbitratorpub CC address
-			mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, arbitratorpub)); 
+			mtx.vout.push_back(MakeCC1voutMixed(EVAL_AGREEMENTS, CC_MARKER_VALUE, arbitratorpub)); 
 	
-		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+		return FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
 
 	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
