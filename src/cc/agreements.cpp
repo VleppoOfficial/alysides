@@ -464,7 +464,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	{
 		//fprintf(stderr,"validating Agreements transaction type (%c)\n",funcid);
 
-		GetCCaddress(cp, globalCCaddress, GetUnspendable(cp, NULL));
+		GetCCaddress(cp, globalCCaddress, GetUnspendable(cp, NULL), true);
 
 		switch (funcid)
 		{
@@ -582,7 +582,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				
 				// Verify that vout0 is an Agreements vout and is sent to global CC address.
 				// Check vout0 for CC_MARKER_VALUE.
-				else if (ConstrainVoutV2(tx.vout[0], 1, cp->unspendableCCaddr, CC_MARKER_VALUE, EVAL_AGREEMENTS) == 0)
+				else if (ConstrainVoutV2(tx.vout[0], 1, globalCCaddress, CC_MARKER_VALUE, EVAL_AGREEMENTS) == 0)
 					return eval->Invalid("vout.0 is agreement CC vout with at least "+std::to_string(CC_MARKER_VALUE)+" sats to global CC addr for 'o' type transaction!");
 				
 				LOGSTREAM("agreementscc", CCLOG_INFO, stream << "AgreementsValidate: 'o' tx validated" << std::endl);
@@ -1268,7 +1268,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					
 					// vout.1: normal payout to dispute's defendant (if specified payout > 0)
 					// Check if vout1 has correct value assigned. (defendantpayout value)
-					else if (defendantpayout > 0 && ConstrainVout(tx.vout[1], 0, defendantnormaladdress, defendantpayout) == 0)
+					else if (defendantpayout > 0 && ConstrainVoutV2(tx.vout[1], 0, defendantnormaladdress, defendantpayout, EVAL_AGREEMENTS) == 0)
 						return eval->Invalid("vout.1 must be payment to dispute's defendantkey!");
 				}
 				else if (ConstrainVoutV2(tx.vout[0], 0, defendantnormaladdress, defendantpayout, EVAL_AGREEMENTS) == 0)
