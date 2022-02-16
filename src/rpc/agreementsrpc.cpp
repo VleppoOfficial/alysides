@@ -74,7 +74,11 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
 
     std::string agreementname = params[1].get_str();
     if (agreementname.size() == 0 || agreementname.size() > AGREEMENTCC_MAX_NAME_SIZE)
-        return MakeResultError("Agreement name must be up to "+std::to_string(AGREEMENTCC_MAX_NAME_SIZE)+" characters");
+    {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Agreement name must be up to "+std::to_string(AGREEMENTCC_MAX_NAME_SIZE)+" characters\n");
+    }
+        //return MakeResultError("Agreement name must be up to "+std::to_string(AGREEMENTCC_MAX_NAME_SIZE)+" characters");
     
     std::string agreementmemo = params[2].get_str();
     if (agreementmemo.size() == 0 || agreementmemo.size() > AGREEMENTCC_MAX_MEMO_SIZE)
@@ -122,8 +126,7 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
     //SET_MYPK_OR_REMOTE(mypk, remotepk);
 
     result = AgreementCreate(mypk,0,destkey,agreementname,agreementmemo,flags,refagreementtxid,deposit,payment,disputefee,arbitratorkey,unlockconds);
-    //result = AgreementCreate(mypk,0,pubkey2pk(destkey),agreementname,agreementhash,deposit,arbitratorpub,disputefee,refagreementtxid,payment);
-
+    
     //RETURN_IF_ERROR(CCerror);
 
     if (result[JSON_HEXTX].getValStr().size() > 0)
