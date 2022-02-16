@@ -582,7 +582,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 
 				// Verify that vout0 is an Agreements vout and is sent to global CC address.
 				// Check vout0 for CC_MARKER_VALUE.
-				if (ConstrainVout(tx.vout[0],1,globalCCaddress,CC_MARKER_VALUE,cp->evalcode) == 0)
+				if (ConstrainVout(tx.vout[0],1,globalCCaddress,CC_MARKER_VALUE) == 0)
 					return eval->Invalid("vout.0 is agreement CC vout with at least "+std::to_string(CC_MARKER_VALUE)+" sats to global CC addr for 'o' type transaction!");
 				
 				// Check numvouts. (vout0, opret vout, and optional vout for change)
@@ -810,17 +810,17 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return (false);
 				
 				// vout.0: CC event logger to global pubkey / offertxid-pubkey 1of2 CC address
-				else if (ConstrainVout(tx.vout[0], 1, eventCCaddress, CC_MARKER_VALUE, cp->evalcode) == 0)
+				else if (ConstrainVout(tx.vout[0], 1, eventCCaddress, CC_MARKER_VALUE) == 0)
 					return eval->Invalid("vout.0 must be CC event logger to global pubkey / offertxid-pubkey 1of2 CC address!");
 
 				// vout.1: deposit / marker to global pubkey
 				// Check if vout1 has correct value assigned. (deposit value specified in offer)
-				else if (ConstrainVout(tx.vout[1], 1, globalCCaddress, deposit, cp->evalcode) == 0)
+				else if (ConstrainVout(tx.vout[1], 1, globalCCaddress, deposit) == 0)
 					return eval->Invalid("vout.1 must be deposit to agreements global CC address!");
 
 				// vout.2: normal payment to offer's srckey (if specified payment > 0)
 				// Check if vout2 has correct value assigned. (payment value specified in offer)
-				if (payment > 0 && ConstrainVout(tx.vout[2], 0, srcnormaladdress, payment, cp->evalcode) == 0)
+				if (payment > 0 && ConstrainVout(tx.vout[2], 0, srcnormaladdress, payment) == 0)
 					return eval->Invalid("vout.2 must be payment to offer's srckey!");
 				
 				break;
@@ -956,7 +956,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				
 				// vout.0: normal payment to offer's srckey (if specified payment > 0)
 				// Check if vout0 has correct value assigned. (offerorpayout value)
-				if (payment > 0 && ConstrainVout(tx.vout[0], 0, srcnormaladdress, offerorpayout, cp->evalcode) == 0)
+				if (payment > 0 && ConstrainVout(tx.vout[0], 0, srcnormaladdress, offerorpayout) == 0)
 					return eval->Invalid("vout.0 must be payment to offer's srckey!");
 				
 				break;
@@ -1066,7 +1066,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return (false);
 				
 				// vout.0: CC event logger w/ dispute fee to global pubkey / offertxid-pubkey 1of2 CC address
-				else if (ConstrainVout(tx.vout[0], 1, eventCCaddress, disputefee, cp->evalcode) == 0)
+				else if (ConstrainVout(tx.vout[0], 1, eventCCaddress, disputefee) == 0)
 					return eval->Invalid("vout.0 must be CC event logger with disputefee to global pubkey / offertxid-pubkey 1of2 CC address!");
 				
 				break;
@@ -1150,7 +1150,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return (false);
 				
 				// vout.0: CC event logger to global pubkey / offertxid-pubkey 1of2 CC address
-				else if (ConstrainVout(tx.vout[0], 1, eventCCaddress, CC_MARKER_VALUE, cp->evalcode) == 0)
+				else if (ConstrainVout(tx.vout[0], 1, eventCCaddress, CC_MARKER_VALUE) == 0)
 					return eval->Invalid("vout.0 must be CC event logger to global pubkey / offertxid-pubkey 1of2 CC address!");
 				
 				break;
@@ -1267,15 +1267,15 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				{
 					// vout.0: normal payout to dispute's claimant (if specified payout > 0)
 					// Check if vout0 has correct value assigned. (claimantpayout value)
-					if (ConstrainVout(tx.vout[0], 0, claimantnormaladdress, claimantpayout, cp->evalcode) == 0)
+					if (ConstrainVout(tx.vout[0], 0, claimantnormaladdress, claimantpayout) == 0)
 						return eval->Invalid("vout.0 must be payment to dispute's claimantkey!");
 					
 					// vout.1: normal payout to dispute's defendant (if specified payout > 0)
 					// Check if vout1 has correct value assigned. (defendantpayout value)
-					else if (defendantpayout > 0 && ConstrainVout(tx.vout[1], 0, defendantnormaladdress, defendantpayout, cp->evalcode) == 0)
+					else if (defendantpayout > 0 && ConstrainVout(tx.vout[1], 0, defendantnormaladdress, defendantpayout) == 0)
 						return eval->Invalid("vout.1 must be payment to dispute's defendantkey!");
 				}
-				else if (ConstrainVout(tx.vout[0], 0, defendantnormaladdress, defendantpayout, cp->evalcode) == 0)
+				else if (ConstrainVout(tx.vout[0], 0, defendantnormaladdress, defendantpayout) == 0)
 					return eval->Invalid("vout.0 must be payment to dispute's defendantkey if claimantpayout = 0!");
 
 				// Note: at this point the collected dispute fee goes back to the arbitrator in the form of change, 
@@ -1426,15 +1426,15 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				{
 					// vout.0: normal payout to dispute's offeror (if specified payout > 0)
 					// Check if vout0 has correct value assigned. (offerorpayout value)
-					if (ConstrainVout(tx.vout[0], 0, offerornormaladdress, offerorpayout, cp->evalcode) == 0)
+					if (ConstrainVout(tx.vout[0], 0, offerornormaladdress, offerorpayout) == 0)
 						return eval->Invalid("vout.0 must be payment to agreement's offerorkey!");
 					
 					// vout.1: normal payout to dispute's signer (if specified payout > 0)
 					// Check if vout1 has correct value assigned. (signerpayout value)
-					else if (signerpayout > 0 && ConstrainVout(tx.vout[1], 0, signernormaladdress, signerpayout, cp->evalcode) == 0)
+					else if (signerpayout > 0 && ConstrainVout(tx.vout[1], 0, signernormaladdress, signerpayout) == 0)
 						return eval->Invalid("vout.1 must be payment to agreement's signerkey!");
 				}
-				else if (ConstrainVout(tx.vout[0], 0, signernormaladdress, signerpayout, cp->evalcode) == 0)
+				else if (ConstrainVout(tx.vout[0], 0, signernormaladdress, signerpayout) == 0)
 					return eval->Invalid("vout.0 must be payment to agreement's signerkey if offerorpayout = 0!");
 				
 				break;
