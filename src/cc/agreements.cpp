@@ -1602,12 +1602,12 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 		// vout.0: CC event logger/marker to global CC address
 		mtx.vout.push_back(MakeCC1vout(cp->evalcode, CC_MARKER_VALUE, GetUnspendable(cp, NULL)));
 
-		rawtx = FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+		return(FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret));
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 	
-	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
+	/*if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
 		result.push_back(Pair("result", "success"));
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
@@ -1659,7 +1659,7 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	
 	result.push_back(Pair("offer_flags",offerflags));
 		
-	return (result);
+	return (result);*/
 }
 
 // Transaction constructor for agreementamend rpc.
