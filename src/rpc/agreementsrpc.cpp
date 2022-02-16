@@ -43,7 +43,7 @@ UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& myp
     return(CCaddress(cp,(char *)"Agreements",pubkey));
 }
 
-UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+/*UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     UniValue result(UniValue::VOBJ);
 
@@ -116,6 +116,91 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& remo
 
     RETURN_IF_ERROR(CCerror);
     return result;
+}*/
+
+extern void Lock2NSPV(const CPubKey &pk);
+extern void Unlock2NSPV(const CPubKey &pk);
+
+UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    UniValue result(UniValue::VOBJ);
+
+    CPubKey destpub,arbitratorpub;
+	uint256 agreementhash,refagreementtxid;
+	std::string agreementname;
+	int64_t payment,disputefee,deposit;
+
+    if (fHelp || params.size() < 4 || params.size() > 8)
+        throw runtime_error(
+            "agreementcreate destpub agreementname agreementhash deposit [arbitratorpub][disputefee][refagreementtxid][payment]\n"
+            );
+    if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    
+    Lock2NSPV(mypk);
+	
+    destpub = pubkey2pk(ParseHex(params[0].get_str().c_str()));
+
+    agreementname = params[1].get_str();
+    if (agreementname.size() == 0 || agreementname.size() > 64)
+    {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Agreement name must not be empty and up to 64 characters\n");
+    }
+
+    agreementhash = Parseuint256((char *)params[2].get_str().c_str());
+	if (agreementhash == zeroid)
+    {
+		Unlock2NSPV(mypk);
+        throw runtime_error("Agreement hash empty or invalid\n");
+    }
+
+    deposit = atof((char *)params[3].get_str().c_str()) * COIN + 0.00000000499999;
+    //deposit = AmountFromValue(params[3]); // doesn't work with Lock/Unlock2NSPV, causes a softlock - Dan
+    if (deposit < 10000)
+    {
+        Unlock2NSPV(mypk);
+        throw runtime_error("Required deposit too low\n");
+    }
+    
+    if (params.size() >= 5)
+        arbitratorpub = pubkey2pk(ParseHex(params[4].get_str().c_str()));
+
+    disputefee = 0;
+	if (params.size() >= 6)
+    {
+        if (arbitratorpub.IsFullyValid())
+        {
+            disputefee = atof((char *)params[5].get_str().c_str()) * COIN + 0.00000000499999;
+            //disputefee = AmountFromValue(params[5]);
+            if (disputefee != 0 && disputefee < 10000)
+            {
+                Unlock2NSPV(mypk);
+                throw runtime_error("Dispute fee too low\n");
+            }
+        }
+    }
+
+    if (params.size() >= 7)
+        refagreementtxid = Parseuint256((char *)params[6].get_str().c_str());
+
+	payment = 0;
+	if (params.size() == 8)
+    {
+        payment = atof((char *)params[7].get_str().c_str()) * COIN + 0.00000000499999;
+        //payment = AmountFromValue(params[7]);
+        if (payment != 0 && payment < 10000)
+        {
+            Unlock2NSPV(mypk);
+            throw runtime_error("Required prepayment too low\n");
+        }
+    }
+	
+	result = AgreementCreate(mypk,0,destpub,agreementname,agreementhash,deposit,arbitratorpub,disputefee,refagreementtxid,payment);
+    if (result[JSON_HEXTX].getValStr().size() > 0)
+        result.push_back(Pair("result", "success"));
+    Unlock2NSPV(mypk);
+    return(result);
 }
 
 UniValue agreementamend(const UniValue& params, bool fHelp, const CPubKey& remotepk)

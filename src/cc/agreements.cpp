@@ -1511,7 +1511,7 @@ static uint8_t FindLatestAgreementEvent(uint256 agreementtxid, struct CCcontract
 
 // Transaction constructor for agreementcreate rpc.
 // Creates transaction with 'o' function id and unsets AOF_AMENDMENT and AOF_CLOSEEXISTING flags.
-UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::vector<uint8_t> destkey, std::string agreementname, std::string agreementmemo, \
+/*UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::vector<uint8_t> destkey, std::string agreementname, std::string agreementmemo, \
 uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, int64_t disputefee, std::vector<uint8_t> arbkey, std::vector<std::vector<uint8_t>> unlockconds)
 {
 	char str[67];
@@ -1660,6 +1660,85 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	result.push_back(Pair("offer_flags",offerflags));
 		
 	return (result);
+}*/
+
+// OP_RETURN data encoders and decoders for all Agreements transactions.
+CScript EncodeAgreementProposalOpRet(uint8_t version, CPubKey srcpub, CPubKey destpub, std::string agreementname, uint256 agreementhash, int64_t deposit, int64_t payment, uint256 refagreementtxid, bool bNewAgreement, CPubKey arbitratorpub, int64_t disputefee)
+{
+	CScript opret; uint8_t evalcode = EVAL_AGREEMENTS, funcid = 'p';
+	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << srcpub << destpub << agreementname << agreementhash << deposit << payment << refagreementtxid << bNewAgreement << arbitratorpub << disputefee);
+	return(opret);
+}
+UniValue AgreementCreate(const CPubKey& pk,uint64_t txfee,CPubKey destpub,std::string agreementname,uint256 agreementhash,int64_t deposit,CPubKey arbitratorpub,int64_t disputefee,uint256 refagreementtxid,int64_t payment)
+{
+	CPubKey mypk,offerorpub,signerpub,refarbitratorpub;
+	int64_t dummyint64;
+	uint256 dummyuint256,hashBlock;
+	CScript opret;
+	CTransaction refagreementtx;
+
+	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+	struct CCcontract_info *cp,C;
+	cp = CCinit(&C,EVAL_AGREEMENTS);
+	if (txfee == 0)
+		txfee = CC_TXFEE;
+	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
+
+	// Checking pubkeys.
+	if (!(destpub.IsFullyValid()))
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Destination pubkey must be valid");
+
+	// mypk and destpub cannot be the same.
+	else if (mypk == destpub)
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Source pubkey and destination pubkey cannot be the same");
+
+	// Checking other passed parameters.
+	if (agreementname.empty() || agreementname.size() > 64)
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Agreement name cannot be empty and must be up to 64 characters");
+	if (agreementhash == zeroid)
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Agreement hash must be a valid sha256 hash");
+	if (deposit < CC_MARKER_VALUE)
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Required deposit must be at least "+std::to_string(CC_MARKER_VALUE)+" satoshis");
+	if (payment < 0)
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Required payment must be positive");
+	
+	// Check arbitrator and disputefee.
+	if (arbitratorpub.IsFullyValid())
+	{
+		// If arbitratorpub is defined, it can't be the same as mypk or destpub.
+		if (arbitratorpub == mypk || arbitratorpub == destpub)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Arbitrator pubkey cannot be the same as source or destination pubkey");
+
+		if (disputefee < CC_MARKER_VALUE)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Required dispute fee must be at least "+std::to_string(CC_MARKER_VALUE)+" satoshis when arbitrator is defined");
+	}
+	else
+		disputefee = 0;
+	
+	// If refagreementtxid is specified, make sure it is of a valid agreement transaction.
+	if (refagreementtxid != zeroid)
+	{
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified reference agreement couldn't be found or is invalid");
+	}
+
+	opret = EncodeAgreementProposalOpRet(AGREEMENTCC_VERSION,mypk,destpub,agreementname,agreementhash,deposit,payment,refagreementtxid,true,arbitratorpub,disputefee);
+
+	if (AddNormalinputs2(mtx, txfee + CC_RESPONSE_VALUE + CC_MARKER_VALUE * 3, 60) > 0) // vin.*: normal input
+	{
+		// vout.0: response baton output to srcpub/destpub CC 1of2 address
+		mtx.vout.push_back(MakeCC1of2vout(EVAL_AGREEMENTS, CC_RESPONSE_VALUE, mypk, destpub)); 
+		// vout.1: marker to srcpub CC address
+		mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, mypk)); 
+		// vout.2: marker to destpub CC address
+		mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, destpub)); 
+		if (arbitratorpub.IsFullyValid())
+			// vout.3 (optional): marker to arbitratorpub CC address
+			mtx.vout.push_back(MakeCC1vout(EVAL_AGREEMENTS, CC_MARKER_VALUE, arbitratorpub)); 
+	
+		return FinalizeCCTxExt(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+	}
+
+	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
 }
 
 // Transaction constructor for agreementamend rpc.
