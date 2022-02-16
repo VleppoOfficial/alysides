@@ -46,7 +46,7 @@ UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& myp
 extern void Lock2NSPV(const CPubKey &pk);
 extern void Unlock2NSPV(const CPubKey &pk);
 
-UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
 
@@ -59,7 +59,7 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& remo
     
     if (!EnsureWalletIsAvailable(false))
         throw runtime_error("wallet is required");
-    CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
+    //CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
     //LOCK2(cs_main, pwalletMain->cs_wallet);  // remote call not supported yet
 
     //Lock2NSPV(mypk);
@@ -114,10 +114,24 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& remo
     }
     std::vector<std::vector<uint8_t>> unlockconds = (std::vector<std::vector<uint8_t>>)0;
 
-    CPubKey mypk;
-    SET_MYPK_OR_REMOTE(mypk, remotepk);
+    //CPubKey mypk;
+    //SET_MYPK_OR_REMOTE(mypk, remotepk);
 
+    bool lockWallet = false;
+    if (!mypk.IsValid())
+        lockWallet = true;
+
+    if (lockWallet)
+    {
+        ENTER_CRITICAL_SECTION(cs_main);
+        ENTER_CRITICAL_SECTION(pwalletMain->cs_wallet);
+    }
     result = AgreementCreate(mypk,0,destkey,agreementname,agreementmemo,flags,refagreementtxid,deposit,payment,disputefee,arbitratorkey,unlockconds);
+    if (lockWallet)
+    {
+        LEAVE_CRITICAL_SECTION(pwalletMain->cs_wallet);
+        LEAVE_CRITICAL_SECTION(cs_main);
+    }
     
     RETURN_IF_ERROR(CCerror);
 
