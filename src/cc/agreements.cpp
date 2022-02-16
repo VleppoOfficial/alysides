@@ -1597,7 +1597,7 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	opret = EncodeAgreementOfferOpRet(AGREEMENTCC_VERSION,std::vector<uint8_t>(mypk.begin(),mypk.end()),destkey,arbkey,offerflags,refagreementtxid,
 	deposit,payment,disputefee,agreementname,agreementmemo,unlockconds);
 
-	if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 5, pk.IsValid()) >= txfee + CC_MARKER_VALUE) // vin.*: normal input
+	if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 5, pk.IsValid()) > 0) // vin.*: normal input
 	{
 		// vout.0: CC event logger/marker to global CC address
 		mtx.vout.push_back(MakeCC1voutMixed(cp->evalcode, CC_MARKER_VALUE, GetUnspendable(cp, NULL)));
@@ -1758,7 +1758,7 @@ uint8_t offerflags, int64_t deposit, int64_t payment, int64_t disputefee, std::v
 	opret = EncodeAgreementOfferOpRet(AGREEMENTCC_VERSION,std::vector<uint8_t>(mypk.begin(),mypk.end()),destkey,arbkey,offerflags,prevagreementtxid,
 	deposit,payment,disputefee,agreementname,agreementmemo,unlockconds);
 
-	if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 5, pk.IsValid()) >= txfee + CC_MARKER_VALUE) // vin.*: normal input
+	if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 5, pk.IsValid()) > 0) // vin.*: normal input
 	{
 		// vout.0: CC event logger/marker to global CC address
 		mtx.vout.push_back(MakeCC1voutMixed(cp->evalcode, CC_MARKER_VALUE, GetUnspendable(cp, NULL)));
@@ -1902,7 +1902,7 @@ UniValue AgreementClose(const CPubKey& pk, uint64_t txfee, uint256 prevagreement
 	opret = EncodeAgreementOfferOpRet(AGREEMENTCC_VERSION,std::vector<uint8_t>(mypk.begin(),mypk.end()),destkey,prevarbkey,offerflags,prevagreementtxid,
 	deposit,payment,disputefee,agreementname,agreementmemo,(std::vector<std::vector<uint8_t>>)0);
 
-	if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 5, pk.IsValid()) >= txfee + CC_MARKER_VALUE) // vin.*: normal input
+	if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 5, pk.IsValid()) > 0) // vin.*: normal input
 	{
 		// vout.0: CC event logger/marker to global CC address
 		mtx.vout.push_back(MakeCC1voutMixed(cp->evalcode, CC_MARKER_VALUE, GetUnspendable(cp, NULL)));
@@ -1990,7 +1990,7 @@ UniValue AgreementStopOffer(const CPubKey& pk,uint64_t txfee,uint256 offertxid,s
 	
 	opret = EncodeAgreementOfferCancelOpRet(AGREEMENTCC_VERSION,offertxid,std::vector<uint8_t>(mypk.begin(),mypk.end()),cancelmemo);
 
-	if (AddNormalinputs(mtx, mypk, txfee, 5, pk.IsValid()) >= txfee) // vin.0 to vin.2+*: normal input
+	if (AddNormalinputs(mtx, mypk, txfee, 5, pk.IsValid()) > 0) // vin.0 to vin.2+*: normal input
 	{
 		// vin.1: CC input from offer vout.0
 		mtx.vin.push_back(CTxIn(offertxid,0,CScript()));
@@ -2126,7 +2126,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 			if (amount < 0)
 				amount = 0;
 			
-			if (AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE+amount, 60, pk.IsValid()) >= txfee+CC_MARKER_VALUE+amount) // vin.0 to vin.4+*: normal input
+			if (AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE+amount, 60, pk.IsValid()) > 0) // vin.0 to vin.4+*: normal input
 			{
 				// vin.1: CC input from offer vout.0 
 				mtx.vin.push_back(CTxIn(offertxid,0,CScript()));
@@ -2172,7 +2172,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 			if (amount < 0)
 				amount = 0;
 			
-			if (AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE+amount, 60, pk.IsValid()) >= txfee+CC_MARKER_VALUE+amount) // vin.0 to vin.4+*: normal input
+			if (AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE+amount, 60, pk.IsValid()) > 0) // vin.0 to vin.4+*: normal input
 			{
 				// vin.1: CC input from offer vout.0 
 				mtx.vin.push_back(CTxIn(offertxid,0,CScript()));
@@ -2220,7 +2220,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 	// No AOF_AMENDMENT means we're creating a new agreement.
 	opret = EncodeAgreementAcceptOpRet(AGREEMENTCC_VERSION,offertxid);
 			
-	if (AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE+deposit+payment, 60, pk.IsValid()) >= txfee+CC_MARKER_VALUE+deposit+payment) // vin.0 to vin.2+*: normal input
+	if (AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE+deposit+payment, 60, pk.IsValid()) > 0) // vin.0 to vin.2+*: normal input
 	{
 		// vin.1: CC input from offer vout.0 
 		mtx.vin.push_back(CTxIn(offertxid,0,CScript()));
@@ -2342,7 +2342,7 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 	
 	opret = EncodeAgreementDisputeOpRet(AGREEMENTCC_VERSION,agreementtxid,std::vector<uint8_t>(mypk.begin(),mypk.end()),disputeflags,disputememo);
 
-	if (AddNormalinputs(mtx, mypk, txfee + disputefee, 60, pk.IsValid()) >= txfee + disputefee) // vin.0 & vin.2+*: normal input
+	if (AddNormalinputs(mtx, mypk, txfee + disputefee, 60, pk.IsValid()) > 0) // vin.0 & vin.2+*: normal input
 	{
 		// vin.1: CC input from latest previous agreement event vout.0
 		mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
@@ -2444,7 +2444,7 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 
 	opret = EncodeAgreementDisputeCancelOpRet(AGREEMENTCC_VERSION,agreementtxid,disputetxid,std::vector<uint8_t>(mypk.begin(),mypk.end()),cancelmemo);
 	
-	if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 60, pk.IsValid()) >= txfee + CC_MARKER_VALUE) // vin.0 & vin.2+*: normal input
+	if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 60, pk.IsValid()) > 0) // vin.0 & vin.2+*: normal input
 	{
 		// vin.1: CC input from latest agreement dispute vout.0 + dispute fee
 		mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
@@ -2556,7 +2556,7 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 
 	opret = EncodeAgreementDisputeResolveOpRet(AGREEMENTCC_VERSION,agreementtxid,disputetxid,claimantpayout,resolutionmemo);
 	
-	if (AddNormalinputs(mtx, mypk, txfee, 60, pk.IsValid()) >= txfee) // vin.0 & vin.3+*: normal input
+	if (AddNormalinputs(mtx, mypk, txfee, 60, pk.IsValid()) > 0) // vin.0 & vin.3+*: normal input
 	{
 		// vin.1: CC input from latest agreement dispute vout.0 + dispute fee
 		mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
@@ -2687,7 +2687,7 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 	
 	opret = EncodeAgreementUnlockOpRet(AGREEMENTCC_VERSION,std::vector<uint8_t>(mypk.begin(),mypk.end()),agreementtxid,unlocktxid);
 
-	if (AddNormalinputs(mtx, mypk, txfee + disputefee, 60, pk.IsValid()) >= txfee + disputefee) // vin.0 & vin.2+*: normal input
+	if (AddNormalinputs(mtx, mypk, txfee + disputefee, 60, pk.IsValid()) > 0) // vin.0 & vin.2+*: normal input
 	{
 		// vin.1: CC input from latest agreement event vout.0
 		mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
