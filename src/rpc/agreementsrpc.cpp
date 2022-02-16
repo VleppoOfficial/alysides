@@ -46,7 +46,7 @@ UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& myp
 extern void Lock2NSPV(const CPubKey &pk);
 extern void Unlock2NSPV(const CPubKey &pk);
 
-UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     UniValue result(UniValue::VOBJ);
 
