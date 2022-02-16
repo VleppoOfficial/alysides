@@ -1511,7 +1511,7 @@ static uint8_t FindLatestAgreementEvent(uint256 agreementtxid, struct CCcontract
 
 // Transaction constructor for agreementcreate rpc.
 // Creates transaction with 'o' function id and unsets AOF_AMENDMENT and AOF_CLOSEEXISTING flags.
-/*UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::vector<uint8_t> destkey, std::string agreementname, std::string agreementmemo, \
+UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::vector<uint8_t> destkey, std::string agreementname, std::string agreementmemo, \
 uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, int64_t disputefee, std::vector<uint8_t> arbkey, std::vector<std::vector<uint8_t>> unlockconds)
 {
 	char str[67];
@@ -1660,10 +1660,10 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	result.push_back(Pair("offer_flags",offerflags));
 		
 	return (result);
-}*/
+}
 
 // OP_RETURN data encoders and decoders for all Agreements transactions.
-CScript EncodeAgreementProposalOpRet(uint8_t version, CPubKey srcpub, CPubKey destpub, std::string agreementname, uint256 agreementhash, int64_t deposit, int64_t payment, uint256 refagreementtxid, bool bNewAgreement, CPubKey arbitratorpub, int64_t disputefee)
+/*CScript EncodeAgreementProposalOpRet(uint8_t version, CPubKey srcpub, CPubKey destpub, std::string agreementname, uint256 agreementhash, int64_t deposit, int64_t payment, uint256 refagreementtxid, bool bNewAgreement, CPubKey arbitratorpub, int64_t disputefee)
 {
 	CScript opret; uint8_t evalcode = EVAL_AGREEMENTS, funcid = 'p';
 	opret << OP_RETURN << E_MARSHAL(ss << evalcode << funcid << version << srcpub << destpub << agreementname << agreementhash << deposit << payment << refagreementtxid << bNewAgreement << arbitratorpub << disputefee);
@@ -1739,7 +1739,7 @@ UniValue AgreementCreate(const CPubKey& pk,uint64_t txfee,CPubKey destpub,std::s
 	}
 
 	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
-}
+}*/
 
 // Transaction constructor for agreementamend rpc.
 // Creates transaction with 'o' function id, sets AOF_AMENDMENT and unsets AOF_CLOSEEXISTING flag.

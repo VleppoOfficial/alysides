@@ -65,9 +65,9 @@ enum EAgreementTxSearchFlags
 /// @returns true if transaction is valid, otherwise false or calls eval->Invalid().
 bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
 
-UniValue AgreementCreate(const CPubKey& pk,uint64_t txfee,CPubKey destpub,std::string agreementname,uint256 agreementhash,int64_t deposit,CPubKey arbitratorpub,int64_t disputefee,uint256 refagreementtxid,int64_t payment);
+//UniValue AgreementCreate(const CPubKey& pk,uint64_t txfee,CPubKey destpub,std::string agreementname,uint256 agreementhash,int64_t deposit,CPubKey arbitratorpub,int64_t disputefee,uint256 refagreementtxid,int64_t payment);
 
-//UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::vector<uint8_t> destkey, std::string agreementname, std::string agreementmemo, \
+UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::vector<uint8_t> destkey, std::string agreementname, std::string agreementmemo, \
 uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, int64_t disputefee, std::vector<uint8_t> arbkey, std::vector<std::vector<uint8_t>> unlockconds);
 UniValue AgreementAmend(const CPubKey& pk, uint64_t txfee, uint256 prevagreementtxid, std::string agreementname, std::string agreementmemo, \
 uint8_t offerflags, int64_t deposit, int64_t payment, int64_t disputefee, std::vector<uint8_t> arbkey, std::vector<std::vector<uint8_t>> unlockconds);
