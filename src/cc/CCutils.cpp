@@ -492,7 +492,7 @@ bool ConstrainVout(CTxOut vout, int32_t CCflag, char *cmpaddr, int64_t nValue)
         return(false);
     }
     std::cerr << "ConstrainVout true" << std::endl;
-    else return(true);
+    /*else*/ return(true);
 }
 
 // validate cc or normal vout address and value
