@@ -57,8 +57,8 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
     if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
     
-    //if (!EnsureWalletIsAvailable(false))
-    //    throw runtime_error("wallet is required");
+    if (!EnsureWalletIsAvailable(false))
+        throw runtime_error("wallet is required");
     //CONDITIONAL_LOCK2(cs_main, pwalletMain->cs_wallet, !remotepk.IsValid());
     //LOCK2(cs_main, pwalletMain->cs_wallet);  // remote call not supported yet
 
