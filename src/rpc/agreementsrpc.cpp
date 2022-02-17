@@ -63,11 +63,11 @@ UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk
 
     std::string agreementname = params[1].get_str();
     if (agreementname.size() == 0 || agreementname.size() > AGREEMENTCC_MAX_NAME_SIZE)
-        return MakeResultError("Agreement name must be up to "+std::to_string(AGREEMENTCC_MAX_NAME_SIZE)+" characters");
+        return MakeResultError("Agreement name must not be empty and be up to "+std::to_string(AGREEMENTCC_MAX_NAME_SIZE)+" characters");
     
     std::string agreementmemo = params[2].get_str();
     if (agreementmemo.size() == 0 || agreementmemo.size() > AGREEMENTCC_MAX_MEMO_SIZE)
-        return MakeResultError("Agreement memo must be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
+        return MakeResultError("Agreement memo must not be empty and be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
     
     CAmount deposit = AmountFromValue(params[3]);
     if (deposit <= 0)
@@ -150,11 +150,11 @@ UniValue agreementamend(const UniValue& params, bool fHelp, const CPubKey& mypk)
     
     std::string agreementname = params[1].get_str();
     if (agreementname.size() == 0 || agreementname.size() > AGREEMENTCC_MAX_NAME_SIZE)
-        return MakeResultError("New agreement name must be up to "+std::to_string(AGREEMENTCC_MAX_NAME_SIZE)+" characters");
+        return MakeResultError("New agreement name must not be empty and be up to "+std::to_string(AGREEMENTCC_MAX_NAME_SIZE)+" characters");
     
     std::string agreementmemo = params[2].get_str();
     if (agreementmemo.size() == 0 || agreementmemo.size() > AGREEMENTCC_MAX_MEMO_SIZE)
-        return MakeResultError("New agreement memo must be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
+        return MakeResultError("New agreement memo must not be empty and be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
     
     CAmount deposit = AmountFromValue(params[3]);
     if (deposit <= 0)
@@ -232,11 +232,11 @@ UniValue agreementclose(const UniValue& params, bool fHelp, const CPubKey& mypk)
     
     std::string agreementname = params[1].get_str();
     if (agreementname.size() == 0 || agreementname.size() > AGREEMENTCC_MAX_NAME_SIZE)
-        return MakeResultError("New agreement name must be up to "+std::to_string(AGREEMENTCC_MAX_NAME_SIZE)+" characters");
+        return MakeResultError("New agreement name must not be empty and be up to "+std::to_string(AGREEMENTCC_MAX_NAME_SIZE)+" characters");
     
     std::string agreementmemo = params[2].get_str();
     if (agreementmemo.size() == 0 || agreementmemo.size() > AGREEMENTCC_MAX_MEMO_SIZE)
-        return MakeResultError("New agreement memo must be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
+        return MakeResultError("New agreement memo must not be empty and be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
     
     CAmount payment = AmountFromValue(params[3]);
     if (payment < 0)

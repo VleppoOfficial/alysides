@@ -2076,7 +2076,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 		if (myGetTransactionCCV2(cp,prevagreementtxid,prevagreementtx,hashBlock) == 0 || prevagreementtx.vout.size() == 0 ||
 		DecodeAgreementOpRet(prevagreementtx.vout.back().scriptPubKey) != 'c')
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Previous agreement transaction not found or is invalid");
-		else if (hashBlock.IsNull()) // NOTE: not sure if agreement still being in mempool can happen at this stage but doesn't hurt to check anyway
+		else if (hashBlock.IsNull())
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Previous agreement transaction is still in mempool");
 		
 		// Make sure previous agreement is not closed, amended or suspended. 
@@ -2128,6 +2128,8 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 				// vin.3: deposit from previous agreement
 				mtx.vin.push_back(CTxIn(prevagreementtxid,1,CScript()));
 				CCaddr1of2set(cp,Agreementspk,prevoffertxidpk,cp->CCpriv,preveventCCaddress);
+				CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,prevoffertxidpk));
+				CCAddVintxCond(cp,cond,cp->CCpriv); 
 
 				// vout.0: normal payment to offer's srckey (if specified payment > 0)
 				if (payment > 0)
