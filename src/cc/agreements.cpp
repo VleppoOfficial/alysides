@@ -782,7 +782,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 						// For accept transactions, make sure this is actually our previous agreement transaction.
 						case 'c':
 							if (tx.vin[2].prevout.hash != prevagreementtxid)
-								return eval->Invalid("Accept transaction is attempting to spend a previous event that references the wrong previous agreement!");
+								return eval->Invalid("Accept transaction is attempting to spend a previous event that is the wrong previous agreement!");
 							break;
 						// For dispute cancel transactions, make sure they're referencing the same agreement as our own offer.
 						case 'x':
@@ -930,7 +930,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					// For accept transactions, make sure this is actually our previous agreement transaction.
 					case 'c':
 						if (tx.vin[2].prevout.hash != agreementtxid)
-							return eval->Invalid("Agreement closure transaction is attempting to spend a previous event that references the wrong previous agreement!");
+							return eval->Invalid("Agreement closure transaction is attempting to spend a previous event that is the wrong previous agreement!");
 						break;
 					// For dispute cancel transactions, make sure they're referencing the same agreement as our own offer.
 					case 'x':
@@ -1044,8 +1044,10 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 						return eval->Invalid("Dispute transaction is attempting to spend an invalid previous event!");
 					// For accept transactions, make sure this is actually our previous agreement transaction.
 					case 'c':
+						std::cerr << "prevtxid: "+tx.vin[1].prevout.hash.GetHex()+"" << std::endl;
+						std::cerr << "agreementtxid: "+agreementtxid.GetHex()+"" << std::endl;
 						if (tx.vin[1].prevout.hash != agreementtxid)
-							return eval->Invalid("Dispute transaction is attempting to spend a previous event that references the wrong agreement!");
+							return eval->Invalid("Dispute transaction is attempting to spend a previous event that is the wrong agreement!");
 						break;
 					// For dispute cancel transactions, make sure they're referencing the same agreement as our own offer.
 					case 'x':
@@ -1398,7 +1400,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					// For accept transactions, make sure this is actually our previous agreement transaction.
 					case 'c':
 						if (tx.vin[1].prevout.hash != agreementtxid)
-							return eval->Invalid("Unlock transaction is attempting to spend a previous event that references the wrong previous agreement!");
+							return eval->Invalid("Unlock transaction is attempting to spend a previous event that is the wrong previous agreement!");
 						break;
 					// For dispute cancel transactions, make sure they're referencing the same agreement as our own offer.
 					case 'x':
