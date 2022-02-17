@@ -2309,7 +2309,7 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Disputes are disabled for this agreement");
 
 	// Check if mypk is eligible to accept this offer.
-	else if (mypk != COfferorPubkey || mypk != CSignerPubkey)
+	else if (mypk != COfferorPubkey && mypk != CSignerPubkey)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Your pubkey is not eligible for opening a dispute for this agreement");
 	
 	// Determine who the defendant is.
