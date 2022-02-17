@@ -771,7 +771,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 
 					// Find the previous transaction from vin.2, extract its data.
 					if (!(eval->GetTxConfirmed(tx.vin[2].prevout.hash,prevTx,blockIdx)) || !(blockIdx.IsValid()) || prevTx.vout.size() == 0 || 
-					(preveventfuncid = DecodeAgreementOpRet(prevTx.vout.back().scriptPubKey)) != 0)
+					(preveventfuncid = DecodeAgreementOpRet(prevTx.vout.back().scriptPubKey)) == 0)
 						return eval->Invalid("Accept transaction has invalid or unconfirmed previous agreement event transaction!");
 					
 					switch (preveventfuncid)
@@ -919,7 +919,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// vin.2: CC input from latest agreement event vout.0
 				// Find the previous transaction from vin.2, extract its data.
 				if (!(eval->GetTxConfirmed(tx.vin[2].prevout.hash,prevTx,blockIdx)) || !(blockIdx.IsValid()) || prevTx.vout.size() == 0 || 
-				(preveventfuncid = DecodeAgreementOpRet(prevTx.vout.back().scriptPubKey)) != 0)
+				(preveventfuncid = DecodeAgreementOpRet(prevTx.vout.back().scriptPubKey)) == 0)
 					return eval->Invalid("Agreement closure transaction has invalid or unconfirmed previous agreement event transaction!");
 					
 				switch (preveventfuncid)
@@ -1034,7 +1034,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// vin.1: CC input from latest agreement event vout.0
 				// Find the previous transaction from vin.1, extract its data.
 				if (!(eval->GetTxConfirmed(tx.vin[1].prevout.hash,prevTx,blockIdx)) || !(blockIdx.IsValid()) || prevTx.vout.size() == 0 || 
-				(preveventfuncid = DecodeAgreementOpRet(prevTx.vout.back().scriptPubKey)) != 0)
+				(preveventfuncid = DecodeAgreementOpRet(prevTx.vout.back().scriptPubKey)) == 0)
 					return eval->Invalid("Dispute transaction has invalid or unconfirmed previous agreement event transaction!");
 				
 				switch (preveventfuncid)
@@ -1387,7 +1387,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// vin.1: CC input from latest agreement event vout.0
 				// Find the previous transaction from vin.1, extract its data.
 				else if (!(eval->GetTxConfirmed(tx.vin[1].prevout.hash,prevTx,blockIdx)) || !(blockIdx.IsValid()) || prevTx.vout.size() == 0 || 
-				(preveventfuncid = DecodeAgreementOpRet(prevTx.vout.back().scriptPubKey)) != 0)
+				(preveventfuncid = DecodeAgreementOpRet(prevTx.vout.back().scriptPubKey)) == 0)
 					return eval->Invalid("Unlock transaction has invalid or unconfirmed previous agreement event transaction!");
 					
 				switch (preveventfuncid)
