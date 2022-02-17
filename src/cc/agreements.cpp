@@ -1044,7 +1044,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 						return eval->Invalid("Dispute transaction is attempting to spend an invalid previous event!");
 					// For accept transactions, make sure this is actually our previous agreement transaction.
 					case 'c':
-						if (tx.vin[2].prevout.hash != agreementtxid)
+						if (tx.vin[1].prevout.hash != agreementtxid)
 							return eval->Invalid("Dispute transaction is attempting to spend a previous event that references the wrong agreement!");
 						break;
 					// For dispute cancel transactions, make sure they're referencing the same agreement as our own offer.
@@ -2366,6 +2366,7 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 
 	result.push_back(Pair("reference_agreement",agreementtxid.GetHex()));
 
+	result.push_back(Pair("dispute_memo",disputememo));
 	result.push_back(Pair("dispute_flags",disputeflags));
 
 	return (result);
