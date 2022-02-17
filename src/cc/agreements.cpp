@@ -725,7 +725,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 
 				Agreementspk = GetUnspendable(cp, NULL);
 				offertxidpk = CCtxidaddr(txidaddr,offertxid);
-				GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk);
+				GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 				Getscriptaddress(srcnormaladdress,CScript() << ParseHex(HexStr(CSourcePubkey)) << OP_CHECKSIG);
 
 				// Checking AOF_AMENDMENT flag.
@@ -746,7 +746,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 						return eval->Invalid("Accept transaction has offer source/destination pubkeys mismatch with offeror/signer pubkeys of previous agreement!");
 
 					prevoffertxidpk = CCtxidaddr(txidaddr,prevoffertxid);
-					GetCCaddress1of2(cp, preveventCCaddress, Agreementspk, prevoffertxidpk);
+					GetCCaddress1of2(cp, preveventCCaddress, Agreementspk, prevoffertxidpk, true);
 				}
 
 				std::cerr << "passed data validation" << std::endl;
@@ -907,7 +907,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Agreement closure transaction has offer source/destination pubkeys mismatch with offeror/signer pubkeys of previous agreement!");
 
 				prevoffertxidpk = CCtxidaddr(txidaddr,prevoffertxid);
-				GetCCaddress1of2(cp, preveventCCaddress, Agreementspk, prevoffertxidpk);
+				GetCCaddress1of2(cp, preveventCCaddress, Agreementspk, prevoffertxidpk, true);
 
 				// Check vout boundaries for agreement creation transactions.
 				if ((payment > 0 && numvouts > 3) || (payment == 0 && numvouts > 2))
@@ -1027,7 +1027,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				
 				Agreementspk = GetUnspendable(cp, NULL);
 				offertxidpk = CCtxidaddr(txidaddr,offertxid);
-				GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk);
+				GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 
 				// Check vout boundaries for agreement dispute transactions.
 				if (numvouts > 3)
@@ -1132,7 +1132,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				
 				Agreementspk = GetUnspendable(cp, NULL);
 				offertxidpk = CCtxidaddr(txidaddr,offertxid);
-				GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk);
+				GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 
 				// Check vout boundaries for agreement dispute transactions.
 				if (numvouts > 3)
@@ -1240,7 +1240,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				
 				Agreementspk = GetUnspendable(cp, NULL);
 				offertxidpk = CCtxidaddr(txidaddr,offertxid);
-				GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk);
+				GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 				Getscriptaddress(claimantnormaladdress,CScript() << ParseHex(HexStr(CClaimantPubkey)) << OP_CHECKSIG);
 				Getscriptaddress(defendantnormaladdress,CScript() << ParseHex(HexStr(CDefendantPubkey)) << OP_CHECKSIG);
 
@@ -1378,7 +1378,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				
 				Agreementspk = GetUnspendable(cp, NULL);
 				offertxidpk = CCtxidaddr(txidaddr,offertxid);
-				GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk);
+				GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 				Getscriptaddress(offerornormaladdress,CScript() << ParseHex(HexStr(COfferorPubkey)) << OP_CHECKSIG);
 				Getscriptaddress(signernormaladdress,CScript() << ParseHex(HexStr(CSignerPubkey)) << OP_CHECKSIG);
 
@@ -1483,7 +1483,7 @@ static uint8_t FindLatestAgreementEvent(uint256 agreementtxid, struct CCcontract
 		// This address can be constructed out of the Agreements global pubkey and the prevoffertxid-pubkey using CCtxidaddr.
 		Agreementspk = GetUnspendable(cp, NULL);
 		offertxidpk = CCtxidaddr(txidaddr,offertxid);
-		GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk);
+		GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 		
 		// Iterate through vout0 batons while we're finding valid Agreements transactions that spent the last baton.
 		while ((IsAgreementsvout(cp,sourcetx,0,eventCCaddress) != 0) &&
@@ -2112,7 +2112,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 		// This address can be constructed out of the Agreements global pubkey and the prevoffertxid-pubkey using CCtxidaddr.
 		Agreementspk = GetUnspendable(cp, NULL);
 		prevoffertxidpk = CCtxidaddr(txidaddr,prevoffertxid);
-		GetCCaddress1of2(cp, preveventCCaddress, Agreementspk, prevoffertxidpk);
+		GetCCaddress1of2(cp, preveventCCaddress, Agreementspk, prevoffertxidpk, true);
 		
 		// If AOF_CLOSEEXISTING is also set, it means we're closing the specified agreement.
 		if (offerflags & AOF_CLOSEEXISTING)
@@ -2333,7 +2333,7 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 	// This address can be constructed out of the Agreements global pubkey and the offertxid-pubkey using CCtxidaddr.
 	Agreementspk = GetUnspendable(cp, NULL);
 	offertxidpk = CCtxidaddr(txidaddr,offertxid);
-	GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk);
+	GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 	
 	opret = EncodeAgreementDisputeOpRet(AGREEMENTCC_VERSION,agreementtxid,std::vector<uint8_t>(mypk.begin(),mypk.end()),disputeflags,disputememo);
 
@@ -2434,7 +2434,7 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 	// This address can be constructed out of the Agreements global pubkey and the offertxid-pubkey using CCtxidaddr.
 	Agreementspk = GetUnspendable(cp, NULL);
 	offertxidpk = CCtxidaddr(txidaddr,offertxid);
-	GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk);
+	GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 
 	opret = EncodeAgreementDisputeCancelOpRet(AGREEMENTCC_VERSION,agreementtxid,disputetxid,std::vector<uint8_t>(mypk.begin(),mypk.end()),cancelmemo);
 	
@@ -2545,7 +2545,7 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 	// This address can be constructed out of the Agreements global pubkey and the offertxid-pubkey using CCtxidaddr.
 	Agreementspk = GetUnspendable(cp, NULL);
 	offertxidpk = CCtxidaddr(txidaddr,offertxid);
-	GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk);
+	GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 
 	opret = EncodeAgreementDisputeResolveOpRet(AGREEMENTCC_VERSION,agreementtxid,disputetxid,claimantpayout,resolutionmemo);
 	
@@ -2675,7 +2675,7 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 	// This address can be constructed out of the Agreements global pubkey and the offertxid-pubkey using CCtxidaddr.
 	Agreementspk = GetUnspendable(cp, NULL);
 	offertxidpk = CCtxidaddr(txidaddr,offertxid);
-	GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk);
+	GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 	
 	opret = EncodeAgreementUnlockOpRet(AGREEMENTCC_VERSION,std::vector<uint8_t>(mypk.begin(),mypk.end()),agreementtxid,unlocktxid);
 
@@ -3117,7 +3117,7 @@ UniValue AgreementReferences(const uint256 agreementtxid)
 	struct CCcontract_info *cp,C;
 	cp = CCinit(&C,EVAL_AGREEMENTS);
 
-	GetCCaddress(cp,AgreementsCCaddr,GetUnspendable(cp, NULL));
+	GetCCaddress(cp,AgreementsCCaddr,GetUnspendable(cp, NULL),true);
 
 	if (myGetTransactionCCV2(cp,agreementtxid,agreementtx,hashBlock) != 0 && (numvouts = agreementtx.vout.size()) > 0 &&
 	DecodeAgreementOpRet(agreementtx.vout[numvouts-1].scriptPubKey) == 'c')
@@ -3160,7 +3160,7 @@ UniValue AgreementList(const uint8_t flags,const uint256 filtertxid,int64_t filt
 	struct CCcontract_info *cp,C;
 	cp = CCinit(&C,EVAL_AGREEMENTS);
 
-	GetCCaddress(cp,AgreementsCCaddr,GetUnspendable(cp, NULL));
+	GetCCaddress(cp,AgreementsCCaddr,GetUnspendable(cp, NULL),true);
 
 	if (flags & ASF_OFFERS)
 	{
