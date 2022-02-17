@@ -2341,6 +2341,8 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 		// vin.1: CC input from latest previous agreement event vout.0
 		mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
 		CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+		CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
+		CCAddVintxCond(cp,cond,cp->CCpriv); 
 		
 		// vout.0: CC event logger w/ dispute fee to global pubkey / offertxid-pubkey 1of2 CC address
 		mtx.vout.push_back(MakeCC1of2voutMixed(cp->evalcode, disputefee, Agreementspk, offertxidpk));
@@ -2442,6 +2444,8 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 		// vin.1: CC input from latest agreement dispute vout.0 + dispute fee
 		mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
 		CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+		CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
+		CCAddVintxCond(cp,cond,cp->CCpriv); 
 		
 		// vout.0: CC event logger to global pubkey / offertxid-pubkey 1of2 CC address
 		mtx.vout.push_back(MakeCC1of2voutMixed(cp->evalcode, CC_MARKER_VALUE, Agreementspk, offertxidpk));
@@ -2555,6 +2559,8 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 		// vin.2: deposit from agreement
 		mtx.vin.push_back(CTxIn(agreementtxid,1,CScript()));
 		CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+		CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
+		CCAddVintxCond(cp,cond,cp->CCpriv); 
 		
 		// vout.0: normal payout to dispute's claimant (if specified payout > 0)
 		if (claimantpayout > 0)
@@ -2685,6 +2691,8 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 		// vin.2: deposit from agreement
 		mtx.vin.push_back(CTxIn(agreementtxid,1,CScript()));
 		CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+		CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
+		CCAddVintxCond(cp,cond,cp->CCpriv); 
 		
 		// vout.0: normal payout to agreement offeror (if specified payout > 0)
 		if (offerorpayout > 0)
