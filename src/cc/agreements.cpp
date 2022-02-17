@@ -48,18 +48,16 @@ vout.n-2: normal output for change (if any)
 vout.n-1: OP_RETURN EVAL_AGREEMENTS 'o' version srckey destkey arbkey offerflags refagreementtxid deposit payment disputefee agreementname agreementmemo unlockconds
 
 Offer cancellation:
-vin.0: normal input
-vin.1: CC input from offer vout.0
+vin.0: CC input from offer vout.0
 ...
 vin.n-1: normal input
 vout.n-2: normal output for change (if any)
 vout.n-1: OP_RETURN EVAL_AGREEMENTS 's' version offertxid cancellerkey cancelmemo
 
 Agreement creation:
-vin.0: normal input
-vin.1: CC input from offer vout.0 
-vin.2: CC input from latest previous agreement event vout.0 (if applicable)
-vin.3: deposit from previous agreement (if applicable)
+vin.0: CC input from offer vout.0 
+vin.1: CC input from latest previous agreement event vout.0 (if applicable)
+vin.2: deposit from previous agreement (if applicable)
 ...
 vin.n-1: normal input
 vout.0: CC event logger to global pubkey / offertxid-pubkey 1of2 CC address
@@ -69,10 +67,9 @@ vout.n-2: normal output for change (if any)
 vout.n-1: OP_RETURN EVAL_AGREEMENTS 'c' version offertxid
 
 Agreement closure:
-vin.0: normal input
-vin.1: CC input from offer vout.0
-vin.2: CC input from latest agreement event vout.0
-vin.3: deposit from agreement
+vin.0: CC input from offer vout.0
+vin.1: CC input from latest agreement event vout.0
+vin.2: deposit from agreement
 ...
 vin.n-1: normal input
 vout.0: normal payment to offer's srckey (if specified payment > 0)
@@ -80,18 +77,24 @@ vout.n-2: normal output for change (if any)
 vout.n-1: OP_RETURN EVAL_AGREEMENTS 't' version agreementtxid offertxid offerorpayout
 
 Agreement dispute:
-vin.0: normal input
-vin.1: CC input from latest agreement event vout.0
+vin.0: CC input from latest agreement event vout.0
 ...
 vin.n-1: normal input
 vout.0: CC event logger w/ dispute fee to global pubkey / offertxid-pubkey 1of2 CC address
 vout.n-2: normal output for change (if any)
 vout.n-1: OP_RETURN EVAL_AGREEMENTS 'd' version agreementtxid claimantkey disputeflags disputememo
 
+Agreement dispute cancellation:
+vin.0: CC input from latest agreement dispute vout.0 + dispute fee
+...
+vin.n-1: normal input
+vout.0: CC event logger to global pubkey / offertxid-pubkey 1of2 CC address
+vout.n-2: normal output for change (if any)
+vout.n-1: OP_RETURN EVAL_AGREEMENTS 'x' version agreementtxid disputetxid cancellerkey cancelmemo
+
 Agreement dispute resolution:
-vin.0: normal input
-vin.1: CC input from latest agreement dispute vout.0 + dispute fee
-vin.2: deposit from agreement
+vin.0: CC input from latest agreement dispute vout.0 + dispute fee
+vin.1: deposit from agreement
 ...
 vin.n-1: normal input
 vout.0: normal payout to dispute's claimant (if specified payout > 0)
@@ -100,9 +103,10 @@ vout.n-2: normal output for change (if any) and collected dispute fee
 vout.n-1: OP_RETURN EVAL_AGREEMENTS 'r' version agreementtxid disputetxid claimantpayout memo
 
 Agreement unlock (TBD):
-vin.0: normal input
-vin.1: CC input from latest agreement event vout.0
-vin.2: deposit from agreement
+vin.0: CC input from latest agreement event vout.0
+vin.1: deposit from agreement
+...
+vin.n-1: normal input
 vout.0: normal payout to agreement offeror (if specified payout > 0)
 vout.1: normal payout to agreement signer (if specified payout > 0)
 vout.2: normal output for change (if any)
@@ -591,8 +595,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 			
 			case 's':
 				// Offer cancellation:
-				// vin.0: normal input
-				// vin.1: CC input from offer vout.0
+				// vin.0: CC input from offer vout.0
 				// ...
 				// vin.n-1: normal input
 				// vout.n-2: normal output for change (if any)
@@ -638,18 +641,14 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// Check vout boundaries for offer cancel transactions.
 				if (numvouts > 2)
 					return eval->Invalid("Too many vouts for 's' type transaction!");
-
-				// Verify that vin.0 is a normal input.
-				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
-					return eval->Invalid("vin.0 must be normal input!");
-
-				// vin.1: CC input from offer vout.0
-				// Verify that vin.1 was signed correctly.
-				else if (ValidateAgreementsVin(cp,eval,tx,1,1,0,offertxid,globalCCaddress,CC_MARKER_VALUE) == 0)
+				
+				// vin.0: CC input from offer vout.0
+				// Verify that vin.0 was signed correctly.
+				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,offertxid,globalCCaddress,CC_MARKER_VALUE) == 0)
 					return (false);
 
 				// Offer cancels shouldn't have any additional CC inputs.
-				else if (ValidateNormalVins(eval,tx,2) == 0)
+				else if (ValidateNormalVins(eval,tx,1) == 0)
 					return (false);
 				
 				// Offer cancels shouldn't have any CC outputs.
@@ -660,10 +659,9 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 			
 			case 'c':
 				// Agreement creation:
-				// vin.0: normal input
-				// vin.1: CC input from offer vout.0 
-				// vin.2: CC input from latest previous agreement event vout.0 (if applicable)
-				// vin.3: deposit from previous agreement (if applicable)
+				// vin.0: CC input from offer vout.0 
+				// vin.1: CC input from latest previous agreement event vout.0 (if applicable)
+				// vin.2: deposit from previous agreement (if applicable)
 				// ...
 				// vin.n-1: normal input
 				// vout.0: CC event logger to global pubkey / offertxid-pubkey 1of2 CC address
@@ -750,27 +748,23 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// Check vout boundaries for agreement creation transactions.
 				if ((payment > 0 && numvouts > 5) || (payment == 0 && numvouts > 4))
 					return eval->Invalid("Invalid number of vouts for 'c' type transaction!");
-
-				// Verify that vin.0 is a normal input.
-				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
-					return eval->Invalid("vin.0 must be normal input!");
-
-				// vin.1: CC input from offer vout.0
-				// Verify that vin.1 was signed correctly.
-				else if (ValidateAgreementsVin(cp,eval,tx,1,1,0,offertxid,globalCCaddress,CC_MARKER_VALUE) == 0)
+				
+				// vin.0: CC input from offer vout.0
+				// Verify that vin.0 was signed correctly.
+				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,offertxid,globalCCaddress,CC_MARKER_VALUE) == 0)
 					return (false);
 
 				// If AOF_AMENDMENT is set, we need to do additional checking on the previous agreement and its events.
 				if (offerflags & AOF_AMENDMENT)
 				{
-					// vin.2: CC input from latest previous agreement event vout.0 (if applicable)
+					// vin.1: CC input from latest previous agreement event vout.0 (if applicable)
 					// In order to figure out if we're allowed to spend the previous agreement deposit, we need to make sure that we're spending an
 					// event that doesn't terminate agreements, and that event is also referencing the same agreementtxid as our own offer we're
 					// trying to accept. Since FindLatestAgreementEvent isn't safe for use in consensus code, we'll need to rely on built-in double
 					// spend protection and assume that the latest event will always be unspent, and previous events are always spent.
 
-					// Find the previous transaction from vin.2, extract its data.
-					if (!(eval->GetTxConfirmed(tx.vin[2].prevout.hash,prevTx,blockIdx)) || !(blockIdx.IsValid()) || prevTx.vout.size() == 0 || 
+					// Find the previous transaction from vin.1, extract its data.
+					if (!(eval->GetTxConfirmed(tx.vin[1].prevout.hash,prevTx,blockIdx)) || !(blockIdx.IsValid()) || prevTx.vout.size() == 0 || 
 					(preveventfuncid = DecodeAgreementOpRet(prevTx.vout.back().scriptPubKey)) == 0)
 						return eval->Invalid("Accept transaction has invalid or unconfirmed previous agreement event transaction!");
 					
@@ -781,7 +775,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 							return eval->Invalid("Accept transaction is attempting to spend an invalid previous event!");
 						// For accept transactions, make sure this is actually our previous agreement transaction.
 						case 'c':
-							if (tx.vin[2].prevout.hash != prevagreementtxid)
+							if (tx.vin[1].prevout.hash != prevagreementtxid)
 								return eval->Invalid("Accept transaction is attempting to spend a previous event that is the wrong previous agreement!");
 							break;
 						// For dispute cancel transactions, make sure they're referencing the same agreement as our own offer.
@@ -791,18 +785,18 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 								return eval->Invalid("Accept transaction is attempting to spend a previous event that references the wrong previous agreement!");
 							break;
 					}
-					if (ValidateAgreementsVin(cp,eval,tx,1,2,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == 0)
+					if (ValidateAgreementsVin(cp,eval,tx,1,1,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == 0)
 						return (false);
 				
-					// vin.3: deposit from previous agreement (if applicable)
-					else if (ValidateAgreementsVin(cp,eval,tx,1,3,1,prevagreementtxid,globalCCaddress,prevdeposit) == 0)
+					// vin.2: deposit from previous agreement (if applicable)
+					else if (ValidateAgreementsVin(cp,eval,tx,1,2,1,prevagreementtxid,globalCCaddress,prevdeposit) == 0)
 						return (false);
 					
-					else if (ValidateNormalVins(eval,tx,4) == 0)
+					else if (ValidateNormalVins(eval,tx,3) == 0)
 						return (false);
 				}
 				// Accept transactions shouldn't have any additional CC inputs.
-				else if (ValidateNormalVins(eval,tx,2) == 0)
+				else if (ValidateNormalVins(eval,tx,1) == 0)
 					return (false);
 				
 				// vout.0: CC event logger to global pubkey / offertxid-pubkey 1of2 CC address
@@ -823,10 +817,9 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 			
 			case 't':
 				// Agreement closure:
-				// vin.0: normal input
-				// vin.1: CC input from offer vout.0
-				// vin.2: CC input from latest agreement event vout.0
-				// vin.3: deposit from agreement
+				// vin.0: CC input from offer vout.0
+				// vin.1: CC input from latest agreement event vout.0
+				// vin.2: deposit from agreement
 				// ...
 				// vin.n-1: normal input
 				// vout.0: normal payment to offer's srckey (if specified payment > 0)
@@ -907,18 +900,14 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				if ((payment > 0 && numvouts > 3) || (payment == 0 && numvouts > 2))
 					return eval->Invalid("Invalid number of vouts for 't' type transaction!");
 
-				// Verify that vin.0 is a normal input.
-				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
-					return eval->Invalid("vin.0 must be normal input!");
-
-				// vin.1: CC input from offer vout.0
-				// Verify that vin.1 was signed correctly.
-				else if (ValidateAgreementsVin(cp,eval,tx,1,1,0,offertxid,globalCCaddress,CC_MARKER_VALUE) == 0)
+				// vin.0: CC input from offer vout.0
+				// Verify that vin.0 was signed correctly.
+				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,offertxid,globalCCaddress,CC_MARKER_VALUE) == 0)
 					return (false);
 
-				// vin.2: CC input from latest agreement event vout.0
-				// Find the previous transaction from vin.2, extract its data.
-				if (!(eval->GetTxConfirmed(tx.vin[2].prevout.hash,prevTx,blockIdx)) || !(blockIdx.IsValid()) || prevTx.vout.size() == 0 || 
+				// vin.1: CC input from latest agreement event vout.0
+				// Find the previous transaction from vin.1, extract its data.
+				if (!(eval->GetTxConfirmed(tx.vin[1].prevout.hash,prevTx,blockIdx)) || !(blockIdx.IsValid()) || prevTx.vout.size() == 0 || 
 				(preveventfuncid = DecodeAgreementOpRet(prevTx.vout.back().scriptPubKey)) == 0)
 					return eval->Invalid("Agreement closure transaction has invalid or unconfirmed previous agreement event transaction!");
 					
@@ -929,7 +918,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 						return eval->Invalid("Agreement closure transaction is attempting to spend an invalid previous event!");
 					// For accept transactions, make sure this is actually our previous agreement transaction.
 					case 'c':
-						if (tx.vin[2].prevout.hash != agreementtxid)
+						if (tx.vin[1].prevout.hash != agreementtxid)
 							return eval->Invalid("Agreement closure transaction is attempting to spend a previous event that is the wrong previous agreement!");
 						break;
 					// For dispute cancel transactions, make sure they're referencing the same agreement as our own offer.
@@ -939,15 +928,15 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 							return eval->Invalid("Agreement closure transaction is attempting to spend a previous event that references the wrong previous agreement!");
 						break;
 				}
-				if (ValidateAgreementsVin(cp,eval,tx,1,2,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == 0)
+				if (ValidateAgreementsVin(cp,eval,tx,1,1,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == 0)
 					return (false);
 			
-				// vin.3: deposit from agreement
-				else if (ValidateAgreementsVin(cp,eval,tx,1,3,1,agreementtxid,globalCCaddress,prevdeposit) == 0)
+				// vin.2: deposit from agreement
+				else if (ValidateAgreementsVin(cp,eval,tx,1,2,1,agreementtxid,globalCCaddress,prevdeposit) == 0)
 					return (false);
 				
 				// Agreement closure transactions shouldn't have any additional CC inputs.
-				else if (ValidateNormalVins(eval,tx,4) == 0)
+				else if (ValidateNormalVins(eval,tx,3) == 0)
 					return (false);
 				
 				// vout.0: normal payment to offer's srckey (if specified payment > 0)
@@ -959,8 +948,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 
 			case 'd':
 				// Agreement dispute:
-				// vin.0: normal input
-				// vin.1: CC input from latest agreement event vout.0
+				// vin.0: CC input from latest agreement event vout.0
 				// ...
 				// vin.n-1: normal input
 				// vout.0: CC event logger w/ dispute fee to global pubkey / offertxid-pubkey 1of2 CC address
@@ -1026,14 +1014,10 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// Check vout boundaries for agreement dispute transactions.
 				if (numvouts > 3)
 					return eval->Invalid("Invalid number of vouts for 'd' type transaction!");
-
-				// Verify that vin.0 is a normal input.
-				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
-					return eval->Invalid("vin.0 must be normal input!");
-
-				// vin.1: CC input from latest agreement event vout.0
-				// Find the previous transaction from vin.1, extract its data.
-				if (!(eval->GetTxConfirmed(tx.vin[1].prevout.hash,prevTx,blockIdx)) || !(blockIdx.IsValid()) || prevTx.vout.size() == 0 || 
+				
+				// vin.0: CC input from latest agreement event vout.0
+				// Find the previous transaction from vin.0, extract its data.
+				if (!(eval->GetTxConfirmed(tx.vin[0].prevout.hash,prevTx,blockIdx)) || !(blockIdx.IsValid()) || prevTx.vout.size() == 0 || 
 				(preveventfuncid = DecodeAgreementOpRet(prevTx.vout.back().scriptPubKey)) == 0)
 					return eval->Invalid("Dispute transaction has invalid or unconfirmed previous agreement event transaction!");
 				
@@ -1044,9 +1028,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 						return eval->Invalid("Dispute transaction is attempting to spend an invalid previous event!");
 					// For accept transactions, make sure this is actually our previous agreement transaction.
 					case 'c':
-						std::cerr << "prevtxid: "+tx.vin[1].prevout.hash.GetHex()+"" << std::endl;
-						std::cerr << "agreementtxid: "+agreementtxid.GetHex()+"" << std::endl;
-						if (tx.vin[1].prevout.hash != agreementtxid)
+						if (tx.vin[0].prevout.hash != agreementtxid)
 							return eval->Invalid("Dispute transaction is attempting to spend a previous event that is the wrong agreement!");
 						break;
 					// For dispute cancel transactions, make sure they're referencing the same agreement as our own offer.
@@ -1056,11 +1038,11 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 							return eval->Invalid("Dispute transaction is attempting to spend a previous event that references the wrong agreement!");
 						break;
 				}
-				if (ValidateAgreementsVin(cp,eval,tx,1,1,0,zeroid,eventCCaddress,CC_MARKER_VALUE) == 0)
+				if (ValidateAgreementsVin(cp,eval,tx,1,0,0,zeroid,eventCCaddress,CC_MARKER_VALUE) == 0)
 					return (false);
 				
 				// Agreement dispute transactions shouldn't have any additional CC inputs.
-				else if (ValidateNormalVins(eval,tx,2) == 0)
+				else if (ValidateNormalVins(eval,tx,1) == 0)
 					return (false);
 				
 				// vout.0: CC event logger w/ dispute fee to global pubkey / offertxid-pubkey 1of2 CC address
@@ -1071,8 +1053,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 
 			case 'x':
 				// Agreement dispute cancellation:
-				// vin.0: normal input
-				// vin.1: CC input from latest agreement dispute vout.0 + dispute fee
+				// vin.0: CC input from latest agreement dispute vout.0 + dispute fee
 				// ...
 				// vin.n-1: normal input
 				// vout.0: CC event logger to global pubkey / offertxid-pubkey 1of2 CC address
@@ -1134,17 +1115,13 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				if (numvouts > 3)
 					return eval->Invalid("Invalid number of vouts for 'x' type transaction!");
 
-				// Verify that vin.0 is a normal input.
-				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
-					return eval->Invalid("vin.0 must be normal input!");
-
-				// vin.1: CC input from latest agreement event vout.0 + disputefee
+				// vin.0: CC input from latest agreement event vout.0 + disputefee
 				// For dispute cancels, we need to make sure that the previous agreement event is in fact the referenced dispute.
-				else if (ValidateAgreementsVin(cp,eval,tx,1,1,0,disputetxid,eventCCaddress,disputefee) == 0)
+				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,disputetxid,eventCCaddress,disputefee) == 0)
 					return (false);
 				
 				// Agreement dispute transactions shouldn't have any additional CC inputs.
-				else if (ValidateNormalVins(eval,tx,2) == 0)
+				else if (ValidateNormalVins(eval,tx,1) == 0)
 					return (false);
 				
 				// vout.0: CC event logger to global pubkey / offertxid-pubkey 1of2 CC address
@@ -1155,9 +1132,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 
 			case 'r':
 				// Agreement dispute resolution:
-				// vin.0: normal input
-				// vin.1: CC input from latest agreement dispute vout.0 + dispute fee
-				// vin.2: deposit from agreement
+				// vin.0: CC input from latest agreement dispute vout.0 + dispute fee
+				// vin.1: deposit from agreement
 				// ...
 				// vin.n-1: normal input
 				// vout.0: normal payout to dispute's claimant (if specified payout > 0)
@@ -1243,22 +1219,18 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// Check vout boundaries for agreement dispute resolution transactions.
 				if (((claimantpayout == 0 || defendantpayout == 0) && numvouts > 3) || ((claimantpayout > 0 && defendantpayout > 0) && numvouts > 4))
 					return eval->Invalid("Invalid number of vouts for 'r' type transaction!");
-
-				// Verify that vin.0 is a normal input.
-				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
-					return eval->Invalid("vin.0 must be normal input!");
-
-				// vin.1: CC input from latest agreement event vout.0 + disputefee
+				
+				// vin.0: CC input from latest agreement event vout.0 + disputefee
 				// For dispute resolutions, we need to make sure that the previous agreement event is in fact the referenced dispute.
-				else if (ValidateAgreementsVin(cp,eval,tx,1,1,0,disputetxid,eventCCaddress,disputefee) == 0)
+				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,disputetxid,eventCCaddress,disputefee) == 0)
 					return (false);
 				
-				// vin.2: deposit from agreement
-				else if (ValidateAgreementsVin(cp,eval,tx,1,3,1,agreementtxid,globalCCaddress,deposit) == 0)
+				// vin.1: deposit from agreement
+				else if (ValidateAgreementsVin(cp,eval,tx,1,1,1,agreementtxid,globalCCaddress,deposit) == 0)
 					return (false);
 				
 				// Agreement dispute resolution transactions shouldn't have any additional CC inputs.
-				else if (ValidateNormalVins(eval,tx,4) == 0)
+				else if (ValidateNormalVins(eval,tx,2) == 0)
 					return (false);
 				
 				if (claimantpayout > 0)
@@ -1283,9 +1255,10 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 			
 			case 'u':
 				// Agreement unlock:
-				// vin.0: normal input
-				// vin.1: CC input from latest agreement event vout.0
-				// vin.2: deposit from agreement
+				// vin.0: CC input from latest agreement event vout.0
+				// vin.1: deposit from agreement
+				// ...
+				// vin.n-1: normal input
 				// vout.0: normal payout to agreement offeror (if specified payout > 0)
 				// vout.1: normal payout to agreement signer (if specified payout > 0)
 				// vout.2: normal output for change (if any)
@@ -1382,13 +1355,9 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				if (((offerorpayout == 0 || signerpayout == 0) && numvouts > 3) || ((offerorpayout > 0 && signerpayout > 0) && numvouts > 4))
 					return eval->Invalid("Invalid number of vouts for 'u' type transaction!");
 
-				// Verify that vin.0 is a normal input.
-				else if (IsCCInput(tx.vin[0].scriptSig) != 0)
-					return eval->Invalid("vin.0 must be normal input!");
-
-				// vin.1: CC input from latest agreement event vout.0
-				// Find the previous transaction from vin.1, extract its data.
-				else if (!(eval->GetTxConfirmed(tx.vin[1].prevout.hash,prevTx,blockIdx)) || !(blockIdx.IsValid()) || prevTx.vout.size() == 0 || 
+				// vin.0: CC input from latest agreement event vout.0
+				// Find the previous transaction from vin.0, extract its data.
+				else if (!(eval->GetTxConfirmed(tx.vin[0].prevout.hash,prevTx,blockIdx)) || !(blockIdx.IsValid()) || prevTx.vout.size() == 0 || 
 				(preveventfuncid = DecodeAgreementOpRet(prevTx.vout.back().scriptPubKey)) == 0)
 					return eval->Invalid("Unlock transaction has invalid or unconfirmed previous agreement event transaction!");
 					
@@ -1399,7 +1368,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 						return eval->Invalid("Unlock transaction is attempting to spend an invalid previous event!");
 					// For accept transactions, make sure this is actually our previous agreement transaction.
 					case 'c':
-						if (tx.vin[1].prevout.hash != agreementtxid)
+						if (tx.vin[0].prevout.hash != agreementtxid)
 							return eval->Invalid("Unlock transaction is attempting to spend a previous event that is the wrong previous agreement!");
 						break;
 					// For dispute cancel transactions, make sure they're referencing the same agreement as our own offer.
@@ -1409,15 +1378,15 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 							return eval->Invalid("Unlock transaction is attempting to spend a previous event that references the wrong previous agreement!");
 						break;
 				}
-				if (ValidateAgreementsVin(cp,eval,tx,1,1,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == 0)
+				if (ValidateAgreementsVin(cp,eval,tx,1,0,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == 0)
 					return (false);
 			
 				// vin.2: deposit from agreement
-				else if (ValidateAgreementsVin(cp,eval,tx,1,2,1,agreementtxid,globalCCaddress,deposit) == 0)
+				else if (ValidateAgreementsVin(cp,eval,tx,1,1,1,agreementtxid,globalCCaddress,deposit) == 0)
 					return (false);
 
 				// Agreement unlock transactions shouldn't have any additional CC inputs.
-				else if (ValidateNormalVins(eval,tx,3) == 0)
+				else if (ValidateNormalVins(eval,tx,2) == 0)
 					return (false);
 				
 				if (offerorpayout > 0)
@@ -1985,11 +1954,10 @@ UniValue AgreementStopOffer(const CPubKey& pk,uint64_t txfee,uint256 offertxid,s
 	
 	opret = EncodeAgreementOfferCancelOpRet(AGREEMENTCC_VERSION,offertxid,std::vector<uint8_t>(mypk.begin(),mypk.end()),cancelmemo);
 
-	if (AddNormalinputs(mtx, mypk, txfee, 5, pk.IsValid()) > 0) // vin.0 to vin.2+*: normal input
+	// vin.0: CC input from offer vout.0
+	mtx.vin.push_back(CTxIn(offertxid,0,CScript()));
+	if (AddNormalinputs(mtx, mypk, txfee, 5, pk.IsValid()) > 0) // vin.1+*: normal input
 	{
-		// vin.1: CC input from offer vout.0
-		mtx.vin.push_back(CTxIn(offertxid,0,CScript()));
-		
 		rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
 	}
 	else
@@ -2121,18 +2089,18 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 			if (amount < 0)
 				amount = 0;
 			
-			if (AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE+amount, 60, pk.IsValid()) > 0) // vin.0 to vin.4+*: normal input
+			// vin.0: CC input from offer vout.0 
+			mtx.vin.push_back(CTxIn(offertxid,0,CScript()));
+			// vin.1: CC input from latest previous agreement event vout.0
+			mtx.vin.push_back(CTxIn(preveventtxid,0,CScript()));
+			// vin.2: deposit from previous agreement
+			mtx.vin.push_back(CTxIn(prevagreementtxid,1,CScript()));
+			CCaddr1of2set(cp,Agreementspk,prevoffertxidpk,cp->CCpriv,preveventCCaddress);
+			CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,prevoffertxidpk));
+			CCAddVintxCond(cp,cond,cp->CCpriv); 
+			
+			if (AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE+amount, 60, pk.IsValid()) > 0) // vin.3+*: normal input
 			{
-				// vin.1: CC input from offer vout.0 
-				mtx.vin.push_back(CTxIn(offertxid,0,CScript()));
-				// vin.2: CC input from latest previous agreement event vout.0
-				mtx.vin.push_back(CTxIn(preveventtxid,0,CScript()));
-				// vin.3: deposit from previous agreement
-				mtx.vin.push_back(CTxIn(prevagreementtxid,1,CScript()));
-				CCaddr1of2set(cp,Agreementspk,prevoffertxidpk,cp->CCpriv,preveventCCaddress);
-				CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,prevoffertxidpk));
-				CCAddVintxCond(cp,cond,cp->CCpriv); 
-
 				// vout.0: normal payment to offer's srckey (if specified payment > 0)
 				if (payment > 0)
 					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CSourcePubkey)) << OP_CHECKSIG));
@@ -2168,18 +2136,18 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 			if (amount < 0)
 				amount = 0;
 			
-			if (AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE+amount, 60, pk.IsValid()) > 0) // vin.0 to vin.4+*: normal input
+			// vin.0: CC input from offer vout.0 
+			mtx.vin.push_back(CTxIn(offertxid,0,CScript()));
+			// vin.1: CC input from latest previous agreement event vout.0
+			mtx.vin.push_back(CTxIn(preveventtxid,0,CScript()));
+			// vin.2: deposit from previous agreement
+			mtx.vin.push_back(CTxIn(prevagreementtxid,1,CScript()));
+			CCaddr1of2set(cp,Agreementspk,prevoffertxidpk,cp->CCpriv,preveventCCaddress);
+			CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,prevoffertxidpk));
+			CCAddVintxCond(cp,cond,cp->CCpriv); 
+			
+			if (AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE+amount, 60, pk.IsValid()) > 0) // vin.3+*: normal input
 			{
-				// vin.1: CC input from offer vout.0 
-				mtx.vin.push_back(CTxIn(offertxid,0,CScript()));
-				// vin.2: CC input from latest previous agreement event vout.0
-				mtx.vin.push_back(CTxIn(preveventtxid,0,CScript()));
-				// vin.3: deposit from previous agreement
-				mtx.vin.push_back(CTxIn(prevagreementtxid,1,CScript()));
-				CCaddr1of2set(cp,Agreementspk,prevoffertxidpk,cp->CCpriv,preveventCCaddress);
-				CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,prevoffertxidpk));
-				CCAddVintxCond(cp,cond,cp->CCpriv); 
-				
 				// Constructing a special event 1of2 CC address out of Agreements global pubkey and txid-pubkey created out of accepted offer txid.
 				// This way we avoid cluttering up the UTXO list for the global pubkey, allowing for easier marker management.
 				offertxidpk = CCtxidaddr(txidaddr,offertxid);
@@ -2216,12 +2184,12 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 	}
 	// No AOF_AMENDMENT means we're creating a new agreement.
 	opret = EncodeAgreementAcceptOpRet(AGREEMENTCC_VERSION,offertxid);
-			
-	if (AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE+deposit+payment, 60, pk.IsValid()) > 0) // vin.0 to vin.2+*: normal input
+	
+	// vin.0: CC input from offer vout.0 
+	mtx.vin.push_back(CTxIn(offertxid,0,CScript()));
+	
+	if (AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE+deposit+payment, 60, pk.IsValid()) > 0) // vin.1+*: normal input
 	{
-		// vin.1: CC input from offer vout.0 
-		mtx.vin.push_back(CTxIn(offertxid,0,CScript()));
-		
 		// Constructing a special event 1of2 CC address out of Agreements global pubkey and txid-pubkey created out of accepted offer txid.
 		// This way we avoid cluttering up the UTXO list for the global pubkey, allowing for easier marker management.
 		offertxidpk = CCtxidaddr(txidaddr,offertxid);
@@ -2338,14 +2306,14 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 	
 	opret = EncodeAgreementDisputeOpRet(AGREEMENTCC_VERSION,agreementtxid,std::vector<uint8_t>(mypk.begin(),mypk.end()),disputeflags,disputememo);
 
-	if (AddNormalinputs(mtx, mypk, txfee + disputefee, 60, pk.IsValid()) > 0) // vin.0 & vin.2+*: normal input
+	// vin.0: CC input from latest previous agreement event vout.0
+	mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
+	CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+	CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
+	CCAddVintxCond(cp,cond,cp->CCpriv); 
+	
+	if (AddNormalinputs(mtx, mypk, txfee + disputefee, 60, pk.IsValid()) > 0) // vin.1+*: normal input
 	{
-		// vin.1: CC input from latest previous agreement event vout.0
-		mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
-		CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
-		CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
-		CCAddVintxCond(cp,cond,cp->CCpriv); 
-		
 		// vout.0: CC event logger w/ dispute fee to global pubkey / offertxid-pubkey 1of2 CC address
 		mtx.vout.push_back(MakeCC1of2voutMixed(cp->evalcode, disputefee, Agreementspk, offertxidpk));
 
@@ -2442,14 +2410,14 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 
 	opret = EncodeAgreementDisputeCancelOpRet(AGREEMENTCC_VERSION,agreementtxid,disputetxid,std::vector<uint8_t>(mypk.begin(),mypk.end()),cancelmemo);
 	
-	if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 60, pk.IsValid()) > 0) // vin.0 & vin.2+*: normal input
+	// vin.0: CC input from latest agreement dispute vout.0 + dispute fee
+	mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
+	CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+	CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
+	CCAddVintxCond(cp,cond,cp->CCpriv); 
+	
+	if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 60, pk.IsValid()) > 0) // vin.1+*: normal input
 	{
-		// vin.1: CC input from latest agreement dispute vout.0 + dispute fee
-		mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
-		CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
-		CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
-		CCAddVintxCond(cp,cond,cp->CCpriv); 
-		
 		// vout.0: CC event logger to global pubkey / offertxid-pubkey 1of2 CC address
 		mtx.vout.push_back(MakeCC1of2voutMixed(cp->evalcode, CC_MARKER_VALUE, Agreementspk, offertxidpk));
 		
@@ -2471,6 +2439,8 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 	result.push_back(Pair("signing_pubkey",pubkey33_str(str,(uint8_t *)&mypk)));
 	result.push_back(Pair("reference_dispute",disputetxid.GetHex()));
 	result.push_back(Pair("reference_agreement",agreementtxid.GetHex()));
+
+	result.push_back(Pair("cancel_memo",cancelmemo));
 
 	return (result);
 }
@@ -2555,16 +2525,16 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 
 	opret = EncodeAgreementDisputeResolveOpRet(AGREEMENTCC_VERSION,agreementtxid,disputetxid,claimantpayout,resolutionmemo);
 	
-	if (AddNormalinputs(mtx, mypk, txfee, 60, pk.IsValid()) > 0) // vin.0 & vin.3+*: normal input
+	// vin.0: CC input from latest agreement dispute vout.0 + dispute fee
+	mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
+	// vin.1: deposit from agreement
+	mtx.vin.push_back(CTxIn(agreementtxid,1,CScript()));
+	CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+	CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
+	CCAddVintxCond(cp,cond,cp->CCpriv); 
+	
+	if (AddNormalinputs(mtx, mypk, txfee, 60, pk.IsValid()) > 0) // vin.2+*: normal input
 	{
-		// vin.1: CC input from latest agreement dispute vout.0 + dispute fee
-		mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
-		// vin.2: deposit from agreement
-		mtx.vin.push_back(CTxIn(agreementtxid,1,CScript()));
-		CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
-		CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
-		CCAddVintxCond(cp,cond,cp->CCpriv); 
-		
 		// vout.0: normal payout to dispute's claimant (if specified payout > 0)
 		if (claimantpayout > 0)
 			mtx.vout.push_back(CTxOut(claimantpayout, CScript() << ParseHex(HexStr(CClaimantPubkey)) << OP_CHECKSIG));
@@ -2592,6 +2562,7 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 	result.push_back(Pair("reference_agreement",agreementtxid.GetHex()));
 	result.push_back(Pair("claimant_payout",claimantpayout));
 	result.push_back(Pair("defendant_payout",defendantpayout));
+	result.push_back(Pair("resolution_memo",resolutionmemo));
 
 	return (result);
 }
@@ -2687,16 +2658,16 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 	
 	opret = EncodeAgreementUnlockOpRet(AGREEMENTCC_VERSION,std::vector<uint8_t>(mypk.begin(),mypk.end()),agreementtxid,unlocktxid);
 
-	if (AddNormalinputs(mtx, mypk, txfee + disputefee, 60, pk.IsValid()) > 0) // vin.0 & vin.2+*: normal input
+	// vin.0: CC input from latest agreement event vout.0
+	mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
+	// vin.1: deposit from agreement
+	mtx.vin.push_back(CTxIn(agreementtxid,1,CScript()));
+	CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+	CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
+	CCAddVintxCond(cp,cond,cp->CCpriv); 
+	
+	if (AddNormalinputs(mtx, mypk, txfee + disputefee, 60, pk.IsValid()) > 0) // vin.2+*: normal input
 	{
-		// vin.1: CC input from latest agreement event vout.0
-		mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
-		// vin.2: deposit from agreement
-		mtx.vin.push_back(CTxIn(agreementtxid,1,CScript()));
-		CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
-		CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
-		CCAddVintxCond(cp,cond,cp->CCpriv); 
-		
 		// vout.0: normal payout to agreement offeror (if specified payout > 0)
 		if (offerorpayout > 0)
 			mtx.vout.push_back(CTxOut(offerorpayout, CScript() << ParseHex(HexStr(COfferorPubkey)) << OP_CHECKSIG));
@@ -2885,6 +2856,10 @@ UniValue AgreementInfo(const uint256 txid)
 
 					case 'd':
 						result.push_back(Pair("status","suspended"));
+						break;
+					
+					case 'x':
+						result.push_back(Pair("status","unsuspended"));
 						break;
 				}
 
