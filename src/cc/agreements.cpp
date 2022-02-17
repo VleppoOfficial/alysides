@@ -2175,6 +2175,8 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 				// vin.3: deposit from previous agreement
 				mtx.vin.push_back(CTxIn(prevagreementtxid,1,CScript()));
 				CCaddr1of2set(cp,Agreementspk,prevoffertxidpk,cp->CCpriv,preveventCCaddress);
+				CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,prevoffertxidpk));
+				CCAddVintxCond(cp,cond,cp->CCpriv); 
 				
 				// Constructing a special event 1of2 CC address out of Agreements global pubkey and txid-pubkey created out of accepted offer txid.
 				// This way we avoid cluttering up the UTXO list for the global pubkey, allowing for easier marker management.
