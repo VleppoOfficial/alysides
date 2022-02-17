@@ -1160,7 +1160,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// Get the agreement's accepted offer transaction and parties.
 				offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags,
-				agreementtxid, deposit, payment, disputefee, agreementname, agreementmemo, unlockconds);
+				refagreementtxid, deposit, payment, disputefee, agreementname, agreementmemo, unlockconds);
 
 				// Determine who the claimant/defendant is.
 				if (claimantkey == offerorkey)
@@ -1577,7 +1577,6 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
-		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
@@ -1737,7 +1736,6 @@ uint8_t offerflags, int64_t deposit, int64_t payment, int64_t disputefee, std::v
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
-		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
@@ -1880,7 +1878,6 @@ UniValue AgreementClose(const CPubKey& pk, uint64_t txfee, uint256 prevagreement
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
-		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
@@ -1966,7 +1963,6 @@ UniValue AgreementStopOffer(const CPubKey& pk,uint64_t txfee,uint256 offertxid,s
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
-		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
@@ -2113,7 +2109,6 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 			if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 			{
 				result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
-				result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 			}
 			else
 				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
@@ -2168,7 +2163,6 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 			if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 			{
 				result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
-				result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 			}
 			else
 				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
@@ -2210,7 +2204,6 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
-		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
@@ -2325,7 +2318,6 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
-		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
@@ -2429,7 +2421,6 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
-		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
@@ -2550,7 +2541,6 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
-		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
@@ -2683,7 +2673,6 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 	if (rawtx[JSON_HEXTX].getValStr().size() > 0)
 	{
 		result.push_back(Pair(JSON_HEXTX, rawtx[JSON_HEXTX].getValStr()));
-		result.push_back(Pair(JSON_SIGDATA, rawtx[JSON_SIGDATA]));
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
