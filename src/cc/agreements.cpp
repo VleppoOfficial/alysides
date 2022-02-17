@@ -978,7 +978,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// Get the agreement's accepted offer transaction and parties.
 				offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags,
-				agreementtxid, deposit, payment, disputefee, agreementname, agreementmemo, unlockconds);
+				refagreementtxid, deposit, payment, disputefee, agreementname, agreementmemo, unlockconds);
 
 				if ((offerflags & AOF_NODISPUTES) || arbkey.empty())
 					return eval->Invalid("Dispute transaction has disputes disabled in referenced agreement!");
