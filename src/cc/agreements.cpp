@@ -462,7 +462,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	// Check the op_return of the transaction and fetch its function id.
 	if ((funcid = DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey)) != 0)
 	{
-		//fprintf(stderr,"validating Agreements transaction type (%c)\n",funcid);
+		fprintf(stderr,"validating Agreements transaction type (%c)\n",funcid);
 
 		GetCCaddress(cp, globalCCaddress, GetUnspendable(cp, NULL), true);
 
@@ -672,6 +672,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// vout.n-2: normal output for change (if any)
 				// vout.n-1: OP_RETURN EVAL_AGREEMENTS 'c' version offertxid
 
+				std::cerr << "entering 'c' validation" << std::endl;
+
 				// Get the data from the transaction's op_return.
 				DecodeAgreementAcceptOpRet(tx.vout[numvouts-1].scriptPubKey,version,offertxid);
 
@@ -747,6 +749,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					GetCCaddress1of2(cp, preveventCCaddress, Agreementspk, prevoffertxidpk);
 				}
 
+				std::cerr << "passed data validation" << std::endl;
+
 				// Check vout boundaries for agreement creation transactions.
 				if ((payment > 0 && numvouts > 5) || (payment == 0 && numvouts > 4))
 					return eval->Invalid("Invalid number of vouts for 'c' type transaction!");
@@ -819,6 +823,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				if (payment > 0 && ConstrainVoutV2(tx.vout[2], 0, srcnormaladdress, payment, EVAL_AGREEMENTS) == 0)
 					return eval->Invalid("vout.2 must be payment to offer's srckey!");
 				
+				std::cerr << "passed 'c' validation" << std::endl;
+
 				break;
 			
 			case 't':
