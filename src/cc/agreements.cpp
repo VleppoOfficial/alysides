@@ -3067,7 +3067,7 @@ UniValue AgreementEventLog(const uint256 agreementtxid,uint8_t flags,int64_t sam
 
 				// Get previous or next event transaction.
 				if (bReverse)
-					batontxid = batontx.vin[1].prevout.hash;
+					batontxid = batontx.vin[0].prevout.hash;
 				else
 					CCgetspenttxid(batontxid,vini,height,batontx.GetHash(),0);
 			}
