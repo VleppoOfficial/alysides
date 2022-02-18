@@ -3146,7 +3146,7 @@ UniValue AgreementList(const uint8_t flags,const uint256 filtertxid,const int64_
 		{
 			txid = *it;
 			if (myGetTransactionCCV2(cp,txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
-			DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey) == 'o' && TotalPubkeyNormalInputs(tx,pk) != 0)
+			DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey) == 'o' && (pk == CPubKey() || TotalPubkeyNormalInputs(tx,pk) != 0))
 			{
 				if (filtertxid == zeroid)
 					result.push_back(txid.GetHex());
@@ -3168,7 +3168,7 @@ UniValue AgreementList(const uint8_t flags,const uint256 filtertxid,const int64_
 		{
 			txid = *it;
 			if (myGetTransaction(txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
-			DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey) == 'c' && TotalPubkeyNormalInputs(tx,pk) != 0)
+			DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey) == 'c' && (pk == CPubKey() || TotalPubkeyNormalInputs(tx,pk) != 0))
 				result.push_back(txid.GetHex());
 		}
 	}

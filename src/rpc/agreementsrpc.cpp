@@ -679,9 +679,13 @@ UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
     if (params.size() >= 3)
         filterdeposit = AmountFromValue(params[2]);
 
-    pk = mypk.IsValid() ? mypk : pubkey2pk(Mypubkey());
+    pk = CPubKey();
     if (params.size() == 4)
+    {
         pk = pubkey2pk(ParseHex(params[3].get_str().c_str()));
+        if (!pk.IsFullyValid() || STR_TOLOWER(params[3].get_str()) == "mypk")
+            pk = mypk.IsValid() ? mypk : pubkey2pk(Mypubkey());
+    }
 
     return (AgreementList(flags,filtertxid,filterdeposit,pk));
 }
