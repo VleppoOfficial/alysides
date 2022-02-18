@@ -3182,6 +3182,7 @@ UniValue AgreementInventory(const CPubKey pk)
 // Returns all offer txids, agreement txids, or both depending on passed flags. 
 // Filtertxid can be defined for only returning offers related to specified agreementtxid.
 // Filterdeposit can be defined for only returning agreements containing the specified deposit amount.
+// pk can be used to filter out any offers/agreements that don't have normal vins signed by pk.
 UniValue AgreementList(const uint8_t flags,const uint256 filtertxid,const int64_t filterdeposit,const CPubKey pk)
 {
 	UniValue result(UniValue::VARR);
