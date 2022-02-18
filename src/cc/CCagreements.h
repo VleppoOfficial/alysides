@@ -80,6 +80,7 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 UniValue AgreementInfo(const uint256 txid);
 UniValue AgreementEventLog(const uint256 agreementtxid,uint8_t flags,int64_t samplenum,bool bReverse);
 UniValue AgreementReferences(const uint256 agreementtxid);
+UniValue AgreementInventory(const CPubKey pk);
 UniValue AgreementList(const uint8_t flags,const uint256 filtertxid,const int64_t filterdeposit,const CPubKey pk);
 
 #endif

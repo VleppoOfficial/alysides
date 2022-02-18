@@ -646,6 +646,24 @@ UniValue agreementreferences(const UniValue& params, bool fHelp, const CPubKey& 
     return (AgreementReferences(agreementtxid));
 }
 
+UniValue agreementinventory(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    CPubKey pubkey;
+    if ( fHelp || params.size() > 1 )
+        throw runtime_error(
+            "agreementreferences [pubkey]\n"
+            );
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    
+    if ( params.size() == 1 )
+        pubkey = pubkey2pk(ParseHex(params[0].get_str().c_str()));
+    else
+		pubkey = mypk.IsValid() ? mypk : pubkey2pk(Mypubkey());
+    
+	return(AgreementInventory(pubkey));
+}
+
 UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	uint256 filtertxid;
@@ -706,6 +724,7 @@ static const CRPCCommand commands[] =
 	{ "agreements",  "agreementinfo",       &agreementinfo,	      true },
 	{ "agreements",  "agreementeventlog",   &agreementeventlog,   true },
 	{ "agreements",  "agreementreferences", &agreementreferences, true },
+    { "agreements",  "agreementinventory",  &agreementinventory,  true },
 	{ "agreements",  "agreementlist",       &agreementlist,       true },
 };
 

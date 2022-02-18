@@ -441,7 +441,8 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	CBlockIndex blockIdx;
 	CPubKey Agreementspk,offertxidpk,refoffertxidpk,prevoffertxidpk,CSourcePubkey,CDestPubkey,CCancellerPubkey,CClaimantPubkey,CDefendantPubkey,CArbitratorPubkey,CUnlockerPubkey,COfferorPubkey,CSignerPubkey;
 	CTransaction refagreementtx,refoffertx,offertx,prevagreementtx,prevoffertx,prevTx,agreementtx,disputetx,unlocktx;
-	char globalCCaddress[65],eventCCaddress[65],srcnormaladdress[65],preveventCCaddress[65],claimantnormaladdress[65],defendantnormaladdress[65],offerornormaladdress[65],signernormaladdress[65];
+	char globalCCaddress[KOMODO_ADDRESS_BUFSIZE],eventCCaddress[KOMODO_ADDRESS_BUFSIZE],srcnormaladdress[KOMODO_ADDRESS_BUFSIZE],preveventCCaddress[KOMODO_ADDRESS_BUFSIZE], \
+	claimantnormaladdress[KOMODO_ADDRESS_BUFSIZE],defendantnormaladdress[KOMODO_ADDRESS_BUFSIZE],offerornormaladdress[KOMODO_ADDRESS_BUFSIZE],signernormaladdress[KOMODO_ADDRESS_BUFSIZE];
 	char *txidaddr;
 	int32_t numvins,numvouts,numblocks;
 	int64_t deposit,payment,disputefee,prevdeposit,prevpayment,prevdisputefee,offerorpayout,signerpayout,claimantpayout,defendantpayout;
@@ -1431,7 +1432,7 @@ static uint8_t FindLatestAgreementEvent(uint256 agreementtxid, struct CCcontract
 	uint256 hashBlock, batontxid, refagreementtxid;
 	int32_t vini, height, retcode;
 	uint8_t funcid,version;
-	char eventCCaddress[65], *txidaddr;
+	char eventCCaddress[KOMODO_ADDRESS_BUFSIZE], *txidaddr;
 	CPubKey Agreementspk,offertxidpk;
 	int64_t deposit, disputefee;
 	uint256 offertxid;
@@ -1984,7 +1985,7 @@ UniValue AgreementStopOffer(const CPubKey& pk,uint64_t txfee,uint256 offertxid,s
 // If both AOF_AMENDMENT and AOF_CLOSEEXISTING are set, will create transaction with 't' function id.
 UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 {
-	char eventCCaddress[65], preveventCCaddress[65], *txidaddr;
+	char eventCCaddress[KOMODO_ADDRESS_BUFSIZE], preveventCCaddress[KOMODO_ADDRESS_BUFSIZE], *txidaddr;
 	CPubKey mypk,Agreementspk,offertxidpk,prevoffertxidpk,CSourcePubkey,CDestPubkey;
 	CScript opret;
 	CTransaction offertx,prevagreementtx,prevoffertx;
@@ -2221,7 +2222,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 // Creates transaction with 'd' function id.
 UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,uint8_t disputeflags,std::string disputememo)
 {
-	char str[67], eventCCaddress[65], *txidaddr;
+	char str[67], eventCCaddress[KOMODO_ADDRESS_BUFSIZE], *txidaddr;
 	CPubKey mypk,Agreementspk,offertxidpk,COfferorPubkey,CSignerPubkey,CArbitratorPubkey;
 	CScript opret;
 	CTransaction offertx,agreementtx;
@@ -2339,7 +2340,7 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 // Creates transaction with 'x' function id.
 UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,std::string cancelmemo)
 {
-	char str[67], eventCCaddress[65], *txidaddr;
+	char str[67], eventCCaddress[KOMODO_ADDRESS_BUFSIZE], *txidaddr;
 	CPubKey mypk,Agreementspk,offertxidpk,COfferorPubkey,CSignerPubkey,CArbitratorPubkey,CClaimantPubkey;
 	CScript opret;
 	CTransaction disputetx,offertx,agreementtx;
@@ -2441,7 +2442,7 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 // Creates transaction with 'r' function id.
 UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,int64_t claimantpayout,std::string resolutionmemo)
 {
-	char str[67], eventCCaddress[65], *txidaddr;
+	char str[67], eventCCaddress[KOMODO_ADDRESS_BUFSIZE], *txidaddr;
 	CPubKey mypk,Agreementspk,offertxidpk,COfferorPubkey,CSignerPubkey,CArbitratorPubkey,CClaimantPubkey,CDefendantPubkey;
 	CScript opret;
 	CTransaction disputetx,offertx,agreementtx;
@@ -2564,7 +2565,7 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 {
 	CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "agreementunlock not done yet");
 
-	char str[67], eventCCaddress[65], *txidaddr;
+	char str[67], eventCCaddress[KOMODO_ADDRESS_BUFSIZE], *txidaddr;
 	CPubKey mypk,Agreementspk,offertxidpk,COfferorPubkey,CSignerPubkey,CArbitratorPubkey;
 	CScript opret;
 	CTransaction offertx,agreementtx,unlocktx;
@@ -3089,7 +3090,7 @@ UniValue AgreementReferences(const uint256 agreementtxid)
 	std::vector<uint256> txids;
 	int64_t deposit,payment,disputefee;
 	int32_t numvouts;
-	char AgreementsCCaddr[65];
+	char AgreementsCCaddr[KOMODO_ADDRESS_BUFSIZE];
 
 	struct CCcontract_info *cp,C;
 	cp = CCinit(&C,EVAL_AGREEMENTS);
@@ -3118,6 +3119,66 @@ UniValue AgreementReferences(const uint256 agreementtxid)
 	return(result);
 }
 
+// agreementinventory returns every active agreement pk is a member of.
+// TODO: add scriptPubKey support
+UniValue AgreementInventory(const CPubKey pk)
+{
+	UniValue result(UniValue::VOBJ), offerorlist(UniValue::VARR), signerlist(UniValue::VARR), arblist(UniValue::VARR);
+	std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > addressIndexCCMarker;
+	std::vector<uint256> foundtxids;
+	
+	char AgreementsCCaddr[KOMODO_ADDRESS_BUFSIZE];
+	uint256 txid, hashBlock, dummytxid, offertxid;
+	std::vector<uint8_t> offerorkey, signerkey, arbkey;
+	int64_t dummyamount;
+	std::string dummystr;
+	CTransaction vintx, offertx;
+	uint8_t version, offerflags;
+
+	struct CCcontract_info *cp, C;
+	cp = CCinit(&C, EVAL_AGREEMENTS);
+
+	GetCCaddress(cp,AgreementsCCaddr,GetUnspendable(cp, NULL),true);
+
+	auto AddAgreementWithKey = [&](uint256 txid)
+	{
+		if (myGetTransactionCCV2(cp, txid, vintx, hashBlock) != 0 && vintx.vout.size() > 0 && 
+		DecodeAgreementOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey) == 'c')
+		{
+			offertxid = GetAcceptedOfferTx(txid, offertx);
+			DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, 
+			dummytxid, dummyamount, dummyamount, dummyamount, dummystr, dummystr);
+
+			if (std::find(foundtxids.begin(), foundtxids.end(), txid) == foundtxids.end())
+			{
+				if (pk == pubkey2pk(offerorkey))
+				{
+					offerorlist.push_back(txid.GetHex());
+					foundtxids.push_back(txid);
+				}
+				if (pk == pubkey2pk(signerkey))
+				{
+					signerlist.push_back(txid.GetHex());
+					foundtxids.push_back(txid);
+				}
+				if (pk == pubkey2pk(arbkey))
+				{
+					arblist.push_back(txid.GetHex());
+					foundtxids.push_back(txid);
+				}
+			}
+		}
+	};
+
+	SetCCunspents(addressIndexCCMarker,AgreementsCCaddr,true);
+	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++)
+		AddAgreementWithKey(it->first.txhash);
+	result.push_back(Pair("offeror",HexStr(offerorkey)));
+	result.push_back(Pair("signer",HexStr(signerkey)));
+	result.push_back(Pair("arbitrator",HexStr(arbkey)));
+	return (result);
+}
+
 // Returns all offer txids, agreement txids, or both depending on passed flags. 
 // Filtertxid can be defined for only returning offers related to specified agreementtxid.
 // Filterdeposit can be defined for only returning agreements containing the specified deposit amount.
@@ -3132,7 +3193,7 @@ UniValue AgreementList(const uint8_t flags,const uint256 filtertxid,const int64_
 	std::vector<uint256> offertxids,agreementtxids;
 	int64_t deposit,payment,disputefee;
 	int32_t numvouts;
-	char AgreementsCCaddr[65];
+	char AgreementsCCaddr[KOMODO_ADDRESS_BUFSIZE];
 
 	struct CCcontract_info *cp,C;
 	cp = CCinit(&C,EVAL_AGREEMENTS);
