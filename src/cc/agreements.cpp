@@ -466,7 +466,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	// Check the op_return of the transaction and fetch its function id.
 	if ((funcid = DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey)) != 0)
 	{
-		fprintf(stderr,"validating Agreements transaction type (%c)\n",funcid);
+		//fprintf(stderr,"validating Agreements transaction type (%c)\n",funcid);
 
 		GetCCaddress(cp, globalCCaddress, GetUnspendable(cp, NULL), true);
 
@@ -1414,7 +1414,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 	else
 		return eval->Invalid("Invalid Agreements function id and/or data!");
 
-	LOGSTREAM("agreementscc", CCLOG_INFO, stream << "Agreements transaction validated" << std::endl);
+	//LOGSTREAM("agreementscc", CCLOG_INFO, stream << "Agreements transaction validated" << std::endl);
 	return (true);
 }
 
@@ -1891,10 +1891,11 @@ UniValue AgreementClose(const CPubKey& pk, uint64_t txfee, uint256 prevagreement
 	result.push_back(Pair("source_key",pubkey33_str(str,(uint8_t *)&mypk)));
 	result.push_back(Pair("destination_key",HexStr(destkey)));
 
-	if (offerflags & AOF_NOCANCEL)
-		result.push_back(Pair("is_cancellable_by_sender","false"));
-	else
-		result.push_back(Pair("is_cancellable_by_sender","true"));
+	// Note: unnecessary to show here since we never allow user to set flags manually in agreementclose. (AOF_NOCANCEL still works as intended though if set)
+	// if (offerflags & AOF_NOCANCEL)
+	// 	result.push_back(Pair("is_cancellable_by_sender","false"));
+	// else
+	// 	result.push_back(Pair("is_cancellable_by_sender","true"));
 
 	result.push_back(Pair("required_offerorpayout",ValueFromAmount(payment)));
 
@@ -2550,8 +2551,8 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 	result.push_back(Pair("signing_pubkey",pubkey33_str(str,(uint8_t *)&mypk)));
 	result.push_back(Pair("reference_dispute",disputetxid.GetHex()));
 	result.push_back(Pair("reference_agreement",agreementtxid.GetHex()));
-	result.push_back(Pair("claimant_payout",claimantpayout));
-	result.push_back(Pair("defendant_payout",defendantpayout));
+	result.push_back(Pair("claimant_payout",ValueFromAmount(claimantpayout)));
+	result.push_back(Pair("defendant_payout",ValueFromAmount(defendantpayout)));
 	result.push_back(Pair("resolution_memo",resolutionmemo));
 
 	return (result);
@@ -2786,12 +2787,14 @@ UniValue AgreementInfo(const uint256 txid)
 					
 					result.push_back(Pair("status_txid",batontxid.GetHex()));
 				}
+				else if (offerflags & AOF_AMENDMENT && ((eventfuncid = FindLatestAgreementEvent(refagreementtxid, cp, eventtxid)) == 'r' || 
+				eventfuncid == 't' || eventfuncid == 'u' || (eventfuncid == 'c' && eventtxid != refagreementtxid)))
+					result.push_back(Pair("status","deprecated"));
 				else
 					result.push_back(Pair("status","active"));
 				
 				break;
 			case 's': // offer cancel
-
 				result.push_back(Pair("type","cancel_offer"));
 
 				DecodeAgreementOfferCancelOpRet(tx.vout[numvouts-1].scriptPubKey,version,offertxid,cancellerkey,cancelmemo);
@@ -3118,7 +3121,7 @@ UniValue AgreementReferences(const uint256 agreementtxid)
 // Returns all offer txids, agreement txids, or both depending on passed flags. 
 // Filtertxid can be defined for only returning offers related to specified agreementtxid.
 // Filterdeposit can be defined for only returning agreements containing the specified deposit amount.
-UniValue AgreementList(const uint8_t flags,const uint256 filtertxid,int64_t filterdeposit)
+UniValue AgreementList(const uint8_t flags,const uint256 filtertxid,const int64_t filterdeposit,const CPubKey pk)
 {
 	UniValue result(UniValue::VARR);
 	CTransaction tx;
@@ -3143,7 +3146,7 @@ UniValue AgreementList(const uint8_t flags,const uint256 filtertxid,int64_t filt
 		{
 			txid = *it;
 			if (myGetTransactionCCV2(cp,txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
-			DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey) == 'o')
+			DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey) == 'o' && TotalPubkeyNormalInputs(tx,pk) != 0)
 			{
 				if (filtertxid == zeroid)
 					result.push_back(txid.GetHex());
@@ -3165,7 +3168,7 @@ UniValue AgreementList(const uint8_t flags,const uint256 filtertxid,int64_t filt
 		{
 			txid = *it;
 			if (myGetTransaction(txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
-			DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey) == 'c')
+			DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey) == 'c' && TotalPubkeyNormalInputs(tx,pk) != 0)
 				result.push_back(txid.GetHex());
 		}
 	}

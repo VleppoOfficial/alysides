@@ -650,11 +650,12 @@ UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
 	uint256 filtertxid;
     uint8_t flags;
-    CAmount filterdeposit;
+    CAmount filterdeposit = 0;
+    CPubKey pk;
 
-    if (fHelp || params.size() > 3)
+    if (fHelp || params.size() > 4)
         throw runtime_error(
-            "agreementlist [all|offers|agreements][filtertxid][filterdeposit]\n"
+            "agreementlist [all|offers|agreements][filtertxid][filterdeposit][pubkey]\n"
             );
     if (ensure_CCrequirements(EVAL_AGREEMENTS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
@@ -675,10 +676,14 @@ UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
     if (params.size() >= 2)
         filtertxid = Parseuint256((char *)params[1].get_str().c_str());
     
-    if (params.size() == 3)
+    if (params.size() >= 3)
         filterdeposit = AmountFromValue(params[2]);
 
-    return (AgreementList(flags,filtertxid,filterdeposit));
+    pk = mypk.IsValid() ? mypk : pubkey2pk(Mypubkey());
+    if (params.size() == 4)
+        pk = pubkey2pk(ParseHex(params[3].get_str().c_str()));
+
+    return (AgreementList(flags,filtertxid,filterdeposit,pk));
 }
 
 static const CRPCCommand commands[] =
