@@ -3173,9 +3173,9 @@ UniValue AgreementInventory(const CPubKey pk)
 	SetCCunspents(addressIndexCCMarker,AgreementsCCaddr,true);
 	for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = addressIndexCCMarker.begin(); it != addressIndexCCMarker.end(); it++)
 		AddAgreementWithKey(it->first.txhash);
-	result.push_back(Pair("offeror",HexStr(offerorkey)));
-	result.push_back(Pair("signer",HexStr(signerkey)));
-	result.push_back(Pair("arbitrator",HexStr(arbkey)));
+	result.push_back(Pair("offeror",offerorlist));
+	result.push_back(Pair("signer",signerlist));
+	result.push_back(Pair("arbitrator",arblist));
 	return (result);
 }
 
