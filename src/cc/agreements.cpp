@@ -3039,7 +3039,7 @@ UniValue AgreementEventLog(const uint256 agreementtxid,uint8_t flags,int64_t sam
 				switch(funcid)
 				{
 					case 'c':
-						if (flags & ASF_AMENDMENTS) result.push_back(batontxid.GetHex());
+						if (flags & ASF_AMENDMENTS && batontxid != agreementtxid) result.push_back(batontxid.GetHex());
 						break;
 					case 't':
 						if (flags & ASF_CLOSURES) result.push_back(batontxid.GetHex());

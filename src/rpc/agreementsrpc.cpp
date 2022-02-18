@@ -583,7 +583,7 @@ UniValue agreementeventlog(const UniValue& params, bool fHelp, const CPubKey& my
 
     if ( fHelp || params.size() < 1 || params.size() > 4)
         throw runtime_error(
-            "agreementeventlog agreementtxid [all|updates|closures|disputes|disputecancels|resolutions][samplenum][reverse]\n"
+            "agreementeventlog agreementtxid [all|amendments|closures|disputes|disputecancels|resolutions][samplenum][reverse]\n"
             );
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
@@ -597,7 +597,7 @@ UniValue agreementeventlog(const UniValue& params, bool fHelp, const CPubKey& my
     {
         if (STR_TOLOWER(params[1].get_str()) == "all")
             flags = ASF_ALLEVENTS;
-        else if (STR_TOLOWER(params[1].get_str()) == "updates")
+        else if (STR_TOLOWER(params[1].get_str()) == "amendments")
             flags = ASF_AMENDMENTS;
         else if (STR_TOLOWER(params[1].get_str()) == "closures")
             flags = ASF_CLOSURES;
