@@ -683,7 +683,7 @@ UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
     if (params.size() == 4)
     {
         pk = pubkey2pk(ParseHex(params[3].get_str().c_str()));
-        if (!pk.IsFullyValid() || STR_TOLOWER(params[3].get_str()) == "mypk")
+        if (STR_TOLOWER(params[3].get_str()) == "mypk" || !pk.IsFullyValid()) // TODO: add scriptPubKey support
             pk = mypk.IsValid() ? mypk : pubkey2pk(Mypubkey());
     }
 

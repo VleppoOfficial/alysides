@@ -2720,7 +2720,7 @@ UniValue AgreementInfo(const uint256 txid)
 				result.push_back(Pair("source_pubkey",HexStr(srckey)));
 				result.push_back(Pair("destination_pubkey",HexStr(destkey)));
 
-				if (offerflags & (AOF_AMENDMENT|AOF_CLOSEEXISTING))
+				if (offerflags & AOF_AMENDMENT && offerflags & AOF_CLOSEEXISTING)
 				{
 					result.push_back(Pair("offer_type","offer_close"));
 					result.push_back(Pair("agreement_to_close",refagreementtxid.GetHex()));
