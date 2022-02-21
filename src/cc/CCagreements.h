@@ -33,7 +33,8 @@ enum EOfferTxFlags
     AOF_CLOSEEXISTING = 2,  // Requires AOF_AMENDMENT. Create a closure offer for the agreement referenced in the refagreementtxid field.
     AOF_NOCANCEL = 4,       // Disables cancellation transaction validation for this offer signed by the original sender.
     AOF_NODISPUTES = 8,     // Disables dispute functionality by invalidating any dispute transactions for this agreement.
-    AOF_NOUNLOCK = 16   // Disables unlocking functionality by invalidating any unlock transactions for this agreement.
+    AOF_NOUNLOCK = 16,      // Disables unlocking functionality by invalidating any unlock transactions for this agreement.
+    AOF_AWAITNOTARIES = 32  // Requires the offer, resulting agreement and any of its latest events to be notarized at least once (or confirmed at least 100 times) before allowing agreement to be created or its state modified.
 };
 
 enum EDisputeTxFlags

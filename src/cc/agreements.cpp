@@ -115,7 +115,7 @@ vout.n-1: OP_RETURN EVAL_AGREEMENTS 'u' version unlockerkey agreementtxid unlock
 
 /*
 NOTE: at the moment, all pubkeys in the OP_RETURN data are stored as std::vector<uint8_t> instead of CPubKey. This is done for potentially enabling
-scriptPubKeys to be used in the future instead, while maintaining backwards compatibility with previous oprets that store regular pubkeys in these fields.
+support for scriptPubKeys to be used in the future as well, for multisig or other types.
 */
 
 // --- Start of consensus code ---
@@ -154,7 +154,7 @@ uint8_t DecodeAgreementOfferOpRet(CScript scriptPubKey, uint8_t &version, std::v
 
 	return DecodeAgreementOfferOpRet(scriptPubKey, version, srckey, destkey, arbkey, offerflags, refagreementtxid, deposit, payment, disputefee, agreementname, agreementmemo, unlockconds);
 }
-// Overload for returning just the keys and flags from the proposal opret.
+// Overload for returning just the keys and flags from the offer opret.
 uint8_t DecodeAgreementOfferOpRet(CScript scriptPubKey, uint8_t &version, std::vector<uint8_t> &srckey, std::vector<uint8_t> &destkey, std::vector<uint8_t> &arbkey, uint8_t &offerflags)
 {
 	int64_t deposit, payment, disputefee;
@@ -327,8 +327,8 @@ static bool CheckUnusedFlags(const uint8_t flags, uint8_t funcid)
 	switch (funcid)
 	{
 		case 'o':
-			// Currently, offers have bits 6, 7 and 8 unused. Verify that these bits are unset.
-			return (!(flags & 32 || flags & 64 || flags & 128));
+			// Currently, offers have bits 7 and 8 unused. Verify that these bits are unset.
+			return (!(flags & 64 || flags & 128));
 		case 'd':
 			// Currently, offers have bits 2, 3, 4, 5, 6, 7 and 8 unused. Verify that these bits are unset.
 			return (!(flags & 2 || flags & 4 || flags & 8 || flags & 16 || flags & 32 || flags & 64 || flags & 128));
@@ -625,6 +625,9 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, srckey, destkey, arbkey, offerflags) != 'o')
 					return eval->Invalid("Offer cancel transaction has invalid or unconfirmed offer transaction!");
 				
+				else if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(offertxid) == 0)
+                    return eval->Invalid("Offer cancel transaction is attempting to cancel an unnotarised offer with AOF_AWAITNOTARIES flag!");
+				
 				// Check if cancellerkey is eligible to cancel this offer.
 				else if (cancellerkey != srckey && cancellerkey != destkey)
 					return eval->Invalid("Offer cancel transaction signing key is not offer source or destination key!");
@@ -679,9 +682,12 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey,version,srckey,destkey,arbkey,offerflags,prevagreementtxid,
 				deposit,payment,disputefee,agreementname,agreementmemo,unlockconds) != 'o')
 					return eval->Invalid("Accept transaction has invalid or unconfirmed offer transaction!");
+				
+				else if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(offertxid) == 0)
+                    return eval->Invalid("Accept transaction is attempting to accept an unnotarised offer with AOF_AWAITNOTARIES flag!");
 
 				// Check if the offer hasn't expired. (aka been created longer than AGREEMENTCC_EXPIRYDATE ago)
-				if (CCduration(numblocks, offertxid) > AGREEMENTCC_EXPIRYDATE)
+				else if (CCduration(numblocks, offertxid) > AGREEMENTCC_EXPIRYDATE)
 					return eval->Invalid("Accept transaction is attempting to accept an offer older than "+std::to_string(AGREEMENTCC_EXPIRYDATE)+" secs!"); 
 
 				// Checking if srckey and destkey are pubkeys.
@@ -786,7 +792,10 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 								return eval->Invalid("Accept transaction is attempting to spend a previous event that references the wrong previous agreement!");
 							break;
 					}
-					if (ValidateAgreementsVin(cp,eval,tx,1,1,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == 0)
+					// If the offer accepted by agreementtxid has AOF_AWAITNOTARIES set, make sure latest event is notarised.
+					if (prevofferflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(tx.vin[1].prevout.hash) == 0)
+						return eval->Invalid("Accept transaction is attempting to spend an unnotarised previous event of an agreement with AOF_AWAITNOTARIES flag!");
+					else if (ValidateAgreementsVin(cp,eval,tx,1,1,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == 0)
 						return (false);
 				
 					// vin.2: deposit from previous agreement (if applicable)
@@ -835,15 +844,19 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey,version,srckey,destkey,arbkey,offerflags,refagreementtxid,
 				deposit,payment,disputefee,agreementname,agreementmemo,unlockconds) != 'o')
 					return eval->Invalid("Agreement closure transaction has invalid or unconfirmed offer transaction!");
+				
+				// If offer to close (not the offer accepted by agreementtxid!) has AOF_AWAITNOTARIES set, make sure this offer is notarised.
+				else if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(offertxid) == 0)
+                    return eval->Invalid("Agreement closure transaction is attempting to accept an unnotarised offer with AOF_AWAITNOTARIES flag!");
 
 				// Check if the offer hasn't expired. (aka been created longer than AGREEMENTCC_EXPIRYDATE ago)
-				if (CCduration(numblocks, offertxid) > AGREEMENTCC_EXPIRYDATE)
+				else if (CCduration(numblocks, offertxid) > AGREEMENTCC_EXPIRYDATE)
 					return eval->Invalid("Agreement closure transaction is attempting to accept an offer older than "+std::to_string(AGREEMENTCC_EXPIRYDATE)+" secs!"); 
 
 				// Make sure the offer and the closure transactions are referencing the same agreement and have same payouts specified.
-				if (refagreementtxid != agreementtxid)
+				else if (refagreementtxid != agreementtxid)
 					return eval->Invalid("Agreement closure transaction and its accepted offer transaction has agreementtxid mismatch!");
-				if (offerorpayout != payment)
+				else if (offerorpayout != payment)
 					return eval->Invalid("Agreement closure transaction and its accepted offer transaction has payout amount mismatch!");
 				
 				// Checking if srckey and destkey are pubkeys.
@@ -929,7 +942,10 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 							return eval->Invalid("Agreement closure transaction is attempting to spend a previous event that references the wrong previous agreement!");
 						break;
 				}
-				if (ValidateAgreementsVin(cp,eval,tx,1,1,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == 0)
+				// If the offer accepted by agreementtxid has AOF_AWAITNOTARIES set, make sure latest event is notarised.
+				if (prevofferflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(tx.vin[1].prevout.hash) == 0)
+					return eval->Invalid("Agreement closure transaction is attempting to spend an unnotarised previous event of an agreement with AOF_AWAITNOTARIES flag!");
+				else if (ValidateAgreementsVin(cp,eval,tx,1,1,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == 0)
 					return (false);
 			
 				// vin.2: deposit from agreement
@@ -1039,7 +1055,10 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 							return eval->Invalid("Dispute transaction is attempting to spend a previous event that references the wrong agreement!");
 						break;
 				}
-				if (ValidateAgreementsVin(cp,eval,tx,1,0,0,zeroid,eventCCaddress,CC_MARKER_VALUE) == 0)
+				// If the offer accepted by agreementtxid has AOF_AWAITNOTARIES set, make sure latest event is notarised.
+				if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(tx.vin[0].prevout.hash) == 0)
+					return eval->Invalid("Dispute transaction is attempting to spend an unnotarised previous event of an agreement with AOF_AWAITNOTARIES flag!");
+				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,zeroid,eventCCaddress,CC_MARKER_VALUE) == 0)
 					return (false);
 				
 				// Agreement dispute transactions shouldn't have any additional CC inputs.
@@ -1084,8 +1103,12 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				// Get the agreement's accepted offer transaction and parties.
 				offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags,
-				agreementtxid, deposit, payment, disputefee, agreementname, agreementmemo, unlockconds);
+				refagreementtxid, deposit, payment, disputefee, agreementname, agreementmemo, unlockconds);
 
+				// If the offer accepted by agreementtxid has AOF_AWAITNOTARIES set, make sure the dispute is notarised.
+				if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(disputetxid) == 0)
+					return eval->Invalid("Dispute cancel transaction is attempting to spend dispute of an agreement with AOF_AWAITNOTARIES flag!");
+				
 				// Checking if cancellerkey is a pubkey.
 				CCancellerPubkey = pubkey2pk(cancellerkey);
 				if (CCancellerPubkey.IsValid())
@@ -1162,6 +1185,10 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags,
 				refagreementtxid, deposit, payment, disputefee, agreementname, agreementmemo, unlockconds);
+
+				// If the offer accepted by agreementtxid has AOF_AWAITNOTARIES set, make sure the dispute is notarised.
+				if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(disputetxid) == 0)
+					return eval->Invalid("Dispute resolution transaction is attempting to spend dispute of an agreement with AOF_AWAITNOTARIES flag!");
 
 				// Determine who the claimant/defendant is.
 				if (claimantkey == offerorkey)
@@ -1303,16 +1330,16 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				}
 				if (!(COfferorPubkey.IsValid()))
 				{
-					// TODO: check if claimantkey is scriptPubKey instead here
+					// TODO: check if offerorkey is scriptPubKey instead here
 					return eval->Invalid("Unlock transaction offerorkey is not a pubkey!");
 				}
 				else if (!(CSignerPubkey.IsValid()))
 				{
-					// TODO: check if defendantkey is scriptPubKey instead here
+					// TODO: check if signerkey is scriptPubKey instead here
 					return eval->Invalid("Unlock transaction signerkey is not a pubkey!");
 				}
 
-				// Check if unlockerkey is eligible to cancel this dispute.
+				// Check if unlockerkey is eligible to unlock this offer.
 				// Note: normally it'd be safe for any key to sign this transaction - this check is done due to executive decision.
 				if (unlockerkey != offerorkey && unlockerkey != signerkey && unlockerkey != arbkey)
 					return eval->Invalid("Unlock transaction has unlockerkey that isn't agreement offerorkey, signerkey or arbkey!");
@@ -1379,10 +1406,13 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 							return eval->Invalid("Unlock transaction is attempting to spend a previous event that references the wrong previous agreement!");
 						break;
 				}
-				if (ValidateAgreementsVin(cp,eval,tx,1,0,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == 0)
+				// If the offer accepted by agreementtxid has AOF_AWAITNOTARIES set, make sure the dispute is notarised.
+				if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(tx.vin[0].prevout.hash) == 0)
+					return eval->Invalid("Unlock transaction is attempting to spend previous event of an agreement with AOF_AWAITNOTARIES flag!");
+				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == 0)
 					return (false);
 			
-				// vin.2: deposit from agreement
+				// vin.1: deposit from agreement
 				else if (ValidateAgreementsVin(cp,eval,tx,1,1,1,agreementtxid,globalCCaddress,deposit) == 0)
 					return (false);
 
@@ -1586,7 +1616,6 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	result.push_back(Pair("type","offer_create"));
 	result.push_back(Pair("agreement_name",agreementname));
 	result.push_back(Pair("agreement_memo",agreementmemo));
-
 	result.push_back(Pair("source_key",pubkey33_str(str,(uint8_t *)&mypk)));
 	result.push_back(Pair("destination_key",HexStr(destkey)));
 
@@ -1746,7 +1775,6 @@ uint8_t offerflags, int64_t deposit, int64_t payment, int64_t disputefee, std::v
 	result.push_back(Pair("agreement_to_amend",prevagreementtxid.GetHex()));
 	result.push_back(Pair("new_agreement_name",agreementname));
 	result.push_back(Pair("new_agreement_memo",agreementmemo));
-
 	result.push_back(Pair("source_key",pubkey33_str(str,(uint8_t *)&mypk)));
 	result.push_back(Pair("destination_key",HexStr(destkey)));
 
@@ -1888,18 +1916,16 @@ UniValue AgreementClose(const CPubKey& pk, uint64_t txfee, uint256 prevagreement
 	result.push_back(Pair("agreement_to_close",prevagreementtxid.GetHex()));
 	result.push_back(Pair("new_agreement_name",agreementname));
 	result.push_back(Pair("new_agreement_memo",agreementmemo));
-
 	result.push_back(Pair("source_key",pubkey33_str(str,(uint8_t *)&mypk)));
 	result.push_back(Pair("destination_key",HexStr(destkey)));
+	result.push_back(Pair("required_offerorpayout",ValueFromAmount(payment)));
 
 	// Note: unnecessary to show here since we never allow user to set flags manually in agreementclose. (AOF_NOCANCEL still works as intended though if set)
 	// if (offerflags & AOF_NOCANCEL)
 	// 	result.push_back(Pair("is_cancellable_by_sender","false"));
 	// else
 	// 	result.push_back(Pair("is_cancellable_by_sender","true"));
-
-	result.push_back(Pair("required_offerorpayout",ValueFromAmount(payment)));
-
+	
 	return (result);
 }
 
@@ -2020,6 +2046,10 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 	else if (CCduration(numblocks, offertxid) > AGREEMENTCC_EXPIRYDATE)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified offer is expired (older than 90 days)");
 	
+	// If offer has AOF_AWAITNOTARIES set, it must be notarised.
+	else if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(offertxid) == 0)
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified offer must be notarised due to having mandatory notarisation flag set");
+	
 	CSourcePubkey = pubkey2pk(srckey);
 	CDestPubkey = pubkey2pk(destkey);
 
@@ -2064,8 +2094,17 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 		prevoffertxid = GetAcceptedOfferTx(prevagreementtxid, prevoffertx);
 		DecodeAgreementOfferOpRet(prevoffertx.vout.back().scriptPubKey, version, prevofferorkey, prevsignerkey, prevarbkey, prevofferflags);
 
+		// If prevofferflags has AOF_AWAITNOTARIES set, preveventtxid must be notarised.
+		if (prevofferflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(preveventtxid) == 0)
+		{
+			if (preveventtxid == prevagreementtxid)
+				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement must be notarised due to having mandatory notarisation flag set");
+			else
+				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement's latest event must be notarised due to having mandatory notarisation flag set");
+		}
+			
 		// Check if the offer source/destination pubkeys match the offeror/signer pubkeys of the referenced agreement.
-		if (!(srckey == prevofferorkey && destkey == prevsignerkey) && !(srckey == prevsignerkey && destkey == prevofferorkey))
+		else if (!(srckey == prevofferorkey && destkey == prevsignerkey) && !(srckey == prevsignerkey && destkey == prevofferorkey))
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Offer source/destination pubkeys don't match offeror/signer pubkeys of referenced agreement");
 
 		// Get the previous agreement's deposit value.
@@ -2265,6 +2304,15 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 	offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
 	DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, refagreementtxid, deposit,
 	payment, disputefee, agreementname, agreementmemo);
+
+	// If offerflags has AOF_AWAITNOTARIES set, eventtxid must be notarised.
+	if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(eventtxid) == 0)
+	{
+		if (eventtxid == agreementtxid)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement must be notarised due to having mandatory notarisation flag set");
+		else
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement's latest event must be notarised due to having mandatory notarisation flag set");
+	}
 	
 	COfferorPubkey = pubkey2pk(offerorkey);
 	CSignerPubkey = pubkey2pk(signerkey);
@@ -2327,9 +2375,7 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 	// Return captured values here for easy debugging/verification before broadcasting.
 	result.push_back(Pair("type","agreement_dispute"));
 	result.push_back(Pair("claimant_pubkey",pubkey33_str(str,(uint8_t *)&mypk)));
-
 	result.push_back(Pair("reference_agreement",agreementtxid.GetHex()));
-
 	result.push_back(Pair("dispute_memo",disputememo));
 	result.push_back(Pair("dispute_flags",disputeflags));
 
@@ -2383,6 +2429,10 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 	offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
 	DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, refagreementtxid, deposit,
 	payment, disputefee, agreementname, agreementmemo);
+
+	// If offerflags has AOF_AWAITNOTARIES set, disputetxid must be notarised.
+	if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(disputetxid) == 0)
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified dispute must be notarised due to having mandatory notarisation flag set");
 	
 	COfferorPubkey = pubkey2pk(offerorkey);
 	CSignerPubkey = pubkey2pk(signerkey);
@@ -2432,7 +2482,6 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 	result.push_back(Pair("signing_pubkey",pubkey33_str(str,(uint8_t *)&mypk)));
 	result.push_back(Pair("reference_dispute",disputetxid.GetHex()));
 	result.push_back(Pair("reference_agreement",agreementtxid.GetHex()));
-
 	result.push_back(Pair("cancel_memo",cancelmemo));
 
 	return (result);
@@ -2481,6 +2530,10 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 	offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
 	DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, refagreementtxid, deposit,
 	payment, disputefee, agreementname, agreementmemo);
+
+	// If offerflags has AOF_AWAITNOTARIES set, disputetxid must be notarised.
+	if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(disputetxid) == 0)
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified dispute must be notarised due to having mandatory notarisation flag set");
 	
 	COfferorPubkey = pubkey2pk(offerorkey);
 	CSignerPubkey = pubkey2pk(signerkey);
@@ -2609,6 +2662,15 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 	DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, refagreementtxid, deposit,
 	payment, disputefee, agreementname, agreementmemo, unlockconds);
 	// TODO: extract/parse unlockconds from DecodeAgreementOfferOpRet here
+
+	// If offerflags has AOF_AWAITNOTARIES set, eventtxid must be notarised.
+	if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(eventtxid) == 0)
+	{
+		if (eventtxid == agreementtxid)
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement must be notarised due to having mandatory notarisation flag set");
+		else
+			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement's latest event must be notarised due to having mandatory notarisation flag set");
+	}
 	
 	COfferorPubkey = pubkey2pk(offerorkey);
 	CSignerPubkey = pubkey2pk(signerkey);
@@ -2788,6 +2850,7 @@ UniValue AgreementInfo(const uint256 txid)
 					
 					result.push_back(Pair("status_txid",batontxid.GetHex()));
 				}
+				// If an offer to amend/close is unspent but points to a closed agreement, mark it as deprecated.
 				else if (offerflags & AOF_AMENDMENT && ((eventfuncid = FindLatestAgreementEvent(refagreementtxid, cp, eventtxid)) == 'r' || 
 				eventfuncid == 't' || eventfuncid == 'u' || (eventfuncid == 'c' && eventtxid != refagreementtxid)))
 					result.push_back(Pair("status","deprecated"));

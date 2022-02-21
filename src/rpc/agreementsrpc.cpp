@@ -651,7 +651,7 @@ UniValue agreementinventory(const UniValue& params, bool fHelp, const CPubKey& m
     CPubKey pubkey;
     if ( fHelp || params.size() > 1 )
         throw runtime_error(
-            "agreementreferences [pubkey]\n"
+            "agreementinventory [pubkey]\n"
             );
     if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
         throw runtime_error(CC_REQUIREMENTS_MSG);
