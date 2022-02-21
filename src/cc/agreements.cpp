@@ -1645,9 +1645,9 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	result.push_back(Pair("required_offerorpayout",ValueFromAmount(payment)));
 
 	if (offerflags & AOF_AWAITNOTARIES)
-		result.push_back(Pair("notarization_required","true"));
+		result.push_back(Pair("notarisation_required","true"));
 	else
-		result.push_back(Pair("notarization_required","false"));
+		result.push_back(Pair("notarisation_required","false"));
 
 	if (!(offerflags & AOF_NOUNLOCK))
 	{
@@ -1806,9 +1806,9 @@ uint8_t offerflags, int64_t deposit, int64_t payment, int64_t disputefee, std::v
 	result.push_back(Pair("required_offerorpayout",ValueFromAmount(payment)));
 
 	if (offerflags & AOF_AWAITNOTARIES)
-		result.push_back(Pair("notarization_required","true"));
+		result.push_back(Pair("notarisation_required","true"));
 	else
-		result.push_back(Pair("notarization_required","false"));
+		result.push_back(Pair("notarisation_required","false"));
 	
 	if (!(offerflags & AOF_NOUNLOCK))
 	{
@@ -2839,9 +2839,9 @@ UniValue AgreementInfo(const uint256 txid)
 					result.push_back(Pair("is_cancellable_by_sender","true"));
 				
 				if (offerflags & AOF_AWAITNOTARIES)
-					result.push_back(Pair("notarization_required","true"));
+					result.push_back(Pair("notarisation_required","true"));
 				else
-					result.push_back(Pair("notarization_required","false"));
+					result.push_back(Pair("notarisation_required","false"));
 
 				if (!(offerflags & AOF_NOUNLOCK))
 				{
@@ -2954,9 +2954,9 @@ UniValue AgreementInfo(const uint256 txid)
 				result.push_back(Pair("deposit",ValueFromAmount(deposit)));
 				
 				if (offerflags & AOF_AWAITNOTARIES)
-					result.push_back(Pair("notarization_required","true"));
+					result.push_back(Pair("notarisation_required","true"));
 				else
-					result.push_back(Pair("notarization_required","false"));
+					result.push_back(Pair("notarisation_required","false"));
 
 				if (!(offerflags & AOF_NOUNLOCK))
 				{
