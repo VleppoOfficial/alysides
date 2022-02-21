@@ -1971,6 +1971,10 @@ UniValue AgreementStopOffer(const CPubKey& pk,uint64_t txfee,uint256 offertxid,s
 	// Check if the offer is still open, by checking if its event logger has been spent or not.
 	else if ((retcode = CCgetspenttxid(batontxid, vini, height, offertxid, 0)) == 0)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified offer has been accepted or cancelled already");
+	
+	// If offer has AOF_AWAITNOTARIES set, it must be notarised.
+	else if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(offertxid) == 0)
+		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified offer must be notarised due to having mandatory notarisation flag set");
 
 	CSourcePubkey = pubkey2pk(srckey);
 	CDestPubkey = pubkey2pk(destkey);
