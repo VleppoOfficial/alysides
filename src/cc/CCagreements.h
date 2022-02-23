@@ -25,8 +25,6 @@
 #define CC_TXFEE 10000
 #define CC_MARKER_VALUE 10000
 
-#define CC_RESPONSE_VALUE 50000
-
 enum EOfferTxFlags
 {
     AOF_AMENDMENT = 1,      // Create an agreement creation offer for amending the agreement referenced in the refagreementtxid field. refagreementtxid must be defined when this flag is set.
