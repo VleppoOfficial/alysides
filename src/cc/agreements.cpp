@@ -2389,6 +2389,7 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 	// Return captured values here for easy debugging/verification before broadcasting.
 	result.push_back(Pair("type","agreement_dispute"));
 	result.push_back(Pair("claimant_pubkey",pubkey33_str(str,(uint8_t *)&mypk)));
+	result.push_back(Pair("defendant_pubkey",HexStr(defendantkey)));
 	result.push_back(Pair("reference_agreement",agreementtxid.GetHex()));
 	result.push_back(Pair("dispute_memo",disputememo));
 	result.push_back(Pair("dispute_flags",disputeflags));
