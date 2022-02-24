@@ -3003,8 +3003,7 @@ UniValue AgreementInfo(const uint256 txid)
 				offertxid = GetAcceptedOfferTx(txid, offertx);
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, refagreementtxid, deposit,
 				payment, disputefee, agreementname, agreementmemo);
-
-				result.push_back(Pair("type","agreement_closure"));
+				
 				result.push_back(Pair("offeror_pubkey",HexStr(offerorkey)));
 				result.push_back(Pair("signing_pubkey",HexStr(signerkey)));
 				result.push_back(Pair("accepted_offer",offertxid.GetHex()));
