@@ -2770,7 +2770,7 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 UniValue AgreementInfo(const uint256 txid)
 {
 	CTransaction tx,batontx,offertx,closeoffertx,refoffertx;
-	int32_t retcode,vini,height,numvouts;
+	int32_t retcode,vini,height,numvouts,numblocks;
 	int64_t dummyint64,deposit,claimantpayout,payment,disputefee,refdeposit,refpayment,refdisputefee;
 	std::string agreementname,agreementmemo,cancelmemo,disputememo,resolutionmemo,refagreementname,refagreementmemo;
 	std::vector<uint8_t> dummyvector,srckey,destkey,arbkey,cancellerkey,offerorkey,signerkey,unlockerkey,claimantkey,refofferorkey,refsignerkey,refarbkey,defendantkey;
@@ -2870,6 +2870,9 @@ UniValue AgreementInfo(const uint256 txid)
 					
 					result.push_back(Pair("status_txid",batontxid.GetHex()));
 				}
+				// Check if the offer hasn't expired. (aka been created longer than AGREEMENTCC_EXPIRYDATE ago)
+				else if (CCduration(numblocks, txid) > AGREEMENTCC_EXPIRYDATE)
+					result.push_back(Pair("status","expired"));
 				// If an offer to amend/close is unspent but points to a closed agreement, mark it as deprecated.
 				else if (offerflags & AOF_AMENDMENT && ((eventfuncid = FindLatestAgreementEvent(refagreementtxid, cp, eventtxid)) == 'r' || 
 				eventfuncid == 't' || eventfuncid == 'u' || (eventfuncid == 'c' && eventtxid != refagreementtxid)))
