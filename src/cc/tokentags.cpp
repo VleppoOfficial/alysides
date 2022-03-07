@@ -65,8 +65,6 @@ TTF_NOESCROWUPDATES - disables escrow type updates for this tag.
 */
 
 /*
-TODO: Insert description of token tags here.
-
 Heuristics for finding correct token tag for app:
 You will need to know the tokenid of the token you're trying to find the tag/logbook for.
 Look for tags that have been made by the token creator for this tokenid specifically.
@@ -131,28 +129,6 @@ static uint8_t GetTokenDetails(const uint256 tokenid)
 	int64_t fullsupply;
 	struct CCcontract_info *cp;
 	return GetTokenDetails(tokenid, cp, fullsupply);
-}
-
-// Wrapper for CheckTokensvout that also checks for tokens CC version.
-// TODO is this needed?
-static int64_t ValidateTokenVout(const CTransaction& tx, int32_t vout, uint256 reftokenid, std::string &errorStr)
-{
-	int64_t fullsupply;
-	std::vector<uint8_t> origpubkey;
-    std::vector<vuint8_t> oprets;
-	uint256 hashBlock, tokenIdOpret;
-	std::string name, description;
-	struct CCcontract_info *cpTokens;
-	switch (GetTokenDetails(reftokenid,cpTokens,fullsupply))
-	{
-		default:
-			break;
-		case 2:
-			return TokensV2::CheckTokensvout(true, true, cpTokens, nullptr, tx, vout, reftokenid, errorStr);
-			break;
-		// add new version handling here
-	}
-	return 0;
 }
 
 // OP_RETURN data encoders and decoders for all Token Tags transactions.
