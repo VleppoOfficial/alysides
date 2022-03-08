@@ -1224,7 +1224,7 @@ UniValue TokenTagInfo(uint256 txid)
 				result.push_back(Pair("creator_pubkey",pubkey33_str(str,(uint8_t *)&srcpub)));
 				result.push_back(Pair("tokenid",tokenid.GetHex()));
 				result.push_back(Pair("token_full_supply",tokensupply));
-				result.push_back(Pair("data",data));
+				result.push_back(Pair("initial_data",data));
 
 				if (flags & TTF_TAGCREATORONLY)
 					result.push_back(Pair("tag_creator_updates_only","true"));
@@ -1268,14 +1268,16 @@ UniValue TokenTagInfo(uint256 txid)
 						break;
 					case 'u':
 						DecodeTokenTagUpdateOpRet(latesttx.vout.back().scriptPubKey,version,refpub,reftokentagid,latestupdatesupply,refdata);
+						result.push_back(Pair("latest_data",refdata));
 						break;
 					case 'e':
 						DecodeTokenTagEscrowOpRet(latesttx.vout.back().scriptPubKey,version,refpub,reftokentagid,refescrowtxid,latestupdatesupply,refdata);
+						result.push_back(Pair("latest_data",refdata));
 						break;
 					default:
 						CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Found incorrect funcid in latest token tag update!");
 				}
-
+				
 				result.push_back(Pair("latest_update",latesttxid.GetHex()));
 				result.push_back(Pair("tokens_required_to_update",latestupdatesupply));
 				break;
