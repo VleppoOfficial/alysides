@@ -91,7 +91,7 @@ int64_t IsTokenTagsvout(struct CCcontract_info *cp,const CTransaction& tx, int32
 // Returns tokens CC version of specified tokenid, alongside the appropriate evalcode and some stats about the token if successful. 
 // Does not support tokensv0. Does recognise TokensV1, though the CC itself is incompatible with v1 tokens.
 // If unsuccessful, returns 0.
-static uint8_t GetTokenDetails(const uint256 tokenid, struct CCcontract_info *cp, int64_t &fullsupply)
+static uint8_t GetTokenDetails(const uint256 tokenid, uint8_t &evalcode, int64_t &fullsupply)
 {
 	CScript opret;
 	CTransaction tokencreatetx;
@@ -99,8 +99,7 @@ static uint8_t GetTokenDetails(const uint256 tokenid, struct CCcontract_info *cp
     std::vector<uint8_t> origpubkey;
     std::vector<vuint8_t> oprets;
 	uint256 hashBlock;
-	struct CCcontract_info C;
-
+	
 	// Fetch transaction and extract opret, with the assumption that it is located in the last vout.
 	if (!myGetTransaction(tokenid, tokencreatetx, hashBlock) || tokencreatetx.vout.size() == 0)
 		return (0);
@@ -111,13 +110,13 @@ static uint8_t GetTokenDetails(const uint256 tokenid, struct CCcontract_info *cp
 	// add new version handling here
     if (TokensV2::DecodeTokenCreateOpRet(opret, origpubkey, name, description, oprets) != 0) // tokens v2
 	{
-		cp = CCinit(&C,EVAL_TOKENSV2);
+		evalcode = EVAL_TOKENSV2;
 		fullsupply = CCfullsupplyV2(tokenid);
         return 2;
 	}
     else if (TokensV1::DecodeTokenCreateOpRet(opret, origpubkey, name, description, oprets) != 0) // tokens v1
 	{
-		cp = CCinit(&C,EVAL_TOKENS);
+		evalcode = EVAL_TOKENS;
 		fullsupply = CCfullsupply(tokenid);
         return 1;
 	}
@@ -127,8 +126,8 @@ static uint8_t GetTokenDetails(const uint256 tokenid, struct CCcontract_info *cp
 static uint8_t GetTokenDetails(const uint256 tokenid)
 {
 	int64_t fullsupply;
-	struct CCcontract_info *cp;
-	return GetTokenDetails(tokenid, cp, fullsupply);
+	uint8_t evalcode;
+	return GetTokenDetails(tokenid, evalcode, fullsupply);
 }
 
 // OP_RETURN data encoders and decoders for all Token Tags transactions.
@@ -339,12 +338,12 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 	CTransaction tokentagtx,prevTx;
 	uint256 tokentagid,tokenid,hashBlock,reftokentagid,refescrowtxid,escrowtxid;
 	std::string data,name,refdata;
-	uint8_t funcid,version,flags,tokensversion,prevfuncid;
+	uint8_t funcid,version,flags,tokensversion,prevfuncid,tokensevalcode;
 	int32_t numvins,numvouts;
 	int64_t tokensupply,updatesupply,fullsupply,requiredupdatesupply,newupdatesupply,prevupdatesupply,tokenamount;
 	CPubKey srcpub,creatorpub,tagtxidpk,TokenTagspk,refpub;
 	char tagCCaddress[KOMODO_ADDRESS_BUFSIZE],srctokenaddr[KOMODO_ADDRESS_BUFSIZE],*txidaddr;
-	struct CCcontract_info *cpTokens;
+	struct CCcontract_info *cpTokens,CTokens;
 	int i;
 
 	// Check boundaries, and verify that input/output amounts are exact.
@@ -386,13 +385,15 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 					return eval->Invalid("Found no normal and CC inputs signed by token tag's source pubkey!");
 
 				// Check if tokenid and its version is correct.
-				else if ((tokensversion = GetTokenDetails(tokenid,cpTokens,fullsupply)) == 0)
+				else if ((tokensversion = GetTokenDetails(tokenid,tokensevalcode,fullsupply)) == 0)
 					return eval->Invalid("tokenid in token tag create tx is invalid or has invalid version!");
 				else if (tokensversion == 1)
 					return eval->Invalid("tokenid in token tag create tx is v1, which is not supported!");
-	
+
+				cpTokens = CCinit(&CTokens,tokensevalcode);
+
 				// Check full supply for tokenid.
-				else if (tokensupply != fullsupply)
+				if (tokensupply != fullsupply)
 					return eval->Invalid("tokensupply in token tag create tx is not full supply for given tokenid!");
 				
 				// Flag checks - make sure there are no unused flags set.
@@ -483,13 +484,15 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 					return eval->Invalid("Token tag update newupdatesupply must be more than "+std::to_string(requiredupdatesupply)+" tokens when TTF_ALLOWANYSUPPLY is not set!");
 				
 				// Check if tokenid and its version is correct.
-				else if ((tokensversion = GetTokenDetails(tokenid,cpTokens,fullsupply)) == 0)
+				else if ((tokensversion = GetTokenDetails(tokenid,tokensevalcode,fullsupply)) == 0)
 					return eval->Invalid("Token tag update references token tag with invalid tokenid!");
 				else if (tokensversion == 1)
 					return eval->Invalid("Token tag update references token tag with v1 tokenid!");
-	
+
+				cpTokens = CCinit(&CTokens,tokensevalcode);
+
 				// Checking data.
-				else if (data.empty() || data.size() > TOKENTAGSCC_MAX_DATA_SIZE)
+				if (data.empty() || data.size() > TOKENTAGSCC_MAX_DATA_SIZE)
 					return eval->Invalid("Token tag data in transaction is empty or exceeds max character limit!");
 				
 				tagtxidpk = CCtxidaddr(txidaddr,tokenid);
@@ -609,13 +612,15 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 					return eval->Invalid("Token tag escrow update newupdatesupply must be more than "+std::to_string(requiredupdatesupply)+" tokens when TTF_ALLOWANYSUPPLY is not set!");
 				
 				// Check if tokenid and its version is correct.
-				else if ((tokensversion = GetTokenDetails(tokenid,cpTokens,fullsupply)) == 0)
+				else if ((tokensversion = GetTokenDetails(tokenid,tokensevalcode,fullsupply)) == 0)
 					return eval->Invalid("Token tag escrow update references token tag with invalid tokenid!");
 				else if (tokensversion == 1)
 					return eval->Invalid("Token tag escrow update references token tag with v1 tokenid!");
-	
+
+				cpTokens = CCinit(&CTokens,tokensevalcode);
+				
 				// Checking data.
-				else if (data.empty() || data.size() > TOKENTAGSCC_MAX_DATA_SIZE)
+				if (data.empty() || data.size() > TOKENTAGSCC_MAX_DATA_SIZE)
 					return eval->Invalid("Token tag data in transaction is empty or exceeds max character limit!");
 				
 				tagtxidpk = CCtxidaddr(txidaddr,tokenid);
@@ -691,19 +696,13 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 // Wrapper for AddTokenCCInputs that also checks for tokens CC version.
 static CAmount AddTokenInputsToTag(struct CCcontract_info *cp, CMutableTransaction &mtx, const CPubKey &pk, uint256 tokenid, CAmount total, int32_t maxinputs, bool usemempool)
 {
-	char tokenaddr[KOMODO_ADDRESS_BUFSIZE];
-	
 	switch (GetTokenDetails(tokenid))
 	{
 		default:
 			break;
 		case 2:
 			std::cerr << "token inputs start" << std::endl;
-			if (cp->evalcode != EVAL_TOKENSV2)
-				break;
-			std::cerr << "GetTokensCCaddress start" << std::endl;
-			GetTokensCCaddress(cp, tokenaddr, pk, true);
-			return AddTokenCCInputs<TokensV2>(cp, mtx, tokenaddr, tokenid, total, maxinputs, usemempool);
+			return (cp->evalcode == EVAL_TOKENSV2) ? AddTokenCCInputs<TokensV2>(cp, mtx, pk, tokenid, total, maxinputs, usemempool) : 0;
 		// add new version handling here
 	}
 	return 0;
@@ -782,11 +781,11 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 	CPubKey mypk,TokenTagspk,tagtxidpk;
 	CScript opret;
 	int64_t fullsupply,requiredupdatesupply;
-	uint8_t version,tokensversion;
+	uint8_t version,tokensversion,tokensevalcode;
 	UniValue rawtx(UniValue::VOBJ), result(UniValue::VOBJ);
 	
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	struct CCcontract_info *cp,C,*cpTokens;
+	struct CCcontract_info *cp,C,*cpTokens,CTokens;
 	cp = CCinit(&C,EVAL_TOKENTAGS);
 	if (txfee == 0)
 		txfee = CC_TXFEE;
@@ -796,13 +795,15 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Signing pubkey must be valid");
 	
 	// Check if tokenid and its version is correct.
-	else if ((tokensversion = GetTokenDetails(tokenid,cpTokens,fullsupply)) == 0)
+	else if ((tokensversion = GetTokenDetails(tokenid,tokensevalcode,fullsupply)) == 0)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Token id invalid");
 	else if (tokensversion == 1)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Token id is version 1, which is not supported by this CC");
 	
+	cpTokens = CCinit(&CTokens,tokensevalcode);
+
 	// Check full supply for tokenid.
-	else if (tokensupply != fullsupply)
+	if (tokensupply != fullsupply)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Specified token supply is not equal to found full supply for given token id");
 	
 	// Flag checks - make sure there are no unused flags set.
@@ -912,12 +913,12 @@ UniValue TokenTagUpdate(const CPubKey& pk,uint64_t txfee,uint256 tokentagid,int6
 	CScript opret;
 	int64_t fullsupply,tokensupply,updatesupply,prevupdatesupply,requiredupdatesupply;
 	std::string refdata,name;
-	uint8_t version,tokensversion,flags,latestfuncid;
+	uint8_t version,tokensversion,flags,latestfuncid,tokensevalcode;
 	uint256 hashBlock,tokenid,latesttxid,reftokentagid,refescrowtxid;
 	UniValue rawtx(UniValue::VOBJ), result(UniValue::VOBJ);
 	
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	struct CCcontract_info *cp,C,*cpTokens;
+	struct CCcontract_info *cp,C,*cpTokens,CTokens;
 	cp = CCinit(&C,EVAL_TOKENTAGS);
 	if (txfee == 0)
 		txfee = CC_TXFEE;
@@ -973,13 +974,15 @@ UniValue TokenTagUpdate(const CPubKey& pk,uint64_t txfee,uint256 tokentagid,int6
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Latest tag creation or update must be notarised due to having mandatory notarisation flag set");
 	
 	// Check if tokenid and its version is correct.
-	else if ((tokensversion = GetTokenDetails(tokenid,cpTokens,fullsupply)) == 0)
+	else if ((tokensversion = GetTokenDetails(tokenid,tokensevalcode,fullsupply)) == 0)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Token id in tag invalid");
 	else if (tokensversion == 1)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Token id in tag is version 1, which is not supported by this CC");
 	
+	cpTokens = CCinit(&CTokens,tokensevalcode);
+
 	// Checking data.
-	else if (data.empty() || data.size() > TOKENTAGSCC_MAX_DATA_SIZE)
+	if (data.empty() || data.size() > TOKENTAGSCC_MAX_DATA_SIZE)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Token tag data cannot be empty and must be up to "+std::to_string(TOKENTAGSCC_MAX_DATA_SIZE)+" characters");
 	
 	TokenTagspk = GetUnspendable(cp, NULL);
@@ -1047,12 +1050,12 @@ UniValue TokenTagEscrowUpdate(const CPubKey& pk,uint64_t txfee,uint256 tokentagi
 	CScript opret;
 	int64_t tokensupply,updatesupply,prevupdatesupply,requiredupdatesupply;
 	std::string refdata,name;
-	uint8_t version,flags,latestfuncid;
+	uint8_t version,flags,latestfuncid,tokensevalcode;
 	uint256 hashBlock,tokenid,latesttxid,reftokentagid,refescrowtxid;
 	UniValue rawtx(UniValue::VOBJ), result(UniValue::VOBJ);
 	
 	CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
-	struct CCcontract_info *cp,C,*cpTokens;
+	struct CCcontract_info *cp,C,*cpTokens,CTokens;
 	cp = CCinit(&C,EVAL_TOKENTAGS);
 	if (txfee == 0)
 		txfee = CC_TXFEE;
