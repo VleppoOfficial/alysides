@@ -447,7 +447,7 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 					return eval->Invalid("vout.0 must be CC baton to global pubkey / tokenid-pubkey 1of2 CC address!");
 
 				// vout.1: tokens back to source address
-				else if (ConstrainVoutV2(tx.vout[1], 1, srctokenaddr, tokensupply, cp->evalcode) == 0)
+				else if (ConstrainVoutV2(tx.vout[1], 1, srctokenaddr, tokensupply, cpTokens->evalcode) == 0)
 					return eval->Invalid("vout.1 must be tokens back to source address!");
 				
 				LOGSTREAM("tokentagscc", CCLOG_INFO, stream << "TokenTagsValidate: 'c' tx validated" << std::endl);
@@ -567,7 +567,7 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 				tokenamount = tx.vout[1].nValue;
 				if (tokenamount < prevupdatesupply)
 					return eval->Invalid("vout.1 nValue is"+std::to_string(tokenamount)+", should be more than "+std::to_string(requiredupdatesupply)+"!");
-				else if (ConstrainVoutV2(tx.vout[1], 1, srctokenaddr, tokenamount, cp->evalcode) == 0)
+				else if (ConstrainVoutV2(tx.vout[1], 1, srctokenaddr, tokenamount, cpTokens->evalcode) == 0)
 					return eval->Invalid("vout.1 must be tokens back to source address!");
 				
 				LOGSTREAM("tokentagscc", CCLOG_INFO, stream << "TokenTagsValidate: 'u' tx validated" << std::endl);
