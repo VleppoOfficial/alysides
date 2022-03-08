@@ -803,7 +803,8 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Can't set unused flag bits");
 	
 	// Check specified update supply, which must be more than 50% of token supply unless TTF_ALLOWANYSUPPLY is set.
-	requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 + 0.5 : static_cast<double>(tokensupply) * 0.5);
+	requiredupdatesupply = (int64_t)(tokensupply % 2 ? (double)(tokensupply) * 0.5 + 0.5 : (double)(tokensupply) * 0.5);
+	//requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 + 0.5 : static_cast<double>(tokensupply) * 0.5);
 
 	if (!(flags & TTF_ALLOWANYSUPPLY) && updatesupply >= requiredupdatesupply)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Update supply must be at least "+std::to_string(requiredupdatesupply)+" tokens");
