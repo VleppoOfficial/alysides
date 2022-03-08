@@ -211,13 +211,12 @@ uint8_t DecodeTokenTagEscrowOpRet(CScript scriptPubKey, uint8_t &version, CPubKe
 }
 
 // Generic decoder for Token Tags transactions, returns function id.
-uint8_t DecodeTokenTagOpRet(const CScript &scriptPubKey,uint8_t &version,uint256 &txid)
+uint8_t DecodeTokenTagOpRet(const CScript &scriptPubKey)
 {
 	std::vector<uint8_t> vopret,vOpretExtra;
 	uint256 tokenid,dummyuint256;
 	std::vector<CPubKey> pubkeys;
     std::vector<vscript_t> oprets;
-	std::vector<uint8_t> vopret;
 	CPubKey dummypubkey;
 	int64_t dummyint64;
 	std::string dummystring;
