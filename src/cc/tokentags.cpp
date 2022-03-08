@@ -691,13 +691,17 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 // Wrapper for AddTokenCCInputs that also checks for tokens CC version.
 static CAmount AddTokenInputsToTag(struct CCcontract_info *cp, CMutableTransaction &mtx, const CPubKey &pk, uint256 tokenid, CAmount total, int32_t maxinputs, bool usemempool)
 {
+	char tokenaddr[KOMODO_ADDRESS_BUFSIZE];
+
 	switch (GetTokenDetails(tokenid))
 	{
 		default:
 			break;
 		case 2:
+			if (cp->evalcode != EVAL_TOKENSV2) return 0;
 			std::cerr << "token inputs start" << std::endl;
-			return (cp->evalcode == EVAL_TOKENSV2) ? AddTokenCCInputs<TokensV2>(cp, mtx, pk, tokenid, total, maxinputs, usemempool) : 0;
+			GetTokensCCaddress(cp, tokenaddr, pk, true);
+			return AddTokenCCInputs<TokensV2>(cp, mtx, tokenaddr, tokenid, total, maxinputs, usemempool);
 		// add new version handling here
 	}
 	return 0;
@@ -819,8 +823,8 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 	tagtxidpk = CCtxidaddr(txidaddr,tokenid);
 	
 	opret = EncodeTokenTagCreateOpRet(TOKENTAGSCC_VERSION,mypk,tokenid,tokensupply,updatesupply,flags,name,data);
-	
-	if (/*AddTokenInputsToTag*/AddTokenCCInputs<TokensV2>(cpTokens,mtx,mypk,tokenid,tokensupply,64,false) == tokensupply) // vin.0 to vin.m-1: tokens
+
+	if (AddTokenInputsToTag(cpTokens,mtx,mypk,tokenid,tokensupply,64,false) == tokensupply) // vin.0 to vin.m-1: tokens
 	{
 		std::cerr << "token inputs done" << std::endl;
         CCwrapper cond(MakeCCcond1(cpTokens->evalcode,mypk));

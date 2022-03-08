@@ -77,7 +77,7 @@ uint8_t GetTokenOpReturnVersion(uint256 tokenid)
 // also sets evalcode in cp, if needed
 template <class V>
 CAmount AddTokenCCInputs(struct CCcontract_info *cp, CMutableTransaction &mtx, const char *tokenaddr, uint256 tokenid, CAmount total, int32_t maxinputs, bool useMempool)
-{ std::cerr << "AddTokenCCInputs<V> start 2" << std::endl;
+{
 	CAmount totalinputs = 0; 
     int32_t n = 0; 
     const bool CC_INPUTS_TRUE = true;
@@ -93,11 +93,11 @@ CAmount AddTokenCCInputs(struct CCcontract_info *cp, CMutableTransaction &mtx, c
         GetTokenData<V>(tokenid, tokenData, vopretNonfungible);
         if (vopretNonfungible.size() > 0)
             cp->evalcodeNFT = vopretNonfungible.begin()[0];  // set evalcode of NFT, for signing
-    } std::cerr << "enter add_token_vin decl" << std::endl;
+    }
 
     // make lambda to use it for either index kind:
     auto add_token_vin = [&](uint256 txhash, int32_t index, CAmount satoshis) -> void
-    { std::cerr << "enter add_token_vin" << std::endl;
+    {
         CTransaction tx;
         uint256 hashBlock;
 
@@ -120,12 +120,11 @@ CAmount AddTokenCCInputs(struct CCcontract_info *cp, CMutableTransaction &mtx, c
 				return;
 			
             LOGSTREAMFN(cctokens_log, CCLOG_DEBUG1, stream << "checked tx vout destaddress=" << destaddr << " amount=" << tx.vout[index].nValue << std::endl);
-            std::cerr << "enter IsTokensvout" << std::endl;
+
 			if (IsTokensvout<V>(true, true, cp, NULL, tx, index, tokenid) > 0 && !myIsutxo_spentinmempool(ignoretxid, ignorevin, txhash, index))
 			{                
                 if (total != 0 && maxinputs != 0)  // if it is not just to calc amount...
 					mtx.vin.push_back(CTxIn(txhash, index, CScript()));
-                    std::cerr << "push_back token vin" << std::endl;
 
 				totalinputs += satoshis;
                 LOGSTREAMFN(cctokens_log, CCLOG_DEBUG1, stream << "adding input nValue=" << satoshis  << std::endl);
@@ -136,7 +135,7 @@ CAmount AddTokenCCInputs(struct CCcontract_info *cp, CMutableTransaction &mtx, c
 			}
 		}
     }; // auto add_token_vin
-    std::cerr << "exit add_token_vin decl" << std::endl;
+
     if (fUnspentCCIndex && GetTokenOpReturnVersion<V>(tokenid) > 0)
     {
         std::vector<std::pair<CUnspentCCIndexKey, CUnspentCCIndexValue> > unspentOutputs;
@@ -147,7 +146,6 @@ CAmount AddTokenCCInputs(struct CCcontract_info *cp, CMutableTransaction &mtx, c
             
         // threshold = total / (maxinputs != 0 ? maxinputs : CC_MAXVINS);   // let's not use threshold
         LOGSTREAMFN(cctokens_log, CCLOG_DEBUG1, stream << " found unspentOutputs=" << unspentOutputs.size() << std::endl);
-        std::cerr << "add_token_vin call w fUnspentCCIndex > 0" << std::endl;
         for (std::vector<std::pair<CUnspentCCIndexKey, CUnspentCCIndexValue> >::const_iterator it = unspentOutputs.begin(); it != unspentOutputs.end(); it++)
             add_token_vin(it->first.txhash, it->first.index, it->second.satoshis);
     }
@@ -161,11 +159,10 @@ CAmount AddTokenCCInputs(struct CCcontract_info *cp, CMutableTransaction &mtx, c
         	SetCCunspents(unspentOutputs, (char*)tokenaddr, CC_INPUTS_TRUE);
             
         LOGSTREAMFN(cctokens_log, CCLOG_DEBUG1, stream << " found unspentOutputs=" << unspentOutputs.size() << std::endl);
-        std::cerr << "add_token_vin call w fUnspentCCIndex > 0" << std::endl;
         for (std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> >::const_iterator it = unspentOutputs.begin(); it != unspentOutputs.end(); it++)
             add_token_vin(it->first.txhash, it->first.index, it->second.satoshis);
     }
-    std::cerr << "AddTokenCCInputs<V> end" << std::endl;
+
 	return totalinputs;
 }
 
@@ -181,9 +178,8 @@ CAmount AddTokenCCInputs(struct CCcontract_info *cp, CMutableTransaction &mtx, c
     GetTokenData<V>(tokenid, tokenData, vopretNonfungible);
     if (vopretNonfungible.size() > 0)
         cp->evalcodeNFT = vopretNonfungible.begin()[0];  // set evalcode of NFT
-    std::cerr << "cp->evalcodeNFT done" << std::endl;
+    
     GetTokensCCaddress(cp, tokenaddr, pk, V::IsMixed());  // GetTokensCCaddress will use 'evalcodeNFT'
-    std::cerr << "AddTokenCCInputs<V> start" << std::endl;
     return AddTokenCCInputs<V>(cp, mtx, tokenaddr, tokenid, total, maxinputs, useMempool);
 } 
 
