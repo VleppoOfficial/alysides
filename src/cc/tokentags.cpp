@@ -1212,6 +1212,7 @@ UniValue TokenTagInfo(uint256 txid)
 				result.push_back(Pair("creator_pubkey",pubkey33_str(str,(uint8_t *)&srcpub)));
 				result.push_back(Pair("tokenid",tokenid.GetHex()));
 				result.push_back(Pair("token_full_supply",tokensupply));
+				result.push_back(Pair("data",data));
 
 				if (flags & TTF_TAGCREATORONLY)
 					result.push_back(Pair("tag_creator_updates_only","true"));
