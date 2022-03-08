@@ -731,10 +731,10 @@ static CTxOut MakeTokensCCvoutforTag(uint256 tokenid, uint8_t evalcode, CAmount 
 	return CTxOut();
 }
 
-// Finds the function id of the latest confirmed transaction that spent the event log baton for the specified token tag.
+// Finds the function id of the transaction that spent the latest baton for the specified token tag.
 // Returns 'c' if event log baton is unspent, or 0 if token tag with the specified txid couldn't be found.
 // Also returns the txid of the latest confirmed update the function found in the latesttxid variable.
-static uint8_t FindLatestConfirmedTagUpdate(uint256 tokentagid, struct CCcontract_info *cp, uint256 &latesttxid)
+static uint8_t FindLatestTagUpdate(uint256 tokentagid, struct CCcontract_info *cp, uint256 &latesttxid)
 {
 	CTransaction sourcetx, batontx;
 	uint256 hashBlock, batontxid, refagreementtxid;
@@ -951,9 +951,11 @@ UniValue TokenTagUpdate(const CPubKey& pk,uint64_t txfee,uint256 tokentagid,int6
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "New required update supply cannot be more than entire token supply");
 	
 	// Find latest tag update.
-	latestfuncid = FindLatestConfirmedTagUpdate(tokentagid, cp, latesttxid);
+	latestfuncid = FindLatestTagUpdate(tokentagid, cp, latesttxid);
 	if (myGetTransactionCCV2(cp,latesttxid,latesttx,hashBlock) == 0 || latesttx.vout.size() == 0)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Couldn't find latest token tag update!");
+	else if (hashBlock.IsNull())
+		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Latest token tag update is still in mempool");
 	
 	// Get latest update supply.
 	switch (latestfuncid)
@@ -1094,9 +1096,11 @@ UniValue TokenTagEscrowUpdate(const CPubKey& pk,uint64_t txfee,uint256 tokentagi
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "New required update supply cannot be more than entire token supply");
 	
 	// Find latest tag update.
-	latestfuncid = FindLatestConfirmedTagUpdate(tokentagid, cp, latesttxid);
+	latestfuncid = FindLatestTagUpdate(tokentagid, cp, latesttxid);
 	if (myGetTransactionCCV2(cp,latesttxid,latesttx,hashBlock) == 0 || latesttx.vout.size() == 0)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Couldn't find latest token tag update!");
+	else if (hashBlock.IsNull())
+		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Latest token tag update is still in mempool");
 	
 	// Get latest update supply.
 	switch (latestfuncid)
@@ -1242,7 +1246,7 @@ UniValue TokenTagInfo(uint256 txid)
 				result.push_back(Pair("flags",flags));
 				
 				// Find latest tag update.
-				latestfuncid = FindLatestConfirmedTagUpdate(txid, cp, latesttxid);
+				latestfuncid = FindLatestTagUpdate(txid, cp, latesttxid);
 				if (myGetTransactionCCV2(cp,latesttxid,latesttx,hashBlock) == 0 || latesttx.vout.size() == 0)
 					CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Couldn't find latest token tag update!");
 
@@ -1311,7 +1315,7 @@ UniValue TokenTagSamples(const uint256 tokentagid,int64_t samplenum,bool bRevers
 	if (myGetTransactionCCV2(cp,tokentagid,tokentagtx,hashBlock) != 0 && (numvouts = tokentagtx.vout.size()) > 0 &&
 	DecodeTokenTagOpRet(tokentagtx.vout[numvouts-1].scriptPubKey) == 'c')
 	{
-		FindLatestConfirmedTagUpdate(tokentagid, cp, latesttxid);
+		FindLatestTagUpdate(tokentagid, cp, latesttxid);
 
 		if (latesttxid != tokentagid)
 		{
