@@ -174,11 +174,11 @@ template <class V>
 CAmount AddTokenCCInputs(struct CCcontract_info *cp, CMutableTransaction &mtx, const CPubKey &pk, uint256 tokenid, CAmount total, int32_t maxinputs, bool useMempool) 
 {
     char tokenaddr[KOMODO_ADDRESS_BUFSIZE];
-    std::cerr << "AddTokenCCInputs start" << std::endl;
+    
     // check if this is a NFT
     TokenDataTuple tokenData;
     vscript_t vopretNonfungible;
-    GetTokenData<V>(tokenid, tokenData, vopretNonfungible);
+    GetTokenData<V>(tokenid, tokenData, vopretNonfungible); std::cerr << "GetTokenData done" << std::endl;
     if (vopretNonfungible.size() > 0)
         cp->evalcodeNFT = vopretNonfungible.begin()[0];  // set evalcode of NFT
     
