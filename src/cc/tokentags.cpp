@@ -618,7 +618,7 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 					return eval->Invalid("Token tag escrow update references token tag with v1 tokenid!");
 
 				cpTokens = CCinit(&CTokens,tokensevalcode);
-				
+
 				// Checking data.
 				if (data.empty() || data.size() > TOKENTAGSCC_MAX_DATA_SIZE)
 					return eval->Invalid("Token tag data in transaction is empty or exceeds max character limit!");
@@ -815,7 +815,9 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 	
 	if (!(flags & TTF_ALLOWANYSUPPLY) && updatesupply <= requiredupdatesupply)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Update supply must be more than "+std::to_string(requiredupdatesupply)+" tokens");
-
+	else if (updatesupply > tokensupply)
+		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Required update supply cannot be more than entire token supply");
+	
 	// Checking name and data.
 	else if (name.empty() || name.size() > TOKENTAGSCC_MAX_NAME_SIZE)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Token tag name cannot be empty and must be up to "+std::to_string(TOKENTAGSCC_MAX_NAME_SIZE)+" characters");
@@ -829,23 +831,17 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 
 	if (AddTokenInputsToTag(cpTokens,mtx,mypk,tokenid,tokensupply,64,false) == tokensupply) // vin.0 to vin.m-1: tokens
 	{
-		std::cerr << "token inputs done" << std::endl;
         CCwrapper cond(MakeCCcond1(cpTokens->evalcode,mypk));
         CCAddVintxCond(cp,cond); 
-		std::cerr << "CCAddVintxCond done" << std::endl;
 		
         if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 5, pk.IsValid()) > 0) // vin.m to vin.n-1: normal input
         {
-			std::cerr << "normal inputs done" << std::endl;
-
 			// vout.0: baton to global pubkey / tokenid-pubkey 1of2 CC address
 			mtx.vout.push_back(MakeCC1of2voutMixed(cp->evalcode, CC_MARKER_VALUE, TokenTagspk, tagtxidpk));
 			// vout.1: tokens back to source address
 			mtx.vout.push_back(MakeTokensCCvoutforTag(tokenid, cpTokens->evalcode, tokensupply, mypk));
 
-			std::cerr << "FinalizeCCV2Tx start" << std::endl;
 			rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
-			std::cerr << "FinalizeCCV2Tx done" << std::endl;
         }
         else
 			CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
@@ -859,8 +855,6 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 	}
 	else
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
-
-	std::cerr << "hex done" << std::endl;
 
 	// Return captured values here for debugging/verification before broadcasting.
 	result.push_back(Pair("type","tag_create"));
@@ -897,8 +891,6 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 	
 	result.push_back(Pair("flags",flags));
 	
-	std::cerr << "func done" << std::endl;
-
 	return (result);
 }
 
@@ -946,6 +938,8 @@ UniValue TokenTagUpdate(const CPubKey& pk,uint64_t txfee,uint256 tokentagid,int6
 	requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 + 0.5 : static_cast<double>(tokensupply) * 0.5);
 	if (!(flags & TTF_ALLOWANYSUPPLY) && newupdatesupply <= requiredupdatesupply)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "New update supply must be more than "+std::to_string(requiredupdatesupply)+" tokens");
+	else if (newupdatesupply > tokensupply)
+		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "New required update supply cannot be more than entire token supply");
 	
 	// Find latest tag update.
 	latestfuncid = FindLatestConfirmedTagUpdate(tokentagid, cp, latesttxid);
@@ -1087,6 +1081,8 @@ UniValue TokenTagEscrowUpdate(const CPubKey& pk,uint64_t txfee,uint256 tokentagi
 	requiredupdatesupply = (tokensupply % 2) ? tokensupply * 0.5 + 1 : tokensupply * 0.5;
 	if (!(flags & TTF_ALLOWANYSUPPLY) && newupdatesupply > requiredupdatesupply)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "New update supply must be more than "+std::to_string(requiredupdatesupply)+" tokens");
+	else if (newupdatesupply > tokensupply)
+		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "New required update supply cannot be more than entire token supply");
 	
 	// Find latest tag update.
 	latestfuncid = FindLatestConfirmedTagUpdate(tokentagid, cp, latesttxid);
