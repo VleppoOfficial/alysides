@@ -692,14 +692,15 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 static CAmount AddTokenInputsToTag(struct CCcontract_info *cp, CMutableTransaction &mtx, const CPubKey &pk, uint256 tokenid, CAmount total, int32_t maxinputs, bool usemempool)
 {
 	char tokenaddr[KOMODO_ADDRESS_BUFSIZE];
-
+	std::cerr << "token inputs start" << std::endl;
 	switch (GetTokenDetails(tokenid))
 	{
 		default:
 			break;
 		case 2:
-			if (cp->evalcode != EVAL_TOKENSV2) return 0;
-			std::cerr << "token inputs start" << std::endl;
+			if (cp->evalcode != EVAL_TOKENSV2)
+				break;
+			std::cerr << "GetTokensCCaddress start" << std::endl;
 			GetTokensCCaddress(cp, tokenaddr, pk, true);
 			return AddTokenCCInputs<TokensV2>(cp, mtx, tokenaddr, tokenid, total, maxinputs, usemempool);
 		// add new version handling here
