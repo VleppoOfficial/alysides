@@ -822,6 +822,8 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 	
 	opret = EncodeTokenTagCreateOpRet(TOKENTAGSCC_VERSION,mypk,tokenid,tokensupply,updatesupply,flags,name,data);
 
+	std::cerr << "opret done" << std::endl;
+
 	if (AddTokenInputsToTag(cpTokens,mtx,mypk,tokenid,tokensupply,64,false) == tokensupply) // vin.0 to vin.m-1: tokens
 	{
         CCwrapper cond(MakeCCcond1(cpTokens->evalcode,mypk));
@@ -848,6 +850,8 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 	}
 	else
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Error reading hex created by FinalizeCCV2Tx");
+
+	std::cerr << "hex done" << std::endl;
 
 	// Return captured values here for debugging/verification before broadcasting.
 	result.push_back(Pair("type","tag_create"));
@@ -883,7 +887,9 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 		result.push_back(Pair("notarisation_required","false"));
 	
 	result.push_back(Pair("flags",flags));
-		
+	
+	std::cerr << "func done" << std::endl;
+
 	return (result);
 }
 
