@@ -211,18 +211,29 @@ uint8_t DecodeTokenTagEscrowOpRet(CScript scriptPubKey, uint8_t &version, CPubKe
 }
 
 // Generic decoder for Token Tags transactions, returns function id.
-uint8_t DecodeTokenTagOpRet(const CScript scriptPubKey)
+uint8_t DecodeTokenTagOpRet(const CScript &scriptPubKey,uint8_t &version,uint256 &txid)
 {
+	std::vector<uint8_t> vopret,vOpretExtra;
+	uint256 tokenid,dummyuint256;
+	std::vector<CPubKey> pubkeys;
+    std::vector<vscript_t> oprets;
 	std::vector<uint8_t> vopret;
 	CPubKey dummypubkey;
 	int64_t dummyint64;
-	std::vector<CAmount> updateamounts;
-	uint256 dummyuint256;
 	std::string dummystring;
 	uint8_t evalcode, funcid, *script, dummyuint8;
-	GetOpReturnData(scriptPubKey, vopret);
-	script = (uint8_t *)vopret.data();
-	if(script != NULL && vopret.size() > 2)
+
+	// add new version handling here
+	if ((TokensV2::DecodeTokenOpRet(scriptPubKey,tokenid,pubkeys,oprets) != 0) &&
+		GetOpReturnCCBlob(oprets, vOpretExtra) && vOpretExtra.size() > 0)
+    {
+        vopret = vOpretExtra;
+    }
+    else
+		GetOpReturnData(scriptPubKey, vopret);
+
+    script = (uint8_t *)vopret.data();
+    if (script != NULL && vopret.size() > 2)
 	{
 		evalcode = script[0];
 		if (evalcode != EVAL_TOKENTAGS)
@@ -701,7 +712,6 @@ static CAmount AddTokenInputsToTag(struct CCcontract_info *cp, CMutableTransacti
 		default:
 			break;
 		case 2:
-			std::cerr << "token inputs start" << std::endl;
 			return (cp->evalcode == EVAL_TOKENSV2) ? AddTokenCCInputs<TokensV2>(cp, mtx, pk, tokenid, total, maxinputs, usemempool) : 0;
 		// add new version handling here
 	}
