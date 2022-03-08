@@ -405,6 +405,8 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 				// Check full supply for tokenid.
 				if (tokensupply != fullsupply)
 					return eval->Invalid("tokensupply in token tag create tx is not full supply for given tokenid!");
+				else if (updatesupply <= 0)
+					return eval->Invalid("updatesupply in token tag create tx is not positive!");
 				
 				// Flag checks - make sure there are no unused flags set.
 				else if (!CheckUnusedFlags(flags, funcid))
@@ -487,6 +489,9 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 				// TTF_CONSTREQS is set to prevent any other updatesupply from being specified compared to original updatesupply.
 				else if ((flags & TTF_CONSTREQS) && newupdatesupply != updatesupply)
 					return eval->Invalid("Token tag update newupdatesupply and previous updatesupply mismatch when TTF_CONSTREQS set!");
+
+				else if (newupdatesupply <= 0)
+					return eval->Invalid("Token tag update newupdatesupply is not positive!");
 				
 				// Check specified update supply, which must be more than 50% of token supply unless TTF_ALLOWANYSUPPLY is set.
 				requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 - 0.5 : static_cast<double>(tokensupply) * 0.5);
@@ -612,7 +617,10 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 				
 				// TTF_CONSTREQS is set to prevent any other updatesupply from being specified compared to original updatesupply.
 				else if ((flags & TTF_CONSTREQS) && newupdatesupply != updatesupply)
-					return eval->Invalid("Token tag update newupdatesupply and previous updatesupply mismatch when TTF_CONSTREQS set!");
+					return eval->Invalid("Token tag escrow update newupdatesupply and previous updatesupply mismatch when TTF_CONSTREQS set!");
+				
+				else if (newupdatesupply <= 0)
+					return eval->Invalid("Token tag escrow update newupdatesupply is not positive!");
 				
 				// TODO: this is where we analyze and validate escrowtxid
 
