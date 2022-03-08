@@ -767,7 +767,7 @@ static uint8_t FindLatestTagUpdate(uint256 tokentagid, struct CCcontract_info *c
 		(retcode = CCgetspenttxid(batontxid, vini, height, sourcetx.GetHash(), 0)) == 0 &&
 
 		// Get spending transaction and its op_return.
-		(myGetTransactionCCV2(cp, batontxid, batontx, hashBlock)) && !hashBlock.IsNull() && batontx.vout.size() > 0 && 
+		(myGetTransactionCCV2(cp, batontxid, batontx, hashBlock)) && batontx.vout.size() > 0 && 
 		(funcid = DecodeTokenTagOpRet(batontx.vout.back().scriptPubKey)) != 0)
 		{
 			sourcetx = batontx;
