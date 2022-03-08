@@ -411,10 +411,10 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 					return eval->Invalid("Token tag create transaction has unused flag bits set!");
 				
 				// Check specified update supply, which must be more than 50% of token supply unless TTF_ALLOWANYSUPPLY is set.
-				requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 + 0.5 : static_cast<double>(tokensupply) * 0.5);
+				requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 - 0.5 : static_cast<double>(tokensupply) * 0.5);
 
 				if (!(flags & TTF_ALLOWANYSUPPLY) && updatesupply <= requiredupdatesupply)
-					return eval->Invalid("Token tag create transaction has update supply set to less than "+std::to_string(requiredupdatesupply)+" tokens!");
+					return eval->Invalid("Token tag create transaction has update supply set to less than "+std::to_string(requiredupdatesupply+1)+" tokens!");
 				
 				// Checking name and data - they can't be empty, and both params have a max size limit.
 				else if (name.empty() || name.size() > TOKENTAGSCC_MAX_NAME_SIZE)
@@ -489,9 +489,9 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 					return eval->Invalid("Token tag update newupdatesupply and previous updatesupply mismatch when TTF_CONSTREQS set!");
 				
 				// Check specified update supply, which must be more than 50% of token supply unless TTF_ALLOWANYSUPPLY is set.
-				requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 + 0.5 : static_cast<double>(tokensupply) * 0.5);
+				requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 - 0.5 : static_cast<double>(tokensupply) * 0.5);
 				if (!(flags & TTF_ALLOWANYSUPPLY) && newupdatesupply <= requiredupdatesupply)
-					return eval->Invalid("Token tag update newupdatesupply must be more than "+std::to_string(requiredupdatesupply)+" tokens when TTF_ALLOWANYSUPPLY is not set!");
+					return eval->Invalid("Token tag update newupdatesupply must be at least "+std::to_string(requiredupdatesupply+1)+" tokens when TTF_ALLOWANYSUPPLY is not set!");
 				
 				// Check if tokenid and its version is correct.
 				else if ((tokensversion = GetTokenDetails(tokenid,tokensevalcode,fullsupply)) == 0)
@@ -617,9 +617,9 @@ bool TokenTagsValidate(struct CCcontract_info *cp, Eval* eval, const CTransactio
 				// TODO: this is where we analyze and validate escrowtxid
 
 				// Check specified update supply, which must be more than 50% of token supply unless TTF_ALLOWANYSUPPLY is set.
-				requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 + 0.5 : static_cast<double>(tokensupply) * 0.5);
+				requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 - 0.5 : static_cast<double>(tokensupply) * 0.5);
 				if (!(flags & TTF_ALLOWANYSUPPLY) && newupdatesupply <= requiredupdatesupply)
-					return eval->Invalid("Token tag escrow update newupdatesupply must be more than "+std::to_string(requiredupdatesupply)+" tokens when TTF_ALLOWANYSUPPLY is not set!");
+					return eval->Invalid("Token tag escrow update newupdatesupply must be at least "+std::to_string(requiredupdatesupply+1)+" tokens when TTF_ALLOWANYSUPPLY is not set!");
 				
 				// Check if tokenid and its version is correct.
 				else if ((tokensversion = GetTokenDetails(tokenid,tokensevalcode,fullsupply)) == 0)
@@ -733,7 +733,7 @@ static CTxOut MakeTokensCCvoutforTag(uint256 tokenid, uint8_t evalcode, CAmount 
 
 // Finds the function id of the transaction that spent the latest baton for the specified token tag.
 // Returns 'c' if event log baton is unspent, or 0 if token tag with the specified txid couldn't be found.
-// Also returns the txid of the latest confirmed update the function found in the latesttxid variable.
+// Also returns the txid of the latest update the function found in the latesttxid variable.
 static uint8_t FindLatestTagUpdate(uint256 tokentagid, struct CCcontract_info *cp, uint256 &latesttxid)
 {
 	CTransaction sourcetx, batontx;
@@ -820,10 +820,10 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Can't set unused flag bits");
 	
 	// Check specified update supply, which must be more than 50% of token supply unless TTF_ALLOWANYSUPPLY is set.
-	requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 + 0.5 : static_cast<double>(tokensupply) * 0.5);
+	requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 - 0.5 : static_cast<double>(tokensupply) * 0.5);
 	
 	if (!(flags & TTF_ALLOWANYSUPPLY) && updatesupply <= requiredupdatesupply)
-		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Update supply must be more than "+std::to_string(requiredupdatesupply)+" tokens");
+		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Update supply must be at least "+std::to_string(requiredupdatesupply+1)+" tokens");
 	else if (updatesupply > tokensupply)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Required update supply cannot be more than entire token supply");
 	
@@ -944,9 +944,9 @@ UniValue TokenTagUpdate(const CPubKey& pk,uint64_t txfee,uint256 tokentagid,int6
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "New required update supply for tag cannot be changed due to a setting in the tag");
 	
 	// Check specified update supply, which must be more than 50% of token supply unless TTF_ALLOWANYSUPPLY is set.
-	requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 + 0.5 : static_cast<double>(tokensupply) * 0.5);
+	requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 - 0.5 : static_cast<double>(tokensupply) * 0.5);
 	if (!(flags & TTF_ALLOWANYSUPPLY) && newupdatesupply <= requiredupdatesupply)
-		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "New update supply must be more than "+std::to_string(requiredupdatesupply)+" tokens");
+		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "New update supply must be at least "+std::to_string(requiredupdatesupply+1)+" tokens");
 	else if (newupdatesupply > tokensupply)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "New required update supply cannot be more than entire token supply");
 	
@@ -1091,7 +1091,7 @@ UniValue TokenTagEscrowUpdate(const CPubKey& pk,uint64_t txfee,uint256 tokentagi
 	// Check specified update supply, which must be more than 50% of token supply unless TTF_ALLOWANYSUPPLY is set.
 	requiredupdatesupply = (tokensupply % 2) ? tokensupply * 0.5 + 1 : tokensupply * 0.5;
 	if (!(flags & TTF_ALLOWANYSUPPLY) && newupdatesupply > requiredupdatesupply)
-		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "New update supply must be more than "+std::to_string(requiredupdatesupply)+" tokens");
+		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "New update supply must be at least "+std::to_string(requiredupdatesupply+1)+" tokens");
 	else if (newupdatesupply > tokensupply)
 		CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "New required update supply cannot be more than entire token supply");
 	
