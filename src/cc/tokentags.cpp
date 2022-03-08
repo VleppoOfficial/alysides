@@ -819,7 +819,7 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 	tagtxidpk = CCtxidaddr(txidaddr,tokenid);
 	
 	opret = EncodeTokenTagCreateOpRet(TOKENTAGSCC_VERSION,mypk,tokenid,tokensupply,updatesupply,flags,name,data);
-
+	
 	if (/*AddTokenInputsToTag*/AddTokenCCInputs<TokensV2>(cpTokens,mtx,mypk,tokenid,tokensupply,64,false) == tokensupply) // vin.0 to vin.m-1: tokens
 	{
 		std::cerr << "token inputs done" << std::endl;
