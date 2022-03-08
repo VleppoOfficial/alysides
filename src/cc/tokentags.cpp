@@ -804,8 +804,8 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 	
 	std::cerr << "Checking required update supply" << std::endl;
 	// Check specified update supply, which must be more than 50% of token supply unless TTF_ALLOWANYSUPPLY is set.
-	requiredupdatesupply = (int64_t)(tokensupply % 2 ? (double)(tokensupply) * 0.5 + 0.5 : (double)(tokensupply) * 0.5);
-	//requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 + 0.5 : static_cast<double>(tokensupply) * 0.5);
+	//requiredupdatesupply = (int64_t)(tokensupply % 2 ? (double)(tokensupply) * 0.5 + 0.5 : (double)(tokensupply) * 0.5);
+	requiredupdatesupply = static_cast<int64_t>(tokensupply % 2 ? static_cast<double>(tokensupply) * 0.5 + 0.5 : static_cast<double>(tokensupply) * 0.5);
 	std::cerr << "Done" << std::endl;
 
 	if (!(flags & TTF_ALLOWANYSUPPLY) && updatesupply >= requiredupdatesupply)
@@ -828,15 +828,21 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 	{
         CCwrapper cond(MakeCCcond1(cpTokens->evalcode,mypk));
         CCAddVintxCond(cp,cond); 
+
+		std::cerr << "token inputs done" << std::endl;
 		
         if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 5, pk.IsValid()) > 0) // vin.m to vin.n-1: normal input
         {
+			std::cerr << "normal inputs done" << std::endl;
+
 			// vout.0: baton to global pubkey / tokenid-pubkey 1of2 CC address
 			mtx.vout.push_back(MakeCC1of2voutMixed(cp->evalcode, CC_MARKER_VALUE, TokenTagspk, tagtxidpk));
 			// vout.1: tokens back to source address
 			mtx.vout.push_back(MakeTokensCCvoutforTag(tokenid, cpTokens->evalcode, tokensupply, mypk));
 
+			std::cerr << "FinalizeCCV2Tx start" << std::endl;
 			rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+			std::cerr << "FinalizeCCV2Tx done" << std::endl;
         }
         else
 			CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
