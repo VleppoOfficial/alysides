@@ -18,8 +18,16 @@
 #include "CCtokens_impl.h"
 
 /*
-Token Tags module - preliminary design (not final, subject to change during build)
-// TODO description
+This is an implementation of a simple linked list data storage method, similar to Oracles in functionality.
+The main difference here is that permissions for adding more transactions to an existing data set is tied to ownership of a specific token rather than any particular signature (at least by default).
+These linked list data sets can be "attached" onto any valid token ID that is fully owned by a single party at time of creation, sort of like a tag, hence the name of the CC.
+
+For proving ownership of specific tokens, we simply draw the required amount of token inputs from a single address, then send those tokens back to the same address in a single vout.
+In the future, the module will provide support for alternative types of proving token ownership (required if the token is not in the owner's wallet, and is stored in, e.g. a heir address, etc.)
+
+The intended use case for the CC is to effectively allow token data to be "updated" by the token owners, however the CC doesn't necessarily have to be used this way.
+
+NOTE: this CC only supports tokens v2. Any future token versions will also be supported via patches to this CC, if possible.
 
 Tag create:
 vin.0 to vin.m-1: tokens
@@ -44,36 +52,7 @@ vin.1 to vin.n-1: normal input
 vout.0: baton to global pubkey / tokenid-pubkey 1of2 CC address
 vout.n-2: normal output for change (if any)
 vout.n-1: OP_RETURN EVAL_TOKENTAGS 'e' version srcpub tokentagid escrowtxid newupdatesupply data
-
-User Flow
-
-- Token owner uses tokentagcreate to set up a tag tied to a specific token than can be updated with new data, as long as the data author has possession of a specified amount of the tokens
-- Token owner uses tokentagupdate to add a new entry to the tag created by the tokentagcreate transaction
-- A list of sorted token tags related to a specific token can be retrieved by tokentaglist
-- Information on a specific token tag can be retrieved by tokentaginfo
-
-RPC List
-
-tokentagcreate tokenid name tokensupply updatesupply [flags] [data]
-tokentagupdate tokentagid [data] [newupdatesupply] [escrowtxid]
-tokentaglist [tokenid]
-tokentaginfo tokentagid
-
-tokentagcreate flags list
-TTF_ALLOWANYSUPPLY - allows updatesupply for this tag to be set to below 51% of the total token supply. By default, only values above 51% of the total token supply are allowed for updatesupply. Note: depending on the updatesupply value set, this flag may allow multiple parties that own this token to post update transactions to this tag at the same time. Exercise caution when setting this flag.
-TTF_NOESCROWUPDATES - disables escrow type updates for this tag.
 */
-
-/*
-Heuristics for finding correct token tag for app:
-You will need to know the tokenid of the token you're trying to find the tag/logbook for.
-Look for tags that have been made by the token creator for this tokenid specifically.
-If the token creator did not create any tags, look for tags that were made by any pubkey.
-The earliest tag in this list is your "official" token tag.
-If there are multiple tags that meet this criteria in the same block / same timestamp, choose the tag with the txid that has the lowest
-numerical value when converting the hex to a number.
-*/
-
 
 // --- Start of consensus code ---
 
@@ -1399,167 +1378,3 @@ UniValue TokenTagList(uint256 tokenid, CPubKey pubkey)
 	}
 	return (result);
 }
-
-// --- Useful misc functions for additional token transaction analysis ---
-
-// internal function that looks for voutPubkeys or destaddrs in token tx oprets
-// used by TokenOwners
-/*template <class V>
-void GetTokenOwnerList(const CTransaction tx, struct CCcontract_info *cp, uint256 tokenid, int64_t &depth, int64_t maxdepth, std::vector<CPubKey> &OwnerList)
-{
-    // Check "max depth" variable to avoid stack overflows from recursive calls
-	if (depth > maxdepth)
-	{
-		return;
-	}
-
-    // Examine each vout in the tx (except last vout)
-    for (int64_t n = 0; n <= tx.vout.size() - 1; n++)
-    {
-        CScript opret;
-        uint256 tokenIdOpret, spendingtxid, hashBlock;
-        CTransaction spendingtx;
-        std::vector<vscript_t>  oprets;
-        std::vector<CPubKey> voutPubkeys;
-        int32_t vini, height;
-		char destaddr[64];
-
-        // We ignore every vout that's not a tokens vout, so we check for that
-        if (IsTokensvout<V>(true, true, cp, NULL, tx, n, tokenid))
-        {
-			// Get the opret from either vout.n or tx.vout.back() scriptPubkey
-			if (!getCCopret(tx.vout[n].scriptPubKey, opret))
-				opret = tx.vout.back().scriptPubKey;
-			uint8_t funcId = V::DecodeTokenOpRet(opret, tokenIdOpret, voutPubkeys, oprets);
-
-			// Include only pubkeys from voutPubkeys arrays with 1 element.
-			// If voutPubkeys size is >= 2 then the vout was probably sent to a CC 1of2 address, which
-			// might have no true "owner" pubkey and is therefore outside the scope of this function
-			if (voutPubkeys.size() == 1)
-			{
-				// Check if found pubkey is already in the list, if not, add it
-				std::vector<CPubKey>::iterator it = std::find(OwnerList.begin(), OwnerList.end(), voutPubkeys[0]);
-				if (it == OwnerList.end())
-					OwnerList.push_back(voutPubkeys[0]);
-			}
-			
-            // Check if this vout was spent, and if it was, find the tx that spent it
-            if (CCgetspenttxid(spendingtxid, vini, height, tx.GetHash(), n) == 0 &&
-            myGetTransaction(spendingtxid, spendingtx, hashBlock))
-            {
-				depth++;
-                // Same procedure for the spending tx, until no more are found
-                GetTokenOwnerList<V>(spendingtx, cp, tokenid, depth, maxdepth, OwnerList);
-            }
-        }
-    }
-
-	depth--;
-    return;
-}
-
-template <class V>
-UniValue TokenOwners(uint256 tokenid, int64_t minbalance, int64_t maxdepth)
-{
-    // NOTE: maybe add option to retrieve addresses instead, including 1of2 addresses?
-	UniValue result(UniValue::VARR); 
-    CTransaction tokenbaseTx; 
-    uint256 hashBlock;
-	uint8_t funcid;
-    std::vector<uint8_t> origpubkey;
-    std::string name, description; 
-	std::vector<vscript_t>  oprets;
-    std::vector<CPubKey> OwnerList;
-	int64_t depth;
-    char str[67];
-
-    struct CCcontract_info *cpTokens, tokensCCinfo;
-    cpTokens = CCinit(&tokensCCinfo, V::EvalCode());
-
-    // Get token create tx
-    if (!myGetTransaction(tokenid, tokenbaseTx, hashBlock) || (KOMODO_NSPV_FULLNODE && hashBlock.IsNull()))
-    {
-        LOGSTREAMFN(cctokens_log, CCLOG_INFO, stream << "cant find tokenid" << std::endl);
-        return(result);
-    }
-
-    // Checking if passed tokenid is a token creation txid
-    funcid = V::DecodeTokenCreateOpRet(tokenbaseTx.vout.back().scriptPubKey, origpubkey, name, description, oprets);
-	if (tokenbaseTx.vout.size() > 0 && !IsTokenCreateFuncid(funcid))
-	{
-        LOGSTREAMFN(cctokens_log, CCLOG_INFO, stream << "passed tokenid isnt token creation txid" << std::endl);
-        return(result);
-    }
-
-    // Get a full list of owners using a recursive looping function
-    GetTokenOwnerList<V>(tokenbaseTx, cpTokens, tokenid, depth, maxdepth, OwnerList);
-
-    // Add owners to result array
-    for (auto owner : OwnerList)
-        if (minbalance == 0 || GetTokenBalance<V>(owner, tokenid, false) >= minbalance)
-			result.push_back(pubkey33_str(str,(uint8_t *)&owner));
-
-	return result;
-}
-
-template <class V>
-UniValue TokenInventory(const CPubKey pk, int64_t minbalance)
-{
-	UniValue result(UniValue::VARR); 
-    char tokenaddr[KOMODO_ADDRESS_BUFSIZE];
-    std::vector<std::pair<CAddressIndexKey, CAmount> > addressIndex;
-    std::vector<uint256> TokenList;
-
-    struct CCcontract_info *cpTokens, tokensCCinfo;
-    cpTokens = CCinit(&tokensCCinfo, EVAL_TOKENS);
-
-	// Get token CC address of specified pubkey
-    GetTokensCCaddress(cpTokens, tokenaddr, pk);
-
-    // Get all CC outputs sent to this address
-    SetCCtxids(addressIndex, tokenaddr, true);
-    
-    for (std::vector<std::pair<CAddressIndexKey, CAmount> >::const_iterator it = addressIndex.begin(); it != addressIndex.end(); it++) 
-    {
-        std::vector<vscript_t>  oprets;
-        std::vector<CPubKey> voutPubkeys;
-        uint256 tokenIdInOpret, hashBlock;
-        CTransaction vintx;
-        CScript opret;
-
-        // Find the tx that the CC output originates from
-        if (myGetTransaction(it->first.txhash, vintx, hashBlock))
-        {
-            int32_t n = (int32_t)it->first.index;
-
-            // skip markers
-            if (IsTokenMarkerVout<V>(vintx.vout[n]))
-                continue;
-
-            // Get the opret from either vout.n or tx.vout.back() scriptPubkey
-            if (!getCCopret(vintx.vout[n].scriptPubKey, opret))
-                opret = vintx.vout.back().scriptPubKey;
-            uint8_t funcid = V::DecodeTokenOpRet(opret, tokenIdInOpret, voutPubkeys, oprets);
-
-            // If the vout is from a token creation tx, the tokenid will be hash of vintx
-            if (IsTokenCreateFuncid(funcid))
-                tokenIdInOpret = vintx.GetHash();
-            
-            // If the vout is not from a token creation tx, check if it is a token vout
-            if (IsTokenCreateFuncid(funcid) || IsTokensvout<V>(true, true, cpTokens, NULL, vintx, n, tokenIdInOpret))
-            {
-                // Check if found tokenid is already in the list, if not, add it
-                std::vector<uint256>::iterator it2 = std::find(TokenList.begin(), TokenList.end(), tokenIdInOpret);
-                if (it2 == TokenList.end())
-                    TokenList.push_back(tokenIdInOpret);
-            }
-        }
-    }
-    
-    // Add token ids to result array
-    for (auto tokenid : TokenList)
-		if (minbalance == 0 || GetTokenBalance<V>(pk, tokenid, false) >= minbalance)
-            result.push_back(tokenid.GetHex());
-
-	return result;
-}*/
