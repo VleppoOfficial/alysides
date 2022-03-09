@@ -1310,7 +1310,7 @@ UniValue TokenTagInfo(uint256 txid)
 	CCERR_RESULT("tokentagscc", CCLOG_INFO, stream << "Invalid token tag transaction ID");
 }
 
-UniValue TokenTagSamples(const uint256 tokentagid,int64_t samplenum,bool bReverse)
+UniValue TokenTagHistory(const uint256 tokentagid,int64_t samplenum,bool bReverse)
 {
 	UniValue result(UniValue::VARR);
 	CTransaction tokentagtx,batontx;
@@ -1343,7 +1343,7 @@ UniValue TokenTagSamples(const uint256 tokentagid,int64_t samplenum,bool bRevers
 			{
 				result.push_back(batontxid.GetHex());
 				
-				if (batontxid != tokentagid) total++;
+				total++;
 
 				// If bReverse = true, stop searching if we found the original token tag txid. 
 				// If bReverse = false, stop searching if we found the latest update txid. 
@@ -1357,6 +1357,8 @@ UniValue TokenTagSamples(const uint256 tokentagid,int64_t samplenum,bool bRevers
 					CCgetspenttxid(batontxid,vini,height,batontx.GetHash(),0);
 			}
 		}
+		else
+			result.push_back(tokentagid.GetHex());
 	}
 
 	return(result);

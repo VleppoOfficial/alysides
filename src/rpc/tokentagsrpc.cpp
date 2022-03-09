@@ -221,7 +221,7 @@ UniValue tokentaginfo(const UniValue& params, bool fHelp, const CPubKey& mypk)
     return(TokenTagInfo(txid));
 }
 
-UniValue tokentagsamples(const UniValue& params, bool fHelp, const CPubKey& mypk)
+UniValue tokentaghistory(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     uint256 tokentagid;
     int64_t samplenum;
@@ -230,7 +230,7 @@ UniValue tokentagsamples(const UniValue& params, bool fHelp, const CPubKey& mypk
 
     if ( fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error(
-            "tokentagsamples tokentagid [samplenum][reverse]\n"
+            "tokentaghistory tokentagid [samplenum][reverse]\n"
             );
     if (ensure_CCrequirements(EVAL_TOKENTAGS) < 0 || ensure_CCrequirements(EVAL_TOKENS) < 0)
         throw runtime_error(CC_REQUIREMENTS_MSG);
@@ -251,7 +251,7 @@ UniValue tokentagsamples(const UniValue& params, bool fHelp, const CPubKey& mypk
            bReverse = true;
     }
 
-    return(TokenTagSamples(tokentagid,samplenum,bReverse));
+    return(TokenTagHistory(tokentagid,samplenum,bReverse));
 }
 
 UniValue tokentaglist(const UniValue& params, bool fHelp, const CPubKey& mypk)
@@ -341,7 +341,7 @@ static const CRPCCommand commands[] =
     { "tokentags", "tokentagupdate",       &tokentagupdate,       true },
     { "tokentags", "tokentagescrowupdate", &tokentagescrowupdate, true },
 	{ "tokentags", "tokentaginfo",         &tokentaginfo,	      true },
-    { "tokentags", "tokentagsamples",      &tokentagsamples,	  true },
+    { "tokentags", "tokentaghistory",      &tokentaghistory,	  true },
     { "tokentags", "tokentaglist",         &tokentaglist,	      true },
     // extended tokens
 	//{ "tokens",    "tokenowners",     &tokenowners,     true },

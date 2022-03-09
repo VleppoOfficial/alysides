@@ -45,7 +45,7 @@ UniValue TokenTagCreate(const CPubKey& pk,uint64_t txfee,uint256 tokenid,int64_t
 UniValue TokenTagUpdate(const CPubKey& pk,uint64_t txfee,uint256 tokentagid,int64_t newupdatesupply,std::string data);
 UniValue TokenTagEscrowUpdate(const CPubKey& pk,uint64_t txfee,uint256 tokentagid,uint256 escrowtxid,int64_t newupdatesupply,std::string data);
 UniValue TokenTagInfo(uint256 txid);
-UniValue TokenTagSamples(const uint256 tokentagid, int64_t samplenum, bool bReverse);
+UniValue TokenTagHistory(const uint256 tokentagid, int64_t samplenum, bool bReverse);
 UniValue TokenTagList(uint256 tokenid, CPubKey pubkey);
 
 /*
