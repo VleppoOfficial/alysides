@@ -13,27 +13,16 @@
  *                                                                            *
  ******************************************************************************/
 
-#include "CCPawnshop.h"
+#ifndef CC_PAWNSHOP_H
+#define CC_PAWNSHOP_H
 
-bool PawnshopValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
-{
-	return eval->Invalid("not supported yet");
-}
+#include "CCinclude.h"
+
+bool AssetLoansValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
 
 
-// temporary validation for stubs
-bool Stub1Validate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
-{
-	return eval->Invalid("attempted to validate reserved, but incomplete eval code.");
-}
+bool Stub1Validate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
+bool Stub2Validate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
+bool Stub3Validate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
 
-bool Stub2Validate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
-{
-	return eval->Invalid("attempted to validate reserved, but incomplete eval code.");
-}
-
-bool Stub3Validate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn)
-{
-	return eval->Invalid("attempted to validate reserved, but incomplete eval code.");
-}
-
+#endif
