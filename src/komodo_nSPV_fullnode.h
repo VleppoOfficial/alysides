@@ -56,6 +56,7 @@ static std::map<std::string,bool> nspv_remote_commands =  {
     { "tokenv2orders", true }, { "mytokenv2orders", true }, { "tokenv2transfer", false }, { "tokenv2create", false }, { "tokenv2address", true },
     // nspv helpers
     { "createtxwithnormalinputs", true }, { "tokenv2addccinputs", true }, { "tokenv2infotokel", true }, { "gettransactionsmany", true },
+    { "faucetaddccinputs", true },
 };
 
 
@@ -912,7 +913,7 @@ int32_t NSPV_getntzsproofresp(struct NSPV_ntzsproofresp* ntzproofp, uint256 next
     ntzproofp->nextntz = NSPV_getrawtx(tx, nextHashBlock, &ntzproofp->nexttxlen, ntzproofp->nexttxid);
     ntzproofp->nexttxidht = komodo_blockheight(nextHashBlock);
     if (NSPV_notarizationextract(DONTVALIDATESIG, &ntzproofp->common.nextht, &bhash1, &desttxid1, &momdepth, tx) < 0) {
-        LogPrintf("%s error: cant decode notarization opreturn ptr->common.nextht.%d bhash1 %s\n", __func__, ntzproofp->common.nextht, bhash1.ToString());
+        LogPrintf("%s error: cant decode notarization opreturn nexttxid %s ptr->common.nextht.%d bhash1 %s\n", __func__, ntzproofp->nexttxid.GetHex(), ntzproofp->common.nextht, bhash1.ToString());
         return (-5);
     } else if (komodo_blockheight(bhash1) != ntzproofp->common.nextht) {
         LogPrintf("%s error: bhash1 ht.%d not equal to nextht.%d\n", __func__, komodo_blockheight(bhash1), ntzproofp->common.nextht);
@@ -985,13 +986,12 @@ void komodo_nSPVreq(CNode* pfrom, std::vector<uint8_t> request) // received a re
         return;
     }
 
-    requestType = request[0];
     memcpy(&requestId, &request[1], sizeof(requestId));
     uint8_t *requestData = &request[nspvHeaderSize];
     int32_t requestDataLen = request.size() - nspvHeaderSize;
 
     // rate limit no more NSPV_MAXREQSPERSEC request/sec of same type from same node:
-    int32_t idata = requestData[0] >> 1;
+    int32_t idata = requestType >> 1;
     if (idata >= sizeof(pfrom->nspvdata) / sizeof(pfrom->nspvdata[0]))
         idata = (int32_t)(sizeof(pfrom->nspvdata) / sizeof(pfrom->nspvdata[0])) - 1;
     if (pfrom->nspvdata[idata].prevtime > timestamp) {

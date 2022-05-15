@@ -66,6 +66,10 @@
 #include <boost/thread.hpp>
 #include <boost/static_assert.hpp>
 
+#ifdef ENABLE_WEBSOCKETS
+#include "komodo_websockets.h"
+#endif
+
 using namespace std;
 
 #if defined(NDEBUG)
@@ -2079,7 +2083,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
         // This is done last to help prevent CPU exhaustion denial-of-service attacks.
         PrecomputedTransactionData txdata(tx);
         std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker(new CCheckCCEvalCodes());
-        if (!ContextualCheckInputs(tx, state, view, true, STANDARD_SCRIPT_VERIFY_FLAGS, true, txdata, Params().GetConsensus(), consensusBranchId, evalcodeChecker))
+        if (!ContextualCheckInputs(tx, state, view, true, STANDARD_SCRIPT_VERIFY_FLAGS, true, txdata, Params().GetConsensus(), consensusBranchId, chainActive.LastTip()->GetHeight() + 1, evalcodeChecker))
         {
             //fprintf(stderr,"accept failure.9\n");
             LogPrint("mempool-tx", "%s ConnectInputs failed for tx %s\n", __func__, HexStr(E_MARSHAL(ss << tx)).c_str());  
@@ -2103,14 +2107,14 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
         }
         //fprintf(stderr,"addmempool 7\n");
 
-        if (!ContextualCheckInputs(tx, state, view, true, MANDATORY_SCRIPT_VERIFY_FLAGS, true, txdata, Params().GetConsensus(), consensusBranchId, evalcodeChecker))
+        if (!ContextualCheckInputs(tx, state, view, true, MANDATORY_SCRIPT_VERIFY_FLAGS, true, txdata, Params().GetConsensus(), consensusBranchId, chainActive.LastTip()->GetHeight() + 1, evalcodeChecker))
         {
             if (flag != 0)
                 KOMODO_CONNECTING = -1;
             return error("AcceptToMemoryPool: BUG! PLEASE REPORT THIS! ConnectInputs failed against MANDATORY but not STANDARD flags %s", hash.ToString());
         }
 
-        if (!ContextualCheckOutputs(tx, state, true, txdata, evalcodeChecker))
+        if (!ContextualCheckOutputs(tx, state, true, txdata, chainActive.LastTip()->GetHeight() + 1, evalcodeChecker))
             return error("AcceptToMemoryPool: BUG! PLEASE REPORT THIS! ContextualCheckOutputs failed %s", hash.ToString());
         if (flag != 0)
             KOMODO_CONNECTING = -1;
@@ -2794,14 +2798,14 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)
 
 bool CScriptCheck::operator()()
 {
-    if (vout != 0) {
-        ServerTransactionSignatureChecker checker(ptxTo, n, amount, cacheStore, evalcodeChecker, *txdata);
-        if (checker.CheckCryptoCondition(scriptPubKey.GetCCV2SPK(), &error) != 1) {
-            return ::error("CScriptCheck(): %s:%d CC validation failed: %s", ptxTo->GetHash().ToString(), n, ScriptErrorString(error));
+    if (vout != 0) { //check cc output
+        ServerTransactionSignatureChecker checker(ptxTo, n, amount, cacheStore, nHeight, evalcodeChecker, *txdata);
+        if (checker.CheckCryptoConditionSpk(scriptPubKey.GetCCV2SPK(), &error) != 1) {
+            return ::error("CScriptCheck(): %s:%d CC output validation failed: %s", ptxTo->GetHash().ToString(), n, ScriptErrorString(error));
         }
-    } else {
+    } else { // check cc input
         const CScript& scriptSig = ptxTo->vin[n].scriptSig;
-        ServerTransactionSignatureChecker checker(ptxTo, n, amount, cacheStore, evalcodeChecker, *txdata);
+        ServerTransactionSignatureChecker checker(ptxTo, n, amount, cacheStore, nHeight, evalcodeChecker, *txdata);
         if (!VerifyScript(scriptSig, scriptPubKey, nFlags, checker, consensusBranchId, &error)) {
             return ::error("CScriptCheck(): %s:%d VerifySignature failed: %s", ptxTo->GetHash().ToString(), n, ScriptErrorString(error));
         }
@@ -2826,14 +2830,13 @@ namespace Consensus {
         // are the JoinSplit's requirements met?
         if (!inputs.HaveJoinSplitRequirements(tx))
             return state.Invalid(error("CheckInputs(): %s JoinSplit requirements not met", tx.GetHash().ToString()));
-
         CAmount nValueIn = 0;
         CAmount nFees = 0;
         for (unsigned int i = 0; i < tx.vin.size(); i++)
         {
             if (tx.IsPegsImport() && i==0)
             {
-                nValueIn=GetCoinImportValue(tx);
+                nValueIn=GetCoinImportValue(tx, nSpendHeight);
                 continue;
             }
             const COutPoint &prevout = tx.vin[i].prevout;
@@ -2927,6 +2930,7 @@ bool ContextualCheckInputs(
                            PrecomputedTransactionData& txdata,
                            const Consensus::Params& consensusParams,
                            uint32_t consensusBranchId,
+                           int32_t nHeight,
                            std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker,
                            std::vector<CScriptCheck> *pvChecks)
 {
@@ -2954,7 +2958,7 @@ bool ContextualCheckInputs(
                 assert(coins);
 
                 // Verify signature
-                CScriptCheck check(*coins, tx, i, flags, cacheStore, consensusBranchId, evalcodeChecker, &txdata);
+                CScriptCheck check(*coins, tx, i, flags, cacheStore, consensusBranchId, nHeight, evalcodeChecker, &txdata);
                 if (pvChecks) {
                     pvChecks->push_back(CScriptCheck());
                     check.swap(pvChecks->back());
@@ -2967,7 +2971,7 @@ bool ContextualCheckInputs(
                         // avoid splitting the network between upgraded and
                         // non-upgraded nodes.
                         CScriptCheck check2(*coins, tx, i,
-                                            flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS, cacheStore, consensusBranchId, evalcodeChecker, &txdata);
+                                            flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS, cacheStore, consensusBranchId, nHeight, evalcodeChecker, &txdata);
                         if (check2())
                             return state.Invalid(false, REJECT_NONSTANDARD, strprintf("non-mandatory-script-verify-flag (%s)", ScriptErrorString(check.GetScriptError())));
                     }
@@ -2987,7 +2991,7 @@ bool ContextualCheckInputs(
     if (tx.IsCoinImport() || tx.IsPegsImport())
     {
         LOCK(cs_main);
-        ServerTransactionSignatureChecker checker(&tx, 0, 0, false, NULL,txdata);
+        ServerTransactionSignatureChecker checker(&tx, 0, 0, false, nHeight, NULL, txdata);
         return VerifyCoinImport(tx.vin[0].scriptSig, checker, state);
     }
 
@@ -2999,6 +3003,7 @@ bool ContextualCheckOutputs(
                            CValidationState &state,
                            bool fScriptChecks,
                            PrecomputedTransactionData& txdata,
+                           int32_t nHeight,
                            std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker,
                            std::vector<CScriptCheck> *pvChecks)
 {
@@ -3009,9 +3014,16 @@ bool ContextualCheckOutputs(
     {
         for (unsigned int i = 0; i < tx.vout.size(); i++) 
         {
+            
             if (tx.vout[i].scriptPubKey.IsPayToCCV2() )
             {
-                CScriptCheck check(tx.vout[i].scriptPubKey, tx.vout[i].nValue, tx, i, evalcodeChecker, &txdata);
+                // check if secp256hash and eval param in action:
+                int subversion = CC_MixedModeSubVersion(tx.vout[i].scriptPubKey[0]);
+                if (subversion >= CC_MIXED_MODE_SECHASH_SUBVER_1 && !CCUpgrades::IsUpgradeActive(nHeight, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1))  
+                {
+                    return state.DoS(100,false, REJECT_INVALID, std::string("cc v2 subversion 1 or more not yet enabled"));
+                }
+                CScriptCheck check(tx.vout[i].scriptPubKey, tx.vout[i].nValue, tx, i, nHeight, evalcodeChecker, &txdata);
                 if (pvChecks)
                 {
                     pvChecks->push_back(CScriptCheck());
@@ -3855,13 +3867,13 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             //fprintf(stderr, "tx.%s nFees.%li interest.%li\n", tx.GetHash().ToString().c_str(), stakeTxValue, interest);
 
             std::vector<CScriptCheck> vChecks;
-            if (!ContextualCheckInputs(tx, state, view, fExpensiveChecks, flags, false, txdata[i], chainparams.GetConsensus(), consensusBranchId, evalcodeChecker, nScriptCheckThreads ? &vChecks : NULL))
+            if (!ContextualCheckInputs(tx, state, view, fExpensiveChecks, flags, false, txdata[i], chainparams.GetConsensus(), consensusBranchId, pindex->GetHeight(), evalcodeChecker, nScriptCheckThreads ? &vChecks : NULL))
                 return false;
         }
 
         {   // check tx outputs including coinbases
             std::vector<CScriptCheck> vChecks;
-            if (!ContextualCheckOutputs(tx, state, fExpensiveChecks, txdata[i], evalcodeChecker, nScriptCheckThreads ? &vChecks : NULL))
+            if (!ContextualCheckOutputs(tx, state, fExpensiveChecks, txdata[i], pindex->GetHeight(), evalcodeChecker, nScriptCheckThreads ? &vChecks : NULL))
                 return false;
             control.Add(vChecks);
         }
@@ -7518,7 +7530,7 @@ void static ProcessGetData(CNode* pfrom)
 
 bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, int64_t nTimeReceived)
 {
-    int32_t nProtocolVersion;
+    //int32_t nProtocolVersion;
     const CChainParams& chainparams = Params();
     LogPrint("net", "received: %s (%u bytes) peer=%d\n", SanitizeString(strCommand), vRecv.size(), pfrom->id);
     //if ( KOMODO_NSPV_SUPERLITE )
@@ -7576,6 +7588,17 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             return false;
         }
         
+        // check min cc version
+        if (nVersion < GetCurrentUpgradeInfo(GetHeight(), CCUpgrades::GetUpgrades()).nProtocolVersion)
+        {
+            LogPrintf("peer=%d using obsolete version %i, needed %d; disconnecting by ccupgrades\n", pfrom->id, nVersion, GetCurrentUpgradeInfo(GetHeight(), CCUpgrades::GetUpgrades()).nProtocolVersion);
+            pfrom->PushMessage("reject", strCommand, REJECT_OBSOLETE,
+                            strprintf("Version must be %d or greater",
+                            GetCurrentUpgradeInfo(GetHeight(), CCUpgrades::GetUpgrades()).nProtocolVersion));
+            pfrom->fDisconnect = true;
+            return false;
+        }
+
         if (!vRecv.empty())
             vRecv >> addrFrom >> nNonce;
         if (!vRecv.empty()) {
@@ -7879,6 +7902,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
     // the getaddr message mitigates the attack.
     else if ((strCommand == "getaddr") && (pfrom->fInbound))
     {
+        std::cerr << __func__ << " in getaddr, node=" << pfrom->id << std::endl;
         // Only send one GetAddr response per connection to reduce resource waste
         //  and discourage addr stamping of INV announcements.
         if (pfrom->fSentAddr) {
@@ -7890,7 +7914,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         pfrom->vAddrToSend.clear();
         vector<CAddress> vAddr = addrman.GetAddr();
         BOOST_FOREACH(const CAddress &addr, vAddr)
-        pfrom->PushAddress(addr);
+            pfrom->PushAddress(addr);
+        std::cerr << __func__ << " on getaddr pushed addresses=" << vAddr.size() << " node=" << pfrom->id << std::endl;
     }
     // temporary optional nspv message processing
     else if ((nLocalServices & NODE_NSPV) &&
@@ -8585,7 +8610,14 @@ bool ProcessMessages(CNode* pfrom)
         bool fRet = false;
         try
         {
-            fRet = ProcessMessage(pfrom, strCommand, vRecv, msg.nTime);
+
+#ifdef ENABLE_WEBSOCKETS
+            if (pfrom->hSocket != INVALID_SOCKET || !(fRet = ws::ProcessWsMessage(pfrom, strCommand, vRecv, msg.nTime))) {
+#endif
+                fRet = ProcessMessage(pfrom, strCommand, vRecv, msg.nTime);
+#ifdef ENABLE_WEBSOCKETS
+            }
+#endif
             boost::this_thread::interruption_point();
         }
         catch (const std::ios_base::failure& e)

@@ -36,6 +36,7 @@
 #include "httprpc.h"
 #include "key.h"
 #include "notarisationdb.h"
+#include "komodo_version.h"
 
 #ifdef ENABLE_MINING
 #include "key_io.h"
@@ -90,6 +91,10 @@
 #endif
 
 #include "librustzcash.h"
+
+#ifdef ENABLE_WEBSOCKETS
+#include "komodo_websockets.h"
+#endif
 
 using namespace std;
 
@@ -223,6 +228,9 @@ void Shutdown()
     mempool.AddTransactionsUpdated(1);
 
     StopHTTPRPC();
+#ifdef ENABLE_WEBSOCKETS
+    ws::StopWebSockets();
+#endif
     StopREST();
     StopRPC();
     StopHTTPServer();
@@ -902,6 +910,10 @@ bool AppInitServers(boost::thread_group& threadGroup)
         return false;
     if (!StartHTTPRPC())
         return false;
+#ifdef ENABLE_WEBSOCKETS
+    if (!ws::StartWebSockets(threadGroup))
+        return false;
+#endif
     if (GetBoolArg("-rest", false) && !StartREST())
         return false;
     if (!StartHTTPServer())
@@ -937,8 +949,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     PSETPROCDEPPOL setProcDEPPol = (PSETPROCDEPPOL)GetProcAddress(GetModuleHandleA("Kernel32.dll"), "SetProcessDEPPolicy");
     if (setProcDEPPol != NULL) setProcDEPPol(PROCESS_DEP_ENABLE);
 #endif
-
-    addrman.Init(); // call clear addr table
 
     if (!SetupNetworking())
         return InitError("Error: Initializing networking failed");
@@ -998,7 +1008,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     fLogIPs = GetBoolArg("-logips", false);
 
     LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    LogPrintf("Zcash version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
+    LogPrintf("Zcash version %s\n", FormatFullVersion());
 
     // when specifying an explicit binding address, you want to listen on it
     // even when -connect or -proxy is specified
@@ -1372,7 +1382,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
     LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    LogPrintf("Komodo version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
+    LogPrintf("Komodo version %s\n", FormatVersion(KOMODO_VERSION));
+    LogPrintf("Tokel version %s (%s)\n", FormatVersion(TOKEL_VERSION), CLIENT_DATE);
 
     if (fPrintToDebugLog)
         OpenDebugLog();
@@ -1464,7 +1475,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             return InitError(strprintf("User Agent comment (%s) contains unsafe characters.", cmt));
         uacomments.push_back(SanitizeString(cmt, SAFE_CHARS_UA_COMMENT));
     }
-    strSubVersion = FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, uacomments);
+    uacomments.insert(uacomments.begin(), TOKEL_CLIENT_NAME);
+    strSubVersion = FormatSubVersion(CLIENT_NAME, KOMODO_VERSION, uacomments);
     if (strSubVersion.size() > MAX_SUBVERSION_LENGTH) {
         return InitError(strprintf("Total length of network version string %i exceeds maximum of %i characters. Reduce the number and/or size of uacomments.",
             strSubVersion.size(), MAX_SUBVERSION_LENGTH));
@@ -2084,6 +2096,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     // ********************************************************* Step 11: finished
 
     SetRPCWarmupFinished();
+#ifdef ENABLE_WEBSOCKETS
+    ws::SetWebSocketsWarmupFinished();
+#endif
     uiInterface.InitMessage(_("Done loading"));
 
 #ifdef ENABLE_WALLET
