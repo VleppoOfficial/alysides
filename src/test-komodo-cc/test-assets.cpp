@@ -113,7 +113,7 @@ private:
     {
         CTransaction tx(mtx);
         PrecomputedTransactionData txdata(tx);
-        ServerTransactionSignatureChecker checker(&tx, 0, 0, false, 0, nullptr, txdata);
+        ServerTransactionSignatureChecker checker(&tx, 0, 0, false, this->GetCurrentTime(), this->GetCurrentHeight(), nullptr, txdata);
         CValidationState verifystate;
         VerifyEval verifyEval = [] (CC *cond, void *checker) {
             //fprintf(stderr,"checker.%p\n",(TransactionSignatureChecker*)checker);
@@ -189,10 +189,10 @@ public:
         return false;
     }
     const std::map<uint256, CTransaction> & getTxs() { return txs; }
-    void SetCurrentHeight(int h)
-    {
-        currentHeight = h;
-    }
+    //void SetCurrentHeight(int h)
+    //{
+    //    currentHeight = h;
+    //}
 
     virtual bool GetTxUnconfirmed(const uint256 &hash, CTransaction &txOut, uint256 &hashBlock) const
     {
@@ -207,10 +207,10 @@ public:
         }
         return false;
     }
-    virtual unsigned int GetCurrentHeight() const
-    {
-       return currentHeight;
-    }
+    //virtual unsigned int GetCurrentHeight() const
+    //{
+    //   return currentHeight;
+    //}
 };
 
 
@@ -520,57 +520,6 @@ CTxOut TestMakeTokensCCMofNvoutMixed(uint8_t evalcode1, uint8_t evalcode2, CAmou
     return vout;
 }
 
-
-/***    // run over CC V2 validation 
-    bool TestRunCCEval(const CMutableTransaction &mtx)
-    {
-        CTransaction tx(mtx);
-        PrecomputedTransactionData txdata(tx);
-        ServerTransactionSignatureChecker checker(&tx, 0, 0, false, eval.GetCurrentHeight(), NULL, txdata);
-        CValidationState verifystate;
-        VerifyEval verifyEval = [] (CC *cond, void *checker) {
-            //fprintf(stderr,"checker.%p\n",(TransactionSignatureChecker*)checker);
-            return ((TransactionSignatureChecker*)checker)->CheckEvalCondition(cond);
-        };
-
-        // set some vars used in validation:
-        KOMODO_CONNECTING = 1;
-        KOMODO_CCACTIVATE = 1;
-        eval.state = CValidationState(); // clear validation state
-        EVAL_TEST = &eval;
-
-        for(const auto &vin : tx.vin)  {
-            if (IsCCInput(vin.scriptSig))  {
-                CC *cond = GetCryptoCondition(vin.scriptSig);
-                if (cond == NULL) {
-                    std::cerr << __func__ << " GetCryptoCondition could not decode vin.scriptSig" << std::endl;
-                    return false;
-                }
-
-                int r = cc_verifyEval(cond, verifyEval, &checker);
-                if (r == 0) {
-                    std::cerr << __func__ << " cc_verify error D" << std::endl;
-                    return false;
-                }
-                //std::cerr << __func__ << " cc_verify okay for vin.hash=" << vin.prevout.hash.GetHex() << std::endl;
-            }
-        }
-        for(const auto &vout : tx.vout)  {
-            if (vout.scriptPubKey.IsPayToCCV2())  {
-
-                ScriptError error;
-
-                bool bCheck = checker.CheckCryptoConditionSpk(vout.scriptPubKey.GetCCV2SPK(), &error);
-                if (!bCheck) {
-                    std::cerr << __func__ << " CheckCryptoConditionSpk error=" << ScriptErrorString(error) << " eval=" << eval.state.GetRejectReason() << std::endl;
-                    return false;
-                }
-                //std::cerr << __func__ << " cc_verify okay for vout.nValue=" << vout.nValue << std::endl;
-            }
-        }
-        return true;
-    }*/
-
 // create mock tx with normal outputs
 static CTransaction MakeNormalTx(CPubKey mypk, CAmount val)
 {
@@ -716,7 +665,7 @@ static CMutableTransaction MakeTokenV2TransferTx(const CPubKey &mypk, CAmount tx
 
             if (CCchange != 0)  {
                 if (TokensV2::EvalCode() == EVAL_TOKENSV2 && 
-                    CCUpgrades::IsUpgradeActive(eval.GetCurrentHeight(), CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1))  {
+                    CCUpgrades::IsUpgradeActive(eval.GetCurrentTime(), eval.GetCurrentHeight(), CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1))  {
                     mtx.vout.push_back(TokensV2::MakeTokensCCMofNDestVout(TokensV2::EvalCode(), 0, CCchange, 1, {mypk.GetID()}));  // send change to R-address after the HF
                 }
                 else
@@ -1011,7 +960,7 @@ static CMutableTransaction MakeTokenV2FillAskTx(struct CCcontract_info *cpAssets
     bool isRoyaltyDust = true;
     if (royaltyFract > 0)  {
         
-        if (CCUpgrades::IsUpgradeActive(eval.GetCurrentHeight(), CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1) == false)  {
+        if (CCUpgrades::IsUpgradeActive(eval.GetCurrentTime(), eval.GetCurrentHeight(), CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1) == false)  {
             // corrected old calculation to allow tx creation and pass to fillask validation code 
             // (note division on TKLROYALTY_DIVISOR first):
             if(paid_nValue - royaltyValue <= ASSETS_NORMAL_DUST / (int64_t)TKLROYALTY_DIVISOR * royaltyFract  - ASSETS_NORMAL_DUST) { // if value paid to seller less than when the royalty is minimum
@@ -1412,8 +1361,6 @@ static void CreateMockTransactions()
     cpTokens = CCinit(&tokensC, TokensV2::EvalCode());
     cpAssets = CCinit(&C, AssetsV2::EvalCode());   
 
-    eval.SetCurrentHeight(11);  
-
     CTransaction txnormal1 = MakeNormalTx(pk1, 200000000);
     eval.AddGenesisTx(txnormal1);
 
@@ -1472,7 +1419,6 @@ static void CreateMockTransactions()
     eval.AddTx(txbid3);
     bidid3 = txbid3.GetHash();
 
-
     //CTransaction txbid2 = MakeTokenV2BidTx(pk2, 1000+1, 2, 1000/2, 222);  // test dust
 }
 
@@ -1486,25 +1432,32 @@ protected:
     static void SetUpTestCase() {  
         // setup eval for tests
         ASSETCHAINS_CC = 2;
-        fDisableCCLogForTests = true;
+        fDisableCCLogForTests = true; // disable LOGSTREAM prints, enable for tests debug
         fDebug = false;
-        fPrintToConsole = true;
+        fPrintToConsole = true; // enable print to console
         mapMultiArgs["-debug"] = { "cctokens", "ccassets", "cctokens_test" };
 
+        strcpy(ASSETCHAINS_SYMBOL, "");
+        CCUpgrades::SelectUpgrades(ASSETCHAINS_SYMBOL);  // select default
+        eval.SetCurrentHeight(11);  // base height for tests
+        eval.SetCurrentTime(1652932911LL);  // base block time for tests
         CreateMockTransactions();
     }
+
+    // called on each test startup
     virtual void SetUp() {
         // enable print
         //fDebug = true;
         //fPrintToConsole = true;
         //mapMultiArgs["-debug"] = { "cctokens", "ccassets", "cctokens_test" };
+        strcpy(ASSETCHAINS_SYMBOL, "");
+        CCUpgrades::SelectUpgrades(ASSETCHAINS_SYMBOL);  // select default
     }
 
+    // called on each test finish
     virtual void TearDown()
     {
         // clean up
-        strcpy(ASSETCHAINS_SYMBOL, "");
-        CCUpgrades::SelectUpgrades(ASSETCHAINS_SYMBOL);  // select default
     }
 };
 
@@ -2182,11 +2135,11 @@ TEST_F(TestAssetsCC, tokenv2fillbid_royalty_fixed)
 // test old incorrect validation rule that failed royalties > 50%
 TEST_F(TestAssetsCC, tokenv2fillask_royalty_non_fixed)
 {
-    eval.SetCurrentHeight(CCUpgrades::CCMIXEDMODE_SUBVER_1_TOKEL_HEIGHT - 1);
+    eval.SetCurrentTime(CCUpgrades::CCMIXEDMODE_SUBVER_1_TOKEL_TIMESTAMP - 1);
     strcpy(ASSETCHAINS_SYMBOL, "TOKEL");
     CCUpgrades::SelectUpgrades(ASSETCHAINS_SYMBOL);
 
-    ASSERT_FALSE(CCUpgrades::IsUpgradeActive(eval.GetCurrentHeight(), CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1));
+    ASSERT_FALSE(CCUpgrades::IsUpgradeActive(eval.GetCurrentTime(), eval.GetCurrentHeight(), CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1));
     for(int r = 100; r < 1000; r += 100)
     {
         UniValue data(UniValue::VOBJ); // some data returned from MakeTokenV2FillBidTx
@@ -2205,8 +2158,7 @@ TEST_F(TestAssetsCC, tokenv2fillask_royalty_non_fixed)
         CAmount asktokens = 1;
         CAmount filltokens = 1;
 
-        // CTransaction mytxask = MakeTokenV2AskTx(cpTokens, pk1, mytokenid, 1, ASSETS_NORMAL_DUST*2+1, 222);
-        CTransaction mytxask = MakeTokenV2AskTx(cpTokens, pk1, mytokenid, asktokens, price, CCUpgrades::CCMIXEDMODE_SUBVER_1_TOKEL_HEIGHT + 222);
+        CTransaction mytxask = MakeTokenV2AskTx(cpTokens, pk1, mytokenid, asktokens, price, eval.GetCurrentHeight() + 222);
         eval.AddTx(mytxask);
 
         CMutableTransaction mytxfillask = MakeTokenV2FillAskTx(cpAssets, pk2, mytokenid, mytxask.GetHash(), filltokens, 0, data);  
@@ -2224,11 +2176,11 @@ TEST_F(TestAssetsCC, tokenv2fillask_royalty_non_fixed)
 // test fill ask updated validation rule
 TEST_F(TestAssetsCC, tokenv2fillask_royalty_fixed)
 {
-    eval.SetCurrentHeight(CCUpgrades::CCMIXEDMODE_SUBVER_1_TOKEL_HEIGHT);
+    eval.SetCurrentTime(CCUpgrades::CCMIXEDMODE_SUBVER_1_TOKEL_TIMESTAMP);
     strcpy(ASSETCHAINS_SYMBOL, "TOKEL");
     CCUpgrades::SelectUpgrades(ASSETCHAINS_SYMBOL);
 
-    ASSERT_TRUE(CCUpgrades::IsUpgradeActive(eval.GetCurrentHeight(), CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1)); // fix in action
+    ASSERT_TRUE(CCUpgrades::IsUpgradeActive(eval.GetCurrentTime(), eval.GetCurrentHeight(), CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1)); // fix in action
     for(int r = 100; r < 1000; r += 100)
     {
         UniValue data(UniValue::VOBJ); // some data returned from MakeTokenV2FilAskTx
@@ -2246,7 +2198,7 @@ TEST_F(TestAssetsCC, tokenv2fillask_royalty_fixed)
         CAmount asktokens = 1;
         CAmount filltokens = 1;
         // CTransaction mytxask = MakeTokenV2AskTx(cpTokens, pk1, mytokenid, 1, ASSETS_NORMAL_DUST*2+1, 222);
-        CTransaction mytxask = MakeTokenV2AskTx(cpTokens, pk1, mytokenid, asktokens, price, CCUpgrades::CCMIXEDMODE_SUBVER_1_TOKEL_HEIGHT + 222);
+        CTransaction mytxask = MakeTokenV2AskTx(cpTokens, pk1, mytokenid, asktokens, price, eval.GetCurrentHeight() + 222);
         eval.AddTx(mytxask);
 
         CMutableTransaction mytxfillask = MakeTokenV2FillAskTx(cpAssets, pk2, mytokenid, mytxask.GetHash(), filltokens, 0, data);  
@@ -2953,6 +2905,48 @@ TEST_F(TestAssetsCC, tokenv2burn)
     CMutableTransaction mburntx = MakeTokenV2TransferTx(pk1, 0, tokenid, tokenaddrs, {}, 1, dests, 1, false, true);
     ASSERT_FALSE(CTransaction(mburntx).IsNull());
     EXPECT_TRUE(eval.TryAddTx(mburntx));
+}
+
+// test CCupgrade frameworks
+TEST_F(TestAssetsCC, ccupgrade_test)
+{
+    // init for a fictious chain
+    strcpy(ASSETCHAINS_SYMBOL, "TESTASSETSCHAIN9876543210");
+    CCUpgrades::InitUpgrade(ASSETCHAINS_SYMBOL, 170009);
+    const int32_t nUpg1Height = 111; 
+    const int64_t nUpg2Time = 1652932911LL; // 19 May 2022;
+    CCUpgrades::AddUpgradeActive(ASSETCHAINS_SYMBOL, CCUpgrades::CCUPGID_ASSETS_OPDROP_VALIDATE_FIX, nUpg1Height, 170010);
+    CCUpgrades::AddUpgradeActive(ASSETCHAINS_SYMBOL, CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1, nUpg2Time, 170011);
+
+    CCUpgrades::SelectUpgrades(ASSETCHAINS_SYMBOL);
+    EXPECT_FALSE(CCUpgrades::IsUpgradeActive(1652932911LL, nUpg1Height-1, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_ASSETS_OPDROP_VALIDATE_FIX));
+    EXPECT_TRUE(CCUpgrades::IsUpgradeActive(1652932911LL, nUpg1Height, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_ASSETS_OPDROP_VALIDATE_FIX));
+
+    EXPECT_FALSE(CCUpgrades::IsUpgradeActive(nUpg2Time-1, nUpg1Height+100, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1));
+    EXPECT_TRUE(CCUpgrades::IsUpgradeActive(nUpg2Time, nUpg1Height+100, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1));
+
+    EXPECT_EQ(GetCurrentUpgradeInfo(nUpg2Time-1, nUpg1Height-1, CCUpgrades::GetUpgrades()).nProtocolVersion, 170009);
+    EXPECT_EQ(GetCurrentUpgradeInfo(nUpg2Time-1, nUpg1Height, CCUpgrades::GetUpgrades()).nProtocolVersion, 170010);
+    EXPECT_EQ(GetCurrentUpgradeInfo(nUpg2Time, nUpg1Height, CCUpgrades::GetUpgrades()).nProtocolVersion, 170011);
+}
+
+
+TEST_F(TestAssetsCC, ccupgrade_tokel)
+{
+    // TOKEL already initialized in CCUpgrades.cpp 
+    strcpy(ASSETCHAINS_SYMBOL, "TOKEL");
+    CCUpgrades::SelectUpgrades(ASSETCHAINS_SYMBOL);
+
+    const int64_t nTime = 1652932911LL; // 19 May 2022;    
+    EXPECT_FALSE(CCUpgrades::IsUpgradeActive(nTime, CCUpgrades::CCASSETS_OPDROP_FIX_TOKEL_HEIGHT-1, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_ASSETS_OPDROP_VALIDATE_FIX));
+    EXPECT_TRUE(CCUpgrades::IsUpgradeActive(nTime, CCUpgrades::CCASSETS_OPDROP_FIX_TOKEL_HEIGHT, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_ASSETS_OPDROP_VALIDATE_FIX));
+
+    EXPECT_FALSE(CCUpgrades::IsUpgradeActive(CCUpgrades::CCMIXEDMODE_SUBVER_1_TOKEL_TIMESTAMP-1, CCUpgrades::CCASSETS_OPDROP_FIX_TOKEL_HEIGHT+100, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1));
+    EXPECT_TRUE(CCUpgrades::IsUpgradeActive(CCUpgrades::CCMIXEDMODE_SUBVER_1_TOKEL_TIMESTAMP, CCUpgrades::CCASSETS_OPDROP_FIX_TOKEL_HEIGHT+100, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1));
+
+    EXPECT_EQ(GetCurrentUpgradeInfo(nTime, CCUpgrades::CCASSETS_OPDROP_FIX_TOKEL_HEIGHT-1, CCUpgrades::GetUpgrades()).nProtocolVersion, CCUpgrades::CCOLDDEFAULT_PROTOCOL_VERSION);
+    EXPECT_EQ(GetCurrentUpgradeInfo(CCUpgrades::CCMIXEDMODE_SUBVER_1_TOKEL_TIMESTAMP-1, CCUpgrades::CCASSETS_OPDROP_FIX_TOKEL_HEIGHT, CCUpgrades::GetUpgrades()).nProtocolVersion, CCUpgrades::CCOLDDEFAULT_PROTOCOL_VERSION); // we did not change the protocol ver at this moment yet
+    EXPECT_EQ(GetCurrentUpgradeInfo(CCUpgrades::CCMIXEDMODE_SUBVER_1_TOKEL_TIMESTAMP, CCUpgrades::CCASSETS_OPDROP_FIX_TOKEL_HEIGHT+1, CCUpgrades::GetUpgrades()).nProtocolVersion, CCUpgrades::CCMIXEDMODE_SUBVER_1_PROTOCOL_VERSION);
 }
 
 } /* namespace CCAssetsTests */
