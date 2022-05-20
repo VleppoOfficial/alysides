@@ -1070,11 +1070,11 @@ inline UniValue MakeResultSuccess(const std::string &txhex) {
 
 /// returns burn pubkey list
 /// @param height current height at which some new pubkeys are activated
-inline std::vector<CPubKey> GetBurnPubKeys(int32_t nHeight)
+inline std::vector<CPubKey> GetBurnPubKeys(int32_t nTime, int32_t nHeight)
 {
     std::vector<CPubKey> vDeadPubkeys;
     vDeadPubkeys.push_back(pubkey2pk(ParseHex(CC_BURNPUBKEY)));
-    if (CCUpgrades::IsUpgradeActive(nHeight, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1))
+    if (CCUpgrades::IsUpgradeActive(nTime, nHeight, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1))
         vDeadPubkeys.push_back(pubkey2pk(ParseHex(CC_BURNPUBKEY_FIXED)));  // activate new burn pubkey
     return vDeadPubkeys;
 }

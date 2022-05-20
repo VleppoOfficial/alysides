@@ -548,7 +548,7 @@ bool CheckMigration(Eval *eval, const CTransaction &importTx, const CTransaction
         if (!hasTokenVin)
             return eval->Invalid("burn-tx-has-no-token-vins");
 
-        std::vector<CPubKey> vDeadPubkeys = GetBurnPubKeys(eval->GetCurrentHeight());
+        std::vector<CPubKey> vDeadPubkeys = GetBurnPubKeys(eval->GetCurrentTime(), eval->GetCurrentHeight());
 
         // calc outputs for burn tx
         CAmount ccBurnOutputs = 0;

@@ -548,18 +548,20 @@ static UniValue tokentransfer(const std::string& name, const UniValue& params, b
     std::vector<CTxDestination> dests;
 
     CTxDestination dest;
+    const int64_t nTime = GetTime();
+    const int32_t nHeight = chainActive.LastTip()->GetHeight() + 1;
     vuint8_t vpubkey(ParseHex(params[1].get_str()));
     if (vpubkey.size() == CPubKey::COMPRESSED_PUBLIC_KEY_SIZE && CPubKey(vpubkey).IsValid()) 
         dest = CPubKey(vpubkey);    
     else 
         dest = DecodeDestination(params[1].get_str());
-    if (dest.which() == TX_PUBKEYHASH && !CCUpgrades::IsUpgradeActive(chainActive.LastTip()->GetHeight() + 1, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1))
+    if (dest.which() == TX_PUBKEYHASH && !CCUpgrades::IsUpgradeActive(nTime, nHeight, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1))
         return MakeResultError("destination as address not active yet");
     if (dest.which() != TX_PUBKEYHASH && dest.which() != TX_PUBKEY)
         return MakeResultError("invalid destination pubkey or address");
         
     // after subver_1 upgrade only addresses always will be used as destination, pubkeys are converted to addresses
-    if (dest.which() == TX_PUBKEY && CCUpgrades::IsUpgradeActive(chainActive.LastTip()->GetHeight() + 1, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1))
+    if (dest.which() == TX_PUBKEY && CCUpgrades::IsUpgradeActive(nTime, nHeight, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1))
         dests.push_back(boost::get<CPubKey>(dest).GetID());
     else
         dests.push_back(dest);  // address or pubkey

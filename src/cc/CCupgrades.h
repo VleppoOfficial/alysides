@@ -26,15 +26,17 @@
 namespace CCUpgrades  {
 
     // asset chain activation heights
-    const int32_t CCASSETS_OPDROP_FIX_TOKEL_HEIGHT = 286359;  // 26 Nov + 90 days
-    const int32_t CCASSETS_OPDROP_FIX_TKLTEST_HEIGHT = 243159;  // 26 Nov + 60 days
+    const int64_t CCASSETS_OPDROP_FIX_TOKEL_HEIGHT = 286359;  // 26 Nov + 90 days
+    const int64_t CCASSETS_OPDROP_FIX_TKLTEST_HEIGHT = 243159;  // 26 Nov + 60 days
 
-    const int32_t CCMIXEDMODE_SUBVER_1_TKLTEST_HEIGHT = 100000000;  // TBD
-    const int32_t CCMIXEDMODE_SUBVER_1_TOKEL_HEIGHT   = 100000000;  // TBD
-    const int32_t CCMIXEDMODE_SUBVER_1_DIMXY24_HEIGHT = 100000000;  // TBD
-    const int32_t CCMIXEDMODE_SUBVER_1_DIMXY28_HEIGHT = 100000000;  // TBD
-    const int32_t CCMIXEDMODE_SUBVER_1_DIMXY32_HEIGHT = 100000000;  // TBD
-    const int32_t CCMIXEDMODE_SUBVER_1_TKLTEST2_HEIGHT = 89940;  // approx 17 May 2022 10:00a.m. UTC
+    const int64_t CCMIXEDMODE_SUBVER_1_TKLTEST_HEIGHT = 100000000;  // TBD
+    const int64_t CCMIXEDMODE_SUBVER_1_DIMXY24_HEIGHT = 100000000;  // TBD
+    const int64_t CCMIXEDMODE_SUBVER_1_DIMXY28_HEIGHT = 100000000;  // TBD
+    const int64_t CCMIXEDMODE_SUBVER_1_DIMXY32_HEIGHT = 100000000;  // TBD
+    const int64_t CCMIXEDMODE_SUBVER_1_TKLTEST2_HEIGHT = 89940;  // approx 17 May 2022 10:00a.m. UTC
+    const int64_t CCMIXEDMODE_SUBVER_1_TOKEL_TIMESTAMP = 1655212904; // test 14 June 2022, to be actualised
+    const int64_t CCMIXEDMODE_SUBVER_1_DIMXY33_TIMESTAMP = 1653064202; // test HF 20 May 2022
+
     // latest protocol version:
     const int     CCMIXEDMODE_SUBVER_1_PROTOCOL_VERSION = 170010; 
     // pre-upgrade protocol version:
@@ -52,7 +54,7 @@ namespace CCUpgrades  {
     };
 
     struct UpgradeInfo {
-        int32_t nActivationHeight;
+        int64_t nActivationPoint;
         UPGRADE_STATUS status;
         int nProtocolVersion;   // used for disconnecting old nodes
     };
@@ -60,8 +62,8 @@ namespace CCUpgrades  {
     class ChainUpgrades {
     public:
         ChainUpgrades() : defaultUpgrade({0, UPGRADE_ACTIVE, CCNEWCHAIN_PROTOCOL_VERSION}) { }
-        void setActivationHeight(UPGRADE_ID upgId, int32_t nHeight, UPGRADE_STATUS upgStatus, int nProtocolVersion) {
-            mUpgrades[upgId] = { nHeight, upgStatus, nProtocolVersion };
+        void setActivationPoint(UPGRADE_ID upgId, int64_t nTimeOrHeight, UPGRADE_STATUS upgStatus, int nProtocolVersion) {
+            mUpgrades[upgId] = { nTimeOrHeight, upgStatus, nProtocolVersion };
         }
         
     public:
@@ -69,10 +71,18 @@ namespace CCUpgrades  {
         const UpgradeInfo defaultUpgrade;
     };
 
+    /** init a protocol version for a chain (if it will be upgraded) */
+    void InitUpgrade(const std::string &chainName, int nProtocolVersion);
+    /** for a chain add an upgrade activation point and new protocol version */
+    void AddUpgradeActive(const std::string &chainName, UPGRADE_ID upgradeId, int64_t nTimeOrHeight, int nProtocolVersion);
+    /** select upgrades for a chain */
     void SelectUpgrades(const std::string &chainName);
+    /** get selected upgrades */
     const ChainUpgrades &GetUpgrades();
-    bool IsUpgradeActive(int32_t nHeight, const ChainUpgrades &chainUpgrades, UPGRADE_ID upgId);
-    UpgradeInfo GetCurrentUpgradeInfo(int32_t nHeight, const ChainUpgrades &chainUpgrades);
+    /** check if an upgrade is active for selected upgrades */
+    bool IsUpgradeActive(int64_t nTime, int32_t nHeight, const ChainUpgrades &chainUpgrades, UPGRADE_ID upgId);
+    /** get currently active upgrade for selected upgrades */
+    UpgradeInfo GetCurrentUpgradeInfo(int64_t nTime, int32_t nHeight, const ChainUpgrades &chainUpgrades);
 
 }; // namespace CCUpgrades
 

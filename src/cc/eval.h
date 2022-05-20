@@ -79,7 +79,7 @@ class CCheckCCEvalCodes;
 class Eval
 {
 public:
-    Eval() : nCurrentHeight(0) {}
+    Eval() : nCurrentTime(0LL), nCurrentHeight(0) {}
     CValidationState state;
 
     bool Invalid(std::string s) { return state.Invalid(false, 0, s); }
@@ -111,6 +111,8 @@ public:
      */
     virtual bool GetTxUnconfirmed(const uint256 &hash, CTransaction &txOut, uint256 &hashBlock) const;
     virtual bool GetTxConfirmed(const uint256 &hash, CTransaction &txOut, CBlockIndex &block) const;
+    virtual int64_t GetCurrentTime() const;
+    void SetCurrentTime(int64_t nTimeIn) { nCurrentTime = nTimeIn; }
     virtual unsigned int GetCurrentHeight() const;
     void SetCurrentHeight(int32_t nHeightIn) { nCurrentHeight = nHeightIn; }
     virtual bool GetSpendsConfirmed(uint256 hash, std::vector<CTransaction> &spends) const;
@@ -122,8 +124,8 @@ public:
     virtual std::string GetAssetchainsSymbol() const;
 
 private:
+    int64_t nCurrentTime;
     int32_t nCurrentHeight;
-
 };
 
 
@@ -144,7 +146,7 @@ public:
 
 
 
-bool RunCCEval(const CC *cond, const CTransaction &tx, unsigned int nIn, int32_t nHeight, std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker);
+bool RunCCEval(const CC *cond, const CTransaction &tx, unsigned int nIn, int64_t nTime, int32_t nHeight, std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker);
 
 
 /*

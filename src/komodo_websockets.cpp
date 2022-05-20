@@ -81,8 +81,17 @@ int GetHeight()
 {
     LOCK(cs_main);
     CBlockIndex* pindex;
-    if ((pindex = chainActive.LastTip()) != 0)
+    if ((pindex = chainActive.LastTip()) != nullptr)
         return pindex->GetHeight();
+    else
+        return 0;
+}
+int64_t GetTipTime()
+{
+    LOCK(cs_main);
+    CBlockIndex* pindex;
+    if ((pindex = chainActive.LastTip()) != nullptr)
+        return pindex->nTime;
     else
         return 0;
 }
@@ -285,13 +294,15 @@ bool ProcessWsMessage(CNode* pfrom, std::string strCommand, CDataStream& vRecv, 
             return false;
         }*/
 
+        const int64_t nTipTime = GetTipTime();
+        const int nHeight = GetHeight();
         // check min cc version
-        if (nVersion < GetCurrentUpgradeInfo(GetHeight(), CCUpgrades::GetUpgrades()).nProtocolVersion)
+        if (nVersion < GetCurrentUpgradeInfo(nTipTime, nHeight, CCUpgrades::GetUpgrades()).nProtocolVersion)
         {
             LogPrint("websockets", "wspeer=%d using obsolete version %i; disconnecting by ccupgrades\n", pfrom->id, nVersion);
             pfrom->PushMessage("reject", strCommand, REJECT_OBSOLETE,
                             strprintf("Version must be %d or greater",
-                            GetCurrentUpgradeInfo(GetHeight(), CCUpgrades::GetUpgrades()).nProtocolVersion));
+                            GetCurrentUpgradeInfo(nTipTime, nHeight, CCUpgrades::GetUpgrades()).nProtocolVersion));
             pfrom->fDisconnect = true;
             return true;
         }
