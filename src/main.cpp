@@ -355,9 +355,18 @@ namespace {
     int GetHeight()
     {
         CBlockIndex *pindex;
-        if ( (pindex= chainActive.LastTip()) != 0 )
+        if ( (pindex= chainActive.LastTip()) != nullptr )
             return pindex->GetHeight();
-        else return(0);
+        else 
+            return(0);
+    }
+    int64_t GetTipTime()
+    {
+        CBlockIndex *pindex;
+        if ( (pindex= chainActive.LastTip()) != nullptr )
+            return pindex->nTime;
+        else 
+            return(0);
     }
 
     void UpdatePreferredDownload(CNode* node, CNodeState* state)
@@ -2083,7 +2092,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
         // This is done last to help prevent CPU exhaustion denial-of-service attacks.
         PrecomputedTransactionData txdata(tx);
         std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker(new CCheckCCEvalCodes());
-        if (!ContextualCheckInputs(tx, state, view, true, STANDARD_SCRIPT_VERIFY_FLAGS, true, txdata, Params().GetConsensus(), consensusBranchId, chainActive.LastTip()->GetHeight() + 1, evalcodeChecker))
+        if (!ContextualCheckInputs(tx, state, view, true, STANDARD_SCRIPT_VERIFY_FLAGS, true, txdata, Params().GetConsensus(), consensusBranchId, GetTime(), chainActive.LastTip()->GetHeight() + 1, evalcodeChecker)) // we can use GetTime() here, does not make big difference as this time is used to activate HF code for txns in mempool
         {
             //fprintf(stderr,"accept failure.9\n");
             LogPrint("mempool-tx", "%s ConnectInputs failed for tx %s\n", __func__, HexStr(E_MARSHAL(ss << tx)).c_str());  
@@ -2107,14 +2116,14 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
         }
         //fprintf(stderr,"addmempool 7\n");
 
-        if (!ContextualCheckInputs(tx, state, view, true, MANDATORY_SCRIPT_VERIFY_FLAGS, true, txdata, Params().GetConsensus(), consensusBranchId, chainActive.LastTip()->GetHeight() + 1, evalcodeChecker))
+        if (!ContextualCheckInputs(tx, state, view, true, MANDATORY_SCRIPT_VERIFY_FLAGS, true, txdata, Params().GetConsensus(), consensusBranchId, GetTime(), chainActive.LastTip()->GetHeight() + 1, evalcodeChecker))
         {
             if (flag != 0)
                 KOMODO_CONNECTING = -1;
             return error("AcceptToMemoryPool: BUG! PLEASE REPORT THIS! ConnectInputs failed against MANDATORY but not STANDARD flags %s", hash.ToString());
         }
 
-        if (!ContextualCheckOutputs(tx, state, true, txdata, chainActive.LastTip()->GetHeight() + 1, evalcodeChecker))
+        if (!ContextualCheckOutputs(tx, state, true, txdata, GetTime(), chainActive.LastTip()->GetHeight() + 1, evalcodeChecker))
             return error("AcceptToMemoryPool: BUG! PLEASE REPORT THIS! ContextualCheckOutputs failed %s", hash.ToString());
         if (flag != 0)
             KOMODO_CONNECTING = -1;
@@ -2799,13 +2808,13 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)
 bool CScriptCheck::operator()()
 {
     if (vout != 0) { //check cc output
-        ServerTransactionSignatureChecker checker(ptxTo, n, amount, cacheStore, nHeight, evalcodeChecker, *txdata);
+        ServerTransactionSignatureChecker checker(ptxTo, n, amount, cacheStore, nTime, nHeight, evalcodeChecker, *txdata);
         if (checker.CheckCryptoConditionSpk(scriptPubKey.GetCCV2SPK(), &error) != 1) {
             return ::error("CScriptCheck(): %s:%d CC output validation failed: %s", ptxTo->GetHash().ToString(), n, ScriptErrorString(error));
         }
     } else { // check cc input
         const CScript& scriptSig = ptxTo->vin[n].scriptSig;
-        ServerTransactionSignatureChecker checker(ptxTo, n, amount, cacheStore, nHeight, evalcodeChecker, *txdata);
+        ServerTransactionSignatureChecker checker(ptxTo, n, amount, cacheStore, nTime, nHeight, evalcodeChecker, *txdata);
         if (!VerifyScript(scriptSig, scriptPubKey, nFlags, checker, consensusBranchId, &error)) {
             return ::error("CScriptCheck(): %s:%d VerifySignature failed: %s", ptxTo->GetHash().ToString(), n, ScriptErrorString(error));
         }
@@ -2813,15 +2822,25 @@ bool CScriptCheck::operator()()
     return true;
 }
 
-int GetSpendHeight(const CCoinsViewCache& inputs)
+int GetSpendHeight(const CCoinsViewCache& inputs) // dimxy why inputs?
 {
     LOCK(cs_main);
     CBlockIndex* pindexPrev = mapBlockIndex.find(inputs.GetBestBlock())->second;
     return pindexPrev->GetHeight() + 1;
 }
 
+/// @author dimxy
+/// get estimated next block time (assuming it would be a spending block) 
+/// this value would be used for timestamp-activating HF code in coins cache code
+int64_t GetSpendTime(const CCoinsViewCache& coins)
+{
+    LOCK(cs_main);
+    CBlockIndex* pindexPrev = mapBlockIndex.find(coins.GetBestBlock())->second;
+    return pindexPrev->GetMedianTimePast();
+}
+
 namespace Consensus {
-    bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoinsViewCache& inputs, int nSpendHeight, const Consensus::Params& consensusParams)
+    bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoinsViewCache& inputs, int nSpendHeight, int64_t nSpendTime, const Consensus::Params& consensusParams)
     {
         // This doesn't trigger the DoS code on purpose; if it did, it would make it easier
         // for an attacker to attempt to split the network.
@@ -2836,7 +2855,7 @@ namespace Consensus {
         {
             if (tx.IsPegsImport() && i==0)
             {
-                nValueIn=GetCoinImportValue(tx, nSpendHeight);
+                nValueIn=GetCoinImportValue(tx, nSpendTime, nSpendHeight);
                 continue;
             }
             const COutPoint &prevout = tx.vin[i].prevout;
@@ -2930,13 +2949,14 @@ bool ContextualCheckInputs(
                            PrecomputedTransactionData& txdata,
                            const Consensus::Params& consensusParams,
                            uint32_t consensusBranchId,
+                           int64_t nTime,
                            int32_t nHeight,
                            std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker,
                            std::vector<CScriptCheck> *pvChecks)
 {
     if (!tx.IsMint())
     {
-        if (!Consensus::CheckTxInputs(tx, state, inputs, GetSpendHeight(inputs), consensusParams)) {
+        if (!Consensus::CheckTxInputs(tx, state, inputs, GetSpendHeight(inputs), GetSpendTime(inputs), consensusParams)) {
             return false;
         }
 
@@ -2958,7 +2978,7 @@ bool ContextualCheckInputs(
                 assert(coins);
 
                 // Verify signature
-                CScriptCheck check(*coins, tx, i, flags, cacheStore, consensusBranchId, nHeight, evalcodeChecker, &txdata);
+                CScriptCheck check(*coins, tx, i, flags, cacheStore, consensusBranchId, nTime, nHeight, evalcodeChecker, &txdata);
                 if (pvChecks) {
                     pvChecks->push_back(CScriptCheck());
                     check.swap(pvChecks->back());
@@ -2971,7 +2991,7 @@ bool ContextualCheckInputs(
                         // avoid splitting the network between upgraded and
                         // non-upgraded nodes.
                         CScriptCheck check2(*coins, tx, i,
-                                            flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS, cacheStore, consensusBranchId, nHeight, evalcodeChecker, &txdata);
+                                            flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS, cacheStore, consensusBranchId, nTime, nHeight, evalcodeChecker, &txdata);
                         if (check2())
                             return state.Invalid(false, REJECT_NONSTANDARD, strprintf("non-mandatory-script-verify-flag (%s)", ScriptErrorString(check.GetScriptError())));
                     }
@@ -2991,7 +3011,7 @@ bool ContextualCheckInputs(
     if (tx.IsCoinImport() || tx.IsPegsImport())
     {
         LOCK(cs_main);
-        ServerTransactionSignatureChecker checker(&tx, 0, 0, false, nHeight, NULL, txdata);
+        ServerTransactionSignatureChecker checker(&tx, 0, 0, false, nTime, nHeight, NULL, txdata);
         return VerifyCoinImport(tx.vin[0].scriptSig, checker, state);
     }
 
@@ -3003,6 +3023,7 @@ bool ContextualCheckOutputs(
                            CValidationState &state,
                            bool fScriptChecks,
                            PrecomputedTransactionData& txdata,
+                           int64_t nTime,
                            int32_t nHeight,
                            std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker,
                            std::vector<CScriptCheck> *pvChecks)
@@ -3019,11 +3040,11 @@ bool ContextualCheckOutputs(
             {
                 // check if secp256hash and eval param in action:
                 int subversion = CC_MixedModeSubVersion(tx.vout[i].scriptPubKey[0]);
-                if (subversion >= CC_MIXED_MODE_SECHASH_SUBVER_1 && !CCUpgrades::IsUpgradeActive(nHeight, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1))  
+                if (subversion >= CC_MIXED_MODE_SECHASH_SUBVER_1 && !CCUpgrades::IsUpgradeActive(nTime, nHeight, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1))  
                 {
                     return state.DoS(100,false, REJECT_INVALID, std::string("cc v2 subversion 1 or more not yet enabled"));
                 }
-                CScriptCheck check(tx.vout[i].scriptPubKey, tx.vout[i].nValue, tx, i, nHeight, evalcodeChecker, &txdata);
+                CScriptCheck check(tx.vout[i].scriptPubKey, tx.vout[i].nValue, tx, i, nTime, nHeight, evalcodeChecker, &txdata);
                 if (pvChecks)
                 {
                     pvChecks->push_back(CScriptCheck());
@@ -3867,13 +3888,13 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             //fprintf(stderr, "tx.%s nFees.%li interest.%li\n", tx.GetHash().ToString().c_str(), stakeTxValue, interest);
 
             std::vector<CScriptCheck> vChecks;
-            if (!ContextualCheckInputs(tx, state, view, fExpensiveChecks, flags, false, txdata[i], chainparams.GetConsensus(), consensusBranchId, pindex->GetHeight(), evalcodeChecker, nScriptCheckThreads ? &vChecks : NULL))
+            if (!ContextualCheckInputs(tx, state, view, fExpensiveChecks, flags, false, txdata[i], chainparams.GetConsensus(), consensusBranchId, pindex->GetBlockTime(), pindex->GetHeight(), evalcodeChecker, nScriptCheckThreads ? &vChecks : NULL))
                 return false;
         }
 
         {   // check tx outputs including coinbases
             std::vector<CScriptCheck> vChecks;
-            if (!ContextualCheckOutputs(tx, state, fExpensiveChecks, txdata[i], pindex->GetHeight(), evalcodeChecker, nScriptCheckThreads ? &vChecks : NULL))
+            if (!ContextualCheckOutputs(tx, state, fExpensiveChecks, txdata[i], pindex->GetBlockTime(), pindex->GetHeight(), evalcodeChecker, nScriptCheckThreads ? &vChecks : NULL))
                 return false;
             control.Add(vChecks);
         }
@@ -7575,9 +7596,11 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             return false;
         }
 
+        const int64_t nTipTime = GetTipTime();
+        const int nHeight = GetHeight();
         // Reject incoming connections from nodes that don't know about the current epoch
         const Consensus::Params& params = Params().GetConsensus();
-        auto currentEpoch = CurrentEpoch(GetHeight(), params);
+        auto currentEpoch = CurrentEpoch(nHeight, params);
         if (nVersion < params.vUpgrades[currentEpoch].nProtocolVersion)
         {
             LogPrintf("peer=%d using obsolete version %i; disconnecting\n", pfrom->id, nVersion);
@@ -7589,12 +7612,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         }
         
         // check min cc version
-        if (nVersion < GetCurrentUpgradeInfo(GetHeight(), CCUpgrades::GetUpgrades()).nProtocolVersion)
+        if (nVersion < GetCurrentUpgradeInfo(nTipTime, nHeight, CCUpgrades::GetUpgrades()).nProtocolVersion)
         {
-            LogPrintf("peer=%d using obsolete version %i, needed %d; disconnecting by ccupgrades\n", pfrom->id, nVersion, GetCurrentUpgradeInfo(GetHeight(), CCUpgrades::GetUpgrades()).nProtocolVersion);
+            LogPrintf("peer=%d using obsolete version %i, needed %d; disconnecting by ccupgrades\n", pfrom->id, nVersion, GetCurrentUpgradeInfo(nTipTime, nHeight, CCUpgrades::GetUpgrades()).nProtocolVersion);
             pfrom->PushMessage("reject", strCommand, REJECT_OBSOLETE,
                             strprintf("Version must be %d or greater",
-                            GetCurrentUpgradeInfo(GetHeight(), CCUpgrades::GetUpgrades()).nProtocolVersion));
+                            GetCurrentUpgradeInfo(nTipTime, nHeight, CCUpgrades::GetUpgrades()).nProtocolVersion));
             pfrom->fDisconnect = true;
             return false;
         }

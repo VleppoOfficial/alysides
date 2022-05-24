@@ -34,9 +34,10 @@ Eval* EVAL_TEST = 0;
 struct CCcontract_info CCinfos[0x100];
 extern pthread_mutex_t KOMODO_CC_mutex;
 
-bool RunCCEval(const CC *cond, const CTransaction &tx, unsigned int nIn, int32_t nHeight, std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker)
+bool RunCCEval(const CC *cond, const CTransaction &tx, unsigned int nIn, int64_t nTime, int32_t nHeight, std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker)
 {
     EvalRef eval;
+    eval->SetCurrentTime(nTime);
     eval->SetCurrentHeight(nHeight);
     pthread_mutex_lock(&KOMODO_CC_mutex);
     bool out = eval->Dispatch(cond, tx, nIn, evalcodeChecker);
@@ -149,6 +150,11 @@ bool Eval::GetTxConfirmed(const uint256 &hash, CTransaction &txOut, CBlockIndex 
     if (hashBlock.IsNull() || !GetBlock(hashBlock, block))
         return false;
     return true;
+}
+
+int64_t Eval::GetCurrentTime() const
+{
+    return nCurrentTime;
 }
 
 unsigned int Eval::GetCurrentHeight() const

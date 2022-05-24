@@ -314,7 +314,7 @@ bool UnmarshalBurnTx(const CTransaction burnTx,uint256 &pegstxid,uint256 &tokeni
 /*
  * Required by main
  */
-CAmount GetCoinImportValue(const CTransaction &tx, int32_t nHeight)
+CAmount GetCoinImportValue(const CTransaction &tx, int64_t nTime, int32_t nHeight)
 {
     ImportProof proof; CTransaction burnTx; std::vector<CTxOut> payouts;
     bool isNewImportTx = false;
@@ -346,7 +346,7 @@ CAmount GetCoinImportValue(const CTransaction &tx, int32_t nHeight)
                     nonfungibleEvalCode = vnonfungibleOpret.begin()[0];
 
 
-                std::vector<CPubKey> vDeadPubkeys = GetBurnPubKeys(nHeight);
+                std::vector<CPubKey> vDeadPubkeys = GetBurnPubKeys(nTime, nHeight);
 
 
                 // calc outputs for burn tx

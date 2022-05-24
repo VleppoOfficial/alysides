@@ -321,7 +321,7 @@ CBlockTemplate* CreateNewBlock(CPubKey _pk,const CScript& _scriptPubKeyIn, int32
             std::vector<int8_t> TMP_NotarisationNotaries;
             if (tx.IsCoinImport())
             {
-                CAmount nValueIn = GetCoinImportValue(tx, nHeight); // burn amount
+                CAmount nValueIn = GetCoinImportValue(tx, pblock->nTime, nHeight); // burn amount
                 nTotalIn += nValueIn;
                 dPriority += (double)nValueIn * 1000;  // flat multiplier... max = 1e16.
             } else {
@@ -334,7 +334,7 @@ CBlockTemplate* CreateNewBlock(CPubKey _pk,const CScript& _scriptPubKeyIn, int32
                 {
                     if (tx.IsPegsImport() && txin.prevout.n==10e8)
                     {
-                        CAmount nValueIn = GetCoinImportValue(tx, nHeight); // burn amount
+                        CAmount nValueIn = GetCoinImportValue(tx, pblock->nTime, nHeight); // burn amount
                         nTotalIn += nValueIn;
                         dPriority += (double)nValueIn * 1000;  // flat multiplier... max = 1e16.
                         continue;
@@ -565,8 +565,8 @@ CBlockTemplate* CreateNewBlock(CPubKey _pk,const CScript& _scriptPubKeyIn, int32
             // create only contains transactions that are valid in new blocks.
             CValidationState state;
             PrecomputedTransactionData txdata(tx);
-            std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker(new CCheckCCEvalCodes());
-            if (!ContextualCheckInputs(tx, state, view, true, MANDATORY_SCRIPT_VERIFY_FLAGS, true, txdata, Params().GetConsensus(), consensusBranchId, nHeight, evalcodeChecker))
+            std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker(new CCheckCCEvalCodes()); // evalcodeChecker pblock->nTime, nHeight are not used as no cc checks are performed (only MANDATORY_SCRIPT_VERIFY_FLAGS)
+            if (!ContextualCheckInputs(tx, state, view, true, MANDATORY_SCRIPT_VERIFY_FLAGS, true, txdata, Params().GetConsensus(), consensusBranchId, pblock->nTime, nHeight, evalcodeChecker))
             {
                 //fprintf(stderr,"context failure\n");
                 continue;

@@ -44,7 +44,7 @@ int TestCC(CMutableTransaction &mtxTo, unsigned int nIn, CC *cond)
     ScriptError error;
     CTransaction txTo(mtxTo);
     PrecomputedTransactionData txdata(txTo);
-    auto checker = ServerTransactionSignatureChecker(&txTo, nIn, amount, false, 1, NULL, txdata);
+    auto checker = ServerTransactionSignatureChecker(&txTo, nIn, amount, false, 0, 1, NULL, txdata);
     return VerifyScript(txTo.vin[nIn].scriptSig, CCPubKey(cond), 0, checker, 0, &error);
 }
 

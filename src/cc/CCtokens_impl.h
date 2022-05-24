@@ -404,7 +404,7 @@ UniValue TokenTransferExtDest(const CPubKey &remotepk, CAmount txfee, uint256 to
 
 			if (CCchange != 0)  {
                 if (V::EvalCode() == EVAL_TOKENSV2 && 
-                    CCUpgrades::IsUpgradeActive(chainActive.LastTip()->GetHeight() + 1, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1))  {
+                    CCUpgrades::IsUpgradeActive(chainActive.LastTip()->GetMedianTimePast(), chainActive.LastTip()->GetHeight() + 1, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1))  {
 				    mtx.vout.push_back(V::MakeTokensCCMofNDestVout(V::EvalCode(), 0, CCchange, 1, {mypk.GetID()}));  // send change to R-address after the HF
                 }
                 else
@@ -914,7 +914,7 @@ static CAmount HasBurnedTokensvouts(Eval *eval, const CTransaction& tx, uint256 
     uint8_t evalCode = V::EvalCode();     // if both payloads are empty maybe it is a transfer to non-payload-one-eval-token vout like GatewaysClaim
     uint8_t evalCode2 = 0;              // will be checked if zero or not
 
-    const bool isSubver1 = CCUpgrades::IsUpgradeActive(eval->GetCurrentHeight(), CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1);
+    const bool isSubver1 = CCUpgrades::IsUpgradeActive(eval->GetCurrentTime(), eval->GetCurrentHeight(), CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1);
 
     // test vouts for possible token use-cases:
     std::vector<std::pair<CTxOut, std::string>> testVouts;
@@ -950,7 +950,7 @@ static CAmount HasBurnedTokensvouts(Eval *eval, const CTransaction& tx, uint256 
         evalCode2 = 0;
     }
 
-    std::vector<CPubKey> vDeadPubkeys = GetBurnPubKeys(eval->GetCurrentHeight());
+    std::vector<CPubKey> vDeadPubkeys = GetBurnPubKeys(eval->GetCurrentTime(), eval->GetCurrentHeight());
 
     CAmount burnedAmount = 0;
 
