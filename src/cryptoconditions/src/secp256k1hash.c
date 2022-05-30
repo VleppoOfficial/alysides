@@ -259,7 +259,7 @@ static CC *secp256k1hashFromJSON(const cJSON *params, char *err) {
     size_t pkSize, sigSize;
 
     // try get pk
-    jsonGetHex(params, "publicKey", err, &pk, &pkSize);
+    jsonGetHexOptional(params, "publicKey", err, &pk, &pkSize);
     // try get sig
     jsonGetHexOptional(params, "signature", err, &sig, &sigSize);
     if (sig && SECP256K1_SIG_SIZE != sigSize) {

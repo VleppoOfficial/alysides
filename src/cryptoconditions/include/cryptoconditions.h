@@ -121,6 +121,7 @@ int             cc_isAnon(const CC *cond);
 struct CC*      cc_anon(const CC *cond);
 void            cc_free(struct CC *cond);
 struct CC*      cc_copy(const CC *cond);
+int             cc_hasSubtypes(enum CCTypeId cctypeid);
 
 #ifdef __cplusplus
 }

@@ -67,7 +67,7 @@ char *cc_conditionUri(const CC *cond) {
     unsigned char *fp = calloc(1, 32);
     cond->type->fingerprint(cond, fp);
 
-    unsigned char *encoded = base64_encode(fp, 32);
+    unsigned char *encoded = base64_encode_url_safe(fp, 32);
 
     unsigned char *out = calloc(1, 1000);
     sprintf(out, "ni:///sha-256;%s?fpt=%s&cost=%lu",encoded, cc_typeName(cond), cc_getCost(cond));
@@ -154,7 +154,7 @@ void asnCondition(const CC *cond, Condition_t *asn) {
     
     // Fixed previous implementation as it was treating every asn as thresholdSha256 type and it was memory leaking
     // because SimpleSha256Condition_t types do not have subtypes so it couldn't free it in the end.
-    int typeId = cond->type->typeId;
+    // int typeId = cond->type->typeId;
     if (asn->present==Condition_PR_thresholdSha256 || asn->present==Condition_PR_prefixSha256)
     {
         CompoundSha256Condition_t* sequence = asn->present == Condition_PR_thresholdSha256 ? &asn->choice.thresholdSha256 : &asn->choice.prefixSha256;
@@ -194,8 +194,6 @@ Condition_t *asnConditionNew(const CC *cond) {
 
 
 Fulfillment_t *asnFulfillmentNew(const CC *cond, FulfillmentFlags flags) {
-    //printf("%s type ptr %p\n", __func__, cond->type);
-    //printf("%s type %d\n", __func__, cond->type->typeId);
     return cond->type->toFulfillment(cond, flags);
 }
 
@@ -374,4 +372,8 @@ CC* cc_copy(const CC *cond) {
     if (cond)
         CCcopy=cond->type->copy(cond);
     return (CCcopy);
+}
+
+int cc_hasSubtypes(enum CCTypeId cctypeid)  {
+    return (cctypeid == CC_Threshold || cctypeid == CC_Prefix) ? 1 : 0;
 }
