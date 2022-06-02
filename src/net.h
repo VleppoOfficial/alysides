@@ -287,7 +287,7 @@ public:
     struct {
         uint32_t prevtime;
         uint32_t nreqs;
-    } nspvdata[16];
+    } nspvdata[32];
     uint32_t dexlastping;
     // Address of this peer
     CAddress addr;
