@@ -538,7 +538,7 @@ void NSPV_resp2indexOutputs(struct NSPV_txidsresp* ptr, std::vector<std::pair<CA
             key.type = type;
             key.hashBytes = hashBytes;
             key.txhash = ptr->txids[i].txid;
-            key.index = ptr->txids[i].vout;
+            key.index = ptr->txids[i].index;
             key.blockHeight = ptr->txids[i].height;
             value = ptr->txids[i].satoshis;
             indexOutputs.push_back(std::make_pair(key, value));

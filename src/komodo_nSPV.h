@@ -214,7 +214,7 @@ int32_t NSPV_rwtxidresp(int32_t rwflag,uint8_t *serialized,struct NSPV_txidresp 
     int32_t len = 0;
     len += iguana_rwbignum(rwflag,&serialized[len],sizeof(ptr->txid),(uint8_t *)&ptr->txid);
     len += iguana_rwnum(rwflag,&serialized[len],sizeof(ptr->satoshis),&ptr->satoshis);
-    len += iguana_rwnum(rwflag,&serialized[len],sizeof(ptr->vout),&ptr->vout);
+    len += iguana_rwnum(rwflag,&serialized[len],sizeof(ptr->index),&ptr->index);
     len += iguana_rwnum(rwflag,&serialized[len],sizeof(ptr->height),&ptr->height);
     return(len);
 }
