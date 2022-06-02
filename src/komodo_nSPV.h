@@ -537,7 +537,7 @@ int32_t NSPV_txextract(CTransaction &tx,uint8_t *data,int32_t datalen)
     {
         rawdata.resize(datalen);
         memcpy(&rawdata[0],data,datalen);
-        if ( DecodeHexTx(tx,HexStr(rawdata)) != 0 )
+        if ( DecodeHexTx(tx,HexStr(rawdata)) != false )
             return(0);
     }
     return(-1);

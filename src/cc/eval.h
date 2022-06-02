@@ -16,6 +16,9 @@
 #ifndef CC_EVAL_H
 #define CC_EVAL_H
 
+#include <boost/thread/locks.hpp>
+#include <boost/thread/mutex.hpp>
+
 #include <cryptoconditions.h>
 
 #include "cc/utils.h"
@@ -297,6 +300,38 @@ public:
 
 
 typedef std::pair<uint256,MerkleBranch> TxProof;
+
+// collect already validated evalcodes in a tx being validated
+// to prevent repeated validation of the same evalcode
+class CCheckCCEvalCodes
+{
+    //! The set of evalcodes that are already processed in CC validation.
+    std::map<uint256, std::set<uint8_t>> evalcodes;
+
+    //! Mutex to protect evalcodes map
+    boost::mutex mutex_eval;
+
+public:
+    void MarkEvalCode(uint256 txid, uint8_t ecode)
+    {
+        boost::unique_lock<boost::mutex> lock(mutex_eval);
+        auto search = evalcodes.find(txid);
+        if (search == evalcodes.end()) {
+            std::set<uint8_t> tmp;
+            tmp.insert(ecode);
+            evalcodes[txid] = tmp;
+        } else
+            search->second.insert(ecode);
+    }
+
+    bool CheckEvalCode(uint256 txid, uint8_t ecode)
+    {
+        boost::unique_lock<boost::mutex> lock(mutex_eval);
+        auto search = evalcodes.find(txid);
+        return search == evalcodes.end() ? false : (search->second.find(ecode) != search->second.end());
+    }
+    CValidationState lastEvalErrorState;  // store last eval error aborting the validation process
+};
 
 
 uint256 GetMerkleRoot(const std::vector<uint256>& vLeaves);

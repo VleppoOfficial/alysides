@@ -2252,16 +2252,17 @@ struct CompareBlocksByHeightMain
     else return(coins.vout[n].nValue);
 }*/
 
-bool myAddtomempool(const CTransaction &tx, CValidationState *pstate, bool fSkipExpiry)
+bool myAddtomempool(const CTransaction &tx, CValidationState *pstate, bool *pMissingInputs, bool fSkipExpiry)
 {
     CValidationState state;
     if (!pstate)
         pstate = &state;
-    CTransaction Ltx; bool fMissingInputs,fOverrideFees = false;
-    if ( mempool.lookup(tx.GetHash(),Ltx) == 0 )
+    CTransaction Ltx; 
+    bool fOverrideFees = false;
+    if (mempool.lookup(tx.GetHash(), Ltx) == false)
     {
         if ( !fSkipExpiry )
-            return(AcceptToMemoryPool(mempool, *pstate, tx, false, &fMissingInputs, !fOverrideFees, -1));
+            return(AcceptToMemoryPool(mempool, *pstate, tx, false, pMissingInputs, !fOverrideFees, -1));
         else 
             return(CCTxFixAcceptToMemPoolUnchecked(mempool,tx));
     }
@@ -3002,7 +3003,10 @@ bool ContextualCheckInputs(
                     // as to the correct behavior - we may want to continue
                     // peering with non-upgraded nodes even after a soft-fork
                     // super-majority vote has passed.
-                    return state.DoS(100,false, REJECT_INVALID, strprintf("mandatory-script-verify-flag-failed (%s)", ScriptErrorString(check.GetScriptError())));
+                    return state.DoS(100,false, REJECT_INVALID, 
+                        strprintf("mandatory-script-verify-flag-failed (%s)%s", 
+                            ScriptErrorString(check.GetScriptError()), 
+                            evalcodeChecker->lastEvalErrorState.IsValid() == false ? strprintf(", eval errcode=%d reason=%s", evalcodeChecker->lastEvalErrorState.GetRejectCode(), evalcodeChecker->lastEvalErrorState.GetRejectReason()) : ""));
                 }
             }
         }
@@ -3052,7 +3056,10 @@ bool ContextualCheckOutputs(
                 }
                 else if (!check())
                 {
-                    return state.DoS(100,false, REJECT_INVALID, strprintf("mandatory-script-verify-flag-failed (%s)", ScriptErrorString(check.GetScriptError())));
+                    return state.DoS(100,false, REJECT_INVALID, 
+                        strprintf("mandatory-script-verify-flag-failed (%s)%s", 
+                            ScriptErrorString(check.GetScriptError()),
+                            evalcodeChecker->lastEvalErrorState.IsValid() == false ? strprintf(", eval errcode=%d reason=%s", evalcodeChecker->lastEvalErrorState.GetRejectCode(), evalcodeChecker->lastEvalErrorState.GetRejectReason()) : ""));
                 }
             }
         }
@@ -5571,7 +5578,7 @@ bool CheckBlock(int32_t *futureblockp,int32_t height,CBlockIndex *pindex,const C
                 if ( tx.IsCoinBase() || !tx.vjoinsplit.empty() || !tx.vShieldedSpend.empty() || (i == block.vtx.size()-1 && komodo_isPoS((CBlock *)&block,height,0) != 0) )
                     continue;
                 Tx = tx;
-                if ( myAddtomempool(Tx, &state, true) == false ) // happens with out of order tx in block on resync
+                if ( myAddtomempool(Tx, &state, nullptr, true) == false ) // happens with out of order tx in block on resync
                 {
                     //LogPrintf("Rejected by mempool, reason: .%s.\n", state.GetRejectReason().c_str());
                     // take advantage of other checks, but if we were only rejected because it is a valid staking

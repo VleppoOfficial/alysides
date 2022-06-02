@@ -818,26 +818,32 @@ uint8_t *NSPV_getrawtx(CTransaction &tx,uint256 &hashBlock,int32_t *txlenp,uint2
     return(rawtx);
 }
 
-int32_t NSPV_sendrawtransaction(struct NSPV_broadcastresp *ptr,uint8_t *data,int32_t n)
+int32_t NSPV_sendrawtransaction(struct NSPV_broadcastresp *ptr, uint8_t *data, int32_t n, CValidationState *pstate)
 {
     CTransaction tx;
     ptr->retcode = 0;
     if ( NSPV_txextract(tx,data,n) == 0 )
     {
-        //LOCK(cs_main);
+        LOCK(cs_main); // required by AcceptToMemoryPool
+        
+        bool fMissingInputs = false;
         ptr->txid = tx.GetHash();
         //fprintf(stderr,"try to addmempool transaction %s\n",ptr->txid.GetHex().c_str());
-        if (myAddtomempool(tx) != 0)
+        if (myAddtomempool(tx, pstate, &fMissingInputs) != false)
         {
             ptr->retcode = 1;
             //int32_t i;
             //for (i=0; i<n; i++)
             //    fprintf(stderr,"%02x",data[i]);
-            fprintf(stderr," relay transaction %s retcode.%d\n",ptr->txid.GetHex().c_str(),ptr->retcode);
+            //fprintf(stderr," relay transaction %s retcode.%d\n",ptr->txid.GetHex().c_str(),ptr->retcode);
             RelayTransaction(tx);
         } 
-        else 
-            ptr->retcode = -3;
+        else {
+            if (fMissingInputs)
+                ptr->retcode = -4;
+            else
+                ptr->retcode = -3;
+        }
 
     } 
     else 
@@ -986,6 +992,18 @@ static void NSPV_senderror(CNode* pfrom, uint32_t requestId, int32_t err)
     std::vector<uint8_t> response = vuint8_t(ss.begin(), ss.end());
     pfrom->PushMessage("nSPV", response);
 }
+
+static void NSPV_senderror(CNode* pfrom, uint32_t requestId, int32_t err, const std::string &errDesc)
+{
+    const uint8_t respCode = NSPV_ERRORRESP;
+
+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    ss << respCode << requestId << err << errDesc;
+
+    std::vector<uint8_t> response = vuint8_t(ss.begin(), ss.end());
+    pfrom->PushMessage("nSPV", response);
+}
+
 
 // processing nspv requests
 void komodo_nSPVreq(CNode* pfrom, std::vector<uint8_t> request) // received a request
@@ -1445,25 +1463,39 @@ void komodo_nSPVreq(CNode* pfrom, std::vector<uint8_t> request) // received a re
             if (requestDataLen > sizeof(txid) + sizeof(txlen)) {
                 int32_t offset = 0;
                 int32_t respEstimated;
+                CValidationState state;
 
                 offset += iguana_rwbignum(IGUANA_READ, &requestData[offset], sizeof(txid), (uint8_t*)&txid);
                 offset += iguana_rwnum(IGUANA_READ, &requestData[offset], sizeof(txlen), &txlen);
                 memset(&B, 0, sizeof(B));
-                if (txlen < MAX_TX_SIZE_AFTER_SAPLING && requestDataLen == offset + txlen && (respEstimated = NSPV_sendrawtransaction(&B, &requestData[offset], txlen)) > 0) {
-                    response.resize(nspvHeaderSize + respEstimated);
-                    response[0] = NSPV_BROADCASTRESP;
-                    memcpy(&response[1], &requestId, sizeof(requestId));
+                if (txlen < MAX_TX_SIZE_AFTER_SAPLING && requestDataLen == offset + txlen && (respEstimated = NSPV_sendrawtransaction(&B, &requestData[offset], txlen, &state)) > 0) {
+                    if (B.retcode >= 0)    {
+                        response.resize(nspvHeaderSize + respEstimated);
+                        response[0] = NSPV_BROADCASTRESP;
+                        memcpy(&response[1], &requestId, sizeof(requestId));
 
-                    int32_t respWritten = NSPV_rwbroadcastresp(IGUANA_WRITE, &response[nspvHeaderSize], &B);
-                    if (respWritten > 0 && respWritten <= respEstimated) {
-                        response.resize(nspvHeaderSize + respWritten);
-                        pfrom->PushMessage("nSPV", response);
-                        pfrom->nspvdata[idata].prevtime = timestamp;
-                        pfrom->nspvdata[idata].nreqs++;
-                        LogPrint("nspv-details", "NSPV_BROADCAST response: txid=%s vout=%d to node=%d\n", B.txid.GetHex().c_str(), pfrom->id);
-                    } else  {
-                        LogPrint("nspv", "NSPV_rwbroadcastresp incorrect response written len.%d\n", respWritten);
-                        NSPV_senderror(pfrom, requestId, NSPV_ERROR_INVALID_RESPONSE);
+                        int32_t respWritten = NSPV_rwbroadcastresp(IGUANA_WRITE, &response[nspvHeaderSize], &B);
+                        if (respWritten > 0 && respWritten <= respEstimated)   {
+                            response.resize(nspvHeaderSize + respWritten);
+                            pfrom->PushMessage("nSPV", response);
+                            pfrom->nspvdata[idata].prevtime = timestamp;
+                            pfrom->nspvdata[idata].nreqs++;
+                            LogPrint("nspv-details", "NSPV_BROADCAST response: txid=%s vout=%d to node=%d\n", B.txid.GetHex().c_str(), pfrom->id);
+                        } else  {
+                            LogPrint("nspv", "NSPV_rwbroadcastresp incorrect response written len.%d\n", respWritten);
+                            NSPV_senderror(pfrom, requestId, NSPV_ERROR_INVALID_RESPONSE);
+                        }
+                    }
+                    else {
+                        std::string errDesc = "unknown-error";
+                        if (B.retcode == -1)
+                            errDesc = "tx-decode-failed";
+                        else if (B.retcode == -3)
+                            errDesc = strprintf("add-to-mempool-error: validation code=%d reason=%s", state.GetRejectCode(), state.GetRejectReason());
+                        else if (B.retcode == -4)
+                            errDesc = "add-to-mempool-error: missing inputs";
+                        NSPV_senderror(pfrom, requestId, NSPV_ERROR_BROADCAST, errDesc);
+                        LogPrint("nspv", "NSPV_sendrawtransaction error retcode %d state code=%d reason=%s node=%d\n", B.retcode, state.GetRejectCode(), state.GetRejectReason(), pfrom->id);
                     }
                     NSPV_broadcast_purge(&B);
                 } else  {
