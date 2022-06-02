@@ -293,6 +293,7 @@ static UniValue tokenbalance(const std::string& name, const UniValue& params, bo
         vpubkey = Mypubkey();
 
     CPubKey pk = pubkey2pk(vpubkey);
+    if (!pk.IsValid()) return MakeResultError("invalid pubkey");
     CAmount balance = GetTokenBalance<V>(pk, tokenid, false);
 
 	if (CCerror.empty()) {
