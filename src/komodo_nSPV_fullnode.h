@@ -1420,7 +1420,7 @@ void komodo_nSPVreq(CNode* pfrom, std::vector<uint8_t> request) // received a re
                         pfrom->PushMessage("nSPV", response);
                         pfrom->nspvdata[idata].prevtime = timestamp;
                         pfrom->nspvdata[idata].nreqs++;
-                        LogPrint("nspv-details", "NSPV_SPENTINFO response: spent txid=%s vout=%d node=%d\n", S.txid.GetHex().c_str(), S.vout, pfrom->id);
+                        LogPrint("nspv-details", "NSPV_SPENTINFO response: spending txid=%s vini=%d node=%d\n", S.spent.txid.GetHex(), S.spentvini, pfrom->id);
                     } else  {
                         LogPrint("nspv", "NSPV_rwspentinfo incorrect response written len.%d\n", respWritten);
                         NSPV_senderror(pfrom, requestId, NSPV_ERROR_INVALID_RESPONSE);
