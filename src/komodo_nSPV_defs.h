@@ -88,7 +88,8 @@
 // see NSPV_txproof struct
 #define NSPV_TXPROOFRESP 0x09
 
-// get spent info for a tx output from spent index
+// get spent info for a tx output from the addressindex
+// returns txproof and spending txid
 // params:
 // int32_t vout - tx output index
 // uint256 txid - txid
@@ -322,11 +323,15 @@ struct NSPV_inforesp
 // response struct for NSPV_TXPROOFRESP
 struct NSPV_txproof
 {
-    uint256 txid;
-    int64_t unspentvalue;
-    int32_t height, vout, txlen, txprooflen;
-    uint8_t *tx, *txproof;
-    uint256 hashblock;
+    uint256 txid;                               // txid of the tx
+    int64_t unspentvalue;                       // amount of the tx vout
+    int32_t height,                             // block height for the tx
+            vout,                               // 
+            txlen,                              // spending tx length
+            txprooflen;                         // txproof length
+    uint8_t *tx,                                // serialised spending tx
+            *txproof;                           // serialised tx proof
+    uint256 hashblock;                          // hash of the block with the spending tx 
 };
 
 // block headers notarised by a notary tx
@@ -359,9 +364,10 @@ struct NSPV_MMRproof
 // response struct for NSPV_SPENTINFORESP
 struct NSPV_spentinfo
 {
-    struct NSPV_txproof spent;
-    uint256 txid;
-    int32_t vout,spentvini;
+    struct NSPV_txproof spent;      // transaction proof of the spending tx
+    uint256 txid;                   // txid of the tx to get spending info of
+    int32_t vout,                   // tx output index to get spending info of 
+            spentvini;              // spending tx vin index
 };
 
 // response struct for NSPV_BROADCASTRESP
@@ -371,7 +377,7 @@ struct NSPV_broadcastresp
     int32_t retcode;
 };
 
-// response struct for NSPV_CCMODULEUTXOSRESP
+// response struct for NSPV_CCMODULEUTXOSRESP (deprecated)
 struct NSPV_CCmtxinfo
 {
     struct NSPV_utxosresp U;
