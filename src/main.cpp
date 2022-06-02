@@ -7925,7 +7925,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
     // the getaddr message mitigates the attack.
     else if ((strCommand == "getaddr") && (pfrom->fInbound))
     {
-        std::cerr << __func__ << " in getaddr, node=" << pfrom->id << std::endl;
         // Only send one GetAddr response per connection to reduce resource waste
         //  and discourage addr stamping of INV announcements.
         if (pfrom->fSentAddr) {
@@ -7938,7 +7937,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         vector<CAddress> vAddr = addrman.GetAddr();
         BOOST_FOREACH(const CAddress &addr, vAddr)
             pfrom->PushAddress(addr);
-        std::cerr << __func__ << " on getaddr pushed addresses=" << vAddr.size() << " node=" << pfrom->id << std::endl;
     }
     // temporary optional nspv message processing
     else if ((nLocalServices & NODE_NSPV) &&
