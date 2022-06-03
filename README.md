@@ -1,53 +1,59 @@
 ![Tokel Header](https://github.com/TokelPlatform/tokel_app/blob/development/assets/tokel-header.png "Tokel Header")
 
 
-## Komodo's 'Tokel' Branch
+## The Tokel Blockchain
+This repository is required to run and use the main Tokel blockchain and hosts Tokel specific developments.
 
-This is the `tokel` branch of Komodo's sourcecode repository. This branch is required to run and use the main Tokel blockchain and hosts Tokel specific developments.
-
-To run Tokel's test chain, please use the repository below instead.
-- https://github.com/TokelPlatform/komodo/
+To run Tokel's test chain (TKLTEST), please use the 'tkltest' branch instead.
+- [https://github.com/TokelPlatform/tokel](https://github.com/TokelPlatform/tokel/tree/tkltest)
 
 
 ## What is the Tokel Platform?
-Tokel is a dedicated token platform. This platform will provide a solid foundation, using existing Komodo Technologies, for token projects to launch and succeed from by offering end-to-end token solutions for fixed supply and non-fungible tokens (NFT's). Furthermore Tokel aims to provide a wealth of knowledge, information and assistance for open-sourced applications, projects and businesses looking to capitalize on token economics or token applications. The Tokel platform will provide simple to use, streamlined token creation, explorer and wallet integration, decentralized exchange integration assistance and more.
+Tokel is an open-source, decentralized, token & NFT platform. 
 
-#### What Tokel aims to offer:
-- The blockchain that facilitates the tokens.
-- An open-sourced all-in-one GUI application.
-- A tokenDEX for all tokens on Tokel.
-- An NFT marketplace for NFTs on Tokel.
-- A free-to-use token test blockchain.
-- Easy to use integrations
-- Easy to use token creation, usage and management tools.
-- Immediate token explorer integration.
+The Tokel platform makes tokenization easy and affordable for creators, businesses and projects by offering inexpensive, user-friendly solutions for token/NFT creation, asset management, and an on-chain decentralized trading functionality without the need for complicated smart contracts or expensive gas fees. 
+
+Utilizing cutting edge UTXO based technology, the Tokel blockchain offers an array of layer 1 blockchain features, removing the need for expensive smart contract development. 
+
+Tokel's super-lite, next-gen SPV technology gives users the ability to interact with their tokens in a decentralized & trust-less fashion on any device, without the inconvenience and energy cost of downloading the entire blockchain. 
+
+Tokel provides universal, accessible, and easy-to-use tokenization technology to people all over the world. 
+
+To NFT and Beyond
+
+#### What Tokel offers:
+- The blockchain that facilitates the tokens and NFTs.
+- An open-sourced all-in-one ]GUI application](https://github.com/TokelPlatform/tokel_dapp).
+- DEX functionality for all tokens/NFTs created on Tokel.
+- A free-to-use test blockchain (TKLTEST).
+- Easy to use integrations (nSPV)
+- Easy to use token/NFT creation, usage and management tools [(within the dApp)](https://github.com/TokelPlatform/tokel_dapp).
+- Immediate [token explorer integration](https://explorer.tokel.io/tokens).
 - Immediate token wallet integration.
-- Open source Discord bot integration.
 
 #### The benefits of creating a token on the Tokel blockchain:
-- There are no requirements to create and manage your own blockchain.
-- Free, simple to use GUI for token usage, management and creation.
+- There are no requirements to create and manage your own blockchain or complicated smart contracts.
+- No gas fees!
+- Free, simple to use [dApp](https://github.com/TokelPlatform/tokel_dapp) for token usage, management and creation.
 - Extremely cheap token creation and transaction fees (1 satoshi of TKL per token created and 0.0001 TKL txfee by default).
 - Free to use TKLTEST chain for any token or custom consensus testing prior to launch or integration.
-- Your token will have immediate token wallet integration.
+- Your token will have immediate token wallet integration within the dApp.
 - Your token will have immediate token explorer integration.
-- Your token is safe from 51% attacks as Tokel is secured through dPoW.
-- You will have the ability to sell your tokens immediately after creation with Tokel’s inbuilt tokenDEX and NFT marketplace integration.
+- Your token is safe from 51% attacks as Tokel is secured through [dPoW](https://komodoplatform.com/en/blog/delayed-proof-of-work/).
+- You will have the ability to sell your tokens immediately after creation with Tokel’s inbuilt decentralized exchange mechanism.
 - Tokel exchange partnerships mean your token will have a centralized exchange listing option. The exchanges are only required to run the Tokel chain to access every single token on it.
 
-## The Tokel Application
+## The Tokel Decentralized Application
 The all-in-one Tokel application is an open-sourced application that will be the one stop shop for all Tokel related features. This application is built using nSPV superlite wallet technology that has been developed by the Komodo platform, for an incredibly fast and reliable experience. This application accesses all of the features offered on the Tokel blockchain whilst keeping users funds in their own wallets (completely non-custodial).
 
-This application is in development. You can keep up with progress on the github, or find out more by having a chat in our discord.
+You can keep up with progress on the github, or find out more by having a chat in our discord.
 https://github.com/TokelPlatform/tokel_dapp
 
 #### Application features include:
 - A TKL coin wallet
 - A multi-token wallet (you are able to hold all tokens that are in existence on the Tokel blockchain)
-- A tokenDEX trading platform
-- A decentralized NFT marketplace
+- Decentralized exchanging functionality
 - A simple to use Token creation tool
-- A token explorer for all tokens on the Tokel blockchain
 
 ## Tokel Resources
 
