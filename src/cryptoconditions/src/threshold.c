@@ -134,7 +134,7 @@ static CC *thresholdFromFulfillmentMixed(const Fulfillment_t *ffill) {
 
     if (nffills == 0) {
         free(cond);
-        fprintf(stderr, "%s nffills == 0\n", __func__);
+        //fprintf(stderr, "%s nffills == 0\n", __func__);
         return NULL;
     }
 
@@ -195,8 +195,8 @@ static CC *thresholdFromFulfillment(const Fulfillment_t *ffill, FulfillmentFlags
         if (!subconditions[i]) {
             for (int j=0; j<i; j++) free(subconditions[j]);
             free(subconditions);
-            fprintf(stderr, "%s !subconditions[i]\n", __func__);
-            return 0;
+            //fprintf(stderr, "%s !subconditions[i]\n", __func__);
+            return NULL;
         }
     }
 
@@ -215,18 +215,15 @@ static Fulfillment_t *thresholdToFulfillmentMixed(const CC *cond, FulfillmentFla
     // Add a marker into the threshold to indicate `t`
     CC* t = cc_new(CC_Preimage);
     t->code = calloc(1, 2);
-    t->code[0] = cond->threshold;
+    t->code[0] = cond->threshold; // store threshold value in a special purpose preimage cond
     t->preimageLength = 1;
     asn_set_add(&tf->subfulfillments, asnFulfillmentNew(t, flags));
 
     for (int i=0; i<cond->size; i++) {
         CC *sub = cond->subconditions[i];
-        //printf("%s sub->type=%d  sub->dontFulfill=%d\n", __func__, sub->type->typeId, sub->dontFulfill);
         if (fulfillment = asnFulfillmentNew(sub, flags)) {
-            //printf("%s sub->type=%d added as ffill\n", __func__, sub->type->typeId);
-            asn_set_add(&tf->subfulfillments, fulfillment);
+            asn_set_add(&tf->subfulfillments, fulfillment);  // always first try to add as fulfillment 
         } else {
-            //printf("%s sub->type=%d added as cond\n", __func__, sub->type->typeId);
             asn_set_add(&tf->subconditions, asnConditionNew(sub));
         }
     }
@@ -239,7 +236,6 @@ static Fulfillment_t *thresholdToFulfillmentMixed(const CC *cond, FulfillmentFla
 
 
 static Fulfillment_t *thresholdToFulfillment(const CC *cond, FulfillmentFlags flags) {
-    //printf("%s flags & MixedMode %d\n", __func__, (flags & MixedMode));
     if (flags & MixedMode) return thresholdToFulfillmentMixed(cond, flags);
 
     Fulfillment_t *fulfillment;
@@ -256,10 +252,10 @@ static Fulfillment_t *thresholdToFulfillment(const CC *cond, FulfillmentFlags fl
     for (int i=0; i<cond->size; i++) {
         CC *sub = subconditions[i];
         if (needed && !sub->dontFulfill && (fulfillment = asnFulfillmentNew(sub, flags))) {
-            asn_set_add(&tf->subfulfillments, fulfillment);
+            asn_set_add(&tf->subfulfillments, fulfillment);  // add as a fulfillment for as many as the thershold number
             needed--;
         } else {
-            asn_set_add(&tf->subconditions, asnConditionNew(sub));
+            asn_set_add(&tf->subconditions, asnConditionNew(sub)); // the rest add as anon conds
         }
     }
 

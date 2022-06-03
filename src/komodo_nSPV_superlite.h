@@ -429,19 +429,19 @@ UniValue NSPV_utxosresp_json(struct NSPV_utxosresp *ptr)
     return(result);
 }
 
-UniValue NSPV_txidresp_json(struct NSPV_txidresp *utxos,int32_t numutxos)
+UniValue NSPV_txidresp_json(struct NSPV_txidresp *txids,int32_t numutxos)
 {
     UniValue array(UniValue::VARR); int32_t i;
     for (i=0; i<numutxos; i++)
     {
         UniValue item(UniValue::VOBJ);
-        item.push_back(Pair("height",(int64_t)utxos[i].height));
-        item.push_back(Pair("txid",utxos[i].txid.GetHex()));
-        item.push_back(Pair("value",(double)utxos[i].satoshis/COIN));
-        if (utxos[i].satoshis > 0)
-            item.push_back(Pair("vout", (int64_t)utxos[i].vout));
+        item.push_back(Pair("height",(int64_t)txids[i].height));
+        item.push_back(Pair("txid",txids[i].txid.GetHex()));
+        item.push_back(Pair("value",(double)txids[i].satoshis/COIN));
+        if (txids[i].satoshis > 0)
+            item.push_back(Pair("vout", (int64_t)txids[i].index));
         else
-            item.push_back(Pair("vin", (int64_t)utxos[i].vout));
+            item.push_back(Pair("vin", (int64_t)txids[i].index));
         array.push_back(item);
     }
     return(array);
