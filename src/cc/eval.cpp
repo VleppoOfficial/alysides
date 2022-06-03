@@ -48,7 +48,8 @@ bool RunCCEval(const CC *cond, const CTransaction &tx, unsigned int nIn, int64_t
 
     if (eval->state.IsValid()) return true;
 
-    evalcodeChecker->lastEvalErrorState = eval->state;
+    if (evalcodeChecker != nullptr)
+        evalcodeChecker->lastEvalErrorState = eval->state;
 
     // report cc error:
     std::string lvl = eval->state.IsInvalid() ? "Invalid" : "Error!";
