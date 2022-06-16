@@ -770,6 +770,8 @@ int32_t NSPV_remoterpc(struct NSPV_remoterpcresp *ptr,char *json,int n)
             rpc_result = JSONRPCReplyObj(result, NullUniValue, jreq.id);
             response=rpc_result.write();
             ptr->json = (char*)malloc(response.size()+1);
+            if (ptr->json == nullptr) 
+                throw JSONRPCError(RPC_OUT_OF_MEMORY, "Cannot allocate memory for response");
             strcpy(ptr->json, response.c_str());
             len+=response.size();
             return (len);
