@@ -141,7 +141,7 @@ CAmount TokensV1::CheckTokensvout(struct CCcontract_info *cp, Eval* eval, const 
 
             // call extra data validators
             for (auto const &vd : vdatas)
-                if (vd.size() > 0 && vd[0] != 0)
+                if (vd.size() > 0 && vd[0] != 0 && vd[0] != cp->evalcode)  // vd[0] is additional evalcode to validate tokendata
                     if (!SubcallCCValidate(eval, vd[0], tx, 0)) 
                         return -1;
 
@@ -568,7 +568,7 @@ CAmount TokensV2::CheckTokensvout(struct CCcontract_info *cp, Eval* eval, const 
             */
             // call extra data validators
             for (auto const &vd : vdatas)
-                if (vd.size() > 0 && vd[0] != 0)
+                if (vd.size() > 0 && vd[0] != 0 && vd[0] != cp->evalcode)  // vd[0] is additional evalcode to validate tokendata
                     if (!SubcallCCValidate(eval, vd[0], tx, 0))
                         return -1;
 
