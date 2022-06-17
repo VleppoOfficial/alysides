@@ -138,8 +138,10 @@ UniValue tokenv2list(const UniValue& params, bool fHelp, const CPubKey& remotepk
     {
         if (params[0].getType() == UniValue::VOBJ)
             jsonParams = params[0].get_array();
-        else if (params[0].getType() == UniValue::VSTR)  // json in quoted string '{...}'
-            jsonParams.read(params[0].get_str().c_str());
+        else if (params[0].getType() == UniValue::VSTR)  { // json in quoted string '{...}'
+            if (!jsonParams.read(params[0].get_str().c_str())) 
+                return MakeResultError("parameter must be a valid json object\n");
+        }
         if (jsonParams.getType() != UniValue::VOBJ)
             throw runtime_error("parameter 1 must be a json object");   
 
@@ -222,8 +224,10 @@ UniValue tokenorders(const std::string& name, const UniValue& params, bool fHelp
     {
         if (params[1].getType() == UniValue::VOBJ)
             jsonParams = params[1].get_array();
-        else if (params[1].getType() == UniValue::VSTR)  // json in quoted string '{...}'
-            jsonParams.read(params[1].get_str().c_str());
+        else if (params[1].getType() == UniValue::VSTR) { // json in quoted string '{...}'
+            if (!jsonParams.read(params[1].get_str().c_str()))
+                return MakeResultError("parameter 2 must be a valid json object\n");
+        }
         if (jsonParams.getType() != UniValue::VOBJ)
             throw runtime_error("parameter 2 must be a json object");   
 
@@ -711,8 +715,10 @@ UniValue tokenv2transferMofN(const UniValue& params, bool fHelp, const CPubKey& 
     UniValue jsonParams(UniValue::VOBJ);
     if (params[0].getType() == UniValue::VOBJ)
         jsonParams = params[0].get_obj();
-    else if (params[0].getType() == UniValue::VSTR)  // json in quoted string '{...}'
-        jsonParams.read(params[0].get_str().c_str());
+    else if (params[0].getType() == UniValue::VSTR)  { // json in quoted string '{...}'
+        if (!jsonParams.read(params[0].get_str().c_str()))
+            return MakeResultError("parameter 1 must be a valid json object\n");
+    }
     if (jsonParams.getType() != UniValue::VOBJ)
         return MakeResultError("parameter 1 must be object\n");
 
@@ -1148,8 +1154,10 @@ UniValue addccv2signature(const UniValue& params, bool fHelp, const CPubKey& rem
     vuint8_t vtx = ParseHex(params[0].get_str().c_str());
     if (params[1].getType() == UniValue::VARR)
         jsonParams = params[1].get_array();
-    else if (params[1].getType() == UniValue::VSTR)  // json in quoted string '{...}'
-        jsonParams.read(params[1].get_str().c_str());
+    else if (params[1].getType() == UniValue::VSTR)  { // json in quoted string '{...}'
+        if (!jsonParams.read(params[1].get_str().c_str()))
+            return MakeResultError("parameter 2 must be a valid json object\n");
+    }
     if (jsonParams.getType() != UniValue::VARR)
         throw runtime_error("parameter 2 must be array\n");
 
@@ -1390,8 +1398,10 @@ UniValue createccevaltx(const UniValue& params, bool fHelp, const CPubKey& remot
     UniValue jsonParams(UniValue::VOBJ);
     if (params[0].getType() == UniValue::VOBJ)
         jsonParams = params[0].get_obj();
-    else if (params[0].getType() == UniValue::VSTR)  // json in quoted string '{...}'
-        jsonParams.read(params[0].get_str().c_str());
+    else if (params[0].getType() == UniValue::VSTR)  { // json in quoted string '{...}'
+        if (!jsonParams.read(params[0].get_str().c_str()))
+            return MakeResultError("parameter must be a valid json object\n");
+    }
     if (jsonParams.getType() != UniValue::VOBJ)
         return MakeResultError("parameter must be an object\n");
 
