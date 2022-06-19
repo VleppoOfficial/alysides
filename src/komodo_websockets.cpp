@@ -247,7 +247,6 @@ static void RemoveWsNode(CWsNodePtr pNode)
 // returns true if message was recognized
 bool ProcessWsMessage(CNode* pfrom, std::string strCommand, CDataStream& vRecv, int64_t nTimeReceived)
 {
-
     if (strCommand == "version")
     {            
         // Each connection can only send one version message
@@ -806,9 +805,10 @@ private:
         return !fWebSocketsInWarmup;
     }
 
+    /* test password
     std::string get_password() {
         return "test";
-    }
+    } */
 
     /* enable for tls 
     context_ptr on_tls_init(tls_mode mode, websocketpp::connection_hdl hdl) {
@@ -1661,6 +1661,7 @@ UniValue GetWsPeers()
 }
 
 // temp rpc to dump addrman table. TODO: remove this code
+/*
 UniValue printaddrman(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
     if (fHelp || params.size() != 0)
@@ -1690,7 +1691,9 @@ UniValue printaddrman(const UniValue& params, bool fHelp, const CPubKey& remotep
 
     return result;
 }
+*/
 
+/*
 // temp rpc to dump addrman table. TODO: remove this code
 UniValue printwsaddrman(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
@@ -1722,6 +1725,7 @@ UniValue printwsaddrman(const UniValue& params, bool fHelp, const CPubKey& remot
 
     return result;
 }
+*/
 
 UniValue getwspeers(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
@@ -1734,8 +1738,8 @@ UniValue getwspeers(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         okSafeMode
   //  --------------------- ------------------------  -----------------------  ----------
-    { "hidden",               "printaddrman",          &ws::printaddrman,          true  },
-    { "hidden",               "printwsaddrman",          &ws::printwsaddrman,          true  },
+//    { "hidden",               "printaddrman",          &ws::printaddrman,          true  },
+//    { "hidden",               "printwsaddrman",          &ws::printwsaddrman,          true  },
     { "hidden",               "getwspeers",          &ws::getwspeers,          true  },
 };
 
