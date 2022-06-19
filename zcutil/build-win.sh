@@ -10,14 +10,14 @@ UTIL_DIR="$(dirname "$(readlink -f "$0")")"
 BASE_DIR="$(dirname "$(readlink -f "$UTIL_DIR")")"
 PREFIX="$BASE_DIR/depends/$HOST"
 
-
+# disable for code audit
 # If --enable-websockets is the next argument, enable websockets support for nspv clients:
-WEBSOCKETS_ARG=''
-if [ "x${1:-}" = 'x--enable-websockets' ]
-then
-WEBSOCKETS_ARG='--enable-websockets=yes'
-shift
-fi
+# WEBSOCKETS_ARG=''
+# if [ "x${1:-}" = 'x--enable-websockets' ]
+# then
+# WEBSOCKETS_ARG='--enable-websockets=yes'
+# shift
+# fi
 
 # make dependences
 cd depends/ && make HOST=$HOST V=1 NO_QT=1
