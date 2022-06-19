@@ -112,7 +112,7 @@ else
 fi
 
 # If --enable-websockets is the next argument, enable websockets support for nspv clients:
-# WEBSOCKETS_ARG=''
+WEBSOCKETS_ARG=''
 # if [ "x${1:-}" = 'x--enable-websockets' ]
 # then
 # WEBSOCKETS_ARG='--enable-websockets=yes'
