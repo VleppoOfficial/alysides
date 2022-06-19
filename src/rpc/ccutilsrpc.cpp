@@ -282,22 +282,17 @@ UniValue searchforpubkey(const UniValue& params, bool fHelp, const CPubKey& remo
 
 UniValue faucetaddccinputs(const UniValue& params, bool fHelp, const CPubKey& remotepk)
 {
-    if (fHelp || params.size() != 1)
+    if (fHelp || params.size() > 1)
     {
-        string msg = "faucetaddccinputs amount\n"
+        string msg = "faucetaddccinputs [amount]\n"
             "\nReturns a new tx with added normal inputs and previous txns. Note that the caller must add the change output\n"
             "\nArguments:\n"
             //"address which utxos are added from\n"
-            "amount (in satoshi) which will be added as normal inputs (equal or more)\n"
+            "amount is deprecated and set to FAUCETSIZE\n"
             "Result: json object with created tx and added vin txns\n\n";
         throw runtime_error(msg);
     }
-    /*std::string address = params[0].get_str();
-    if (!CBitcoinAddress(address.c_str()).IsValid())
-        throw runtime_error("address invalid");*/
-    CAmount amount = atoll(params[0].get_str().c_str());
-    if (amount <= 0)
-        throw runtime_error("amount invalid");
+    CAmount amount = FAUCETSIZE;
 
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
     std::vector<CTransaction> vintxns;
@@ -315,7 +310,6 @@ UniValue faucetaddccinputs(const UniValue& params, bool fHelp, const CPubKey& re
         if (myGetTransaction(vin.prevout.hash, tx, hashBlock))
             vintxns.push_back(tx);
     }
-
 
     UniValue result (UniValue::VOBJ);
     UniValue array (UniValue::VARR);
