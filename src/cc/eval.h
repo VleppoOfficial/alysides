@@ -16,6 +16,9 @@
 #ifndef CC_EVAL_H
 #define CC_EVAL_H
 
+#include <boost/thread/locks.hpp>
+#include <boost/thread/mutex.hpp>
+
 #include <cryptoconditions.h>
 
 #include "cc/utils.h"
@@ -79,6 +82,7 @@ class CCheckCCEvalCodes;
 class Eval
 {
 public:
+    Eval() : nCurrentTime(0LL), nCurrentHeight(0) {}
     CValidationState state;
 
     bool Invalid(std::string s) { return state.Invalid(false, 0, s); }
@@ -110,7 +114,10 @@ public:
      */
     virtual bool GetTxUnconfirmed(const uint256 &hash, CTransaction &txOut, uint256 &hashBlock) const;
     virtual bool GetTxConfirmed(const uint256 &hash, CTransaction &txOut, CBlockIndex &block) const;
+    virtual int64_t GetCurrentTime() const;
+    void SetCurrentTime(int64_t nTimeIn) { nCurrentTime = nTimeIn; }
     virtual unsigned int GetCurrentHeight() const;
+    void SetCurrentHeight(int32_t nHeightIn) { nCurrentHeight = nHeightIn; }
     virtual bool GetSpendsConfirmed(uint256 hash, std::vector<CTransaction> &spends) const;
     virtual bool GetBlock(uint256 hash, CBlockIndex& blockIdx) const;
     virtual int32_t GetNotaries(uint8_t pubkeys[64][33], int32_t height, uint32_t timestamp) const;
@@ -118,6 +125,10 @@ public:
     virtual bool CheckNotaryInputs(const CTransaction &tx, uint32_t height, uint32_t timestamp) const;
     virtual uint32_t GetAssetchainsCC() const;
     virtual std::string GetAssetchainsSymbol() const;
+
+private:
+    int64_t nCurrentTime;
+    int32_t nCurrentHeight;
 };
 
 
@@ -138,7 +149,7 @@ public:
 
 
 
-bool RunCCEval(const CC *cond, const CTransaction &tx, unsigned int nIn, std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker);
+bool RunCCEval(const CC *cond, const CTransaction &tx, unsigned int nIn, int64_t nTime, int32_t nHeight, std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker);
 
 
 /*
@@ -289,6 +300,38 @@ public:
 
 
 typedef std::pair<uint256,MerkleBranch> TxProof;
+
+// collect already validated evalcodes in a tx being validated
+// to prevent repeated validation of the same evalcode
+class CCheckCCEvalCodes
+{
+    //! The set of evalcodes that are already processed in CC validation.
+    std::map<uint256, std::set<uint8_t>> evalcodes;
+
+    //! Mutex to protect evalcodes map
+    boost::mutex mutex_eval;
+
+public:
+    void MarkEvalCode(uint256 txid, uint8_t ecode)
+    {
+        boost::unique_lock<boost::mutex> lock(mutex_eval);
+        auto search = evalcodes.find(txid);
+        if (search == evalcodes.end()) {
+            std::set<uint8_t> tmp;
+            tmp.insert(ecode);
+            evalcodes[txid] = tmp;
+        } else
+            search->second.insert(ecode);
+    }
+
+    bool CheckEvalCode(uint256 txid, uint8_t ecode)
+    {
+        boost::unique_lock<boost::mutex> lock(mutex_eval);
+        auto search = evalcodes.find(txid);
+        return search == evalcodes.end() ? false : (search->second.find(ecode) != search->second.end());
+    }
+    CValidationState lastEvalErrorState;  // store last eval error aborting the validation process
+};
 
 
 uint256 GetMerkleRoot(const std::vector<uint256>& vLeaves);

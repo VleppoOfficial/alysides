@@ -344,6 +344,31 @@ namespace TestScriptStandartTests {
         ASSERT_TRUE(result == expected);
     }
 
+    // timelocked script in tokel repo
+    TEST(TestScriptStandartTests, script_standard_GetScriptFor_CLTV) {
+
+        CKey keys[1];
+        CPubKey pubkeys[1];
+        for (int i = 0; i < sizeof(keys)/sizeof(keys[0]); i++) {
+            keys[i].MakeNewKey(true);
+            pubkeys[i] = keys[i].GetPubKey();
+        }
+
+        CScript expected, result;
+
+        // CCLTVID
+        int64_t utm = 1651073436;
+        expected.clear();
+        expected << CScriptNum::serialize(utm) << OP_CHECKLOCKTIMEVERIFY << OP_DROP << ToByteVector(pubkeys[0]) << OP_CHECKSIG;
+        result = GetScriptForDestination(CCLTVID(pubkeys[0], utm));
+        ASSERT_TRUE(result == expected);
+
+        expected.clear();
+        expected << CScriptNum::serialize(utm) << OP_CHECKLOCKTIMEVERIFY << OP_DROP << OP_DUP << OP_HASH160 << ToByteVector(pubkeys[0].GetID()) << OP_EQUALVERIFY << OP_CHECKSIG;
+        result = GetScriptForDestination(CCLTVID(pubkeys[0].GetID(), utm));
+        ASSERT_TRUE(result == expected);
+    }
+
     TEST(TestScriptStandartTests, script_standard_IsMine) {
 
         CKey keys[2];

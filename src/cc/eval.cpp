@@ -34,9 +34,11 @@ Eval* EVAL_TEST = 0;
 struct CCcontract_info CCinfos[0x100];
 extern pthread_mutex_t KOMODO_CC_mutex;
 
-bool RunCCEval(const CC *cond, const CTransaction &tx, unsigned int nIn, std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker)
+bool RunCCEval(const CC *cond, const CTransaction &tx, unsigned int nIn, int64_t nTime, int32_t nHeight, std::shared_ptr<CCheckCCEvalCodes> evalcodeChecker)
 {
     EvalRef eval;
+    eval->SetCurrentTime(nTime);
+    eval->SetCurrentHeight(nHeight);
     pthread_mutex_lock(&KOMODO_CC_mutex);
     bool out = eval->Dispatch(cond, tx, nIn, evalcodeChecker);
     pthread_mutex_unlock(&KOMODO_CC_mutex);
@@ -45,6 +47,9 @@ bool RunCCEval(const CC *cond, const CTransaction &tx, unsigned int nIn, std::sh
     //assert(eval->state.IsValid() == out);
 
     if (eval->state.IsValid()) return true;
+
+    if (evalcodeChecker != nullptr)
+        evalcodeChecker->lastEvalErrorState = eval->state;
 
     // report cc error:
     std::string lvl = eval->state.IsInvalid() ? "Invalid" : "Error!";
@@ -103,6 +108,9 @@ bool Eval::Dispatch(const CC *cond, const CTransaction &txTo, unsigned int nIn,s
         cp->didinit = 1;
     }
 
+    if (GetCurrentHeight() <= 0)
+        return Invalid("current chain height not set for eval object");
+
     switch ( ecode )
     {
         case EVAL_IMPORTPAYOUT:
@@ -147,9 +155,14 @@ bool Eval::GetTxConfirmed(const uint256 &hash, CTransaction &txOut, CBlockIndex 
     return true;
 }
 
+int64_t Eval::GetCurrentTime() const
+{
+    return nCurrentTime;
+}
+
 unsigned int Eval::GetCurrentHeight() const
 {
-    return chainActive.Height();
+    return nCurrentHeight;
 }
 
 bool Eval::GetBlock(uint256 hash, CBlockIndex& blockIdx) const

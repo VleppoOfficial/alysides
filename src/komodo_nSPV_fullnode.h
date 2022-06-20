@@ -38,6 +38,7 @@ std::map<int32_t, std::string> nspvErrors = {
     { NSPV_ERROR_INVALID_RESPONSE, "could not create response message" },
     { NSPV_ERROR_BROADCAST, "could not broadcast transaction" },
     { NSPV_ERROR_REMOTE_RPC, "could not execute rpc" },
+    { NSPV_ERROR_DEPRECATED, "request deprecated" },
 };
 
 static std::map<std::string,bool> nspv_remote_commands =  {
@@ -56,6 +57,7 @@ static std::map<std::string,bool> nspv_remote_commands =  {
     { "tokenv2orders", true }, { "mytokenv2orders", true }, { "tokenv2transfer", false }, { "tokenv2create", false }, { "tokenv2address", true },
     // nspv helpers
     { "createtxwithnormalinputs", true }, { "tokenv2addccinputs", true }, { "tokenv2infotokel", true }, { "gettransactionsmany", true },
+    { "faucetaddccinputs", true },
 };
 
 
@@ -375,7 +377,7 @@ static std::map<uint8_t, class BaseCCChecker*> ccCheckerTable =
 };
 
 // implements SPV server's part, gets cc module utxos, filtered by evalcode, funcid and txid on opret, for the specified amount
-// if the amount param is 0 returns total available filtere utxo amount and returns no utxos 
+// if the amount param is 0 returns total available filtered utxos amount and returns no utxos 
 // first char funcid in the string param is considered as the creation tx funcid so filtertxid is compared to the creation txid itself
 // for other funcids filtertxid is compared to the txid in opreturn
 int32_t NSPV_getccmoduleutxos(struct NSPV_utxosresp *ptr, char *coinaddr, int64_t amount, uint8_t evalcode,  std::string funcids, uint256 filtertxid)
@@ -504,18 +506,28 @@ int32_t NSPV_getccmoduleutxos(struct NSPV_utxosresp *ptr, char *coinaddr, int64_
     }
 }
 
-int32_t NSPV_getaddresstxids(struct NSPV_txidsresp* ptr, char* coinaddr, bool isCC, int32_t skipcount, int32_t maxrecords)
+int32_t NSPV_getaddresstxids(struct NSPV_txidsresp* ptr, char* coinaddr, bool isCC, bool isParamsToSkip, int32_t param1, int32_t param2)
 {
     int32_t txheight, ind = 0, len = 0;
     //CTransaction tx;
     //uint256 hashBlock;
-    std::vector<std::pair<CAddressIndexKey, CAmount>> txids;
-    SetAddressIndexOutputs(txids, coinaddr, isCC);
-    {
-        LOCK(cs_main);
-        ptr->nodeheight = chainActive.LastTip()->GetHeight();
+    int32_t skipcount = 0; 
+    int32_t maxrecords = 0;
+    int32_t beginHeight = 0; 
+    int32_t endHeight = 0;
+
+    if (isParamsToSkip)  {
+        skipcount = param1;
+        maxrecords = param2;
+    } else {
+        beginHeight = param1;
+        endHeight = param2;
     }
 
+    std::vector<std::pair<CAddressIndexKey, CAmount>> txids;
+    SetAddressIndexOutputs(txids, coinaddr, isCC, beginHeight, endHeight);
+    std::cerr << __func__ << " isParamsToSkip=" << isParamsToSkip << " beginHeight=" << beginHeight << " endHeight=" << endHeight << std::endl;
+    
     // using maxrecords instead:
     //maxlen = MAX_BLOCK_SIZE(ptr->nodeheight) - 512;
     //maxlen /= sizeof(*ptr->txids);
@@ -528,6 +540,10 @@ int32_t NSPV_getaddresstxids(struct NSPV_txidsresp* ptr, char* coinaddr, bool is
     if (skipcount < 0)
         skipcount = 0;
     ptr->skipcount = skipcount;
+    {
+        LOCK(cs_main);
+        ptr->nodeheight = chainActive.LastTip()->GetHeight();
+    }
     ptr->txids = nullptr;
 
     if (txids.size() >= 0 && skipcount < txids.size()) {
@@ -535,7 +551,7 @@ int32_t NSPV_getaddresstxids(struct NSPV_txidsresp* ptr, char* coinaddr, bool is
         for (std::vector<std::pair<CAddressIndexKey, CAmount>>::const_iterator it = txids.begin() + skipcount; 
             it != txids.end() && ind < maxrecords; it++) {
             ptr->txids[ind].txid = it->first.txhash;
-            ptr->txids[ind].vout = (int32_t)it->first.index;
+            ptr->txids[ind].index = (int32_t)it->first.index;
             ptr->txids[ind].satoshis = (int64_t)it->second;
             ptr->txids[ind].height = (int64_t)it->first.blockHeight;
 
@@ -754,6 +770,8 @@ int32_t NSPV_remoterpc(struct NSPV_remoterpcresp *ptr,char *json,int n)
             rpc_result = JSONRPCReplyObj(result, NullUniValue, jreq.id);
             response=rpc_result.write();
             ptr->json = (char*)malloc(response.size()+1);
+            if (ptr->json == nullptr) 
+                throw JSONRPCError(RPC_OUT_OF_MEMORY, "Cannot allocate memory for response");
             strcpy(ptr->json, response.c_str());
             len+=response.size();
             return (len);
@@ -802,26 +820,32 @@ uint8_t *NSPV_getrawtx(CTransaction &tx,uint256 &hashBlock,int32_t *txlenp,uint2
     return(rawtx);
 }
 
-int32_t NSPV_sendrawtransaction(struct NSPV_broadcastresp *ptr,uint8_t *data,int32_t n)
+int32_t NSPV_sendrawtransaction(struct NSPV_broadcastresp *ptr, uint8_t *data, int32_t n, CValidationState *pstate)
 {
     CTransaction tx;
     ptr->retcode = 0;
     if ( NSPV_txextract(tx,data,n) == 0 )
     {
-        //LOCK(cs_main);
+        LOCK(cs_main); // required by AcceptToMemoryPool
+        
+        bool fMissingInputs = false;
         ptr->txid = tx.GetHash();
         //fprintf(stderr,"try to addmempool transaction %s\n",ptr->txid.GetHex().c_str());
-        if (myAddtomempool(tx) != 0)
+        if (myAddtomempool(tx, pstate, &fMissingInputs) != false)
         {
             ptr->retcode = 1;
             //int32_t i;
             //for (i=0; i<n; i++)
             //    fprintf(stderr,"%02x",data[i]);
-            fprintf(stderr," relay transaction %s retcode.%d\n",ptr->txid.GetHex().c_str(),ptr->retcode);
+            //fprintf(stderr," relay transaction %s retcode.%d\n",ptr->txid.GetHex().c_str(),ptr->retcode);
             RelayTransaction(tx);
         } 
-        else 
-            ptr->retcode = -3;
+        else {
+            if (fMissingInputs)
+                ptr->retcode = -4;
+            else
+                ptr->retcode = -3;
+        }
 
     } 
     else 
@@ -912,7 +936,7 @@ int32_t NSPV_getntzsproofresp(struct NSPV_ntzsproofresp* ntzproofp, uint256 next
     ntzproofp->nextntz = NSPV_getrawtx(tx, nextHashBlock, &ntzproofp->nexttxlen, ntzproofp->nexttxid);
     ntzproofp->nexttxidht = komodo_blockheight(nextHashBlock);
     if (NSPV_notarizationextract(DONTVALIDATESIG, &ntzproofp->common.nextht, &bhash1, &desttxid1, &momdepth, tx) < 0) {
-        LogPrintf("%s error: cant decode notarization opreturn ptr->common.nextht.%d bhash1 %s\n", __func__, ntzproofp->common.nextht, bhash1.ToString());
+        LogPrintf("%s error: cant decode notarization opreturn nexttxid %s ptr->common.nextht.%d bhash1 %s\n", __func__, ntzproofp->nexttxid.GetHex(), ntzproofp->common.nextht, bhash1.ToString());
         return (-5);
     } else if (komodo_blockheight(bhash1) != ntzproofp->common.nextht) {
         LogPrintf("%s error: bhash1 ht.%d not equal to nextht.%d\n", __func__, komodo_blockheight(bhash1), ntzproofp->common.nextht);
@@ -971,6 +995,18 @@ static void NSPV_senderror(CNode* pfrom, uint32_t requestId, int32_t err)
     pfrom->PushMessage("nSPV", response);
 }
 
+static void NSPV_senderror(CNode* pfrom, uint32_t requestId, int32_t err, const std::string &errDesc)
+{
+    const uint8_t respCode = NSPV_ERRORRESP;
+
+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    ss << respCode << requestId << err << errDesc;
+
+    std::vector<uint8_t> response = vuint8_t(ss.begin(), ss.end());
+    pfrom->PushMessage("nSPV", response);
+}
+
+
 // processing nspv requests
 void komodo_nSPVreq(CNode* pfrom, std::vector<uint8_t> request) // received a request
 {
@@ -985,13 +1021,12 @@ void komodo_nSPVreq(CNode* pfrom, std::vector<uint8_t> request) // received a re
         return;
     }
 
-    requestType = request[0];
     memcpy(&requestId, &request[1], sizeof(requestId));
     uint8_t *requestData = &request[nspvHeaderSize];
     int32_t requestDataLen = request.size() - nspvHeaderSize;
 
     // rate limit no more NSPV_MAXREQSPERSEC request/sec of same type from same node:
-    int32_t idata = requestData[0] >> 1;
+    int32_t idata = requestType >> 1;
     if (idata >= sizeof(pfrom->nspvdata) / sizeof(pfrom->nspvdata[0]))
         idata = (int32_t)(sizeof(pfrom->nspvdata) / sizeof(pfrom->nspvdata[0])) - 1;
     if (pfrom->nspvdata[idata].prevtime > timestamp) {
@@ -1139,18 +1174,17 @@ void komodo_nSPVreq(CNode* pfrom, std::vector<uint8_t> request) // received a re
         break;
 
     case NSPV_TXIDS: 
+    case NSPV_TXIDS_V2: 
         {
             struct NSPV_txidsresp T;
             char coinaddr[KOMODO_ADDRESS_BUFSIZE];
-            int32_t skipcount = 0;
-            int32_t maxrecords = 0;
+            int32_t param1 = 0;
+            int32_t param2 = 0;
             uint8_t isCC = 0;
             int32_t respEstimated;
 
-            //fprintf(stderr,"utxos: %u > %u, ind.%d, len.%d\n",timestamp,pfrom->nspvdata[ind].prevtime,ind,len);
-
             if (requestDataLen < 1) {
-                LogPrint("nspv", "NSPV_TXIDS bad request too short len.%d, node %d\n", requestDataLen, pfrom->id);
+                LogPrint("nspv", "NSPV_TXIDS[_V2] bad request too short len.%d, node %d\n", requestDataLen, pfrom->id);
                 NSPV_senderror(pfrom, requestId, NSPV_ERROR_INVALID_REQUEST_DATA);
                 return;
             }
@@ -1159,40 +1193,39 @@ void komodo_nSPVreq(CNode* pfrom, std::vector<uint8_t> request) // received a re
             int32_t offset = 1;
             if (offset + addrlen > requestDataLen || addrlen > sizeof(coinaddr) - 1) // out of bounds
             {
-                LogPrint("nspv", "NSPV_TXIDS bad request len.%d too short or addrlen.%d out of bounds, node=%d\n", requestDataLen, addrlen, pfrom->id);
+                LogPrint("nspv", "NSPV_TXIDS[_V2] bad request len.%d too short or addrlen.%d out of bounds, node=%d\n", requestDataLen, addrlen, pfrom->id);
                 NSPV_senderror(pfrom, requestId, NSPV_ERROR_INVALID_REQUEST_DATA);
                 return;
             }
 
             memcpy(coinaddr, &requestData[offset], addrlen);
-            coinaddr[addrlen] = 0;
+            coinaddr[addrlen] = '\0';
             offset += addrlen;
             if (offset + sizeof(isCC) <= requestDataLen) // TODO: a bit different from others format - allows omitted params, maybe better have fixed
             {
                 isCC = (requestData[offset] != 0);
                 offset += sizeof(isCC);
-                if (offset + sizeof(skipcount) <= requestDataLen) {
-                    iguana_rwnum(IGUANA_READ, &requestData[offset], sizeof(skipcount), &skipcount);
-                    offset += sizeof(skipcount);
-                    if (offset + sizeof(maxrecords) <= requestDataLen) {
-                        iguana_rwnum(IGUANA_READ, &requestData[offset], sizeof(maxrecords), &maxrecords);
-                        offset += sizeof(maxrecords);
+                if (offset + sizeof(param1) <= requestDataLen) {
+                    iguana_rwnum(IGUANA_READ, &requestData[offset], sizeof(param1), &param1);
+                    offset += sizeof(param1);
+                    if (offset + sizeof(param2) <= requestDataLen) {
+                        iguana_rwnum(IGUANA_READ, &requestData[offset], sizeof(param2), &param2);
+                        offset += sizeof(param2);
                     }
                 }
             }
             if (offset != requestDataLen) {
-                LogPrint("nspv", "NSPV_TXIDS bad request parameters format: len.%d, offset.%d, addrlen.%d, node=%d\n", requestDataLen, offset, addrlen, pfrom->id);
+                LogPrint("nspv", "NSPV_TXIDS[_V2] bad request parameters format: len.%d, offset.%d, addrlen.%d, node=%d\n", requestDataLen, offset, addrlen, pfrom->id);
                 NSPV_senderror(pfrom, requestId, NSPV_ERROR_INVALID_REQUEST_DATA);
                 return;
             }
 
-            LogPrint("nspv-details", "NSPV_TXIDS address=%s isCC.%d skipcount.%d maxrecords.%x\n", coinaddr, isCC, skipcount, maxrecords);
+            LogPrint("nspv-details", "NSPV_TXIDS[_V2] requestType=0x%02x address=%s isCC.%d param1.%d param2.%d\n", (int)requestType, coinaddr, isCC, param1, param2);
 
             memset(&T, 0, sizeof(T));
-            if ((respEstimated = NSPV_getaddresstxids(&T, coinaddr, isCC, skipcount, maxrecords)) > 0) {
-                //fprintf(stderr,"respLen.%d\n",respLen);
+            if ((respEstimated = NSPV_getaddresstxids(&T, coinaddr, isCC, (requestType == NSPV_TXIDS), param1, param2)) > 0) {
                 response.resize(nspvHeaderSize + respEstimated);
-                response[0] = NSPV_TXIDSRESP;
+                response[0] = requestType == NSPV_TXIDS ? NSPV_TXIDSRESP : NSPV_TXIDSRESP_V2;
                 memcpy(&response[1], &requestId, sizeof(requestId));
                 int32_t respWritten = NSPV_rwtxidsresp(IGUANA_WRITE, &response[nspvHeaderSize], &T);
                 if (respWritten > 0 && respWritten <= respEstimated) {
@@ -1200,14 +1233,14 @@ void komodo_nSPVreq(CNode* pfrom, std::vector<uint8_t> request) // received a re
                     pfrom->PushMessage("nSPV", response);
                     pfrom->nspvdata[idata].prevtime = timestamp;
                     pfrom->nspvdata[idata].nreqs++;
-                    LogPrint("nspv-details", "NSPV_TXIDS response: numtxids=%d to node=%d\n", (int)T.numtxids, pfrom->id);
+                    LogPrint("nspv-details", "NSPV_TXIDS[_V2] response: numtxids=%d to node=%d\n", (int)T.numtxids, pfrom->id);
                 } else  {
-                    LogPrint("nspv", "NSPV_rwtxidsresp incorrect response written len.%d\n", respWritten);
+                    LogPrint("nspv", "NSPV_TXIDS[_V2] NSPV_rwtxidsresp incorrect response written len.%d\n", respWritten);
                     NSPV_senderror(pfrom, requestId, NSPV_ERROR_INVALID_RESPONSE);
                 }
                 NSPV_txidsresp_purge(&T);
             } else {
-                LogPrint("nspv", "NSPV_getaddresstxids error.%d\n", respEstimated);
+                LogPrint("nspv", "NSPV_TXIDS[_V2] NSPV_getaddresstxids error.%d\n", respEstimated);
                 NSPV_senderror(pfrom, requestId, NSPV_ERROR_READ_DATA);
             }
         } 
@@ -1222,6 +1255,8 @@ void komodo_nSPVreq(CNode* pfrom, std::vector<uint8_t> request) // received a re
             uint8_t funcid, isCC = 0;
             int8_t addrlen;
             int32_t respEstimated;
+
+            NSPV_senderror(pfrom, requestId, NSPV_ERROR_DEPRECATED);
 
             if (requestDataLen > sizeof(isCC) + sizeof(funcid) + sizeof(vout) + sizeof(txid) + sizeof(addrlen)) {
                 uint32_t offset = 0;
@@ -1405,7 +1440,7 @@ void komodo_nSPVreq(CNode* pfrom, std::vector<uint8_t> request) // received a re
                         pfrom->PushMessage("nSPV", response);
                         pfrom->nspvdata[idata].prevtime = timestamp;
                         pfrom->nspvdata[idata].nreqs++;
-                        LogPrint("nspv-details", "NSPV_SPENTINFO response: spent txid=%s vout=%d node=%d\n", S.txid.GetHex().c_str(), S.vout, pfrom->id);
+                        LogPrint("nspv-details", "NSPV_SPENTINFO response: spending txid=%s vini=%d node=%d\n", S.spent.txid.GetHex(), S.spentvini, pfrom->id);
                     } else  {
                         LogPrint("nspv", "NSPV_rwspentinfo incorrect response written len.%d\n", respWritten);
                         NSPV_senderror(pfrom, requestId, NSPV_ERROR_INVALID_RESPONSE);
@@ -1430,25 +1465,39 @@ void komodo_nSPVreq(CNode* pfrom, std::vector<uint8_t> request) // received a re
             if (requestDataLen > sizeof(txid) + sizeof(txlen)) {
                 int32_t offset = 0;
                 int32_t respEstimated;
+                CValidationState state;
 
                 offset += iguana_rwbignum(IGUANA_READ, &requestData[offset], sizeof(txid), (uint8_t*)&txid);
                 offset += iguana_rwnum(IGUANA_READ, &requestData[offset], sizeof(txlen), &txlen);
                 memset(&B, 0, sizeof(B));
-                if (txlen < MAX_TX_SIZE_AFTER_SAPLING && requestDataLen == offset + txlen && (respEstimated = NSPV_sendrawtransaction(&B, &requestData[offset], txlen)) > 0) {
-                    response.resize(nspvHeaderSize + respEstimated);
-                    response[0] = NSPV_BROADCASTRESP;
-                    memcpy(&response[1], &requestId, sizeof(requestId));
+                if (txlen < MAX_TX_SIZE_AFTER_SAPLING && requestDataLen == offset + txlen && (respEstimated = NSPV_sendrawtransaction(&B, &requestData[offset], txlen, &state)) > 0) {
+                    if (B.retcode >= 0)    {
+                        response.resize(nspvHeaderSize + respEstimated);
+                        response[0] = NSPV_BROADCASTRESP;
+                        memcpy(&response[1], &requestId, sizeof(requestId));
 
-                    int32_t respWritten = NSPV_rwbroadcastresp(IGUANA_WRITE, &response[nspvHeaderSize], &B);
-                    if (respWritten > 0 && respWritten <= respEstimated) {
-                        response.resize(nspvHeaderSize + respWritten);
-                        pfrom->PushMessage("nSPV", response);
-                        pfrom->nspvdata[idata].prevtime = timestamp;
-                        pfrom->nspvdata[idata].nreqs++;
-                        LogPrint("nspv-details", "NSPV_BROADCAST response: txid=%s vout=%d to node=%d\n", B.txid.GetHex().c_str(), pfrom->id);
-                    } else  {
-                        LogPrint("nspv", "NSPV_rwbroadcastresp incorrect response written len.%d\n", respWritten);
-                        NSPV_senderror(pfrom, requestId, NSPV_ERROR_INVALID_RESPONSE);
+                        int32_t respWritten = NSPV_rwbroadcastresp(IGUANA_WRITE, &response[nspvHeaderSize], &B);
+                        if (respWritten > 0 && respWritten <= respEstimated)   {
+                            response.resize(nspvHeaderSize + respWritten);
+                            pfrom->PushMessage("nSPV", response);
+                            pfrom->nspvdata[idata].prevtime = timestamp;
+                            pfrom->nspvdata[idata].nreqs++;
+                            LogPrint("nspv-details", "NSPV_BROADCAST response: txid=%s vout=%d to node=%d\n", B.txid.GetHex().c_str(), pfrom->id);
+                        } else  {
+                            LogPrint("nspv", "NSPV_rwbroadcastresp incorrect response written len.%d\n", respWritten);
+                            NSPV_senderror(pfrom, requestId, NSPV_ERROR_INVALID_RESPONSE);
+                        }
+                    }
+                    else {
+                        std::string errDesc = "unknown-error";
+                        if (B.retcode == -1)
+                            errDesc = "tx-decode-failed";
+                        else if (B.retcode == -3)
+                            errDesc = strprintf("add-to-mempool-error: validation code=%d reason=%s", state.GetRejectCode(), state.GetRejectReason());
+                        else if (B.retcode == -4)
+                            errDesc = "add-to-mempool-error: missing inputs";
+                        NSPV_senderror(pfrom, requestId, NSPV_ERROR_BROADCAST, errDesc);
+                        LogPrint("nspv", "NSPV_sendrawtransaction error retcode %d state code=%d reason=%s node=%d\n", B.retcode, state.GetRejectCode(), state.GetRejectReason(), pfrom->id);
                     }
                     NSPV_broadcast_purge(&B);
                 } else  {
@@ -1514,6 +1563,7 @@ void komodo_nSPVreq(CNode* pfrom, std::vector<uint8_t> request) // received a re
             bool errorFormat = false;
             int32_t respEstimated;
 
+            NSPV_senderror(pfrom, requestId, NSPV_ERROR_DEPRECATED);
             //fprintf(stderr,"utxos: %u > %u, ind.%d, len.%d\n",timestamp,pfrom->nspvdata[ind].prevtime,ind,len);
 
             if (requestDataLen < sizeof(int32_t)) {

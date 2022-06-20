@@ -17,6 +17,7 @@
 // make token cryptoconditions and vouts
 // This code was moved to a separate source file to enable linking libcommon.so (with importcoin.cpp which depends on some token functions)
 
+#include "key_io.h"
 #include "CCtokens.h"
 
 CScript EncodeTokenCreateOpRetV1(const std::vector<uint8_t> &origpubkey, const std::string &name, const std::string &description, const std::vector<vscript_t> &oprets)
@@ -369,13 +370,21 @@ CTxOut MakeTokensCC1vout(uint8_t evalcode, CAmount nValue, CPubKey pk, std::vect
 
 // token v2 'mixed' vouts:
 
-// make three-eval (token+evalcode+evalcode2) 1of2 cryptocondition:
-CC *MakeTokensv2CCcondMofN(uint8_t evalcode1, uint8_t evalcode2, uint8_t M, std::vector<CPubKey> pks)
+// make three-eval (token+evalcode+evalcode2) 1of2 cryptocondition with pubkeys or keyids:
+CC *MakeTokensv2CCcondMofNDest(uint8_t evalcode1, uint8_t evalcode2, uint8_t M, std::vector<CTxDestination> dests)
 {
-    // make 1of2 sigs cond 
-    std::vector<CC*> condpks;
-    for (auto const &pk : pks)
-        condpks.push_back(CCNewSecp256k1(pk));
+    // make MofN sigs cond with destinations
+    std::vector<CC*> conddests;
+    for (auto const &dest : dests) {
+        CC *ccSig;
+        if (dest.which() == TX_PUBKEY)
+            ccSig = CCNewSecp256k1(boost::get<CPubKey>(dest));
+        else if (dest.which() == TX_PUBKEYHASH)
+            ccSig = CCNewSecp256k1Hash(boost::get<CKeyID>(dest));
+        else 
+            return nullptr;
+        conddests.push_back(ccSig);
+    }
 
     std::vector<CC*> thresholds;
     if (evalcode1 != 0)
@@ -384,10 +393,23 @@ CC *MakeTokensv2CCcondMofN(uint8_t evalcode1, uint8_t evalcode2, uint8_t M, std:
         thresholds.push_back(CCNewEval(E_MARSHAL(ss << (uint8_t)EVAL_TOKENSV2)));	// this is eval token cc
     if (evalcode2 != 0)
         thresholds.push_back(CCNewEval(E_MARSHAL(ss << evalcode2)));                // add optional additional evalcode
-    thresholds.push_back(CCNewThreshold(M, condpks));		                            // this is 1 of 2 sigs cc
+    thresholds.push_back(CCNewThreshold(M, conddests));		                            // this is 1 of 2 sigs cc
 
     return CCNewThreshold(thresholds.size(), thresholds);
 }
+
+// make three-eval (token+evalcode+evalcode2) 1of2 cryptocondition with pubkeys:
+CC *MakeTokensv2CCcondMofN(uint8_t evalcode1, uint8_t evalcode2, uint8_t M, std::vector<CPubKey> pks)
+{
+    // convert pks to dests
+    std::vector<CTxDestination> dests;
+    for (auto const &pk : pks)
+        dests.push_back(pk);
+    // make MofN sigs cond 
+    return MakeTokensv2CCcondMofNDest(evalcode1, evalcode2, M, dests);
+}
+
+
 // overload to make two-eval (token+evalcode) 1of2 cryptocondition:
 CC *MakeTokensv2CCcond1of2(uint8_t evalcode, CPubKey pk1, CPubKey pk2) {
     return MakeTokensv2CCcondMofN(evalcode, 0, 1, { pk1, pk2 });
@@ -409,20 +431,27 @@ CC *MakeTokensv2CCcond1(uint8_t evalcode, CPubKey pk) {
     return MakeTokensv2CCcondMofN(evalcode, 0, 1, { pk });
 }
 
-// make three-eval (token+evalcode+evalcode2) MofN cc vout:
-CTxOut MakeTokensCCMofNvoutMixed(uint8_t evalcode1, uint8_t evalcode2, CAmount nValue, uint8_t M, const std::vector<CPubKey> &pks, vscript_t* pvData)
+CTxOut MakeTokensCCMofNDestVoutMixed(uint8_t evalcode1, uint8_t evalcode2, CAmount nValue, uint8_t M, const std::vector<CTxDestination> &dests, vscript_t* pvData)
 {
     CTxOut vout;
-    CCwrapper payoutCond( MakeTokensv2CCcondMofN(evalcode1, evalcode2, M, pks) );
-    if (!CCtoAnon(payoutCond.get())) 
-        return vout;
+    CCwrapper payoutCond( MakeTokensv2CCcondMofNDest(evalcode1, evalcode2, M, dests) );
+    //if (!CCtoAnon(payoutCond.get())) 
+    //    return vout;
 
-    vout = CTxOut(nValue, CCPubKey(payoutCond.get(),true));
+    bool hasSecHash = std::find_if(dests.begin(), dests.end(), [](const CTxDestination &dest){ return dest.which() == TX_PUBKEYHASH; }) != dests.end();
+
+    vout = CTxOut(nValue, CCPubKey(payoutCond.get(), hasSecHash ? CC_MIXED_MODE_SECHASH_SUBVER_1 : CC_MIXED_MODE_SUBVER_0) );
 
     {
         std::vector<vscript_t> vvData;
         if (pvData)
             vvData.push_back(*pvData);
+
+        // convert to pubkeys to show them in opdrop
+        std::vector<CPubKey> pks;
+        for (auto const &dest : dests)
+            if (dest.which() == TX_PUBKEY)
+                pks.push_back(boost::get<CPubKey>(dest));
 
         COptCCParams ccp = COptCCParams(COptCCParams::VERSION_2, evalcode1, M, pks.size(), pks, vvData);  // ver2 -> add pks
         vout.scriptPubKey << ccp.AsVector() << OP_DROP;
@@ -430,6 +459,16 @@ CTxOut MakeTokensCCMofNvoutMixed(uint8_t evalcode1, uint8_t evalcode2, CAmount n
     //if (pvData)
     //    vout.scriptPubKey << *pvData << OP_DROP;
     return vout;
+}
+
+// make three-eval (token+evalcode+evalcode2) MofN cc vout:
+CTxOut MakeTokensCCMofNvoutMixed(uint8_t evalcode1, uint8_t evalcode2, CAmount nValue, uint8_t M, const std::vector<CPubKey> &pks, vscript_t* pvData)
+{
+    // convert pks to dests
+    std::vector<CTxDestination> dests;
+    for (auto const &pk : pks)
+        dests.push_back(pk);
+    return MakeTokensCCMofNDestVoutMixed(evalcode1, evalcode2, nValue, M, dests, pvData);
 }
 
 // make three-eval (token+evalcode+evalcode2) cc vout:

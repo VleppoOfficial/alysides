@@ -74,8 +74,13 @@ Details.
 #include "../init.h"
 #include "../unspentccindex.h"
 #include "rpc/server.h"
+#include "CCupgrades.h"
 
+// invalid burn pubkey stop using it
 #define CC_BURNPUBKEY "02deaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddead" //!< 'dead' pubkey in hex for burning tokens (if tokens are sent to it, they become 'burned')
+// valid burn pubkey, start support in June 2022
+#define CC_BURNPUBKEY_FIXED "02deaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaa" 
+
 /// \cond INTERNAL
 #define CC_MAXVINS 1024
 #define CC_REQUIREMENTS_MSG (KOMODO_NSPV_SUPERLITE?"to use CC contracts you need to nspv_login first\n":"to use CC contracts, you need to launch daemon with valid -pubkey= for an address in your wallet\n")
@@ -410,7 +415,7 @@ int64_t CCgettxout(uint256 txid,int32_t vout,int32_t mempoolflag,int32_t lockfla
 
 /// \cond INTERNAL
 bool myIsutxo_spentinmempool(uint256 &spenttxid,int32_t &spentvini,uint256 txid,int32_t vout);
-bool myAddtomempool(const CTransaction &tx, CValidationState *pstate = NULL, bool fSkipExpiry = false);
+bool myAddtomempool(const CTransaction &tx, CValidationState *pstate = NULL, bool *pMissingInputs = nullptr, bool fSkipExpiry = false);
 bool mytxid_inmempool(uint256 txid);
 int32_t myIsutxo_spent(uint256 &spenttxid,uint256 txid,int32_t vout);
 int32_t myGet_mempool_txs(std::vector<CTransaction> &txs,uint8_t evalcode,uint8_t funcid);
@@ -609,8 +614,6 @@ CTxOut MakeCC1vout(uint8_t evalcode,CAmount nValue,CPubKey pk, std::vector<std::
 /// @param vData pointer to vector of vectors of unsigned char data to be added to the created vout for application needs
 /// @returns vout object
 CTxOut MakeCC1of2vout(uint8_t evalcode,CAmount nValue,CPubKey pk,CPubKey pk2, std::vector<std::vector<unsigned char>>* vData = NULL);
-
-bool CCtoAnon(const CC *cond);
 
 CTxOut MakeCC1voutMixed(uint8_t evalcode, CAmount nValue, CPubKey pk, std::vector<unsigned char> *vData = NULL);
 CTxOut MakeCC1of2voutMixed(uint8_t evalcode, CAmount nValue, CPubKey pk1, CPubKey pk2, std::vector<unsigned char> *vData = NULL);
@@ -1065,6 +1068,16 @@ inline UniValue MakeResultSuccess(const std::string &txhex) {
 }
 /*! \endcond */
 
+/// returns burn pubkey list
+/// @param height current height at which some new pubkeys are activated
+inline std::vector<CPubKey> GetBurnPubKeys(int32_t nTime, int32_t nHeight)
+{
+    std::vector<CPubKey> vDeadPubkeys;
+    vDeadPubkeys.push_back(pubkey2pk(ParseHex(CC_BURNPUBKEY)));
+    if (CCUpgrades::IsUpgradeActive(nTime, nHeight, CCUpgrades::GetUpgrades(), CCUpgrades::CCUPGID_MIXEDMODE_SUBVER_1))
+        vDeadPubkeys.push_back(pubkey2pk(ParseHex(CC_BURNPUBKEY_FIXED)));  // activate new burn pubkey
+    return vDeadPubkeys;
+}
 
 /// @private
 bool inline IS_REMOTE(const CPubKey &remotepk) { return remotepk.IsValid(); }
@@ -1089,6 +1102,9 @@ bool IsBlockHashInActiveChain(uint256 hashBlock);
 bool SubcallCCValidate(Eval* eval, uint8_t evalcode, const CTransaction& ctx, int32_t nIn);
 
 extern bool fUnspentCCIndex;  // if unspent cc index enabled
+
+/// decode condition to UniValue for decoderawtransaction
+UniValue CCDecodeMixedMode(const CC *cond);
 
 /// @private forward decl
 struct CLockedInMemoryUtxos;

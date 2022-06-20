@@ -437,8 +437,7 @@ UniValue FinalizeCCV2Tx(bool remote, uint32_t changeFlag, struct CCcontract_info
     int64_t utxovalues[CC_MAXVINS], change, totaloutputs = 0, totalinputs = 0;
     char destaddr[KOMODO_ADDRESS_BUFSIZE], 
          myccaddr[KOMODO_ADDRESS_BUFSIZE], 
-         globaladdr[KOMODO_ADDRESS_BUFSIZE],
-         mynftaddr[KOMODO_ADDRESS_BUFSIZE] = { '\0' };
+         globaladdr[KOMODO_ADDRESS_BUFSIZE];
     uint8_t myprivkey[32] = {'\0'};
     //CC *cond = NULL, *probecond = NULL;
     UniValue sigData(UniValue::VARR), result(UniValue::VOBJ), partialConds(UniValue::VARR);
@@ -447,7 +446,12 @@ UniValue FinalizeCCV2Tx(bool remote, uint32_t changeFlag, struct CCcontract_info
     globalpk = GetUnspendable(cp, 0);
     _GetCCaddress(myccaddr, cp->evalcode, mypk, true);
     _GetCCaddress(globaladdr, cp->evalcode, globalpk, true);
-    GetTokensCCaddress(cp, mynftaddr, mypk, true); // get token or nft probe
+
+    // mynftaddr[KOMODO_ADDRESS_BUFSIZE] = { '\0' };
+    // GetTokensCCaddress(cp, mynftaddr, mypk, true); // get token or nft probe
+    std::vector<CCwrapper> tokenconds = GetTokenV2Conds(mypk);
+    std::vector<std::string> tokenaddrs = GetTokenV2IndexKeys(mypk);
+    std::vector<std::string>::iterator tokenit;
 
     n = mtx.vout.size();
     for (int i = 0; i < n; i++) {
@@ -502,8 +506,10 @@ UniValue FinalizeCCV2Tx(bool remote, uint32_t changeFlag, struct CCcontract_info
             if (vintx.vout[utxovout].scriptPubKey.IsPayToCryptoCondition() == 0) {
                 if (KOMODO_NSPV_FULLNODE) {
                     if (!remote) {
-                        if (SignTx(mtx, i, vintx.vout[utxovout].nValue, vintx.vout[utxovout].scriptPubKey) == 0)
+                        if (SignTx(mtx, i, vintx.vout[utxovout].nValue, vintx.vout[utxovout].scriptPubKey) == 0)  {
                             fprintf(stderr, "%s signing error for normal vini.%d\n", __func__, i);
+                            return sigDataNull;
+                        }
                     } else {
                         // if no myprivkey for mypk it means remote call from nspv superlite client
                         // add sigData for superlite client
@@ -521,6 +527,7 @@ UniValue FinalizeCCV2Tx(bool remote, uint32_t changeFlag, struct CCcontract_info
                         fprintf(stderr, "%s NSPV signing error for vini.%d\n", __func__, i);
                 }
             } else {
+                bool bdontsign = false;
                 Getscriptaddress(destaddr, vintx.vout[utxovout].scriptPubKey);
                 if (strcmp(destaddr, globaladdr) == 0) {
                     privkey = cp->CCpriv;
@@ -528,55 +535,72 @@ UniValue FinalizeCCV2Tx(bool remote, uint32_t changeFlag, struct CCcontract_info
                 } else if (strcmp(destaddr, myccaddr) == 0) {
                     privkey = myprivkey;
                     cond.reset(MakeCCcond1(cp->evalcode, mypk));
-                } else if (strcmp(destaddr, mynftaddr) == 0) {
+                //} else if (strcmp(destaddr, mynftaddr) == 0) {
+                } else if ((tokenit = std::find(tokenaddrs.begin(), tokenaddrs.end(), std::string(destaddr))) != tokenaddrs.end()) {
                     privkey = myprivkey;
-                    cond.reset(MakeTokensv2CCcond1(cp->evalcode, mypk));
+                    //cond.reset(MakeTokensv2CCcond1(cp->evalcode, mypk));
+                    cond = tokenconds[ std::distance(tokenaddrs.begin(), tokenit) ];
                 } else {
                     const uint8_t nullpriv[32] = {'\0'};
+                    const uint8_t dontsign[32]  = { 0xff };
                     // use vector of dest addresses and conds to probe vintxconds
                     for (auto& t : cp->CCvintxprobes) {
-                        char coinaddr[KOMODO_ADDRESS_BUFSIZE];
                         if (t.CCwrapped.get() != NULL) {
-                            CCwrapper anonCond = t.CCwrapped;
-                            CCtoAnon(anonCond.get());
-                            Getscriptaddress(coinaddr, CCPubKey(anonCond.get(), true));
-                            if (strcmp(destaddr, coinaddr) == 0) {
-                                if (memcmp(t.CCpriv, nullpriv, sizeof(t.CCpriv) / sizeof(t.CCpriv[0])) != 0)
-                                    privkey = t.CCpriv;
-                                else
-                                    privkey = myprivkey;
-                                cond = t.CCwrapped;
-                                break;
+                            //CCwrapper anonCond = t.CCwrapped;
+                            //CCtoAnon(anonCond.get()); // now in CCPubKey()
+                            for (CC_SUBVER ccSubVer = CC_MIXED_MODE_SUBVER_0; ccSubVer <= CC_MIXED_MODE_SUBVER_MAX; ccSubVer = (CC_SUBVER)(ccSubVer+1))
+                            {
+                                char coinaddr[KOMODO_ADDRESS_BUFSIZE];
+                                //Getscriptaddress(coinaddr, CCPubKey(anonCond.get(), ccSubVer));
+                                Getscriptaddress(coinaddr, CCPubKey(t.CCwrapped.get(), ccSubVer));
+                                if (strcmp(destaddr, coinaddr) == 0) {
+                                    if (memcmp(t.CCpriv, nullpriv, sizeof(t.CCpriv) / sizeof(t.CCpriv[0])) == 0)
+                                        privkey = myprivkey;
+                                    else if (memcmp(t.CCpriv, dontsign, sizeof(t.CCpriv) / sizeof(t.CCpriv[0])) == 0)
+                                        bdontsign = true;
+                                    else
+                                        privkey = t.CCpriv;
+
+                                    cond = t.CCwrapped;
+                                    break;
+                                }
                             }
+                            if (cond.get() != nullptr) break; // found cond
                         }
                     }
                 }
-                if (cond.get() == NULL) {
+                if (cond.get() == nullptr) {
                     fprintf(stderr, "%s vini.%d has CC signing error: could not find matching cond, address.(%s) %s\n", __func__, i, destaddr, EncodeHexTx(mtx).c_str());
                     memset(myprivkey, 0, sizeof(myprivkey));
                     return sigDataNull;
                 }
-                if (!remote) // we have privkey in the wallet
+                if (bdontsign) {
+                    mtx.vin[i].scriptSig = CCSig(cond.get()); // no signing cond
+                    //std::cerr << __func__ << " using 'dont sign' vin" << i << std::endl;
+                }
+                else if (!remote) // we have privkey in the wallet
                 {
                     uint256 sighash = SignatureHash(CCPubKey(cond.get()), mtx, i, SIGHASH_ALL, utxovalues[i], consensusBranchId, &txdata);
-                    if (cc_signTreeSecp256k1Msg32(cond.get(), privkey, sighash.begin()) != 0) {
-                        std::string strcond;
-                        cJSON *params = cc_conditionToJSON(cond.get());
-                        if (params)  {
-                            char *out = cJSON_PrintUnformatted(params);
-                            cJSON_Delete(params);
-                            if (out)   {
-                                strcond = out;
-                                cJSON_free(out);
-                            }
-                        }
+                    if (cc_signTreeSecp256k1Msg32(cond.get(), privkey, sighash.begin()) != 0 ||
+                        cc_signTreeSecp256k1HashMsg32(cond.get(), privkey, sighash.begin()) != 0) {
 
-                        UniValue unicond(UniValue::VOBJ);
-                        unicond.read(strcond);
                         mtx.vin[i].scriptSig = CCSig(cond.get());
                         if (!IsCCInput(mtx.vin[i].scriptSig)) {
                             // if fulfillment could not be serialised treat as signature threshold not reached
                             // return partially signed condition:
+                            std::string strcond;
+                            cJSON *params = cc_conditionToJSON(cond.get());
+                            if (params)  {
+                                char *out = cJSON_PrintUnformatted(params);
+                                cJSON_Delete(params);
+                                if (out)   {
+                                    strcond = out;
+                                    cJSON_free(out);
+                                }
+                            }
+
+                            UniValue unicond(UniValue::VOBJ);
+                            unicond.read(strcond);
                             UniValue elem(UniValue::VOBJ);
                             elem.push_back(Pair("vin", i));
                             elem.push_back(Pair("ccaddress", destaddr));
@@ -1191,7 +1215,7 @@ CAmount AddNormalinputsLocal(CMutableTransaction& mtx, CPubKey mypk, CAmount tot
             return (0);
         }
         up = &utxos[ind];
-        mtx.vin.push_back(CTxIn(up->txid, up->vout, CScript()));
+        mtx.vin.push_back(CTxIn(up->txid, up->vout, CScript(), (4294967295U-1)));  // for TOKEL sequence non-final to allow CLTV spending
         totalinputs += up->nValue;
         remains -= up->nValue;
         utxos[ind] = utxos[--n];
@@ -1309,7 +1333,7 @@ CAmount AddNormalinputsRemote(CMutableTransaction& mtx, CPubKey mypk, CAmount to
             return (0);
         }
         up = &utxos[ind];
-        mtx.vin.push_back(CTxIn(up->txid, up->vout, CScript()));
+        mtx.vin.push_back(CTxIn(up->txid, up->vout, CScript(), (4294967295U-1)));  // for TOKEL sequence non-final to allow CLTV spending
         totalinputs += up->nValue;
         remains -= up->nValue;
         utxos[ind] = utxos[--n];

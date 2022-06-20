@@ -1,5 +1,5 @@
-DIST_SUBDIRS = secp256k1 univalue cryptoconditions
-
+DIST_SUBDIRS = secp256k1 univalue
+SUBDIRS = cryptoconditions
 AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) $(SAN_LDFLAGS) $(HARDENED_LDFLAGS)
 AM_CXXFLAGS = $(SAN_CXXFLAGS) $(HARDENED_CXXFLAGS) $(ERROR_CXXFLAGS)
 AM_CPPFLAGS = $(HARDENED_CPPFLAGS)
@@ -15,7 +15,7 @@ LIBMEMENV  += $(builddir)/leveldb/libmemenv.a
 $(LIBLEVELDB): $(LIBMEMENV)
 
 $(LIBLEVELDB) $(LIBMEMENV):
-	@echo "Building LevelDB ..." && $(MAKE) -C $(@D) $(@F) CXX="$(CXX)" \
+	$(AM_V_at)$(MAKE) -C $(@D) $(@F) CXX="$(CXX)" \
 	  CC="$(CC)" PLATFORM=$(TARGET_OS) AR="$(AR)" $(LEVELDB_TARGET_FLAGS) \
           OPT="$(AM_CXXFLAGS) $(PIE_FLAGS) $(CXXFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) -D__STDC_LIMIT_MACROS"
 endif
@@ -31,16 +31,8 @@ BITCOIN_INCLUDES += -I$(srcdir)/snark
 BITCOIN_INCLUDES += -I$(srcdir)/snark/libsnark
 BITCOIN_INCLUDES += -I$(srcdir)/univalue/include
 
-if TARGET_WINDOWS
-LIBBITCOIN_SERVER=libbitcoin_server.a -lcurl
-endif
-if TARGET_DARWIN
-LIBBITCOIN_SERVER=libbitcoin_server.a -lcurl
-endif
-if TARGET_LINUX
-LIBBITCOIN_SERVER=libbitcoin_server.a -lcurl
-endif
-
+LIBBITCOIN_SERVER=libbitcoin_server.a
+LIBBITCOIN_WALLET=libbitcoin_wallet.a
 LIBBITCOIN_COMMON=libbitcoin_common.a
 LIBBITCOIN_CLI=libbitcoin_cli.a
 LIBBITCOIN_UTIL=libbitcoin_util.a
@@ -48,9 +40,10 @@ LIBBITCOIN_CRYPTO=crypto/libbitcoin_crypto.a
 LIBVERUS_CRYPTO=crypto/libverus_crypto.a
 LIBVERUS_PORTABLE_CRYPTO=crypto/libverus_portable_crypto.a
 LIBSECP256K1=secp256k1/libsecp256k1.la
-LIBCRYPTOCONDITIONS=cryptoconditions/libcryptoconditions_core.la
+LIBCRYPTOCONDITIONS=cryptoconditions/libcryptoconditions_core.a
 LIBSNARK=snark/libsnark.a
 LIBUNIVALUE=univalue/libunivalue.la
+LIBCC=libcc.a
 LIBZCASH=libzcash.a
 
 if ENABLE_ZMQ
@@ -62,17 +55,10 @@ endif
 if BUILD_BITCOIN_LIBS
 LIBZCASH_CONSENSUS=libzcashconsensus.la
 endif
-if ENABLE_WALLET
-LIBBITCOIN_WALLET=libbitcoin_wallet.a
-endif
-
-LIBDYNCUSTOMCONSENSUS = cc/libcc.a 
-
-$(LIBSECP256K1): $(wildcard secp256k1/src/*) $(wildcard secp256k1/include/*)
-	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F) OPTFLAGS="-O2 -march=x86-64 -g "
 
 LIBSNARK_CXXFLAGS = $(AM_CXXFLAGS) $(PIC_FLAGS) -DBINARY_OUTPUT -DNO_PT_COMPRESSION=1 -fstack-protector-all
 LIBSNARK_CONFIG_FLAGS = CURVE=ALT_BN128 NO_PROCPS=1 NO_DOCS=1 STATIC=1 NO_SUPERCOP=1 FEATUREFLAGS=-DMONTGOMERY_OUTPUT NO_COPY_DEPINST=1 NO_COMPILE_LIBGTEST=1
+LIBSNARK_OPTFLAGS = $(CPPFLAGS) -march=x86-64
 if HAVE_OPENMP
 LIBSNARK_CONFIG_FLAGS += MULTICORE=1
 endif
@@ -80,20 +66,24 @@ if TARGET_DARWIN
 LIBSNARK_CONFIG_FLAGS += PLATFORM=darwin
 endif
 
+$(LIBSECP256K1): $(wildcard secp256k1/src/*) $(wildcard secp256k1/include/*)
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F) OPTFLAGS="$(LIBSNARK_OPTFLAGS) "
+
 $(LIBSNARK): $(wildcard snark/src/*)
-	$(AM_V_at) CC="$(CC)" CXX="$(CXX)" AR="$(AR)" CXXFLAGS="$(LIBSNARK_CXXFLAGS)" $(MAKE) $(AM_MAKEFLAGS) -C snark/ DEPINST="$(LIBSNARK_DEPINST)" $(LIBSNARK_CONFIG_FLAGS) OPTFLAGS="-O2 -march=x86-64"
+	$(AM_V_at)CC="$(CC)" CXX="$(CXX)" AR="$(AR)" CXXFLAGS="$(LIBSNARK_CXXFLAGS)" $(MAKE) $(AM_MAKEFLAGS) -C snark/ DEPINST="$(LIBSNARK_DEPINST)" $(LIBSNARK_CONFIG_FLAGS) OPTFLAGS="$(LIBSNARK_OPTFLAGS)"
 
 libsnark-tests: $(wildcard snark/src/*)
-	$(AM_V_at) CC="$(CC)" CXX="$(CXX)" AR="$(AR)" CXXFLAGS="$(LIBSNARK_CXXFLAGS)" $(MAKE) $(AM_MAKEFLAGS) -C snark/ check DEPINST="$(LIBSNARK_DEPINST)" $(LIBSNARK_CONFIG_FLAGS) OPTFLAGS="-O2 -march=x86-64"
+	$(AM_V_at)CC="$(CC)" CXX="$(CXX)" AR="$(AR)" CXXFLAGS="$(LIBSNARK_CXXFLAGS)" $(MAKE) $(AM_MAKEFLAGS) -C snark/ check DEPINST="$(LIBSNARK_DEPINST)" $(LIBSNARK_CONFIG_FLAGS) OPTFLAGS="$(LIBSNARK_OPTFLAGS)"
 
 $(LIBUNIVALUE): $(wildcard univalue/lib/*)
-	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F) OPTFLAGS="-O2 -march=x86-64 -g "
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F) OPTFLAGS="$(LIBSNARK_OPTFLAGS)"
 
-$(LIBCRYPTOCONDITIONS): $(wildcard cryptoconditions/src/*) $(wildcard cryptoconditions/include/*)
-	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F) OPTFLAGS="-O2 -march=x86-64 -g "
-
-$(LIBDYNCUSTOMCONSENSUS): $(wildcard *.h) $(wildcard cc/*.h) $(wildcard cryptoconditions/include/*)
-	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) -f Makefile_custom HOST=$(host)
+# libcjson build
+LIBCJSON=libcjson.a
+libcjson_a_SOURCES = cJSON.c \
+  komodo_cJSON.c komodo_cutils.cpp
+libcjson_a_CPPFLAGS=-fPIC
+EXTRA_LIBRARIES += $(LIBCJSON)
 
 # Make is not made aware of per-object dependencies to avoid limiting building parallelization
 # But to build the less dependent modules first, we manually select their order here:
@@ -117,7 +107,10 @@ if ENABLE_PROTON
 EXTRA_LIBRARIES += $(LIBBITCOIN_PROTON)
 endif
 
-lib_LTLIBRARIES = $(LIBZCASH_CONSENSUS)
+lib_LTLIBRARIES = $(LIBZCASH_CONSENSUS) $(LIBCC)
+
+LIBSSLSTATIC = $(abs_builddir)/../depends/$(host)/lib/libssl.a
+LIBCRYPTOSTATIC = $(abs_builddir)/../depends/$(host)/lib/libcrypto.a
 
 bin_PROGRAMS =
 noinst_PROGRAMS =
@@ -274,6 +267,9 @@ BITCOIN_CORE_H = \
   zmq/zmqnotificationinterface.h \
   zmq/zmqpublishnotifier.h
 
+if ENABLE_WEBSOCKETS
+  BITCOIN_CORE_H += komodo_websockets.h
+endif
 
 obj/build.h: FORCE
 	@$(MKDIR_P) $(builddir)/obj
@@ -284,6 +280,7 @@ libbitcoin_util_a-clientversion.$(OBJEXT): obj/build.h
 # server: komodod
 libbitcoin_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
 libbitcoin_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+libbitcoin_server_a_CPPFLAGS += -fPIC
 libbitcoin_server_a_SOURCES = \
   sendalert.cpp \
   addrman.cpp \
@@ -300,6 +297,8 @@ libbitcoin_server_a_SOURCES = \
   cc/CCtx.cpp \
   cc/CCutils.cpp \
   cc/CCvalidation.cpp \
+  cc/CCtokens.h \
+  cc/CCtokens_impl.h \
   cc/CCtokens.cpp \
   cc/assets.cpp \
   cc/faucet.cpp \
@@ -318,6 +317,7 @@ libbitcoin_server_a_SOURCES = \
   cc/betprotocol.cpp \
   cc/pricesfeed.cpp \
   cc/priceslibs/cjsonpointer.cpp \
+  cc/CCTokelData.h \
   cc/CCTokelData.cpp \
   chain.cpp \
   checkpoints.cpp \
@@ -363,9 +363,12 @@ libbitcoin_server_a_SOURCES = \
   txdb.cpp \
   txmempool.cpp \
   validationinterface.cpp \
-  cc/CCupgrades.cpp \
   $(BITCOIN_CORE_H) \
   $(LIBZCASH_H)
+
+if ENABLE_WEBSOCKETS
+  libbitcoin_server_a_SOURCES += komodo_websockets.cpp
+endif
 
 if ENABLE_ZMQ
 libbitcoin_zmq_a_CPPFLAGS = $(BITCOIN_INCLUDES) $(ZMQ_CFLAGS)
@@ -411,6 +414,11 @@ libbitcoin_wallet_a_SOURCES = \
   zcash/zip32.cpp \
   $(BITCOIN_CORE_H) \
   $(LIBZCASH_H)
+
+# a shared library for cryptoconditions
+libcc_a_SOURCES = cc/cclib.cpp
+libcc_a_CXXFLAGS = -DBUILD_CUSTOMCC -I../secp256k1/include -I../depends/$(shell echo `../depends/config.guess`/include) -I./univalue/include -I./cryptoconditions/include -I./cryptoconditions/src -I./cryptoconditions/src/asn -I. -I./cc
+libcc_a_LDFLAGS = -version-info 0:0:0
 
 # crypto primitives library
 crypto_libbitcoin_crypto_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_CONFIG_INCLUDES)
@@ -508,6 +516,9 @@ libbitcoin_common_a_SOURCES = \
   transaction_builder.cpp \
   cc/CCtokenutils.cpp \
   cc/CCutilbits.cpp \
+  cc/CCupgrades.h \
+  cc/CCupgrades.cpp \
+  komodo_version.h \
   gmp_i64.c \
   $(BITCOIN_CORE_H) \
   $(LIBZCASH_H)
@@ -587,8 +598,6 @@ endif
 komodod_LDADD += \
   $(BOOST_LIBS) \
   $(BDB_LIBS) \
-  $(SSL_LIBS) \
-  $(CRYPTO_LIBS) \
   $(EVENT_PTHREADS_LIBS) \
   $(EVENT_LIBS) \
   $(ZMQ_LIBS) \
@@ -596,9 +605,20 @@ komodod_LDADD += \
   $(LIBBITCOIN_CRYPTO) \
   $(LIBVERUS_CRYPTO) \
   $(LIBVERUS_PORTABLE_CRYPTO) \
-  $(LIBZCASH_LIBS)
+  $(LIBZCASH_LIBS) \
+  $(LIBCC) \
+  -lcurl
 
-komodod_LDADD += $(LIBDYNCUSTOMCONSENSUS) $(LIBSECP256K1)
+if ENABLE_WEBSOCKETS
+# link statically openssl
+komodod_LDADD += \
+  $(LIBSSLSTATIC) \
+  $(LIBCRYPTOSTATIC)
+else
+komodod_LDADD += \
+  $(SSL_LIBS) \
+  $(CRYPTO_LIBS)
+endif
 
 if ENABLE_PROTON
 komodod_LDADD += $(LIBBITCOIN_PROTON) $(PROTON_LIBS)
@@ -622,7 +642,7 @@ endif
 if ENABLE_WALLET
 wallet_utility_SOURCES = wallet-utility.cpp
 wallet_utility_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-wallet_utility_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+wallet_utility_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS) $(CXXFLAGS)
 wallet_utility_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 endif
 
@@ -687,7 +707,6 @@ komodo_tx_LDADD = \
   $(LIBCRYPTOCONDITIONS)
 
 komodo_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
-#
 
 # zcash protocol primitives #
 libzcash_a_SOURCES = \
@@ -707,13 +726,12 @@ libzcash_a_SOURCES = \
 	zcash/circuit/prfs.tcc \
 	zcash/circuit/utils.tcc
 
-libzcash_a_CPPFLAGS = -DMULTICORE -fopenmp -fPIC -DBINARY_OUTPUT -DCURVE_ALT_BN128 -DBOOST_SPIRIT_THREADSAFE -DHAVE_BUILD_INFO -D__STDC_FORMAT_MACROS $(HARDENED_CPPFLAGS) $(HARDENED_CXXFLAGS) $(HARDENED_LDFLAGS) -pipe $(SAN_LDFLAGS) -O1 -g -Wstack-protector $(SAN_CXXFLAGS) -fstack-protector-all -fPIE -fvisibility=hidden -DSTATIC $(BITCOIN_INCLUDES)
-
-#libzcash_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-#libzcash_a_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
-#libzcash_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) -DMONTGOMERY_OUTPUT
-
-libzcash_a_CXXFLAGS = $(SAN_CXXFLAGS) $(HARDENED_CXXFLAGS) -fwrapv -fno-strict-aliasing
+libzcash_a_CPPFLAGS = -DMULTICORE -fopenmp -fPIC -DBINARY_OUTPUT -DCURVE_ALT_BN128 \
+	-DBOOST_SPIRIT_THREADSAFE -DHAVE_BUILD_INFO -D__STDC_FORMAT_MACROS $(HARDENED_CPPFLAGS) \
+	$(HARDENED_CXXFLAGS) $(HARDENED_LDFLAGS) -pipe $(SAN_LDFLAGS) \
+	-Wstack-protector $(SAN_CXXFLAGS) -fstack-protector-all -fPIE -fvisibility=hidden \
+	-DSTATIC $(BITCOIN_INCLUDES)
+libzcash_a_CXXFLAGS = $(CXXFLAGS) $(SAN_CXXFLAGS) $(HARDENED_CXXFLAGS) -fwrapv -fno-strict-aliasing
 libzcash_a_LDFLAGS = $(SAN_LDFLAGS) $(HARDENED_LDFLAGS)
 libzcash_a_CPPFLAGS += -DMONTGOMERY_OUTPUT
 
@@ -765,7 +783,13 @@ clean-local:
 	-rm -f config.h
 	-rm -f cc/customcc.so cc/customcc.dll cc/customcc.dylib # clean now unused file
 	-rm -f libcc.so libcc.dll libcc.dylib  # clean now unused file 
-	-$(MAKE) -C cc -f Makefile_custom clean
+	-$(RM) *.a
+	-$(RM) crypto/*.a
+	-$(RM) cryptoconditions/.libs/*.a
+
+clean-all: clean-local
+	-$(MAKE) -C snark clean-all
+	-$(MAKE) -C univalue clean-all
 
 .rc.o:
 	@test -f $(WINDRES)
@@ -850,9 +874,22 @@ customd_LDADD += \
   $(LIBBITCOIN_CRYPTO) \
   $(LIBVERUS_CRYPTO) \
   $(LIBVERUS_PORTABLE_CRYPTO) \
-  $(LIBZCASH_LIBS)
+  $(LIBZCASH_LIBS) \
+  $(LIBCC) \
+  -lcurl
 
 customd_LDADD += $(LIBDYNCUSTOMCONSENSUS) $(LIBSECP256K1)
+
+if ENABLE_WEBSOCKETS
+# link statically openssl
+customd_LDADD += \
+  $(LIBSSLSTATIC) \
+  $(LIBCRYPTOSTATIC)
+else
+customd_LDADD += \
+  $(SSL_LIBS) \
+  $(CRYPTO_LIBS)
+endif
 
 if ENABLE_PROTON
 customd_LDADD += $(LIBBITCOIN_PROTON) $(PROTON_LIBS)

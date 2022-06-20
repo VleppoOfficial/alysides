@@ -28,6 +28,8 @@
 #include "sync_ext.h"
 #include "../main.h"
 #include "../cc/CCinclude.h"
+#include "../cc/CCfaucet.h"
+
 
 using namespace std;
 
@@ -120,6 +122,7 @@ UniValue createtxwithnormalinputs(const UniValue& params, bool fHelp, const CPub
     }
 
     CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+    mtx.nLockTime = komodo_next_tx_locktime();
     std::vector<CTransaction> vintxns;
     CAmount added = AddNormalinputsRemote(mtx, usedpk, amount, CC_MAXVINS, &vintxns);
     if (added < amount)
@@ -205,7 +208,7 @@ UniValue getindexkeyforcc(const UniValue& params, bool fHelp, const CPubKey& rem
             "Sample:\n"
             "getindexkeyforcc \'{ \"type\": \"threshold-sha-256\", \"threshold\": 2, \"subfulfillments\":"
             "[{\"type\":\"eval-sha-256\",\"code\":\"9A\"}, {\"type\":\"threshold-sha-256\", \"threshold\":1,"
-            "subfulfillments\":[{ \"type\": \"secp256k1-sha-256\", \"publicKey\": \"03682b255c40d0cde8faee381a1a50bbb89980ff24539cb8518e294d3a63cefe12\" }] }] }\' true\n\n"
+            "\"subfulfillments\":[{ \"type\": \"secp256k1-sha-256\", \"publicKey\": \"03682b255c40d0cde8faee381a1a50bbb89980ff24539cb8518e294d3a63cefe12\" }] }] }\' true\n\n"
         ;
         throw std::runtime_error(msg);
     }
@@ -222,10 +225,22 @@ UniValue getindexkeyforcc(const UniValue& params, bool fHelp, const CPubKey& rem
     else
         throw std::runtime_error(std::string("is-mixed must be true or false"));
 
-    CScript spk = CCPubKey(cc.get(), ismixed);
-    char ccaddress[KOMODO_ADDRESS_BUFSIZE];
-    Getscriptaddress(ccaddress, spk);
-    return ccaddress;
+    UniValue result(UniValue::VARR);
+    if (ismixed)  {
+        for (CC_SUBVER ccSubVer = CC_MIXED_MODE_SUBVER_0; ccSubVer <= CC_MIXED_MODE_SUBVER_MAX; ccSubVer = (CC_SUBVER)(ccSubVer+1)) {
+            CScript spk = CCPubKey(cc.get(), ccSubVer);
+            char ccaddress[KOMODO_ADDRESS_BUFSIZE];
+            Getscriptaddress(ccaddress, spk);
+            result.push_back(ccaddress);
+        }
+    }
+    else {
+        CScript spk = CCPubKey(cc.get(), CC_OLD_V1_SUBVER);
+        char ccaddress[KOMODO_ADDRESS_BUFSIZE];
+        Getscriptaddress(ccaddress, spk);
+        result.push_back(ccaddress);
+    }
+    return result;
 }
 
 extern bool fAddressIndex;
@@ -265,6 +280,47 @@ UniValue searchforpubkey(const UniValue& params, bool fHelp, const CPubKey& remo
         throw std::runtime_error("pubkey not found");
 }
 
+UniValue faucetaddccinputs(const UniValue& params, bool fHelp, const CPubKey& remotepk)
+{
+    if (fHelp || params.size() > 1)
+    {
+        string msg = "faucetaddccinputs [amount]\n"
+            "\nReturns a new tx with added normal inputs and previous txns. Note that the caller must add the change output\n"
+            "\nArguments:\n"
+            //"address which utxos are added from\n"
+            "amount is deprecated and set to FAUCETSIZE\n"
+            "Result: json object with created tx and added vin txns\n\n";
+        throw runtime_error(msg);
+    }
+    CAmount amount = FAUCETSIZE;
+
+    CMutableTransaction mtx = CreateNewContextualCMutableTransaction(Params().GetConsensus(), komodo_nextheight());
+    std::vector<CTransaction> vintxns;
+    struct CCcontract_info *cp, C;
+    cp = CCinit(&C, EVAL_FAUCET);
+    CPubKey faucetpk = GetUnspendable(cp,0);
+
+    CAmount added = AddFaucetInputs(cp, mtx, faucetpk, amount, CC_MAXVINS);
+    if (added < amount)
+        throw runtime_error("could not find normal inputs");
+
+    for (auto const & vin : mtx.vin)    {
+        CTransaction tx;
+        uint256 hashBlock;
+        if (myGetTransaction(vin.prevout.hash, tx, hashBlock))
+            vintxns.push_back(tx);
+    }
+
+    UniValue result (UniValue::VOBJ);
+    UniValue array (UniValue::VARR);
+
+    result.pushKV("txhex", HexStr(E_MARSHAL(ss << mtx)));
+    for (auto const &vtx : vintxns) 
+        array.push_back(HexStr(E_MARSHAL(ss << vtx)));
+    result.pushKV("previousTxns", array);
+    return result;
+}
+
 static const CRPCCommand commands[] =
 { //  category              name                actor (function)        okSafeMode
   //  -------------- ------------------------  -----------------------  ----------
@@ -274,6 +330,8 @@ static const CRPCCommand commands[] =
 	{ "ccutils",      "searchforpubkey",    &searchforpubkey,      true },
     { "nspv",       "createtxwithnormalinputs",      &createtxwithnormalinputs,         true },
     { "nspv",       "gettransactionsmany",      &gettransactionsmany,         true },
+    { "nspv",             "faucetaddccinputs",        &faucetaddccinputs,        true  },
+
 };
 
 void RegisterCCUtilsRPCCommands(CRPCTable &tableRPC)
