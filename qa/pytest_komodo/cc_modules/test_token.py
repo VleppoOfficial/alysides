@@ -294,7 +294,6 @@ def test_token(test_params):
         # valid token transfer
         sendtokens = call_token_rpc(rpc, "token"+v+"transfer", tokenid, randompubkey, "1")
         assert sendtokens['hex'], "token"+v+"transfer tx not created"
-        print('tx1=', sendtokens["hex"])
         send_and_mine(sendtokens["hex"], rpc)
         result = call_token_rpc(rpc, "token"+v+"balance", tokenid, randompubkey)
         assert result["balance"] == 1
@@ -302,9 +301,7 @@ def test_token(test_params):
         print("making valid token" + v + "transfermany...")
         # valid token transfer
         sendtokens = call_token_rpc(rpc, "token"+v+"transfermany", tokenid, randompubkey, "1")
-        print('transfermany result', sendtokens)
         assert sendtokens['hex'], "token"+v+"transfermany tx not created"
-        print('tx2=', sendtokens["hex"])
         send_and_mine(sendtokens["hex"], rpc)
         result = call_token_rpc(rpc, "token"+v+"balance", tokenid, randompubkey)
         assert result["balance"] == 2
