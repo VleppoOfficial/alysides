@@ -249,7 +249,7 @@ def validate_tx_pattern(txid):
 def validate_raddr_pattern(addr):
     if not isinstance(addr, str):
         return False
-    address_pattern = re.compile(r"R[a-zA-Z0-9]{33}\Z")
+    address_pattern = re.compile(r"[RC][a-zA-Z0-9]{33}\Z")
     if address_pattern.match(addr):
         return True
     else:
