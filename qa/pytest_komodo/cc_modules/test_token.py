@@ -30,29 +30,24 @@ def test_token(test_params):
 
     for v in ["", "v2"] :
 
-        result = call_token_rpc(rpc, "token"+v+"address")
-        assert_success(result)
-        for x in result.keys():
-            if x.find('ddress') > 0:
-                assert result[x][0] == 'R' or result[x][0] == 'C'
+        result = call_token_rpc(rpc, "token"+v+"indexkey", pubkey)
+        if v == '':  # for v2 a diff result
+            assert_success(result)
+            for x in result.keys():
+                if x.find('ddress') > 0:
+                    assert result[x][0] == 'R' or result[x][0] == 'C'
+        else : # v2 index keys:
+            for x in result:
+                assert x[0] == 'C'
 
-        result = call_token_rpc(rpc, "token"+v+"address", pubkey)
-        assert_success(result)
-        for x in result.keys():
-            if x.find('ddress') > 0:
-                assert result[x][0] == 'R' or result[x][0] == 'C'
-
-        result = call_token_rpc(rpc, "assetsaddress")
-        assert_success(result)
-        for x in result.keys():
-            if x.find('ddress') > 0:
-                assert result[x][0] == 'R' or result[x][0] == 'C'
-
-        result = call_token_rpc(rpc, "assetsaddress", pubkey)
-        assert_success(result)
-        for x in result.keys():
-            if x.find('ddress') > 0:
-                assert result[x][0] == 'R' or result[x][0] == 'C'
+        result = call_token_rpc(rpc, "assets"+v+"indexkey", pubkey)
+        if v == '':  # for v2 a diff result
+            assert_success(result)
+            for x in result.keys():
+                if x.find('ddress') > 0:
+                    assert result[x][0] == 'R' or result[x][0] == 'C'
+        else : # v2 index key
+            assert result[0] == 'C'
 
         # there are no tokens created yet
         # TODO: this test conflicts with heir test because token creating for heir
@@ -299,6 +294,7 @@ def test_token(test_params):
         # valid token transfer
         sendtokens = call_token_rpc(rpc, "token"+v+"transfer", tokenid, randompubkey, "1")
         assert sendtokens['hex'], "token"+v+"transfer tx not created"
+        print('tx1=', sendtokens["hex"])
         send_and_mine(sendtokens["hex"], rpc)
         result = call_token_rpc(rpc, "token"+v+"balance", tokenid, randompubkey)
         assert result["balance"] == 1
@@ -306,7 +302,9 @@ def test_token(test_params):
         print("making valid token" + v + "transfermany...")
         # valid token transfer
         sendtokens = call_token_rpc(rpc, "token"+v+"transfermany", tokenid, randompubkey, "1")
+        print('transfermany result', sendtokens)
         assert sendtokens['hex'], "token"+v+"transfermany tx not created"
+        print('tx2=', sendtokens["hex"])
         send_and_mine(sendtokens["hex"], rpc)
         result = call_token_rpc(rpc, "token"+v+"balance", tokenid, randompubkey)
         assert result["balance"] == 2
