@@ -38,6 +38,12 @@ void RegisterRawTransactionRPCCommands(CRPCTable &tableRPC);
 void RegisterTokensRPCCommands(CRPCTable &tableRPC);
 // cc utils rpcs:
 void RegisterCCUtilsRPCCommands(CRPCTable &tableRPC);
+// agreements cc rpcs:
+void RegisterAgreementsRPCCommands(CRPCTable &tableRPC);
+// assetloans cc rpcs:
+void RegisterAssetLoansRPCCommands(CRPCTable &tableRPC);
+// tokentags cc rpcs:
+void RegisterTokenTagsRPCCommands(CRPCTable &tableRPC);
 #ifdef ENABLE_WEBSOCKETS
 // websockets helper rpcs
 void RegisterWebSocketsRPCCommands(CRPCTable &tableRPC);
@@ -52,6 +58,9 @@ static inline void RegisterAllCoreRPCCommands(CRPCTable &tableRPC)
     RegisterRawTransactionRPCCommands(tableRPC);
     RegisterTokensRPCCommands(tableRPC);
     RegisterCCUtilsRPCCommands(tableRPC);
+    RegisterAgreementsRPCCommands(tableRPC);
+	RegisterAssetLoansRPCCommands(tableRPC);
+    RegisterTokenTagsRPCCommands(tableRPC);
 #ifdef ENABLE_WEBSOCKETS
     RegisterWebSocketsRPCCommands(tableRPC);
 #endif
