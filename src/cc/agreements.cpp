@@ -2905,7 +2905,7 @@ UniValue AgreementInfo(const uint256 txid)
 				result.push_back(Pair("accepted_offer",offertxid.GetHex()));
 
 				eventfuncid = FindLatestAgreementEvent(txid, cp, eventtxid);
-				if (eventtxid != txid)
+				if (eventtxid != zeroid && eventtxid != txid)
 					result.push_back(Pair("latest_event_txid",eventtxid.GetHex()));
 				switch (eventfuncid)
 				{
