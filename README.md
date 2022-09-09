@@ -1,93 +1,173 @@
-![Tokel Header](https://github.com/TokelPlatform/tokel_app/blob/development/assets/tokel-header.png "Tokel Header")
+![Alysides Header](https://github.com/VleppoOfficial/alysides/blob/main/alysides-header.png "Alysides Header")
 
+## Vleppo Alysides
+This repository hosts the Vleppo Alysides core blockchain software that is required to host all Komodo-based blockchains used by the [Vleppo Platform](https://vleppo.com/).
 
-## The Tokel Blockchain
-This repository is required to run and use the main Tokel blockchain and hosts Tokel specific developments.
+All stable releases used in production / notary node environments are hosted in the 'main' branch. 
+- [https://github.com/VleppoOfficial/alysides](https://github.com/VleppoOfficial/alysides/tree/main)
 
-To run Tokel's test chain (TKLTEST), please use the 'tkltest' branch instead.
-- [https://github.com/TokelPlatform/tokel](https://github.com/TokelPlatform/tokel/tree/tkltest)
+To run Vleppo's non-production chains and receive latest updates that will be integrated to the 'main' branch in the next notary node season, use the 'beta' branch instead.
+- [https://github.com/VleppoOfficial/alysides](https://github.com/VleppoOfficial/alysides/tree/beta)
 
+Vleppo Alysides is powered by the [Komodo Platform](https://komodoplatform.com/en), and contains code enhancements from the [Tokel Platform](https://github.com/TokelPlatform/tokel).
 
-## What is the Tokel Platform?
-Tokel is an open-source, decentralized, token & NFT platform. 
+## List of Alysides Technologies
+- All technologies from the main Komodo Platform codebase, such as:
+  - Delayed Proof of Work (dPoW) - Additional security layer and Komodo's own consensus algorithm
+  - zk-SNARKs - Komodo Platform's privacy technology for shielded transactions (however, it is unused and inaccessible in any of Vleppo's chains)
+  - CC - Custom Contracts to realize UTXO-based "smart contract" logic on top of blockchains
+- Enhancements inherited from the Tokel Platform codebase, such as:
+  - Improvements to the Tokens & Assets CCs
+  - Improvements to Komodo's nSPV technology. nSPV is a super-lite, next-gen SPV technology gives users the ability to interact with their tokens in a decentralized & trust-less fashion on any device, without the inconvenience and energy cost of downloading the entire blockchain.
+- Agreements CC, a Komodo Custom Contract allowing fully on-chain digital contract creation & management
+- Token Tags CC, a Komodo Custom Contract enabling amendable data logs attached to existing Tokens
 
-The Tokel platform makes tokenization easy and affordable for creators, businesses and projects by offering inexpensive, user-friendly solutions for token/NFT creation, asset management, and an on-chain decentralized trading functionality without the need for complicated smart contracts or expensive gas fees. 
+## Installation
+In order to run any of Vleppo's Komodo-based blockchains as a full node, you must build the Alysides daemon and launch the specified blockchain through it.
+If you wish to run a production-grade Vleppo blockchain, make sure you are running it from the 'main' branch of this repository in order to avoid syncing issues.
 
-Utilizing cutting edge UTXO based technology, the Tokel blockchain offers an array of layer 1 blockchain features, removing the need for expensive smart contract development. 
+#### Dependencies
+```shell
+#The following packages are needed:
+sudo apt-get install build-essential pkg-config libc6-dev m4 g++-multilib autoconf libtool ncurses-dev unzip git zlib1g-dev wget curl bsdmainutils automake cmake clang ntp ntpdate nano -y
+```
 
-Tokel's super-lite, next-gen SPV technology gives users the ability to interact with their tokens in a decentralized & trust-less fashion on any device, without the inconvenience and energy cost of downloading the entire blockchain. 
+#### Linux
+```shell
+git clone https://github.com/VleppoOfficial/alysides --branch main --single-branch
+cd alysides
+./zcutil/fetch-params.sh
+./zcutil/build.sh -j$(expr $(nproc) - 1)
+#This can take some time.
+```
 
-Tokel provides universal, accessible, and easy-to-use tokenization technology to people all over the world. 
+#### OSX
+Ensure you have [brew](https://brew.sh/) and Command Line Tools installed.
 
-To NFT and Beyond
+```shell
+# Install brew
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+# Install Xcode, opens a pop-up window to install CLT without installing the entire Xcode package
+xcode-select --install
+# Update brew and install dependencies
+brew update
+brew upgrade
+brew tap discoteq/discoteq; brew install flock
+brew install autoconf autogen automake
+brew update && brew install gcc@8
+brew install binutils
+brew install protobuf
+brew install coreutils
+brew install wget
+# Clone the Alysides repo
+git clone https://github.com/VleppoOfficial/alysides --branch main --single-branch
+cd alysides
+./zcutil/fetch-params.sh
+./zcutil/build-mac.sh -j$(expr $(sysctl -n hw.ncpu) - 1)
+# This can take some time.
+```
 
-#### What Tokel offers:
-- The blockchain that facilitates the tokens and NFTs.
-- An open-sourced all-in-one [GUI application](https://github.com/TokelPlatform/tokel_dapp).
-- DEX functionality for all tokens/NFTs created on Tokel.
-- A free-to-use test blockchain (TKLTEST).
-- Easy to use integrations (nSPV)
-- Easy to use token/NFT creation, usage and management tools [(within the dApp)](https://github.com/TokelPlatform/tokel_dapp).
-- Immediate [token explorer integration](https://explorer.tokel.io/tokens).
-- Immediate token wallet integration.
+#### Windows
+The Windows software cannot be directly compiled on a Windows machine. Rather, the software must be compiled on a Linux machine, and then transferred to the Windows machine. You can also use a Virtual Machine-based installation of Debian or Ubuntu Linux, running on a Windows machine, as an alternative solution.
+Use a Debian-based cross-compilation setup with MinGW for Windows and run:
 
-#### The benefits of creating a token on the Tokel blockchain:
-- There are no requirements to create and manage your own blockchain or complicated smart contracts.
-- No gas fees!
-- Free, simple to use [dApp](https://github.com/TokelPlatform/tokel_dapp) for token usage, management and creation.
-- Extremely cheap token creation and transaction fees (1 satoshi of TKL per token created and 0.0001 TKL txfee by default).
-- Free to use TKLTEST chain for any token or custom consensus testing prior to launch or integration.
-- Your token will have immediate token wallet integration within the dApp.
-- Your token will have immediate token explorer integration.
-- Your token is safe from 51% attacks as Tokel is secured through [dPoW](https://komodoplatform.com/en/blog/delayed-proof-of-work/).
-- You will have the ability to sell your tokens immediately after creation with Tokel’s inbuilt decentralized exchange mechanism.
-- Tokel exchange partnerships mean your token will have a centralized exchange listing option. The exchanges are only required to run the Tokel chain to access every single token on it.
+```shell
+sudo apt-get install build-essential pkg-config libc6-dev m4 g++-multilib autoconf libtool ncurses-dev unzip git zlib1g-dev wget libcurl4-gnutls-dev bsdmainutils automake curl cmake mingw-w64 libsodium-dev libevent-dev
+curl https://sh.rustup.rs -sSf | sh
+source $HOME/.cargo/env
+rustup target add x86_64-pc-windows-gnu
 
-## The Tokel Decentralized Application
-The all-in-one Tokel application is an open-sourced application that will be the one stop shop for all Tokel related features. This application is built using nSPV superlite wallet technology that has been developed by the Komodo platform, for an incredibly fast and reliable experience. This application accesses all of the features offered on the Tokel blockchain whilst keeping users funds in their own wallets (completely non-custodial).
+sudo update-alternatives --config x86_64-w64-mingw32-gcc
+# (configure to use POSIX variant)
+sudo update-alternatives --config x86_64-w64-mingw32-g++
+# (configure to use POSIX variant)
 
-You can keep up with progress on the github, or find out more by having a chat in our discord.
-https://github.com/TokelPlatform/tokel_dapp
+git clone https://github.com/VleppoOfficial/alysides --branch main --single-branch
+cd alysides
+./zcutil/fetch-params.sh
+./zcutil/build-win.sh -j$(expr $(nproc) - 1)
+#This can take some time.
+```
 
-#### Application features include:
-- A TKL coin wallet
-- A multi-token wallet (you are able to hold all tokens that are in existence on the Tokel blockchain)
-- Decentralized exchanging functionality
-- A simple to use Token creation tool
+#### Launch Alysides
+Change to the Alysides src directory:
 
-## Tokel Resources
+```shell
+cd ~/alysides/src
+```
 
-- Tokel Website: [https://tokel.io](https://tokel.io)
-- Tokel Block Explorer: [https://explorer.tokel.io](https://explorer.tokel.io)
-- Tokel Discord: [Tokel Discord Invitation](http://discord.tokel.io)
-- Tokel Blog: [Tokel Blog](https://tokel.io/blog/)
-- Email: [contact@tokel.io](mailto:contact@tokel.io)
-- Whitepaper: [Tokel Paper](https://tokel.io/TokelPaper1stEdition.pdf)
-- Knowledgebase & How-to: [Tokel Documentation](https://docs.tokel.io)
-  - [How to run the Tokel blockchain](https://docs.tokel.io/guides/LaunchTheChain/)
-  - [Tokens RPC/API documentation](https://docs.tokel.io/api/tokens/)
-  - [Assets RPC/API documentation](https://docs.tokel.io/api/assets/)
-  - [How to run the Tokel test chain](https://docs.tokel.io/guides/LaunchTKLTESTchain/)
+Launch the Alysides chain command:
 
-## List of Tokel Platform Technologies
+```shell
+./alysidesd &
+```
 
-- [Delayed Proof of Work (dPoW)](https://blog.komodoplatform.com/en/delayed-proof-of-work/)- Bitcoin hashrate level protection. An additional security layer that protects from 51% attacks by notarizing Tokels hash onto Komodo's chain, then on to the Bitcoin blockchain.
-- [Tokens](https://docs.tokel.io/api/tokens/)/[Assets](https://docs.tokel.io/api/assets/) Technology - Create your own tokens or non-fungible tokens (NFTs) and trade them immediately on-chain with the assets based tokenDEX.
+Running the alysidesd executable will launch the most up-to-date Vleppo blockchain. If you wish to run a specific blockchain that is not the default, refer to Vleppo Blockchain Specifics below.
 
-## Tokel Blockchain Specifics
+Now wait for the chain to finish syncing. This might take while depending on your machine and internet connection. You can check check sync progress by using tail -f on the debug.log file in the blockchain's data directory. Double check the number of blocks you've downloaded with an explorer to verify you're up to the latest block.
 
-[Documentation on how to launch & run the Tokel blockchain (CLI).](https://docs.tokel.io/guides/LaunchTheChain/)
+Alysides uses CryptoConditions that require launching the blockchain with the -pubkey parameter to work correctly. Once you have completed block download, you will need to create a new address or import your current address. After you have done that, you will need to stop the blockchain and launch it with the -pubkey parameter.
 
-- Max Supply: Approximately 200.25 million TKL
-- Block Time: 60 seconds
-- Starting Block Reward (Era 1): 1 TKL (for ~8 weeks)
-- Block reward after ~8 weeks: 42.5 TKL
-- Block reward reduction time period: Every 525600 blocks following Era 1 (roughly every year)
-- Reduction amount: 23%
-- Mining Algorithm: Equihash - Proof of Work - Secured by dPoW
-- Specific coin emission broken down in the whitepaper
+You can use the RPC below to create a new address or import a privkey you currently have.
 
+```shell
+./alysides-cli getnewaddress
+```
 
+```shell
+./alysides-cli importprivkey
+```
+
+Once you have completed this, use the validateaddress RPC to find your associated pubkey.
+
+```shell
+./alysides-cli validateaddress *INSERTYOURADDRESSHERE*
+```
+
+Once you have written down your pubkey, stop the blockchain daemon.
+
+```shell
+cd ~/alysides/src
+./alysides-cli stop
+```
+
+Wait a minute or so for the blockchain to stop, then relaunch the blockchain with the command below. Please remove the ** and replace them with the pubkey of the address you imported.
+
+```shell
+cd ~/alysides/src
+./alysidesd -pubkey=**YOURPUBKEYHERE** &
+```
+
+You are now ready to use the Alysides software to its fullest extent.
+
+## Vleppo Resources
+- Vleppo Website: [https://vleppo.com](https://vleppo.com)
+- Vleppo Discord: [Invitation](https://discord.gg/PdvqNjkWTd)
+- Vleppo Telegram: [Invitation](https://t.me/vleppospeaks)
+- Email: [support@vleppo.com](mailto:support@vleppo.com)
+
+## Vleppo Blockchain Specifics
+The following is a list of Komodo-based Vleppo blockchains that can be run with the Alysides software, alongside their attributes and exact launch parameters. The list will be updated over time as new blockchains are created for use in the Vleppo Platform.
+
+### VLCGLB1
+VLCGLB1 is a "beta" chain, being the first publicly available of its type. The VLCGLB1 coin holds no value, just like other VLC coins, as its primary purpose is testing and facilitating Custom Contract functionality for the Vleppo Application.
+
+The current version of the Vleppo Application is run on VLCGLB1.
+
+```shell
+-ac_name=VLCGLB1 -ac_supply=498000000 -ac_reward=1000000000 -ac_blocktime=120 -ac_cc=1 -ac_staked=100 -ac_halving=27600 -ac_decay=85000000 -ac_end=331200 -ac_public=1 -addnode=143.110.242.177 -addnode=143.110.254.96 -addnode=139.59.110.85 -addnode=139.59.110.86
+#Example launch command (remove the ** and replace them with the pubkey of the address you imported):
+./komodod -ac_name=VLCGLB1 -ac_supply=498000000 -ac_reward=1000000000 -ac_blocktime=120 -ac_cc=1 -ac_staked=100 -ac_halving=27600 -ac_decay=85000000 -ac_end=331200 -ac_public=1 -addnode=143.110.242.177 -addnode=143.110.254.96 -addnode=139.59.110.85 -addnode=139.59.110.86 -pubkey=**YOURPUBKEYHERE** & 
+```
+
+- Max Supply: Approximately 500 million VLC
+- Block Time: 120 seconds
+- Starting Block Reward (Era 1): 10 VLC
+- Block reward reduction time period: Every 27600 blocks following Era 1
+- Reduction amount: 15%
+- Mining Algorithm: 100% Proof-of-Stake
+
+## License
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
