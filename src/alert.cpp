@@ -139,7 +139,7 @@ bool CAlert::AppliesTo(int nVersion, const std::string& strSubVerIn) const
 
 bool CAlert::AppliesToMe() const
 {
-    return AppliesTo(PROTOCOL_VERSION, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, { TOKEL_CLIENT_NAME }));
+    return AppliesTo(PROTOCOL_VERSION, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, { ALYSIDES_CLIENT_NAME }));
 }
 
 bool CAlert::RelayTo(CNode* pnode) const

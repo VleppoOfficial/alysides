@@ -72,8 +72,8 @@ make "$@" -C ./depends/ V=1 NO_QT=1 NO_PROTON=1
 CPPFLAGS="-I$PREFIX/include -arch x86_64" LDFLAGS="-L$PREFIX/lib -arch x86_64 -Wl,-no_pie" \
 CXXFLAGS="-arch x86_64 -I/usr/local/Cellar/gcc\@8/8.3.0/include/c++/8.3.0/ -fwrapv -fno-strict-aliasing -Wno-builtin-declaration-mismatch -Werror -Wno-error=attributes -g -Wl,-undefined -Wl,dynamic_lookup" \
 ./configure --prefix="${PREFIX}" --with-gui=no "$HARDENING_ARG" "$LCOV_ARG" "$CONFIGURE_FLAGS" "$WEBSOCKETS_ARG"  "$DEBUGGING_ARG" \
-  --with-custom-bin=yes CUSTOM_BIN_NAME=tokel CUSTOM_BRAND_NAME=Tokel \
-  CUSTOM_SERVER_ARGS="'-ac_name=TOKEL -ac_supply=100000000 -ac_eras=2 -ac_cbmaturity=1 -ac_reward=100000000,4250000000 -ac_end=80640,0 -ac_decay=0,77700000 -ac_halving=0,525600 -ac_cc=555 -ac_ccenable=236,245,246,247 -ac_adaptivepow=6 -addnode=135.125.204.169 -addnode=192.99.71.125 -nspv_msg=1'" \
-  CUSTOM_CLIENT_ARGS='-ac_name=TOKEL'
+  --with-custom-bin=yes CUSTOM_BIN_NAME=alysides CUSTOM_BRAND_NAME=Alysides \
+  CUSTOM_SERVER_ARGS="'-ac_name=VLCGLB1 -ac_supply=498000000 -ac_reward=1000000000 -ac_blocktime=120 -ac_cc=1 -ac_staked=100 -ac_halving=27600 -ac_decay=85000000 -ac_end=331200 -ac_public=1 -addnode=143.110.242.177 -addnode=143.110.254.96 -addnode=139.59.110.85 -addnode=139.59.110.86 -nspv_msg=1'" \
+  CUSTOM_CLIENT_ARGS='-ac_name=VLCGLB1'
 
 make "$@" V=1 NO_GTEST=1 STATIC=1 
