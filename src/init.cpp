@@ -1383,7 +1383,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         ShrinkDebugFile();
     LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
     LogPrintf("Komodo version %s\n", FormatVersion(KOMODO_VERSION));
-    LogPrintf("Tokel version %s (%s)\n", FormatVersion(TOKEL_VERSION), CLIENT_DATE);
+    LogPrintf("Alysides version %s (%s)\n", FormatVersion(ALYSIDES_VERSION), CLIENT_DATE);
 
     if (fPrintToDebugLog)
         OpenDebugLog();
@@ -1475,7 +1475,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             return InitError(strprintf("User Agent comment (%s) contains unsafe characters.", cmt));
         uacomments.push_back(SanitizeString(cmt, SAFE_CHARS_UA_COMMENT));
     }
-    uacomments.insert(uacomments.begin(), TOKEL_CLIENT_NAME);
+    uacomments.insert(uacomments.begin(), ALYSIDES_CLIENT_NAME);
     strSubVersion = FormatSubVersion(CLIENT_NAME, KOMODO_VERSION, uacomments);
     if (strSubVersion.size() > MAX_SUBVERSION_LENGTH) {
         return InitError(strprintf("Total length of network version string %i exceeds maximum of %i characters. Reduce the number and/or size of uacomments.",

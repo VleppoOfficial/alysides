@@ -22,10 +22,10 @@
 
 // version = major * 1000000 + minor * 10000 + rev * 100 + build
 //const int KOMODO_VERSION = 60000; 
-//const int TOKEL_VERSION =  30100;
+//const int ALYSIDES_VERSION =  30100;
 
 const std::string KOMODO_CLIENT_NAME = std::string("komodod:") + FormatVersion(KOMODO_VERSION);
-const std::string TOKEL_CLIENT_NAME = std::string("tokeld:") + FormatVersion(TOKEL_VERSION);
+const std::string ALYSIDES_CLIENT_NAME = std::string("alysidesd:") + FormatVersion(ALYSIDES_VERSION);
 
 
 #endif // #ifndef KOMODO_VERSION_H

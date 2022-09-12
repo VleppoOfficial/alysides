@@ -163,6 +163,8 @@ doc/man/Makefile.in
 src/Makefile.in
 src/cc/customcc.so
 src/libcc.so
-src/tokel-cli
+src/alysides-cli
 src/komodo-test-cc
+src/alysidesd
+src/tokel-cli
 src/tokeld
