@@ -166,3 +166,5 @@ src/libcc.so
 src/alysides-cli
 src/komodo-test-cc
 src/alysidesd
+src/tokel-cli
+src/tokeld
