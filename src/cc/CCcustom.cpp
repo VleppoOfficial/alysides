@@ -212,8 +212,8 @@ uint8_t TokensCCpriv[32] = { 0x1d, 0x0d, 0x0d, 0xce, 0x2d, 0xd2, 0xe1, 0x9d, 0xf
 // Agreements
 #define FUNCNAME IsAgreementsInput
 #define EVALCODE EVAL_AGREEMENTS
-const char *AgreementsCCaddr = "CeoP7RGjTcfXk4zCmge1bkD9P8iyUcomdG";
-const char *AgreementsNormaladdr = "RKMpncH1SyUJojdc4PR7QYWgKFDS5Z4bxP";
+//const char *AgreementsCCaddr = "CeoP7RGjTcfXk4zCmge1bkD9P8iyUcomdG";
+//const char *AgreementsNormaladdr = "RKMpncH1SyUJojdc4PR7QYWgKFDS5Z4bxP";
 char AgreementsCChexstr[67] = { "0291ca39fe72f5d0f6a65933239ca7fc608dab04eed3428ba7f425256811ddd07e" };
 uint8_t AgreementsCCpriv[32] = { 0x0d, 0x88, 0x03, 0x42, 0x36, 0x25, 0xd5, 0xe3, 0x35, 0xf2, 0x84, 0x2f, 0xd8, 0x43, 0x51, 0xdf, 0x38, 0x11, 0x1f, 0x8f, 0x03, 0x5e, 0xe6, 0x39, 0xe8, 0x42, 0xf5, 0x4a, 0xbd, 0x74, 0xba, 0x97 };
 #include "CCcustom.inc"
@@ -432,8 +432,8 @@ struct CCcontract_info *CCinit(struct CCcontract_info *cp, uint8_t evalcode)
 			cp->ismyvin = IsTokensInput;
 			break;
         case EVAL_AGREEMENTS:
-			strcpy(cp->unspendableCCaddr, AgreementsCCaddr);
-			strcpy(cp->normaladdr, AgreementsNormaladdr);
+			//strcpy(cp->unspendableCCaddr, AgreementsCCaddr);
+			//strcpy(cp->normaladdr, AgreementsNormaladdr);
 			strcpy(cp->CChexstr, AgreementsCChexstr);
 			memcpy(cp->CCpriv, AgreementsCCpriv, 32);
 			cp->validate = AgreementsValidate;
