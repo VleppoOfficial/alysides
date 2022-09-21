@@ -32,15 +32,15 @@ using namespace std;
 
 UniValue agreementaddress(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
-    struct CCcontract_info *cp,C; std::vector<unsigned char> pubkey;
-    cp = CCinit(&C,EVAL_AGREEMENTS);
-    if ( fHelp || params.size() > 1 )
-        throw runtime_error("agreementaddress [pubkey]\n");
-    if ( ensure_CCrequirements(0) < 0 )
-        throw runtime_error(CC_REQUIREMENTS_MSG);
-    if ( params.size() == 1 )
-        pubkey = ParseHex(params[0].get_str().c_str());
-    return(CCaddress(cp,(char *)"Agreements",pubkey,true));
+	struct CCcontract_info *cp, C; std::vector<unsigned char> pubkey;
+	cp = CCinit(&C, EVAL_AGREEMENTS);
+	if (fHelp || params.size() > 1)
+		throw runtime_error("agreementaddress [pubkey]\n");
+	if (ensure_CCrequirements(cp->evalcode) < 0)
+		throw runtime_error(CC_REQUIREMENTS_MSG);
+	if (params.size() == 1)
+		pubkey = ParseHex(params[0].get_str().c_str());
+	return CCaddress(cp, (char *)"Agreements", pubkey, true);
 }
 
 UniValue agreementcreate(const UniValue& params, bool fHelp, const CPubKey& mypk)
