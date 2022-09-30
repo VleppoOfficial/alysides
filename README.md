@@ -46,7 +46,7 @@ Ensure you have [brew](https://brew.sh/) and Command Line Tools installed.
 
 ```shell
 # Install brew
-/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+/bin/bash -c "$(curl -fSSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 # Install Xcode, opens a pop-up window to install CLT without installing the entire Xcode package
 xcode-select --install
 # Update brew and install dependencies
@@ -152,7 +152,7 @@ The following is a list of Komodo-based Vleppo blockchains that can be run with 
 ### VLCGLB1
 VLCGLB1 is a "beta" chain, being the first publicly available of its type. The VLCGLB1 coin holds no value, just like other VLC coins, as its primary purpose is testing and facilitating Custom Contract functionality for the Vleppo Application.
 
-The current version of the Vleppo Application is run on VLCGLB1.
+NOTE: VLCGLB1 must be run using komodod executables compiled from the 'legacy_v0.5' branch.
 
 ```shell
 -ac_name=VLCGLB1 -ac_supply=498000000 -ac_reward=1000000000 -ac_blocktime=120 -ac_cc=1 -ac_staked=100 -ac_halving=27600 -ac_decay=85000000 -ac_end=331200 -ac_public=1 -addnode=143.110.242.177 -addnode=143.110.254.96 -addnode=139.59.110.85 -addnode=139.59.110.86
@@ -165,6 +165,20 @@ The current version of the Vleppo Application is run on VLCGLB1.
 - Starting Block Reward (Era 1): 10 VLC
 - Block reward reduction time period: Every 27600 blocks following Era 1
 - Reduction amount: 15%
+- Mining Algorithm: 100% Proof-of-Stake
+
+### VLCGLB2
+VLCGLB2 is a "beta" chain, running on current versions of Alysides which introduce nSPV compatibility. The VLCGLB2 coin holds no value, just like other VLC coins, as its primary purpose is testing and facilitating Custom Contract functionality for the Vleppo Application.
+
+```shell
+-ac_name=VLCGLB2 -ac_supply=500000000 -ac_reward=1 -ac_blocktime=120 -ac_cc=1 -ac_ccenable=167,168,169,228,236,245 -ac_staked=100 -ac_end=1 -ac_public=1 -addnode=143.110.242.177 -addnode=143.110.254.96 -addnode=139.59.110.85 -addnode=139.59.110.86
+#Example launch command (remove the ** and replace them with the pubkey of the address you imported):
+./komodod -ac_name=VLCGLB2 -ac_supply=500000000 -ac_reward=1 -ac_blocktime=120 -ac_cc=1 -ac_ccenable=167,168,169,228,236,245 -ac_staked=100 -ac_end=1 -ac_public=1 -addnode=143.110.242.177 -addnode=143.110.254.96 -addnode=139.59.110.85 -addnode=139.59.110.86 -pubkey=**YOURPUBKEYHERE** & 
+```
+
+- Max Supply: Approximately 500 million VLC
+- Block Time: 120 seconds
+- Starting Block Reward: None
 - Mining Algorithm: 100% Proof-of-Stake
 
 ## License
