@@ -123,9 +123,9 @@ support for scriptPubKeys to be used in the future as well, for multisig or othe
 int64_t IsAgreementsvout(struct CCcontract_info *cp,const CTransaction& tx,int32_t v, char* destkey)
 {
 	char tmpaddr[64];
-	if ( tx.vout[v].scriptPubKey.IsPayToCryptoCondition() != 0 )
+	if ( tx.vout[v].scriptPubKey.IsPayToCryptoCondition() )
 	{
-		if ( Getscriptaddress(tmpaddr,tx.vout[v].scriptPubKey) > 0 && strcmp(tmpaddr,destkey) == 0 )
+		if ( Getscriptaddress(tmpaddr,tx.vout[v].scriptPubKey) > 0 && strcmp(tmpaddr,destkey) == false )
 			return(tx.vout[v].nValue);
 	}
 	return(0);
@@ -397,18 +397,18 @@ bool ValidateAgreementsVin(struct CCcontract_info *cp,Eval* eval,const CTransact
 	if (CCflag != 0)
 	{
 		// Check if a vin is a Agreements CC vin.
-		if ((*cp->ismyvin)(tx.vin[index].scriptSig) == 0)
+		if ((*cp->ismyvin)(tx.vin[index].scriptSig) == false)
 			return eval->Invalid("vin."+std::to_string(index)+" is CC for this agreement tx!");
 	}
 	else
 	{
 		// Check if a vin is a normal input.
-		if (IsCCInput(tx.vin[index].scriptSig) != 0)
+		if (IsCCInput(tx.vin[index].scriptSig))
 			return eval->Invalid("vin."+std::to_string(index)+" is normal for this agreement tx!");
 	}
 	
 	// Verify previous transaction and its op_return.
-	if (myGetTransaction(tx.vin[index].prevout.hash,prevTx,hashblock) == 0)
+	if (myGetTransaction(tx.vin[index].prevout.hash,prevTx,hashblock) == false)
 		return eval->Invalid("vin."+std::to_string(index)+" tx does not exist!");
 	
 	numvouts = prevTx.vout.size();
@@ -532,7 +532,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				if (refagreementtxid != zeroid)
 				{
 					// Make sure referenced agreement actually exists and is valid. (doesn't have to be confirmed as we're not spending any vouts from it now)
-					if (myGetTransactionCCV2(cp, refagreementtxid, refagreementtx, hashBlock) == 0 || refagreementtx.vout.size() == 0 ||
+					if (myGetTransactionCCV2(cp, refagreementtxid, refagreementtx, hashBlock) == false || refagreementtx.vout.size() == 0 ||
 					DecodeAgreementOpRet(refagreementtx.vout.back().scriptPubKey) != 'c')
 						return eval->Invalid("Offer transaction has invalid or nonexistent reference agreement set!");
 
@@ -578,7 +578,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Unlock conditions defined while their validation isn't done yet, can't validate!");
 				
 				// Verify that all vins are normal inputs.
-				else if (ValidateNormalVins(eval,tx,0) == 0)
+				else if (ValidateNormalVins(eval,tx,0) == false)
                     return (false);
 				
 				// Check numvouts. (vout0, opret vout, and optional vout for change)
@@ -587,7 +587,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				
 				// Verify that vout0 is an Agreements vout and is sent to global CC address.
 				// Check vout0 for CC_MARKER_VALUE.
-				else if (ConstrainVoutV2(tx.vout[0], 1, globalCCaddress, CC_MARKER_VALUE, EVAL_AGREEMENTS) == 0)
+				else if (ConstrainVoutV2(tx.vout[0], 1, globalCCaddress, CC_MARKER_VALUE, EVAL_AGREEMENTS) == false)
 					return eval->Invalid("vout.0 is agreement CC vout with at least "+std::to_string(CC_MARKER_VALUE)+" sats to global CC addr for 'o' type transaction!");
 				
 				LOGSTREAM("agreementscc", CCLOG_INFO, stream << "AgreementsValidate: 'o' tx validated" << std::endl);
@@ -625,7 +625,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, srckey, destkey, arbkey, offerflags) != 'o')
 					return eval->Invalid("Offer cancel transaction has invalid or unconfirmed offer transaction!");
 				
-				else if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(offertxid) == 0)
+				else if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(offertxid) == false)
                     return eval->Invalid("Offer cancel transaction is attempting to cancel an unnotarised offer with AOF_AWAITNOTARIES flag!");
 				
 				// Check if cancellerkey is eligible to cancel this offer.
@@ -648,15 +648,15 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				
 				// vin.0: CC input from offer vout.0
 				// Verify that vin.0 was signed correctly.
-				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,offertxid,globalCCaddress,CC_MARKER_VALUE) == 0)
+				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,offertxid,globalCCaddress,CC_MARKER_VALUE) == false)
 					return (false);
 
 				// Offer cancels shouldn't have any additional CC inputs.
-				else if (ValidateNormalVins(eval,tx,1) == 0)
+				else if (ValidateNormalVins(eval,tx,1) == false)
 					return (false);
 				
 				// Offer cancels shouldn't have any CC outputs.
-				if (tx.vout[0].scriptPubKey.IsPayToCryptoCondition() != 0 || tx.vout[1].scriptPubKey.IsPayToCryptoCondition() != 0)
+				if (tx.vout[0].scriptPubKey.IsPayToCryptoCondition() || tx.vout[1].scriptPubKey.IsPayToCryptoCondition())
 					return eval->Invalid("Offer cancels shouldn't have any CC vouts!");
 				
 				break;
@@ -683,7 +683,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				deposit,payment,disputefee,agreementname,agreementmemo,unlockconds) != 'o')
 					return eval->Invalid("Accept transaction has invalid or unconfirmed offer transaction!");
 				
-				else if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(offertxid) == 0)
+				else if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(offertxid) == false)
                     return eval->Invalid("Accept transaction is attempting to accept an unnotarised offer with AOF_AWAITNOTARIES flag!");
 
 				// Check if the offer hasn't expired. (aka been created longer than AGREEMENTCC_EXPIRYDATE ago)
@@ -727,7 +727,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Unlock conditions defined while their validation isn't done yet, can't validate!");
 
 				Agreementspk = GetUnspendable(cp, NULL);
-				offertxidpk = CCtxidaddr(txidaddr,offertxid);
+				offertxidpk = CCtxidaddr_tweak(txidaddr,offertxid);
 				GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 				Getscriptaddress(srcnormaladdress,CScript() << ParseHex(HexStr(CSourcePubkey)) << OP_CHECKSIG);
 
@@ -748,7 +748,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					if (!(srckey == prevofferorkey && destkey == prevsignerkey) && !(srckey == prevsignerkey && destkey == prevofferorkey))
 						return eval->Invalid("Accept transaction has offer source/destination pubkeys mismatch with offeror/signer pubkeys of previous agreement!");
 
-					prevoffertxidpk = CCtxidaddr(txidaddr,prevoffertxid);
+					prevoffertxidpk = CCtxidaddr_tweak(txidaddr,prevoffertxid);
 					GetCCaddress1of2(cp, preveventCCaddress, Agreementspk, prevoffertxidpk, true);
 				}
 
@@ -758,7 +758,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				
 				// vin.0: CC input from offer vout.0
 				// Verify that vin.0 was signed correctly.
-				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,offertxid,globalCCaddress,CC_MARKER_VALUE) == 0)
+				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,offertxid,globalCCaddress,CC_MARKER_VALUE) == false)
 					return (false);
 
 				// If AOF_AMENDMENT is set, we need to do additional checking on the previous agreement and its events.
@@ -793,34 +793,34 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 							break;
 					}
 					// If the offer accepted by agreementtxid has AOF_AWAITNOTARIES set, make sure latest event is notarised.
-					if (prevofferflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(tx.vin[1].prevout.hash) == 0)
+					if (prevofferflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(tx.vin[1].prevout.hash) == false)
 						return eval->Invalid("Accept transaction is attempting to spend an unnotarised previous event of an agreement with AOF_AWAITNOTARIES flag!");
-					else if (ValidateAgreementsVin(cp,eval,tx,1,1,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == 0)
+					else if (ValidateAgreementsVin(cp,eval,tx,1,1,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == false)
 						return (false);
 				
 					// vin.2: deposit from previous agreement (if applicable)
-					else if (ValidateAgreementsVin(cp,eval,tx,1,2,1,prevagreementtxid,globalCCaddress,prevdeposit) == 0)
+					else if (ValidateAgreementsVin(cp,eval,tx,1,2,1,prevagreementtxid,globalCCaddress,prevdeposit) == false)
 						return (false);
 					
-					else if (ValidateNormalVins(eval,tx,3) == 0)
+					else if (ValidateNormalVins(eval,tx,3) == false)
 						return (false);
 				}
 				// Accept transactions shouldn't have any additional CC inputs.
-				else if (ValidateNormalVins(eval,tx,1) == 0)
+				else if (ValidateNormalVins(eval,tx,1) == false)
 					return (false);
 				
 				// vout.0: CC event logger to global pubkey / offertxid-pubkey 1of2 CC address
-				else if (ConstrainVoutV2(tx.vout[0], 1, eventCCaddress, CC_MARKER_VALUE, EVAL_AGREEMENTS) == 0)
+				else if (ConstrainVoutV2(tx.vout[0], 1, eventCCaddress, CC_MARKER_VALUE, EVAL_AGREEMENTS) == false)
 					return eval->Invalid("vout.0 must be CC event logger to global pubkey / offertxid-pubkey 1of2 CC address!");
 
 				// vout.1: deposit / marker to global pubkey
 				// Check if vout1 has correct value assigned. (deposit value specified in offer)
-				else if (ConstrainVoutV2(tx.vout[1], 1, globalCCaddress, deposit, EVAL_AGREEMENTS) == 0)
+				else if (ConstrainVoutV2(tx.vout[1], 1, globalCCaddress, deposit, EVAL_AGREEMENTS) == false)
 					return eval->Invalid("vout.1 must be deposit to agreements global CC address!");
 
 				// vout.2: normal payment to offer's srckey (if specified payment > 0)
 				// Check if vout2 has correct value assigned. (payment value specified in offer)
-				if (payment > 0 && ConstrainVoutV2(tx.vout[2], 0, srcnormaladdress, payment, EVAL_AGREEMENTS) == 0)
+				if (payment > 0 && ConstrainVoutV2(tx.vout[2], 0, srcnormaladdress, payment, EVAL_AGREEMENTS) == false)
 					return eval->Invalid("vout.2 must be payment to offer's srckey!");
 				
 				break;
@@ -846,7 +846,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Agreement closure transaction has invalid or unconfirmed offer transaction!");
 				
 				// If offer to close (not the offer accepted by agreementtxid!) has AOF_AWAITNOTARIES set, make sure this offer is notarised.
-				else if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(offertxid) == 0)
+				else if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(offertxid) == false)
                     return eval->Invalid("Agreement closure transaction is attempting to accept an unnotarised offer with AOF_AWAITNOTARIES flag!");
 
 				// Check if the offer hasn't expired. (aka been created longer than AGREEMENTCC_EXPIRYDATE ago)
@@ -907,7 +907,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				if (!(srckey == prevofferorkey && destkey == prevsignerkey) && !(srckey == prevsignerkey && destkey == prevofferorkey))
 					return eval->Invalid("Agreement closure transaction has offer source/destination pubkeys mismatch with offeror/signer pubkeys of previous agreement!");
 
-				prevoffertxidpk = CCtxidaddr(txidaddr,prevoffertxid);
+				prevoffertxidpk = CCtxidaddr_tweak(txidaddr,prevoffertxid);
 				GetCCaddress1of2(cp, preveventCCaddress, Agreementspk, prevoffertxidpk, true);
 
 				// Check vout boundaries for agreement creation transactions.
@@ -916,7 +916,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 
 				// vin.0: CC input from offer vout.0
 				// Verify that vin.0 was signed correctly.
-				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,offertxid,globalCCaddress,CC_MARKER_VALUE) == 0)
+				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,offertxid,globalCCaddress,CC_MARKER_VALUE) == false)
 					return (false);
 
 				// vin.1: CC input from latest agreement event vout.0
@@ -943,22 +943,22 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 						break;
 				}
 				// If the offer accepted by agreementtxid has AOF_AWAITNOTARIES set, make sure latest event is notarised.
-				if (prevofferflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(tx.vin[1].prevout.hash) == 0)
+				if (prevofferflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(tx.vin[1].prevout.hash) == false)
 					return eval->Invalid("Agreement closure transaction is attempting to spend an unnotarised previous event of an agreement with AOF_AWAITNOTARIES flag!");
-				else if (ValidateAgreementsVin(cp,eval,tx,1,1,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == 0)
+				else if (ValidateAgreementsVin(cp,eval,tx,1,1,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == false)
 					return (false);
 			
 				// vin.2: deposit from agreement
-				else if (ValidateAgreementsVin(cp,eval,tx,1,2,1,agreementtxid,globalCCaddress,prevdeposit) == 0)
+				else if (ValidateAgreementsVin(cp,eval,tx,1,2,1,agreementtxid,globalCCaddress,prevdeposit) == false)
 					return (false);
 				
 				// Agreement closure transactions shouldn't have any additional CC inputs.
-				else if (ValidateNormalVins(eval,tx,3) == 0)
+				else if (ValidateNormalVins(eval,tx,3) == false)
 					return (false);
 				
 				// vout.0: normal payment to offer's srckey (if specified payment > 0)
 				// Check if vout0 has correct value assigned. (offerorpayout value)
-				if (payment > 0 && ConstrainVoutV2(tx.vout[0], 0, srcnormaladdress, offerorpayout, EVAL_AGREEMENTS) == 0)
+				if (payment > 0 && ConstrainVoutV2(tx.vout[0], 0, srcnormaladdress, offerorpayout, EVAL_AGREEMENTS) == false)
 					return eval->Invalid("vout.0 must be payment to offer's srckey!");
 				
 				break;
@@ -1025,7 +1025,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Dispute transaction has agreement with invalid disputefee defined!");
 				
 				Agreementspk = GetUnspendable(cp, NULL);
-				offertxidpk = CCtxidaddr(txidaddr,offertxid);
+				offertxidpk = CCtxidaddr_tweak(txidaddr,offertxid);
 				GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 
 				// Check vout boundaries for agreement dispute transactions.
@@ -1056,17 +1056,17 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 						break;
 				}
 				// If the offer accepted by agreementtxid has AOF_AWAITNOTARIES set, make sure latest event is notarised.
-				if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(tx.vin[0].prevout.hash) == 0)
+				if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(tx.vin[0].prevout.hash) == false)
 					return eval->Invalid("Dispute transaction is attempting to spend an unnotarised previous event of an agreement with AOF_AWAITNOTARIES flag!");
-				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,zeroid,eventCCaddress,CC_MARKER_VALUE) == 0)
+				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,zeroid,eventCCaddress,CC_MARKER_VALUE) == false)
 					return (false);
 				
 				// Agreement dispute transactions shouldn't have any additional CC inputs.
-				else if (ValidateNormalVins(eval,tx,1) == 0)
+				else if (ValidateNormalVins(eval,tx,1) == false)
 					return (false);
 				
 				// vout.0: CC event logger w/ dispute fee to global pubkey / offertxid-pubkey 1of2 CC address
-				else if (ConstrainVoutV2(tx.vout[0], 1, eventCCaddress, disputefee, EVAL_AGREEMENTS) == 0)
+				else if (ConstrainVoutV2(tx.vout[0], 1, eventCCaddress, disputefee, EVAL_AGREEMENTS) == false)
 					return eval->Invalid("vout.0 must be CC event logger with disputefee to global pubkey / offertxid-pubkey 1of2 CC address!");
 				
 				break;
@@ -1106,7 +1106,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				refagreementtxid, deposit, payment, disputefee, agreementname, agreementmemo, unlockconds);
 
 				// If the offer accepted by agreementtxid has AOF_AWAITNOTARIES set, make sure the dispute is notarised.
-				if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(disputetxid) == 0)
+				if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(disputetxid) == false)
 					return eval->Invalid("Dispute cancel transaction is attempting to spend dispute of an agreement with AOF_AWAITNOTARIES flag!");
 				
 				// Checking if cancellerkey is a pubkey.
@@ -1132,7 +1132,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Cancel memo in dispute cancel transaction exceeds max character limit!");
 				
 				Agreementspk = GetUnspendable(cp, NULL);
-				offertxidpk = CCtxidaddr(txidaddr,offertxid);
+				offertxidpk = CCtxidaddr_tweak(txidaddr,offertxid);
 				GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 
 				// Check vout boundaries for agreement dispute transactions.
@@ -1141,15 +1141,15 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 
 				// vin.0: CC input from latest agreement event vout.0 + disputefee
 				// For dispute cancels, we need to make sure that the previous agreement event is in fact the referenced dispute.
-				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,disputetxid,eventCCaddress,disputefee) == 0)
+				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,disputetxid,eventCCaddress,disputefee) == false)
 					return (false);
 				
 				// Agreement dispute transactions shouldn't have any additional CC inputs.
-				else if (ValidateNormalVins(eval,tx,1) == 0)
+				else if (ValidateNormalVins(eval,tx,1) == false)
 					return (false);
 				
 				// vout.0: CC event logger to global pubkey / offertxid-pubkey 1of2 CC address
-				else if (ConstrainVoutV2(tx.vout[0], 1, eventCCaddress, CC_MARKER_VALUE, EVAL_AGREEMENTS) == 0)
+				else if (ConstrainVoutV2(tx.vout[0], 1, eventCCaddress, CC_MARKER_VALUE, EVAL_AGREEMENTS) == false)
 					return eval->Invalid("vout.0 must be CC event logger to global pubkey / offertxid-pubkey 1of2 CC address!");
 				
 				break;
@@ -1187,7 +1187,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				refagreementtxid, deposit, payment, disputefee, agreementname, agreementmemo, unlockconds);
 
 				// If the offer accepted by agreementtxid has AOF_AWAITNOTARIES set, make sure the dispute is notarised.
-				if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(disputetxid) == 0)
+				if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(disputetxid) == false)
 					return eval->Invalid("Dispute resolution transaction is attempting to spend dispute of an agreement with AOF_AWAITNOTARIES flag!");
 
 				// Determine who the claimant/defendant is.
@@ -1202,7 +1202,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				if (CArbitratorPubkey.IsValid())
 				{
 					// arbkey is a pubkey, check if any normal inputs were signed by this pubkey.
-					if (TotalPubkeyNormalInputs(eval,tx,CArbitratorPubkey) == 0)
+					if (TotalPubkeyNormalInputs(eval,tx,CArbitratorPubkey) == false)
 						return eval->Invalid("Found no normal inputs in dispute resolution transaction signed by arbitrator pubkey!");
 				}
 				else
@@ -1239,7 +1239,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Resolution memo in dispute resolution transaction exceeds max character limit!");
 				
 				Agreementspk = GetUnspendable(cp, NULL);
-				offertxidpk = CCtxidaddr(txidaddr,offertxid);
+				offertxidpk = CCtxidaddr_tweak(txidaddr,offertxid);
 				GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 				Getscriptaddress(claimantnormaladdress,CScript() << ParseHex(HexStr(CClaimantPubkey)) << OP_CHECKSIG);
 				Getscriptaddress(defendantnormaladdress,CScript() << ParseHex(HexStr(CDefendantPubkey)) << OP_CHECKSIG);
@@ -1250,30 +1250,30 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				
 				// vin.0: CC input from latest agreement event vout.0 + disputefee
 				// For dispute resolutions, we need to make sure that the previous agreement event is in fact the referenced dispute.
-				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,disputetxid,eventCCaddress,disputefee) == 0)
+				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,disputetxid,eventCCaddress,disputefee) == false)
 					return (false);
 				
 				// vin.1: deposit from agreement
-				else if (ValidateAgreementsVin(cp,eval,tx,1,1,1,agreementtxid,globalCCaddress,deposit) == 0)
+				else if (ValidateAgreementsVin(cp,eval,tx,1,1,1,agreementtxid,globalCCaddress,deposit) == false)
 					return (false);
 				
 				// Agreement dispute resolution transactions shouldn't have any additional CC inputs.
-				else if (ValidateNormalVins(eval,tx,2) == 0)
+				else if (ValidateNormalVins(eval,tx,2) == false)
 					return (false);
 				
 				if (claimantpayout > 0)
 				{
 					// vout.0: normal payout to dispute's claimant (if specified payout > 0)
 					// Check if vout0 has correct value assigned. (claimantpayout value)
-					if (ConstrainVoutV2(tx.vout[0], 0, claimantnormaladdress, claimantpayout, EVAL_AGREEMENTS) == 0)
+					if (ConstrainVoutV2(tx.vout[0], 0, claimantnormaladdress, claimantpayout, EVAL_AGREEMENTS) == false)
 						return eval->Invalid("vout.0 must be payment to dispute's claimantkey!");
 					
 					// vout.1: normal payout to dispute's defendant (if specified payout > 0)
 					// Check if vout1 has correct value assigned. (defendantpayout value)
-					else if (defendantpayout > 0 && ConstrainVoutV2(tx.vout[1], 0, defendantnormaladdress, defendantpayout, EVAL_AGREEMENTS) == 0)
+					else if (defendantpayout > 0 && ConstrainVoutV2(tx.vout[1], 0, defendantnormaladdress, defendantpayout, EVAL_AGREEMENTS) == false)
 						return eval->Invalid("vout.1 must be payment to dispute's defendantkey!");
 				}
-				else if (ConstrainVoutV2(tx.vout[0], 0, defendantnormaladdress, defendantpayout, EVAL_AGREEMENTS) == 0)
+				else if (ConstrainVoutV2(tx.vout[0], 0, defendantnormaladdress, defendantpayout, EVAL_AGREEMENTS) == false)
 					return eval->Invalid("vout.0 must be payment to dispute's defendantkey if claimantpayout = 0!");
 
 				// Note: at this point the collected dispute fee goes back to the arbitrator in the form of change, 
@@ -1374,7 +1374,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Invalid offerorpayout and signerpayout in unlock transaction!");
 				
 				Agreementspk = GetUnspendable(cp, NULL);
-				offertxidpk = CCtxidaddr(txidaddr,offertxid);
+				offertxidpk = CCtxidaddr_tweak(txidaddr,offertxid);
 				GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 				Getscriptaddress(offerornormaladdress,CScript() << ParseHex(HexStr(COfferorPubkey)) << OP_CHECKSIG);
 				Getscriptaddress(signernormaladdress,CScript() << ParseHex(HexStr(CSignerPubkey)) << OP_CHECKSIG);
@@ -1406,33 +1406,33 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 							return eval->Invalid("Unlock transaction is attempting to spend a previous event that references the wrong previous agreement!");
 						break;
 				}
-				// If the offer accepted by agreementtxid has AOF_AWAITNOTARIES set, make sure the dispute is notarised.
-				if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(tx.vin[0].prevout.hash) == 0)
+				// If the offer accepted by agreementtxid has AOF_AWAITNOTARIES set, make sure the agreement is notarised.
+				if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(tx.vin[0].prevout.hash) == false)
 					return eval->Invalid("Unlock transaction is attempting to spend previous event of an agreement with AOF_AWAITNOTARIES flag!");
-				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == 0)
+				else if (ValidateAgreementsVin(cp,eval,tx,1,0,0,zeroid,preveventCCaddress,CC_MARKER_VALUE) == false)
 					return (false);
 			
 				// vin.1: deposit from agreement
-				else if (ValidateAgreementsVin(cp,eval,tx,1,1,1,agreementtxid,globalCCaddress,deposit) == 0)
+				else if (ValidateAgreementsVin(cp,eval,tx,1,1,1,agreementtxid,globalCCaddress,deposit) == false)
 					return (false);
 
 				// Agreement unlock transactions shouldn't have any additional CC inputs.
-				else if (ValidateNormalVins(eval,tx,2) == 0)
+				else if (ValidateNormalVins(eval,tx,2) == false)
 					return (false);
 				
 				if (offerorpayout > 0)
 				{
 					// vout.0: normal payout to dispute's offeror (if specified payout > 0)
 					// Check if vout0 has correct value assigned. (offerorpayout value)
-					if (ConstrainVoutV2(tx.vout[0], 0, offerornormaladdress, offerorpayout, EVAL_AGREEMENTS) == 0)
+					if (ConstrainVoutV2(tx.vout[0], 0, offerornormaladdress, offerorpayout, EVAL_AGREEMENTS) == false)
 						return eval->Invalid("vout.0 must be payment to agreement's offerorkey!");
 					
 					// vout.1: normal payout to dispute's signer (if specified payout > 0)
 					// Check if vout1 has correct value assigned. (signerpayout value)
-					else if (signerpayout > 0 && ConstrainVoutV2(tx.vout[1], 0, signernormaladdress, signerpayout, EVAL_AGREEMENTS) == 0)
+					else if (signerpayout > 0 && ConstrainVoutV2(tx.vout[1], 0, signernormaladdress, signerpayout, EVAL_AGREEMENTS) == false)
 						return eval->Invalid("vout.1 must be payment to agreement's signerkey!");
 				}
-				else if (ConstrainVoutV2(tx.vout[0], 0, signernormaladdress, signerpayout, EVAL_AGREEMENTS) == 0)
+				else if (ConstrainVoutV2(tx.vout[0], 0, signernormaladdress, signerpayout, EVAL_AGREEMENTS) == false)
 					return eval->Invalid("vout.0 must be payment to agreement's signerkey if offerorpayout = 0!");
 				
 				break;
@@ -1476,9 +1476,9 @@ static uint8_t FindLatestAgreementEvent(uint256 agreementtxid, struct CCcontract
 		// A valid event baton vout for any type of event must be vout.0, and is sent to a special address created from the global CC pubkey, 
 		// and a txid-pubkey created from the agreement's offertxid.
 		// To check if a vout is valid, we'll need to get this address first.
-		// This address can be constructed out of the Agreements global pubkey and the prevoffertxid-pubkey using CCtxidaddr.
+		// This address can be constructed out of the Agreements global pubkey and the prevoffertxid-pubkey using CCtxidaddr_tweak.
 		Agreementspk = GetUnspendable(cp, NULL);
-		offertxidpk = CCtxidaddr(txidaddr,offertxid);
+		offertxidpk = CCtxidaddr_tweak(txidaddr,offertxid);
 		GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 		
 		// Iterate through vout0 batons while we're finding valid Agreements transactions that spent the last baton.
@@ -1555,7 +1555,7 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	{
 		// Make sure referenced agreement actually exists and is valid.
 		// NOTE: unnecessary to check for confirmation here, since refagreementtxid in offers to create new agreements don't really affect consensus logic.
-		if (myGetTransactionCCV2(cp,refagreementtxid,refagreementtx,hashBlock) == 0 || refagreementtx.vout.size() == 0 ||
+		if (myGetTransactionCCV2(cp,refagreementtxid,refagreementtx,hashBlock) == false || refagreementtx.vout.size() == 0 ||
 		DecodeAgreementOpRet(refagreementtx.vout.back().scriptPubKey) != 'c')
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Reference agreement transaction not found or is invalid");
 
@@ -1595,12 +1595,12 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 	opret = EncodeAgreementOfferOpRet(AGREEMENTCC_VERSION,std::vector<uint8_t>(mypk.begin(),mypk.end()),destkey,arbkey,offerflags,refagreementtxid,
 	deposit,payment,disputefee,agreementname,agreementmemo,unlockconds);
 
-	if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 5, pk.IsValid()) > 0) // vin.*: normal input
+	if (AddNormalinputsRemote(mtx, mypk, txfee + CC_MARKER_VALUE, CC_MAXVINS) > 0) // vin.*: normal input
 	{
 		// vout.0: CC event logger/marker to global CC address
 		mtx.vout.push_back(MakeCC1voutMixed(cp->evalcode, CC_MARKER_VALUE, GetUnspendable(cp, NULL)));
 
-		rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+		rawtx = FinalizeCCV2Tx(pk.IsValid(),FINALIZECCTX_NO_CHANGE_WHEN_DUST,cp,mtx,mypk,txfee,opret);
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
@@ -1688,7 +1688,7 @@ uint8_t offerflags, int64_t deposit, int64_t payment, int64_t disputefee, std::v
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement transaction id undefined");
 
 	// Make sure previous agreement actually exists and is valid.
-	else if (myGetTransactionCCV2(cp,prevagreementtxid,prevagreementtx,hashBlock) == 0 || prevagreementtx.vout.size() == 0 ||
+	else if (myGetTransactionCCV2(cp,prevagreementtxid,prevagreementtx,hashBlock) == false || prevagreementtx.vout.size() == 0 ||
 	DecodeAgreementOpRet(prevagreementtx.vout.back().scriptPubKey) != 'c')
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement transaction not found or is invalid");
 	
@@ -1758,12 +1758,12 @@ uint8_t offerflags, int64_t deposit, int64_t payment, int64_t disputefee, std::v
 	opret = EncodeAgreementOfferOpRet(AGREEMENTCC_VERSION,std::vector<uint8_t>(mypk.begin(),mypk.end()),destkey,arbkey,offerflags,prevagreementtxid,
 	deposit,payment,disputefee,agreementname,agreementmemo,unlockconds);
 
-	if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 5, pk.IsValid()) > 0) // vin.*: normal input
+	if (AddNormalinputsRemote(mtx, mypk, txfee + CC_MARKER_VALUE, CC_MAXVINS) > 0) // vin.*: normal input
 	{
 		// vout.0: CC event logger/marker to global CC address
 		mtx.vout.push_back(MakeCC1voutMixed(cp->evalcode, CC_MARKER_VALUE, GetUnspendable(cp, NULL)));
 
-		rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+		rawtx = FinalizeCCV2Tx(pk.IsValid(),FINALIZECCTX_NO_CHANGE_WHEN_DUST,cp,mtx,mypk,txfee,opret);
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
@@ -1849,7 +1849,7 @@ UniValue AgreementClose(const CPubKey& pk, uint64_t txfee, uint256 prevagreement
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement transaction id undefined");
 
 	// Make sure previous agreement actually exists and is valid.
-	else if (myGetTransactionCCV2(cp,prevagreementtxid,prevagreementtx,hashBlock) == 0 || prevagreementtx.vout.size() == 0 ||
+	else if (myGetTransactionCCV2(cp,prevagreementtxid,prevagreementtx,hashBlock) == false || prevagreementtx.vout.size() == 0 ||
 	DecodeAgreementOpRet(prevagreementtx.vout.back().scriptPubKey) != 'c')
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement transaction not found or is invalid");
 	
@@ -1904,12 +1904,12 @@ UniValue AgreementClose(const CPubKey& pk, uint64_t txfee, uint256 prevagreement
 	opret = EncodeAgreementOfferOpRet(AGREEMENTCC_VERSION,std::vector<uint8_t>(mypk.begin(),mypk.end()),destkey,prevarbkey,offerflags,prevagreementtxid,
 	deposit,payment,disputefee,agreementname,agreementmemo,(std::vector<std::vector<uint8_t>>)0);
 
-	if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 5, pk.IsValid()) > 0) // vin.*: normal input
+	if (AddNormalinputsRemote(mtx, mypk, txfee + CC_MARKER_VALUE, CC_MAXVINS) > 0) // vin.*: normal input
 	{
 		// vout.0: CC event logger/marker to global CC address
 		mtx.vout.push_back(MakeCC1voutMixed(cp->evalcode, CC_MARKER_VALUE, GetUnspendable(cp, NULL)));
 
-		rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+		rawtx = FinalizeCCV2Tx(pk.IsValid(),FINALIZECCTX_NO_CHANGE_WHEN_DUST,cp,mtx,mypk,txfee,opret);
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
@@ -1962,7 +1962,7 @@ UniValue AgreementStopOffer(const CPubKey& pk,uint64_t txfee,uint256 offertxid,s
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 
 	// Find the specified offer transaction, extract its data.
-	if (myGetTransactionCCV2(cp,offertxid,offertx,hashBlock) == 0 || offertx.vout.size() == 0 ||
+	if (myGetTransactionCCV2(cp,offertxid,offertx,hashBlock) == false || offertx.vout.size() == 0 ||
 	DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, srckey, destkey, arbkey, offerflags) != 'o')
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified offer transaction not found or is invalid");
 	else if (hashBlock.IsNull())
@@ -1973,7 +1973,7 @@ UniValue AgreementStopOffer(const CPubKey& pk,uint64_t txfee,uint256 offertxid,s
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified offer has been accepted or cancelled already");
 	
 	// If offer has AOF_AWAITNOTARIES set, it must be notarised.
-	else if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(offertxid) == 0)
+	else if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(offertxid) == false)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified offer must be notarised due to having mandatory notarisation flag set");
 
 	CSourcePubkey = pubkey2pk(srckey);
@@ -1995,9 +1995,9 @@ UniValue AgreementStopOffer(const CPubKey& pk,uint64_t txfee,uint256 offertxid,s
 
 	// vin.0: CC input from offer vout.0
 	mtx.vin.push_back(CTxIn(offertxid,0,CScript()));
-	if (AddNormalinputs(mtx, mypk, txfee, 5, pk.IsValid()) > 0) // vin.1+*: normal input
+	if (AddNormalinputsRemote(mtx, mypk, txfee, CC_MAXVINS-1) > 0) // vin.1+*: normal input
 	{
-		rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+		rawtx = FinalizeCCV2Tx(pk.IsValid(),FINALIZECCTX_NO_CHANGE_WHEN_DUST,cp,mtx,mypk,txfee,opret);
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
@@ -2045,7 +2045,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 
 	// Find the specified offer transaction, extract its data.
-	if (myGetTransactionCCV2(cp,offertxid,offertx,hashBlock) == 0 || offertx.vout.size() == 0 ||
+	if (myGetTransactionCCV2(cp,offertxid,offertx,hashBlock) == false || offertx.vout.size() == 0 ||
 	DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey,version,srckey,destkey,arbkey,offerflags,prevagreementtxid,deposit,
 	payment,disputefee,agreementname,agreementmemo) != 'o')
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified offer transaction not found or is invalid");
@@ -2061,7 +2061,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified offer is expired (older than 90 days)");
 	
 	// If offer has AOF_AWAITNOTARIES set, it must be notarised.
-	else if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(offertxid) == 0)
+	else if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(offertxid) == false)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified offer must be notarised due to having mandatory notarisation flag set");
 	
 	CSourcePubkey = pubkey2pk(srckey);
@@ -2085,7 +2085,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 	if (offerflags & AOF_AMENDMENT)
 	{
 		// Find the previous agreement transaction, extract its data.
-		if (myGetTransactionCCV2(cp,prevagreementtxid,prevagreementtx,hashBlock) == 0 || prevagreementtx.vout.size() == 0 ||
+		if (myGetTransactionCCV2(cp,prevagreementtxid,prevagreementtx,hashBlock) == false || prevagreementtx.vout.size() == 0 ||
 		DecodeAgreementOpRet(prevagreementtx.vout.back().scriptPubKey) != 'c')
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Previous agreement transaction not found or is invalid");
 		else if (hashBlock.IsNull())
@@ -2109,7 +2109,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 		DecodeAgreementOfferOpRet(prevoffertx.vout.back().scriptPubKey, version, prevofferorkey, prevsignerkey, prevarbkey, prevofferflags);
 
 		// If prevofferflags has AOF_AWAITNOTARIES set, preveventtxid must be notarised.
-		if (prevofferflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(preveventtxid) == 0)
+		if (prevofferflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(preveventtxid) == false)
 		{
 			if (preveventtxid == prevagreementtxid)
 				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement must be notarised due to having mandatory notarisation flag set");
@@ -2126,8 +2126,8 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 		prevdeposit = prevagreementtx.vout[1].nValue;
 
 		// We'll need to spend the event logger of the previous agreement, to do that we need to get its special event 1of2 CC address.
-		// This address can be constructed out of the Agreements global pubkey and the prevoffertxid-pubkey using CCtxidaddr.
-		prevoffertxidpk = CCtxidaddr(txidaddr,prevoffertxid);
+		// This address can be constructed out of the Agreements global pubkey and the prevoffertxid-pubkey using CCtxidaddr_tweak.
+		prevoffertxidpk = CCtxidaddr_tweak(txidaddr,prevoffertxid);
 		GetCCaddress1of2(cp, preveventCCaddress, Agreementspk, prevoffertxidpk, true);
 		
 		// If AOF_CLOSEEXISTING is also set, it means we're closing the specified agreement.
@@ -2146,17 +2146,17 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 			mtx.vin.push_back(CTxIn(preveventtxid,0,CScript()));
 			// vin.2: deposit from previous agreement
 			mtx.vin.push_back(CTxIn(prevagreementtxid,1,CScript()));
-			CCaddr1of2set(cp,Agreementspk,prevoffertxidpk,cp->CCpriv,preveventCCaddress);
+			//CCaddr1of2set(cp,Agreementspk,prevoffertxidpk,cp->CCpriv,preveventCCaddress);
 			CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,prevoffertxidpk));
 			CCAddVintxCond(cp,cond,cp->CCpriv); 
 			
-			if (AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE+amount, 60, pk.IsValid()) > 0) // vin.3+*: normal input
+			if (AddNormalinputsRemote(mtx, mypk, txfee+CC_MARKER_VALUE+amount, CC_MAXVINS-3) > 0) // vin.3+*: normal input
 			{
 				// vout.0: normal payment to offer's srckey (if specified payment > 0)
 				if (payment > 0)
 					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CSourcePubkey)) << OP_CHECKSIG));
 
-				rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+				rawtx = FinalizeCCV2Tx(pk.IsValid(),FINALIZECCTX_NO_CHANGE_WHEN_DUST,cp,mtx,mypk,txfee,opret);
 			}
 			else
 				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
@@ -2192,15 +2192,15 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 			mtx.vin.push_back(CTxIn(preveventtxid,0,CScript()));
 			// vin.2: deposit from previous agreement
 			mtx.vin.push_back(CTxIn(prevagreementtxid,1,CScript()));
-			CCaddr1of2set(cp,Agreementspk,prevoffertxidpk,cp->CCpriv,preveventCCaddress);
+			//CCaddr1of2set(cp,Agreementspk,prevoffertxidpk,cp->CCpriv,preveventCCaddress);
 			CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,prevoffertxidpk));
 			CCAddVintxCond(cp,cond,cp->CCpriv); 
 			
-			if (AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE+amount, 60, pk.IsValid()) > 0) // vin.3+*: normal input
+			if (AddNormalinputsRemote(mtx, mypk, txfee+CC_MARKER_VALUE+amount, CC_MAXVINS-3) > 0) // vin.3+*: normal input
 			{
 				// Constructing a special event 1of2 CC address out of Agreements global pubkey and txid-pubkey created out of accepted offer txid.
 				// This way we avoid cluttering up the UTXO list for the global pubkey, allowing for easier marker management.
-				offertxidpk = CCtxidaddr(txidaddr,offertxid);
+				offertxidpk = CCtxidaddr_tweak(txidaddr,offertxid);
 
 				// vout.0: CC event logger to global pubkey / offertxid-pubkey 1of2 CC address
 				mtx.vout.push_back(MakeCC1of2voutMixed(cp->evalcode, CC_MARKER_VALUE, Agreementspk, offertxidpk));
@@ -2210,7 +2210,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 				if (payment > 0)
 					mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CSourcePubkey)) << OP_CHECKSIG));
 
-				rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+				rawtx = FinalizeCCV2Tx(pk.IsValid(),FINALIZECCTX_NO_CHANGE_WHEN_DUST,cp,mtx,mypk,txfee,opret);
 			}
 			else
 				CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
@@ -2237,11 +2237,11 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 	// vin.0: CC input from offer vout.0 
 	mtx.vin.push_back(CTxIn(offertxid,0,CScript()));
 	
-	if (AddNormalinputs(mtx, mypk, txfee+CC_MARKER_VALUE+deposit+payment, 60, pk.IsValid()) > 0) // vin.1+*: normal input
+	if (AddNormalinputsRemote(mtx, mypk, txfee+CC_MARKER_VALUE+deposit+payment, CC_MAXVINS-1) > 0) // vin.1+*: normal input
 	{
 		// Constructing a special event 1of2 CC address out of Agreements global pubkey and txid-pubkey created out of accepted offer txid.
 		// This way we avoid cluttering up the UTXO list for the global pubkey, allowing for easier marker management.
-		offertxidpk = CCtxidaddr(txidaddr,offertxid);
+		offertxidpk = CCtxidaddr_tweak(txidaddr,offertxid);
 
 		// vout.0: CC event logger to global pubkey / offertxid-pubkey 1of2 CC address
 		mtx.vout.push_back(MakeCC1of2voutMixed(cp->evalcode, CC_MARKER_VALUE, Agreementspk, offertxidpk));
@@ -2251,7 +2251,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 		if (payment > 0)
 			mtx.vout.push_back(CTxOut(payment, CScript() << ParseHex(HexStr(CSourcePubkey)) << OP_CHECKSIG));
 
-		rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+		rawtx = FinalizeCCV2Tx(pk.IsValid(),FINALIZECCTX_NO_CHANGE_WHEN_DUST,cp,mtx,mypk,txfee,opret);
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
@@ -2295,7 +2295,7 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 
 	// Find the agreement transaction, extract its data.
-	if (myGetTransactionCCV2(cp,agreementtxid,agreementtx,hashBlock) == 0 || agreementtx.vout.size() == 0 ||
+	if (myGetTransactionCCV2(cp,agreementtxid,agreementtx,hashBlock) == false || agreementtx.vout.size() == 0 ||
 	DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement transaction not found or is invalid");
 	else if (hashBlock.IsNull())
@@ -2320,7 +2320,7 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 	payment, disputefee, agreementname, agreementmemo);
 
 	// If offerflags has AOF_AWAITNOTARIES set, eventtxid must be notarised.
-	if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(eventtxid) == 0)
+	if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(eventtxid) == false)
 	{
 		if (eventtxid == agreementtxid)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement must be notarised due to having mandatory notarisation flag set");
@@ -2356,25 +2356,25 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Agreement has invalid disputefee defined");
 	
 	// We'll need to spend the event logger of the agreement, to do that we need to get its special event 1of2 CC address.
-	// This address can be constructed out of the Agreements global pubkey and the offertxid-pubkey using CCtxidaddr.
+	// This address can be constructed out of the Agreements global pubkey and the offertxid-pubkey using CCtxidaddr_tweak.
 	Agreementspk = GetUnspendable(cp, NULL);
-	offertxidpk = CCtxidaddr(txidaddr,offertxid);
+	offertxidpk = CCtxidaddr_tweak(txidaddr,offertxid);
 	GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 	
 	opret = EncodeAgreementDisputeOpRet(AGREEMENTCC_VERSION,agreementtxid,std::vector<uint8_t>(mypk.begin(),mypk.end()),disputeflags,disputememo);
 
 	// vin.0: CC input from latest previous agreement event vout.0
 	mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
-	CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+	//CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
 	CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
 	CCAddVintxCond(cp,cond,cp->CCpriv); 
 	
-	if (AddNormalinputs(mtx, mypk, txfee + disputefee, 60, pk.IsValid()) > 0) // vin.1+*: normal input
+	if (AddNormalinputsRemote(mtx, mypk, txfee + disputefee, CC_MAXVINS-1) > 0) // vin.1+*: normal input
 	{
 		// vout.0: CC event logger w/ dispute fee to global pubkey / offertxid-pubkey 1of2 CC address
 		mtx.vout.push_back(MakeCC1of2voutMixed(cp->evalcode, disputefee, Agreementspk, offertxidpk));
 
-		rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+		rawtx = FinalizeCCV2Tx(pk.IsValid(),FINALIZECCTX_NO_CHANGE_WHEN_DUST,cp,mtx,mypk,txfee,opret);
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
@@ -2420,7 +2420,7 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 	
 	// Find the dispute transaction, extract its data.
-	if (myGetTransactionCCV2(cp,disputetxid,disputetx,hashBlock) == 0 || disputetx.vout.size() == 0 ||
+	if (myGetTransactionCCV2(cp,disputetxid,disputetx,hashBlock) == false || disputetx.vout.size() == 0 ||
 	DecodeAgreementDisputeOpRet(disputetx.vout.back().scriptPubKey,version,agreementtxid,claimantkey,disputeflags,disputememo) != 'd')
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified dispute transaction not found or is invalid");
 	else if (hashBlock.IsNull())
@@ -2431,7 +2431,7 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified dispute transaction is marked as final, can't cancel");
 	
 	// Find the agreement transaction, extract its data.
-	if (myGetTransactionCCV2(cp,agreementtxid,agreementtx,hashBlock) == 0 || agreementtx.vout.size() == 0 ||
+	if (myGetTransactionCCV2(cp,agreementtxid,agreementtx,hashBlock) == false || agreementtx.vout.size() == 0 ||
 	DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Agreement transaction referenced by dispute not found or is invalid");
 	// NOTE: no need to check if agreement's confirmed here, that should already be done at the dispute tx creation stage
@@ -2446,7 +2446,7 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 	payment, disputefee, agreementname, agreementmemo);
 
 	// If offerflags has AOF_AWAITNOTARIES set, disputetxid must be notarised.
-	if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(disputetxid) == 0)
+	if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(disputetxid) == false)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified dispute must be notarised due to having mandatory notarisation flag set");
 	
 	COfferorPubkey = pubkey2pk(offerorkey);
@@ -2462,25 +2462,25 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Dispute cancel memo must be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
 	
 	// We'll need to spend the event logger of the agreement, to do that we need to get its special event 1of2 CC address.
-	// This address can be constructed out of the Agreements global pubkey and the offertxid-pubkey using CCtxidaddr.
+	// This address can be constructed out of the Agreements global pubkey and the offertxid-pubkey using CCtxidaddr_tweak.
 	Agreementspk = GetUnspendable(cp, NULL);
-	offertxidpk = CCtxidaddr(txidaddr,offertxid);
+	offertxidpk = CCtxidaddr_tweak(txidaddr,offertxid);
 	GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 
 	opret = EncodeAgreementDisputeCancelOpRet(AGREEMENTCC_VERSION,agreementtxid,disputetxid,std::vector<uint8_t>(mypk.begin(),mypk.end()),cancelmemo);
 	
 	// vin.0: CC input from latest agreement dispute vout.0 + dispute fee
 	mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
-	CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+	//CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
 	CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
 	CCAddVintxCond(cp,cond,cp->CCpriv); 
 	
-	if (AddNormalinputs(mtx, mypk, txfee + CC_MARKER_VALUE, 60, pk.IsValid()) > 0) // vin.1+*: normal input
+	if (AddNormalinputsRemote(mtx, mypk, txfee + CC_MARKER_VALUE, CC_MAXVINS-1) > 0) // vin.1+*: normal input
 	{
 		// vout.0: CC event logger to global pubkey / offertxid-pubkey 1of2 CC address
 		mtx.vout.push_back(MakeCC1of2voutMixed(cp->evalcode, CC_MARKER_VALUE, Agreementspk, offertxidpk));
 		
-		rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+		rawtx = FinalizeCCV2Tx(pk.IsValid(),FINALIZECCTX_NO_CHANGE_WHEN_DUST,cp,mtx,mypk,txfee,opret);
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
@@ -2525,14 +2525,14 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 
 	// Find the dispute transaction, extract its data.
-	if (myGetTransactionCCV2(cp,disputetxid,disputetx,hashBlock) == 0 || disputetx.vout.size() == 0 ||
+	if (myGetTransactionCCV2(cp,disputetxid,disputetx,hashBlock) == false || disputetx.vout.size() == 0 ||
 	DecodeAgreementDisputeOpRet(disputetx.vout.back().scriptPubKey,version,agreementtxid,claimantkey,disputeflags,disputememo) != 'd')
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified dispute transaction not found or is invalid");
 	else if (hashBlock.IsNull())
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified dispute transaction is still in mempool");
 
 	// Find the agreement transaction, extract its data.
-	if (myGetTransactionCCV2(cp,agreementtxid,agreementtx,hashBlock) == 0 || agreementtx.vout.size() == 0 ||
+	if (myGetTransactionCCV2(cp,agreementtxid,agreementtx,hashBlock) == false || agreementtx.vout.size() == 0 ||
 	DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Agreement transaction referenced by dispute not found or is invalid");
 	// NOTE: no need to check if agreement's confirmed here, that should already be done at the dispute tx creation stage
@@ -2547,7 +2547,7 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 	payment, disputefee, agreementname, agreementmemo);
 
 	// If offerflags has AOF_AWAITNOTARIES set, disputetxid must be notarised.
-	if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(disputetxid) == 0)
+	if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(disputetxid) == false)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified dispute must be notarised due to having mandatory notarisation flag set");
 	
 	COfferorPubkey = pubkey2pk(offerorkey);
@@ -2579,9 +2579,9 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Dispute resolution memo must be up to "+std::to_string(AGREEMENTCC_MAX_MEMO_SIZE)+" characters");
 	
 	// We'll need to spend the event logger of the agreement, to do that we need to get its special event 1of2 CC address.
-	// This address can be constructed out of the Agreements global pubkey and the offertxid-pubkey using CCtxidaddr.
+	// This address can be constructed out of the Agreements global pubkey and the offertxid-pubkey using CCtxidaddr_tweak.
 	Agreementspk = GetUnspendable(cp, NULL);
-	offertxidpk = CCtxidaddr(txidaddr,offertxid);
+	offertxidpk = CCtxidaddr_tweak(txidaddr,offertxid);
 	GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 
 	opret = EncodeAgreementDisputeResolveOpRet(AGREEMENTCC_VERSION,agreementtxid,disputetxid,claimantpayout,resolutionmemo);
@@ -2590,11 +2590,11 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 	mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
 	// vin.1: deposit from agreement
 	mtx.vin.push_back(CTxIn(agreementtxid,1,CScript()));
-	CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+	//CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
 	CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
 	CCAddVintxCond(cp,cond,cp->CCpriv); 
 	
-	if (AddNormalinputs(mtx, mypk, txfee, 60, pk.IsValid()) > 0) // vin.2+*: normal input
+	if (AddNormalinputsRemote(mtx, mypk, txfee, CC_MAXVINS-2) > 0) // vin.2+*: normal input
 	{
 		// vout.0: normal payout to dispute's claimant (if specified payout > 0)
 		if (claimantpayout > 0)
@@ -2603,7 +2603,7 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 		if (defendantpayout > 0)
 			mtx.vout.push_back(CTxOut(defendantpayout, CScript() << ParseHex(HexStr(CDefendantPubkey)) << OP_CHECKSIG));
 		
-		rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+		rawtx = FinalizeCCV2Tx(pk.IsValid(),FINALIZECCTX_NO_CHANGE_WHEN_DUST,cp,mtx,mypk,txfee,opret);
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
@@ -2653,7 +2653,7 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 	mypk = pk.IsValid() ? pk : pubkey2pk(Mypubkey());
 
 	// Find the agreement transaction, extract its data.
-	if (myGetTransactionCCV2(cp,agreementtxid,agreementtx,hashBlock) == 0 || agreementtx.vout.size() == 0 ||
+	if (myGetTransactionCCV2(cp,agreementtxid,agreementtx,hashBlock) == false || agreementtx.vout.size() == 0 ||
 	DecodeAgreementOpRet(agreementtx.vout.back().scriptPubKey) != 'c')
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement transaction not found or is invalid");
 	else if (hashBlock.IsNull())
@@ -2679,7 +2679,7 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 	// TODO: extract/parse unlockconds from DecodeAgreementOfferOpRet here
 
 	// If offerflags has AOF_AWAITNOTARIES set, eventtxid must be notarised.
-	if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(eventtxid) == 0)
+	if (offerflags & AOF_AWAITNOTARIES && komodo_txnotarizedconfirmed(eventtxid) == false)
 	{
 		if (eventtxid == agreementtxid)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement must be notarised due to having mandatory notarisation flag set");
@@ -2699,7 +2699,7 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Your pubkey is not eligible for unlocking this agreement");
 	
 	// Find the unlock transaction, extract its data.
-	else if (myGetTransactionCCV2(cp,unlocktxid,unlocktx,hashBlock) == 0 || unlocktx.vout.size() == 0)
+	else if (myGetTransactionCCV2(cp,unlocktxid,unlocktx,hashBlock) == false || unlocktx.vout.size() == 0)
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified unlock transaction not found or is invalid");
 	else if (hashBlock.IsNull())
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified unlock transaction is still in mempool");
@@ -2720,9 +2720,9 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified payouts don't match the amount of deposit held in agreement");
 	
 	// We'll need to spend the event logger of the agreement, to do that we need to get its special event 1of2 CC address.
-	// This address can be constructed out of the Agreements global pubkey and the offertxid-pubkey using CCtxidaddr.
+	// This address can be constructed out of the Agreements global pubkey and the offertxid-pubkey using CCtxidaddr_tweak.
 	Agreementspk = GetUnspendable(cp, NULL);
-	offertxidpk = CCtxidaddr(txidaddr,offertxid);
+	offertxidpk = CCtxidaddr_tweak(txidaddr,offertxid);
 	GetCCaddress1of2(cp, eventCCaddress, Agreementspk, offertxidpk, true);
 	
 	opret = EncodeAgreementUnlockOpRet(AGREEMENTCC_VERSION,std::vector<uint8_t>(mypk.begin(),mypk.end()),agreementtxid,unlocktxid);
@@ -2731,11 +2731,11 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 	mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
 	// vin.1: deposit from agreement
 	mtx.vin.push_back(CTxIn(agreementtxid,1,CScript()));
-	CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+	//CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
 	CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
 	CCAddVintxCond(cp,cond,cp->CCpriv); 
 	
-	if (AddNormalinputs(mtx, mypk, txfee + disputefee, 60, pk.IsValid()) > 0) // vin.2+*: normal input
+	if (AddNormalinputsRemote(mtx, mypk, txfee + disputefee, CC_MAXVINS-2) > 0) // vin.2+*: normal input
 	{
 		// vout.0: normal payout to agreement offeror (if specified payout > 0)
 		if (offerorpayout > 0)
@@ -2744,7 +2744,7 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 		if (signerpayout > 0)
 			mtx.vout.push_back(CTxOut(signerpayout, CScript() << ParseHex(HexStr(CSignerPubkey)) << OP_CHECKSIG));
 		
-		rawtx = FinalizeCCV2Tx(pk.IsValid(),0,cp,mtx,mypk,txfee,opret);
+		rawtx = FinalizeCCV2Tx(pk.IsValid(),FINALIZECCTX_NO_CHANGE_WHEN_DUST,cp,mtx,mypk,txfee,opret);
 	}
 	else
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Error adding normal inputs, check if you have available funds or too many small value UTXOs");
@@ -2781,7 +2781,7 @@ UniValue AgreementInfo(const uint256 txid)
 	struct CCcontract_info *cp,C;
 	cp = CCinit(&C,EVAL_AGREEMENTS);
 
-	if (myGetTransactionCCV2(cp,txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
+	if (myGetTransactionCCV2(cp,txid,tx,hashBlock) && (numvouts = tx.vout.size()) > 0 &&
 	(funcid = DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey)) != 0)
 	{
 		result.push_back(Pair("result","success"));
@@ -2860,7 +2860,7 @@ UniValue AgreementInfo(const uint256 txid)
 
 				// Check status and spending txid.
 				if ((retcode = CCgetspenttxid(batontxid,vini,height,txid,0)) == 0 &&
-				myGetTransactionCCV2(cp,batontxid,batontx,hashBlock) != 0 && batontx.vout.size() > 0 &&
+				myGetTransactionCCV2(cp,batontxid,batontx,hashBlock) && batontx.vout.size() > 0 &&
 				(eventfuncid = DecodeAgreementOpRet(batontx.vout.back().scriptPubKey)) != 0)
 				{
 					if (eventfuncid == 'c' || eventfuncid == 't')
@@ -3108,7 +3108,7 @@ UniValue AgreementEventLog(const uint256 agreementtxid,uint8_t flags,int64_t sam
 	struct CCcontract_info *cp,C;
 	cp = CCinit(&C,EVAL_AGREEMENTS);
 
-	if (myGetTransactionCCV2(cp,agreementtxid,agreementtx,hashBlock) != 0 && (numvouts = agreementtx.vout.size()) > 0 &&
+	if (myGetTransactionCCV2(cp,agreementtxid,agreementtx,hashBlock) && (numvouts = agreementtx.vout.size()) > 0 &&
 	DecodeAgreementOpRet(agreementtx.vout[numvouts-1].scriptPubKey) == 'c')
 	{
 		FindLatestAgreementEvent(agreementtxid,cp,eventtxid);
@@ -3123,7 +3123,7 @@ UniValue AgreementEventLog(const uint256 agreementtxid,uint8_t flags,int64_t sam
 			// Iterate through events while we haven't reached samplenum limits yet.
 			while ((total < samplenum || samplenum == 0) &&
 			// Fetch the transaction.
-			myGetTransactionCCV2(cp,batontxid,batontx,hashBlock) != 0 && batontx.vout.size() > 0 &&
+			myGetTransactionCCV2(cp,batontxid,batontx,hashBlock) && batontx.vout.size() > 0 &&
 			// Fetch function id.
 			(funcid = DecodeAgreementOpRet(batontx.vout.back().scriptPubKey)) != 0)
 			{
@@ -3187,14 +3187,14 @@ UniValue AgreementReferences(const uint256 agreementtxid)
 
 	GetCCaddress(cp,AgreementsCCaddr,GetUnspendable(cp, NULL),true);
 
-	if (myGetTransactionCCV2(cp,agreementtxid,agreementtx,hashBlock) != 0 && (numvouts = agreementtx.vout.size()) > 0 &&
+	if (myGetTransactionCCV2(cp,agreementtxid,agreementtx,hashBlock) && (numvouts = agreementtx.vout.size()) > 0 &&
 	DecodeAgreementOpRet(agreementtx.vout[numvouts-1].scriptPubKey) == 'c')
 	{
 		SetCCtxids(txids,AgreementsCCaddr,true,cp->evalcode,0,zeroid,'c');
 		for (std::vector<uint256>::const_iterator it=txids.begin(); it!=txids.end(); it++)
 		{
 			txid = *it;
-			if (myGetTransactionCCV2(cp,txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
+			if (myGetTransactionCCV2(cp,txid,tx,hashBlock) && (numvouts = tx.vout.size()) > 0 &&
 			DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey) == 'c')
 			{
 				GetAcceptedOfferTx(txid, offertx);
@@ -3232,7 +3232,7 @@ UniValue AgreementInventory(const CPubKey pk)
 
 	auto AddAgreementWithKey = [&](uint256 txid)
 	{
-		if (myGetTransactionCCV2(cp, txid, vintx, hashBlock) != 0 && vintx.vout.size() > 0 && 
+		if (myGetTransactionCCV2(cp, txid, vintx, hashBlock) && vintx.vout.size() > 0 && 
 		DecodeAgreementOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey) == 'c')
 		{
 			offertxid = GetAcceptedOfferTx(txid, offertx);
@@ -3297,7 +3297,7 @@ UniValue AgreementList(const uint8_t flags,const uint256 filtertxid,const int64_
 		for (std::vector<uint256>::const_iterator it=offertxids.begin(); it!=offertxids.end(); it++)
 		{
 			txid = *it;
-			if (myGetTransactionCCV2(cp,txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
+			if (myGetTransactionCCV2(cp,txid,tx,hashBlock) && (numvouts = tx.vout.size()) > 0 &&
 			DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey) == 'o' && (pk == CPubKey() || TotalPubkeyNormalInputs(nullptr,tx,pk) != 0))
 			{
 				if (filtertxid == zeroid)
@@ -3319,7 +3319,7 @@ UniValue AgreementList(const uint8_t flags,const uint256 filtertxid,const int64_
 		for (std::vector<uint256>::const_iterator it=agreementtxids.begin(); it!=agreementtxids.end(); it++)
 		{
 			txid = *it;
-			if (myGetTransaction(txid,tx,hashBlock) != 0 && (numvouts = tx.vout.size()) > 0 &&
+			if (myGetTransaction(txid,tx,hashBlock) && (numvouts = tx.vout.size()) > 0 &&
 			DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey) == 'c' && (pk == CPubKey() || TotalPubkeyNormalInputs(nullptr,tx,pk) != 0))
 				result.push_back(txid.GetHex());
 		}
