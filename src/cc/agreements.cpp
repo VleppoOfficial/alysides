@@ -2146,7 +2146,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 			mtx.vin.push_back(CTxIn(preveventtxid,0,CScript()));
 			// vin.2: deposit from previous agreement
 			mtx.vin.push_back(CTxIn(prevagreementtxid,1,CScript()));
-			//CCaddr1of2set(cp,Agreementspk,prevoffertxidpk,cp->CCpriv,preveventCCaddress);
+
 			CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,prevoffertxidpk));
 			CCAddVintxCond(cp,cond,cp->CCpriv); 
 			
@@ -2192,7 +2192,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 			mtx.vin.push_back(CTxIn(preveventtxid,0,CScript()));
 			// vin.2: deposit from previous agreement
 			mtx.vin.push_back(CTxIn(prevagreementtxid,1,CScript()));
-			//CCaddr1of2set(cp,Agreementspk,prevoffertxidpk,cp->CCpriv,preveventCCaddress);
+
 			CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,prevoffertxidpk));
 			CCAddVintxCond(cp,cond,cp->CCpriv); 
 			
@@ -2365,7 +2365,7 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 
 	// vin.0: CC input from latest previous agreement event vout.0
 	mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
-	//CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+
 	CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
 	CCAddVintxCond(cp,cond,cp->CCpriv); 
 	
@@ -2471,7 +2471,7 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 	
 	// vin.0: CC input from latest agreement dispute vout.0 + dispute fee
 	mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
-	//CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+
 	CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
 	CCAddVintxCond(cp,cond,cp->CCpriv); 
 	
@@ -2590,7 +2590,7 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 	mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
 	// vin.1: deposit from agreement
 	mtx.vin.push_back(CTxIn(agreementtxid,1,CScript()));
-	//CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+
 	CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
 	CCAddVintxCond(cp,cond,cp->CCpriv); 
 	
@@ -2731,7 +2731,7 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 	mtx.vin.push_back(CTxIn(eventtxid,0,CScript()));
 	// vin.1: deposit from agreement
 	mtx.vin.push_back(CTxIn(agreementtxid,1,CScript()));
-	//CCaddr1of2set(cp,Agreementspk,offertxidpk,cp->CCpriv,eventCCaddress);
+
 	CCwrapper cond(MakeCCcond1of2(cp->evalcode,Agreementspk,offertxidpk));
 	CCAddVintxCond(cp,cond,cp->CCpriv); 
 	
