@@ -64,6 +64,15 @@ enum EAgreementTxSearchFlags
 /// @returns true if transaction is valid, otherwise false or calls eval->Invalid().
 bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransaction &tx, uint32_t nIn);
 
+// Finds the function id of the latest confirmed transaction that spent the event log baton for the specified agreement.
+// Returns 'c' if event log baton is unspent, or 0 if agreement with the specified txid couldn't be found.
+// Also returns the txid of the latest confirmed event the function found in the eventtxid variable.
+/// @param agreementtxid agreement transaction id to be examined
+/// @param cp CCcontract_info object with Agreements CC variables (global CC address, global private key, etc.)
+/// @param eventtxid [out] the latest event's transaction id. If no events exists for agreementtxid, returns agreementtxid.
+/// @returns funcid of eventtxid if it is found, else returns (uint8_t)0.
+uint8_t FindLatestAgreementEvent(uint256 agreementtxid, struct CCcontract_info *cp, uint256 &eventtxid);
+
 UniValue AgreementCreate(const CPubKey& pk, uint64_t txfee, std::vector<uint8_t> destkey, std::string agreementname, std::string agreementmemo, \
 uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, int64_t disputefee, std::vector<uint8_t> arbkey, std::vector<std::vector<uint8_t>> unlockconds);
 UniValue AgreementAmend(const CPubKey& pk, uint64_t txfee, uint256 prevagreementtxid, std::string agreementname, std::string agreementmemo, \
