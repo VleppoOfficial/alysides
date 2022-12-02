@@ -1453,10 +1453,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 
 // --- Helper functions for RPC implementations ---
 
-// Finds the function id of the latest confirmed transaction that spent the event log baton for the specified agreement.
-// Returns 'c' if event log baton is unspent, or 0 if agreement with the specified txid couldn't be found.
-// Also returns the txid of the latest confirmed event the function found in the eventtxid variable.
-static uint8_t FindLatestAgreementEvent(uint256 agreementtxid, struct CCcontract_info *cp, uint256 &eventtxid)
+uint8_t FindLatestAgreementEvent(uint256 agreementtxid, struct CCcontract_info *cp, uint256 &eventtxid)
 {
 	CTransaction sourcetx, batontx;
 	uint256 hashBlock, batontxid, refagreementtxid;

@@ -355,8 +355,8 @@ UniValue agreementaccept(const UniValue& params, bool fHelp, const CPubKey& mypk
 UniValue agreementdispute(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-	std::string typestr;
-
+	//std::string typestr;
+    
     if (fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error(
             "agreementdispute agreementtxid [disputememo][isdisputefinal]\n"
@@ -382,8 +382,10 @@ UniValue agreementdispute(const UniValue& params, bool fHelp, const CPubKey& myp
 	uint8_t disputeflags = 0;
 	if (params.size() == 3)
     {
-        typestr = params[2].get_str(); // NOTE: is there a better way to parse a bool from the param array?
-        if (STR_TOLOWER(typestr) == "1" || STR_TOLOWER(typestr) == "true")
+        //typestr = params[2].get_str(); // NOTE: is there a better way to parse a bool from the param array?
+        //if (STR_TOLOWER(typestr) == "1" || STR_TOLOWER(typestr) == "true")
+        //    disputeflags |= ADF_FINALDISPUTE;
+        if (params[2].get_bool() == true)
             disputeflags |= ADF_FINALDISPUTE;
     }
 
@@ -579,7 +581,7 @@ UniValue agreementeventlog(const UniValue& params, bool fHelp, const CPubKey& my
     int64_t samplenum;
     uint8_t flags;
     bool bReverse;
-    std::string typestr;
+    //std::string typestr;
 
     if ( fHelp || params.size() < 1 || params.size() > 4)
         throw runtime_error(
@@ -620,9 +622,10 @@ UniValue agreementeventlog(const UniValue& params, bool fHelp, const CPubKey& my
     bReverse = false;
 	if (params.size() == 4)
     {
-        typestr = params[3].get_str(); // NOTE: is there a better way to parse a bool from the param array?
-        if (STR_TOLOWER(typestr) == "1" || STR_TOLOWER(typestr) == "true")
-            bReverse = true;
+        //typestr = params[3].get_str(); // NOTE: is there a better way to parse a bool from the param array?
+        //if (STR_TOLOWER(typestr) == "1" || STR_TOLOWER(typestr) == "true")
+        //    bReverse = true;
+        bReverse = params[3].get_bool();
     }
 
     return (AgreementEventLog(agreementtxid,flags,samplenum,bReverse));
@@ -708,6 +711,39 @@ UniValue agreementlist(const UniValue& params, bool fHelp, const CPubKey& mypk)
     return (AgreementList(flags,filtertxid,filterdeposit,pk));
 }
 
+// Helper RPC for external implementations that calls FindLatestAgreementEvent directly and returns its output.
+UniValue findlatestagreementevent(const UniValue& params, bool fHelp, const CPubKey& mypk)
+{
+    UniValue result(UniValue::VOBJ);
+    uint8_t eventfuncid;
+    uint256 agreementtxid, eventtxid;
+    struct CCcontract_info *cp,C;
+	cp = CCinit(&C,EVAL_AGREEMENTS);
+
+    if ( fHelp || params.size() != 1 )
+        throw runtime_error(
+            "findlatestagreementevent agreementtxid\n"
+            );
+    if ( ensure_CCrequirements(EVAL_AGREEMENTS) < 0 )
+        throw runtime_error(CC_REQUIREMENTS_MSG);
+    
+    agreementtxid = Parseuint256((char *)params[0].get_str().c_str());
+    if (agreementtxid == zeroid)
+        return MakeResultError("Agreement transaction id invalid");
+
+    eventfuncid = FindLatestAgreementEvent(agreementtxid, cp, eventtxid);
+
+    if (eventfuncid == 0 || eventtxid == zeroid)
+        return MakeResultError("No eventtxid found, agreementtxid invalid or doesn't have 'c' funcid");
+    
+    result.push_back(Pair("result", "success"));
+    result.push_back(Pair("agreementtxid", agreementtxid.GetHex()));
+    result.push_back(Pair("eventtxid", eventtxid.GetHex()));
+    result.push_back(Pair("eventfuncid", eventfuncid));
+
+	return result;
+}
+
 static const CRPCCommand commands[] =
 { //  category              name              actor (function)    okSafeMode
   //  -------------- ---------------------  --------------------  ----------
@@ -726,6 +762,7 @@ static const CRPCCommand commands[] =
 	{ "agreements",  "agreementreferences", &agreementreferences, true },
     { "agreements",  "agreementinventory",  &agreementinventory,  true },
 	{ "agreements",  "agreementlist",       &agreementlist,       true },
+    { "agreements",  "findlatestagreementevent", &findlatestagreementevent, true },
 };
 
 void RegisterAgreementsRPCCommands(CRPCTable &tableRPC)
