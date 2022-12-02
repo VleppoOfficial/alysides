@@ -736,10 +736,12 @@ UniValue findlatestagreementevent(const UniValue& params, bool fHelp, const CPub
     if (eventfuncid == 0 || eventtxid == zeroid)
         return MakeResultError("No eventtxid found, agreementtxid invalid or doesn't have 'c' funcid");
     
+    char func[5];
+    sprintf(func,"%c",eventfuncid);
     result.push_back(Pair("result", "success"));
     result.push_back(Pair("agreementtxid", agreementtxid.GetHex()));
     result.push_back(Pair("eventtxid", eventtxid.GetHex()));
-    result.push_back(Pair("eventfuncid", (char)eventfuncid));
+    result.push_back(Pair("eventfuncid", func));
 
 	return result;
 }
