@@ -385,7 +385,7 @@ UniValue agreementdispute(const UniValue& params, bool fHelp, const CPubKey& myp
         //typestr = params[2].get_str(); // NOTE: is there a better way to parse a bool from the param array?
         //if (STR_TOLOWER(typestr) == "1" || STR_TOLOWER(typestr) == "true")
         //    disputeflags |= ADF_FINALDISPUTE;
-        if (params[2].get_bool() == true)
+        if ((params[2].get_int() != 0))
             disputeflags |= ADF_FINALDISPUTE;
     }
 
@@ -625,7 +625,7 @@ UniValue agreementeventlog(const UniValue& params, bool fHelp, const CPubKey& my
         //typestr = params[3].get_str(); // NOTE: is there a better way to parse a bool from the param array?
         //if (STR_TOLOWER(typestr) == "1" || STR_TOLOWER(typestr) == "true")
         //    bReverse = true;
-        bReverse = params[3].get_bool();
+        bReverse = (params[3].get_int() != 0);
     }
 
     return (AgreementEventLog(agreementtxid,flags,samplenum,bReverse));
