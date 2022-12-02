@@ -355,7 +355,7 @@ UniValue agreementaccept(const UniValue& params, bool fHelp, const CPubKey& mypk
 UniValue agreementdispute(const UniValue& params, bool fHelp, const CPubKey& mypk)
 {
     UniValue result(UniValue::VOBJ);
-	//std::string typestr;
+	std::string typestr;
     
     if (fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error(
@@ -382,11 +382,11 @@ UniValue agreementdispute(const UniValue& params, bool fHelp, const CPubKey& myp
 	uint8_t disputeflags = 0;
 	if (params.size() == 3)
     {
-        //typestr = params[2].get_str(); // NOTE: is there a better way to parse a bool from the param array?
-        //if (STR_TOLOWER(typestr) == "1" || STR_TOLOWER(typestr) == "true")
-        //    disputeflags |= ADF_FINALDISPUTE;
-        if ((params[2].get_int() != 0))
+        typestr = params[2].get_str(); // NOTE: is there a better way to parse a bool from the param array?
+        if (STR_TOLOWER(typestr) == "1" || STR_TOLOWER(typestr) == "true")
             disputeflags |= ADF_FINALDISPUTE;
+        //if ((params[2].get_int() != 0))
+        //    disputeflags |= ADF_FINALDISPUTE;
     }
 
     bool lockWallet = false; 
@@ -581,7 +581,7 @@ UniValue agreementeventlog(const UniValue& params, bool fHelp, const CPubKey& my
     int64_t samplenum;
     uint8_t flags;
     bool bReverse;
-    //std::string typestr;
+    std::string typestr;
 
     if ( fHelp || params.size() < 1 || params.size() > 4)
         throw runtime_error(
@@ -622,10 +622,10 @@ UniValue agreementeventlog(const UniValue& params, bool fHelp, const CPubKey& my
     bReverse = false;
 	if (params.size() == 4)
     {
-        //typestr = params[3].get_str(); // NOTE: is there a better way to parse a bool from the param array?
-        //if (STR_TOLOWER(typestr) == "1" || STR_TOLOWER(typestr) == "true")
-        //    bReverse = true;
-        bReverse = (params[3].get_int() != 0);
+        typestr = params[3].get_str(); // NOTE: is there a better way to parse a bool from the param array?
+        if (STR_TOLOWER(typestr) == "1" || STR_TOLOWER(typestr) == "true")
+            bReverse = true;
+        //bReverse = (params[3].get_int() != 0);
     }
 
     return (AgreementEventLog(agreementtxid,flags,samplenum,bReverse));
@@ -739,7 +739,7 @@ UniValue findlatestagreementevent(const UniValue& params, bool fHelp, const CPub
     result.push_back(Pair("result", "success"));
     result.push_back(Pair("agreementtxid", agreementtxid.GetHex()));
     result.push_back(Pair("eventtxid", eventtxid.GetHex()));
-    result.push_back(Pair("eventfuncid", eventfuncid));
+    result.push_back(Pair("eventfuncid", (char)eventfuncid));
 
 	return result;
 }
