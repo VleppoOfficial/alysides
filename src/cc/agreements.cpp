@@ -342,7 +342,7 @@ static bool CheckUnusedFlags(const uint8_t flags, uint8_t funcid)
 // Finds the accepted offer transaction from the specified accept transaction id.
 // accepttxid must refer to a transaction with function id 'c' or 't'.
 // Returns offertxid if transaction is successfully retrieved, zeroid if no accept or offer transaction is found using the specified txid.
-static uint256 GetAcceptedOfferTx(uint256 accepttxid, CTransaction &offertx)
+static uint256 GetAcceptedOfferTx(uint256 accepttxid, Eval *eval, CTransaction &offertx)
 {
 	uint8_t version, funcid;
 	int64_t dummyint64;
@@ -350,7 +350,7 @@ static uint256 GetAcceptedOfferTx(uint256 accepttxid, CTransaction &offertx)
 	uint256 hashBlock, dummyuint256, offertxid;
 
 	// Find specified transaction.
-	if (myGetTransaction(accepttxid, accepttx, hashBlock) && accepttx.vout.size() > 0 && 
+	if (GetTxUnconfirmedOpt(eval, accepttxid, accepttx, hashBlock) && accepttx.vout.size() > 0 &&
 
 	// Decode op_return, check function id.
 	(funcid = DecodeAgreementOpRet(accepttx.vout.back().scriptPubKey)) != 0)
@@ -370,8 +370,8 @@ static uint256 GetAcceptedOfferTx(uint256 accepttxid, CTransaction &offertx)
 		}
 
 		// Finding the accepted offer transaction.
-		if (myGetTransaction(offertxid, offertx, hashBlock) && offertx.vout.size() > 0 && !hashBlock.IsNull() &&
-
+		if (GetTxUnconfirmedOpt(eval, offertxid, offertx, hashBlock) && offertx.vout.size() > 0 && !hashBlock.IsNull() &&
+		
 		// Decoding the accepted offer transaction op_return and getting the data.
 		DecodeAgreementOpRet(offertx.vout.back().scriptPubKey) == 'o')
 		{
@@ -408,7 +408,7 @@ bool ValidateAgreementsVin(struct CCcontract_info *cp,Eval* eval,const CTransact
 	}
 	
 	// Verify previous transaction and its op_return.
-	if (myGetTransaction(tx.vin[index].prevout.hash,prevTx,hashblock) == false)
+	if (GetTxUnconfirmedOpt(eval,tx.vin[index].prevout.hash,prevTx,hashblock) == false)
 		return eval->Invalid("vin."+std::to_string(index)+" tx does not exist!");
 	
 	numvouts = prevTx.vout.size();
@@ -531,13 +531,14 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 				
 				if (refagreementtxid != zeroid)
 				{
-					// Make sure referenced agreement actually exists and is valid. (doesn't have to be confirmed as we're not spending any vouts from it now)
-					if (myGetTransactionCCV2(cp, refagreementtxid, refagreementtx, hashBlock) == false || refagreementtx.vout.size() == 0 ||
+					// Make sure referenced agreement actually exists and is valid.
+					// NOTE: the referenced agreement must be confirmed, otherwise unconfirmed refagreements can cause accidental or forced chain forks.
+					if (!(eval->GetTxConfirmed(refagreementtxid,refagreementtx,blockIdx)) || !(blockIdx.IsValid()) || refagreementtx.vout.size() == 0 || 
 					DecodeAgreementOpRet(refagreementtx.vout.back().scriptPubKey) != 'c')
-						return eval->Invalid("Offer transaction has invalid or nonexistent reference agreement set!");
+						return eval->Invalid("Offer transaction has invalid or unconfirmed reference agreement set!");
 
 					// Get the agreement's accepted parties.
-					GetAcceptedOfferTx(refagreementtxid, refoffertx);
+					GetAcceptedOfferTx(refagreementtxid, eval, refoffertx);
 					DecodeAgreementOfferOpRet(refoffertx.vout.back().scriptPubKey, version, refofferorkey, refsignerkey, refarbkey, refofferflags);
 
 					// NOTE: We won't check if refagreement is open or not in the consensus code at this point - that will be done if this offer happens to be accepted later.
@@ -740,7 +741,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 						return eval->Invalid("Accept transaction has invalid or unconfirmed prevagreement transaction!");
 
 					// Get the previous agreement's accepted offer transaction and parties.
-					prevoffertxid = GetAcceptedOfferTx(prevagreementtxid, prevoffertx);
+					prevoffertxid = GetAcceptedOfferTx(prevagreementtxid, eval, prevoffertx);
 					DecodeAgreementOfferOpRet(prevoffertx.vout.back().scriptPubKey, version, prevofferorkey, prevsignerkey, prevarbkey, prevofferflags,
 					refagreementtxid, prevdeposit, prevpayment, prevdisputefee, prevagreementname, prevagreementmemo, prevunlockconds);
 
@@ -899,7 +900,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Agreement closure transaction has invalid or unconfirmed agreement transaction!");
 
 				// Get the agreement's accepted offer transaction and parties.
-				prevoffertxid = GetAcceptedOfferTx(agreementtxid, prevoffertx);
+				prevoffertxid = GetAcceptedOfferTx(agreementtxid, eval, prevoffertx);
 				DecodeAgreementOfferOpRet(prevoffertx.vout.back().scriptPubKey, version, prevofferorkey, prevsignerkey, prevarbkey, prevofferflags,
 				refagreementtxid, prevdeposit, prevpayment, prevdisputefee, prevagreementname, prevagreementmemo, prevunlockconds);
 
@@ -981,7 +982,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Dispute transaction has invalid or unconfirmed agreement transaction!");
 
 				// Get the agreement's accepted offer transaction and parties.
-				offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
+				offertxid = GetAcceptedOfferTx(agreementtxid, eval, offertx);
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags,
 				refagreementtxid, deposit, payment, disputefee, agreementname, agreementmemo, unlockconds);
 
@@ -1101,7 +1102,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Dispute cancel transaction has invalid or unconfirmed agreement transaction!");
 
 				// Get the agreement's accepted offer transaction and parties.
-				offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
+				offertxid = GetAcceptedOfferTx(agreementtxid, eval, offertx);
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags,
 				refagreementtxid, deposit, payment, disputefee, agreementname, agreementmemo, unlockconds);
 
@@ -1182,7 +1183,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Dispute resolution transaction has invalid or unconfirmed agreement transaction!");
 
 				// Get the agreement's accepted offer transaction and parties.
-				offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
+				offertxid = GetAcceptedOfferTx(agreementtxid, eval, offertx);
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags,
 				refagreementtxid, deposit, payment, disputefee, agreementname, agreementmemo, unlockconds);
 
@@ -1305,7 +1306,7 @@ bool AgreementsValidate(struct CCcontract_info *cp, Eval* eval, const CTransacti
 					return eval->Invalid("Unlock transaction has invalid or unconfirmed agreement transaction!");
 
 				// Get the agreement's accepted offer transaction and parties.
-				offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
+				offertxid = GetAcceptedOfferTx(agreementtxid, eval, offertx);
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags,
 				agreementtxid, deposit, payment, disputefee, agreementname, agreementmemo, unlockconds);
 
@@ -1557,7 +1558,7 @@ uint8_t offerflags, uint256 refagreementtxid, int64_t deposit, int64_t payment, 
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Reference agreement transaction not found or is invalid");
 
 		// Get the agreement's accepted parties.
-		GetAcceptedOfferTx(refagreementtxid, refoffertx);
+		GetAcceptedOfferTx(refagreementtxid, nullptr, refoffertx);
 		DecodeAgreementOfferOpRet(refoffertx.vout.back().scriptPubKey, version, refofferorkey, refsignerkey, refarbkey, refofferflags);
 	
 		CRefOfferorPubkey = pubkey2pk(refofferorkey);
@@ -1690,7 +1691,7 @@ uint8_t offerflags, int64_t deposit, int64_t payment, int64_t disputefee, std::v
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement transaction not found or is invalid");
 	
 	// Get the agreement's accepted parties.
-	GetAcceptedOfferTx(prevagreementtxid, prevoffertx);
+	GetAcceptedOfferTx(prevagreementtxid, nullptr, prevoffertx);
 	DecodeAgreementOfferOpRet(prevoffertx.vout.back().scriptPubKey, version, prevofferorkey, prevsignerkey, prevarbkey, prevofferflags);
 
 	CPrevOfferorPubkey = pubkey2pk(prevofferorkey);
@@ -1851,7 +1852,7 @@ UniValue AgreementClose(const CPubKey& pk, uint64_t txfee, uint256 prevagreement
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement transaction not found or is invalid");
 	
 	// Get the agreement's accepted parties.
-	GetAcceptedOfferTx(prevagreementtxid, prevoffertx);
+	GetAcceptedOfferTx(prevagreementtxid, nullptr, prevoffertx);
 	DecodeAgreementOfferOpRet(prevoffertx.vout.back().scriptPubKey, version, prevofferorkey, prevsignerkey, prevarbkey, prevofferflags);
 
 	CPrevOfferorPubkey = pubkey2pk(prevofferorkey);
@@ -2102,7 +2103,7 @@ UniValue AgreementAccept(const CPubKey& pk,uint64_t txfee,uint256 offertxid)
 			CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement is under dispute / suspended, can't accept");
 		
 		// Get the previous agreement's accepted offer transaction and parties.
-		prevoffertxid = GetAcceptedOfferTx(prevagreementtxid, prevoffertx);
+		prevoffertxid = GetAcceptedOfferTx(prevagreementtxid, nullptr, prevoffertx);
 		DecodeAgreementOfferOpRet(prevoffertx.vout.back().scriptPubKey, version, prevofferorkey, prevsignerkey, prevarbkey, prevofferflags);
 
 		// If prevofferflags has AOF_AWAITNOTARIES set, preveventtxid must be notarised.
@@ -2312,7 +2313,7 @@ UniValue AgreementDispute(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement is already under dispute");
 	
 	// Get the agreement's accepted offer transaction and parties.
-	offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
+	offertxid = GetAcceptedOfferTx(agreementtxid, nullptr, offertx);
 	DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, refagreementtxid, deposit,
 	payment, disputefee, agreementname, agreementmemo);
 
@@ -2438,7 +2439,7 @@ UniValue AgreementStopDispute(const CPubKey& pk,uint64_t txfee,uint256 disputetx
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Agreement transaction in dispute doesn't have this dispute as its latest event");
 	
 	// Get the agreement's accepted offer transaction and parties.
-	offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
+	offertxid = GetAcceptedOfferTx(agreementtxid, nullptr, offertx);
 	DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, refagreementtxid, deposit,
 	payment, disputefee, agreementname, agreementmemo);
 
@@ -2539,7 +2540,7 @@ UniValue AgreementResolve(const CPubKey& pk,uint64_t txfee,uint256 disputetxid,i
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Agreement transaction in dispute doesn't have this dispute as its latest event");
 	
 	// Get the agreement's accepted offer transaction and parties.
-	offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
+	offertxid = GetAcceptedOfferTx(agreementtxid, nullptr, offertx);
 	DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, refagreementtxid, deposit,
 	payment, disputefee, agreementname, agreementmemo);
 
@@ -2670,7 +2671,7 @@ UniValue AgreementUnlock(const CPubKey& pk,uint64_t txfee,uint256 agreementtxid,
 		CCERR_RESULT("agreementscc", CCLOG_INFO, stream << "Specified agreement is under dispute, can't unlock");
 	
 	// Get the agreement's accepted offer transaction and parties.
-	offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
+	offertxid = GetAcceptedOfferTx(agreementtxid, nullptr, offertx);
 	DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, refagreementtxid, deposit,
 	payment, disputefee, agreementname, agreementmemo, unlockconds);
 	// TODO: extract/parse unlockconds from DecodeAgreementOfferOpRet here
@@ -2893,7 +2894,7 @@ UniValue AgreementInfo(const uint256 txid)
 				result.push_back(Pair("type","agreement_create"));
 
 				// Get the agreement's accepted offer transaction and parties.
-				offertxid = GetAcceptedOfferTx(txid, offertx);
+				offertxid = GetAcceptedOfferTx(txid, nullptr, offertx);
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, refagreementtxid, deposit,
 				payment, disputefee, agreementname, agreementmemo);
 
@@ -2925,7 +2926,7 @@ UniValue AgreementInfo(const uint256 txid)
 						result.push_back(Pair("status","closed"));
 
 						// Get the updated names for the agreement from the closure transaction.
-						GetAcceptedOfferTx(eventtxid, closeoffertx);
+						GetAcceptedOfferTx(eventtxid, nullptr, closeoffertx);
 						DecodeAgreementOfferOpRet(closeoffertx.vout.back().scriptPubKey, version, dummyvector, dummyvector, dummyvector, dummyuint8, 
 						dummyuint256, dummyint64, dummyint64, dummyint64, agreementname, agreementmemo);
 						break;
@@ -2997,7 +2998,7 @@ UniValue AgreementInfo(const uint256 txid)
 			case 't': // close
 				result.push_back(Pair("type","agreement_closure"));
 
-				offertxid = GetAcceptedOfferTx(txid, offertx);
+				offertxid = GetAcceptedOfferTx(txid, nullptr, offertx);
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, refagreementtxid, deposit,
 				payment, disputefee, agreementname, agreementmemo);
 				
@@ -3006,7 +3007,7 @@ UniValue AgreementInfo(const uint256 txid)
 				result.push_back(Pair("accepted_offer",offertxid.GetHex()));
 				result.push_back(Pair("closed_agreement",refagreementtxid.GetHex()));
 
-				refoffertxid = GetAcceptedOfferTx(refagreementtxid, refoffertx);
+				refoffertxid = GetAcceptedOfferTx(refagreementtxid, nullptr, refoffertx);
 				DecodeAgreementOfferOpRet(refoffertx.vout.back().scriptPubKey, version, refofferorkey, refsignerkey, refarbkey, refofferflags, 
 				dummyuint256, refdeposit, refpayment, refdisputefee, refagreementname, refagreementmemo);
 
@@ -3020,7 +3021,7 @@ UniValue AgreementInfo(const uint256 txid)
 				DecodeAgreementDisputeOpRet(tx.vout[numvouts-1].scriptPubKey,version,agreementtxid,claimantkey,disputeflags,disputememo);
 				result.push_back(Pair("agreement_txid",agreementtxid.GetHex()));
 
-				offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
+				offertxid = GetAcceptedOfferTx(agreementtxid, nullptr, offertx);
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, refagreementtxid, deposit,
 				payment, disputefee, agreementname, agreementmemo);
 
@@ -3074,7 +3075,7 @@ UniValue AgreementInfo(const uint256 txid)
 				result.push_back(Pair("resolved_dispute",disputetxid.GetHex()));
 
 
-				offertxid = GetAcceptedOfferTx(agreementtxid, offertx);
+				offertxid = GetAcceptedOfferTx(agreementtxid, nullptr, offertx);
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, refagreementtxid, deposit,
 				payment, disputefee, agreementname, agreementmemo);
 
@@ -3194,7 +3195,7 @@ UniValue AgreementReferences(const uint256 agreementtxid)
 			if (myGetTransactionCCV2(cp,txid,tx,hashBlock) && (numvouts = tx.vout.size()) > 0 &&
 			DecodeAgreementOpRet(tx.vout[numvouts-1].scriptPubKey) == 'c')
 			{
-				GetAcceptedOfferTx(txid, offertx);
+				GetAcceptedOfferTx(txid, nullptr, offertx);
 				DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, refagreementtxid, deposit,
 				payment, disputefee, agreementname, agreementmemo);
 				if (refagreementtxid == agreementtxid)
@@ -3232,7 +3233,7 @@ UniValue AgreementInventory(const CPubKey pk)
 		if (myGetTransactionCCV2(cp, txid, vintx, hashBlock) && vintx.vout.size() > 0 && 
 		DecodeAgreementOpRet(vintx.vout[vintx.vout.size() - 1].scriptPubKey) == 'c')
 		{
-			offertxid = GetAcceptedOfferTx(txid, offertx);
+			offertxid = GetAcceptedOfferTx(txid, nullptr, offertx);
 			DecodeAgreementOfferOpRet(offertx.vout.back().scriptPubKey, version, offerorkey, signerkey, arbkey, offerflags, 
 			dummytxid, dummyamount, dummyamount, dummyamount, dummystr, dummystr);
 
