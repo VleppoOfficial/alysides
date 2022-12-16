@@ -19,7 +19,7 @@ dnl komodo codebase version
 define(_KOMODO_VERSION, 60000)
 
 dnl alysides codebase version
-define(_ALYSIDES_VERSION, 30200)
+define(_ALYSIDES_VERSION, 30300)
 
 AC_DEFINE(KOMODO_VERSION, _KOMODO_VERSION, [Komodo Version])
 AC_DEFINE(ALYSIDES_VERSION, _ALYSIDES_VERSION, [Alysides Version])
