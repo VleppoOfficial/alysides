@@ -168,7 +168,7 @@ NOTE: VLCGLB1 must be run using komodod executables compiled from the 'legacy_v0
 - Mining Algorithm: 100% Proof-of-Stake
 
 ### VLCGLB2
-VLCGLB2 is a "beta" chain, running on current versions of Alysides which introduce nSPV compatibility. The VLCGLB2 coin holds no value, just like other VLC coins, as its primary purpose is testing and facilitating Custom Contract functionality for the Vleppo Application.
+VLCGLB2 is a "candidate" chain, running on current versions of Alysides. The VLCGLB2 coin holds no value, just like other VLC coins, as its primary purpose is facilitating Custom Contract functionality for the Vleppo Application and other offerings.
 
 ```shell
 -ac_name=VLCGLB2 -ac_supply=500000000 -ac_reward=1 -ac_blocktime=120 -ac_cc=1 -ac_ccenable=167,168,169,228,236,245 -ac_staked=100 -ac_end=1 -ac_public=1 -addnode=143.110.242.177 -addnode=143.110.254.96 -addnode=139.59.110.85 -addnode=139.59.110.86
