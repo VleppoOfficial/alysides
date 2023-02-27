@@ -3047,7 +3047,7 @@ UniValue AgreementInfo(const uint256 txid)
 					result.push_back(Pair("event_txid",batontxid.GetHex()));
 				}
 				else
-					result.push_back(Pair("is_active","false"));
+					result.push_back(Pair("is_active","true"));
 				
 				if (!(disputememo.empty()))
 					result.push_back(Pair("dispute_memo",disputememo));
